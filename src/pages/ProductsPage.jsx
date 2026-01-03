@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import { PlusIcon, PencilIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import ProductModal from '../components/products/ProductModal';
+import Tooltip from '../components/ui/Tooltip';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -83,22 +84,23 @@ const ProductsPage = () => {
       header: 'Actions',
       className: 'w-24 text-right',
       render: (row) => (
-        <div className="flex justify-end gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
-            title="Edit"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </Button>
+        <div className="flex justify-end">
+          <Tooltip content="Edit Product" align="end">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Button>
+          </Tooltip>
         </div>
       )
     }
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
         <Button onClick={handleAdd}>
