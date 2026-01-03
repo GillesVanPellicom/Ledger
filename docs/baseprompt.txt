@@ -1,0 +1,50 @@
+Ok so we're generating a /plan.md. The two goals of this project are:
+keeping track of receipts in a way where products can't be duplicates or any garbage data can be easily inputted.
+How we're doing this is we have receipts, receipts consist of line items, and line items are a product, price and quantity.
+Receipts also have an associated store.
+
+Techstack: electron, tailwind, react, vite, sqlite, charts
+
+The idea is to make a modern CRUD interface.
+We are going to make this easily maintainable, meaning all queries are in sql files in a query folder.
+All re-usable components such as confirm modals, db tables with pagination and search built in are reusable components.
+Think about how these components are most useful. So e.g. pagination navigation at the bottom and top of a table, to make it easier.
+Pagination because I don't want this to slow down with 10000 items or something. All styling is centralized. We work with tailwind.
+There should be a dark mode which can be enabled at any time with a button in the bottom of the sidenav.
+The sidenav should have a full mode with text and should be able to be shrunk to icons only mode for more screen space.
+Every page not on the nav bar should have a top left back button, which works using some kind of android backstack equivalent.
+
+The flow is as follows: in the nav bar there is a receipts page, here we have a table of all receipts.
+You can look at the db schema under /utils/db/db_schema.sql This page should consist of a table with entries.
+Each entry should show ReceiptDate, StoreName (join), ReceiptNote. Also two buttons per row, view and delete.
+Let's leave edit a stub for now. Delete should pop up a modal. This should be a component modal which blurs the background.
+The blur rule is for all modals. Clicking anywhere not on the modal should dismiss it.
+Even things like the red "delete" button in this modal should be standardized so that this can be changed globally for all "danger-btn" or however we call it.
+Make sure all associated line items are also removed  when a receipt is deleted.
+
+The view button brings you to another page (as discussed, with a back arrow because it isn't featured on the nav bar).
+This page is the "view receipt" page. It'll show a full version of the receipt, so the date of the receipt, name, note, all line items in a table component.
+Also a gallery of all associated images is going to be stored here.
+The gallery is a component which must be able to go fullscreen. At the bottom previews of all pictures (clickable), and a left and right button.
+There must also be an edit button on the view page itself.
+
+The edit button brings you to an edit receipt page.
+This page is going to be reused for making receipts so make it easy to code with.
+This is simply an editable version of the view page. You can add line items (everything is in euro), you can remove and add pictures, preview etc. Edit the date, store and note.
+For a line item you need to be able to add a product. We're obviously not doing that by having a user input an id, so there is for every line item a "choose product" section.
+This brings up a large modal, also a component, the product search.
+This is a table of all products and brand names, searchable, paginated etc. A product can be selected from the list, the modal closes, and the line item now contains this product.
+In this modal it's possible you don't find the product you need so in the same style as the receipt system, make it so you can add and edit products on the fly.
+A full products page with add and edit is also provided in the nav bar.
+
+Make a full plan of this in stages, so this doesn't all have to be done in one prompt.
+I can just say "/plan.md, complete phase 2".
+
+Add in the nav bar a stub for an analytics page.
+We're going to be using apache ECharts for that.
+
+Make this all modular, easy to maintain, DRY.
+Do the styling professionally.
+The dark mode background should be #000000 and white mode background #FFFFFF.
+Accent color for a button, pick macOS button blue for that.
+All other accent colors and derivatives are up to your discretion. Plan it out, be efficient.
