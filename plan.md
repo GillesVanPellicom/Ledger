@@ -119,10 +119,12 @@
 1.  **Analytics**
     - **Page**: `/analytics`.
     - **Charts**:
-        - Monthly Spending (Bar/Line).
+        - Monthly Spending per year, trends and gains/losses compared to next month and if available previous year same month.
         - Spending by Store (Pie).
-        - Spending by Category/Product (Bar).
+        - 
+        - Selectable per week/month/year or fine tunable via a from-to calendar (all for a specific year) top 10 products bought by price. Eg 500 euro spent on water, etc. This is a specific page with a chart at the top and then a table component order DESC for the non top 10.
     - Use `apache-echarts` for rendering.
+    - Make year selection dynamic based on records. Eg earliest receipt is 2023, first year you can select is 2023.
 
 2.  **Polish & Optimization**
     - **Performance**: Ensure `DataTable` handles large datasets efficiently (server-side pagination logic in SQL).

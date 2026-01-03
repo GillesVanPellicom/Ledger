@@ -20,7 +20,6 @@ function connectDatabase(filePath) {
         return reject({ success: false, error: err.message });
       }
       
-      // Use WAL mode for better concurrency
       db.run('PRAGMA journal_mode = WAL;', (walErr) => {
         if (walErr) {
            console.error('Failed to set WAL mode:', walErr);
@@ -48,7 +47,6 @@ function createWindow() {
   
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL(startUrl);
-    // Auto-connect to DB in dev mode
     connectDatabase(path.join(app.getAppPath(), 'fin.db')).catch(console.error);
     
     mainWindow.webContents.on('did-finish-load', () => {
@@ -86,27 +84,34 @@ app.on('quit', () => {
   }
 });
 
-// IPC Handlers
+// IPC Handlers with enhanced logging
 ipcMain.handle('query-db', (event, sql, params = []) => {
   return new Promise((resolve, reject) => {
-    if (!db) return reject(new Error('Database not connected'));
+    if (!db) {
+      console.error('[IPC query-db] Error: Database not connected.');
+      return reject(new Error('Database not connected'));
+    }
+
+    console.log(`[IPC query-db] Received query:\nSQL: ${sql}\nParams: ${JSON.stringify(params)}`);
 
     const isSelect = sql.trim().toLowerCase().startsWith('select');
     
     if (isSelect) {
       db.all(sql, params, (err, rows) => {
         if (err) {
-          console.error('Query failed:', err);
+          console.error('[IPC query-db] Query failed:', err);
           return reject({ error: err.message });
         }
+        console.log(`[IPC query-db] Query successful. Rows returned: ${rows.length}`);
         resolve(rows);
       });
     } else {
       db.run(sql, params, function(err) { // Use function() to get `this`
         if (err) {
-          console.error('Query failed:', err);
+          console.error('[IPC query-db] Query failed:', err);
           return reject({ error: err.message });
         }
+        console.log(`[IPC query-db] Query successful. Changes: ${this.changes}`);
         resolve({ changes: this.changes, lastID: this.lastID });
       });
     }
