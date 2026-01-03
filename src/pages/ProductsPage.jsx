@@ -11,12 +11,10 @@ const ProductsPage = () => {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   
-  // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [pageSize, setPageSize] = useState(10);
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
@@ -30,9 +28,7 @@ const ProductsPage = () => {
         JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
         WHERE p.ProductIsActive = 1
       `;
-      
       const params = [];
-      
       if (searchTerm) {
         query += ` AND (p.ProductName LIKE ? OR p.ProductBrand LIKE ?)`;
         params.push(`%${searchTerm}%`, `%${searchTerm}%`);
@@ -74,15 +70,13 @@ const ProductsPage = () => {
   };
 
   const columns = [
-    { header: 'Name', accessor: 'ProductName', className: 'font-medium' },
-    { header: 'Brand', accessor: 'ProductBrand' },
-    { 
-      header: 'Size', 
-      render: (row) => `${row.ProductSize} ${row.ProductUnitType}` 
-    },
+    { header: 'Name', accessor: 'ProductName', width: '40%' },
+    { header: 'Brand', accessor: 'ProductBrand', width: '35%' },
+    { header: 'Size', width: '15%', render: (row) => `${row.ProductSize} ${row.ProductUnitType}` },
     {
       header: 'Actions',
-      className: 'w-24 text-right',
+      width: '10%',
+      className: 'text-right',
       render: (row) => (
         <div className="flex justify-end">
           <Tooltip content="Edit Product" align="end">

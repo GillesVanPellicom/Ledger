@@ -67,7 +67,7 @@ const DataTable = ({
               min="1"
               max={totalPages}
             />
-            <span className="text-gray-500">{totalPages || 1}</span>
+            <span className="text-gray-500">/ {totalPages || 1}</span>
           </form>
           <Button variant="secondary" size="sm" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages || loading} className="h-8 w-8 p-0">
             <ChevronRightIcon className="h-4 w-4" />
@@ -101,28 +101,36 @@ const DataTable = ({
         </Tooltip>
       </div>
 
-      <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm relative">
+        <div 
+          className={cn(
+            "overflow-x-auto transition-opacity duration-200",
+            loading && "opacity-50 pointer-events-none"
+          )}
+        >
+          <table className="w-full text-left text-sm table-fixed">
+            <colgroup>
+              {columns.map((col, idx) => (
+                <col key={idx} style={{ width: col.width }} />
+              ))}
+            </colgroup>
             <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
               <tr>
                 {columns.map((col, idx) => (
-                  <th key={idx} className={cn("px-4 py-3 font-medium text-gray-500 dark:text-gray-400", col.className)}>
+                  <th key={idx} className={cn("px-4 py-3 font-medium text-gray-500 dark:text-gray-400 truncate", col.className)}>
                     {col.header}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-              {loading ? (
-                <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
-              ) : data.length === 0 ? (
+              {data.length === 0 && !loading ? (
                 <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">No results found.</td></tr>
               ) : (
                 data.map((row, rowIdx) => (
                   <tr key={row.ProductID || rowIdx} onClick={() => onRowClick && onRowClick(row)} className={cn("transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50", onRowClick && "cursor-pointer")}>
                     {columns.map((col, colIdx) => (
-                      <td key={colIdx} className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                      <td key={colIdx} className="px-4 py-3 text-gray-900 dark:text-gray-100 break-words">
                         {col.render ? col.render(row) : row[col.accessor]}
                       </td>
                     ))}
