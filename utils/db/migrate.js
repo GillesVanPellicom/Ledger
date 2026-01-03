@@ -1,43 +1,55 @@
-import Database from 'better-sqlite3';
+import sqlite3 from 'sqlite3';
 import path from 'path';
 import fs from 'fs';
-import {fileURLToPath} from 'url';
+import { fileURLToPath } from 'url';
 import chalk from 'chalk';
-import {task, info, success, done} from './styling.js';
-
+import { task, info, success, done } from './styling.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize DB
 const dbPath = path.join(__dirname, '../../fin.db');
-const db = new Database(dbPath);
 
 async function migrate() {
   info('Starting database migration...');
 
-  await task('Reading schema file', async () => {
+  const db = await task('Connecting to database', () => {
+    return new Promise((resolve, reject) => {
+      const dbInstance = new sqlite3.Database(dbPath, (err) => {
+        if (err) reject(err);
+        else resolve(dbInstance);
+      });
+    });
+  });
+
+  const schema = await task('Reading schema file', () => {
     const schemaPath = path.join(__dirname, 'db_schema.sql');
     if (!fs.existsSync(schemaPath)) {
       throw new Error(`Schema file not found at ${schemaPath}`);
     }
-    return 'DONE';
+    return fs.readFileSync(schemaPath, 'utf-8');
   });
 
-  await task('Applying schema to database', async () => {
-    const schemaPath = path.join(__dirname, 'db_schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf-8');
+  await task('Applying schema to database', () => {
+    return new Promise((resolve, reject) => {
+      db.exec(schema, (err) => {
+        if (err) reject(err);
+        else resolve('DONE');
+      });
+    });
+  });
 
-    // Split by semicolon to execute statements individually if needed, 
-    // but better-sqlite3's exec handles multiple statements.
-    db.exec(schema);
-
-    return 'DONE';
+  await task('Closing database connection', () => {
+    return new Promise((resolve, reject) => {
+      db.close((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
   });
 
   done('Migration finished');
   success('Database schema applied successfully');
-  process.exit(0);
 }
 
 migrate().catch(err => {

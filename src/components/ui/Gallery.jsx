@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon, ArrowsPointingOutIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 
 const Gallery = ({ images = [], onDelete }) => {
@@ -50,7 +50,7 @@ const Gallery = ({ images = [], onDelete }) => {
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <Maximize2 className="text-white drop-shadow-md" size={24} />
+              <ArrowsPointingOutIcon className="h-6 w-6 text-white drop-shadow-md" />
             </div>
             {onDelete && (
               <button
@@ -58,9 +58,9 @@ const Gallery = ({ images = [], onDelete }) => {
                   e.stopPropagation();
                   onDelete(img, idx);
                 }}
-                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
               >
-                <X size={14} />
+                <XMarkIcon className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -75,7 +75,7 @@ const Gallery = ({ images = [], onDelete }) => {
             onClick={closeLightbox}
             className="absolute top-4 right-4 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-50"
           >
-            <X size={32} />
+            <XMarkIcon className="h-8 w-8" />
           </button>
 
           {/* Navigation Buttons */}
@@ -85,13 +85,13 @@ const Gallery = ({ images = [], onDelete }) => {
                 onClick={handlePrev}
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-50"
               >
-                <ChevronLeft size={40} />
+                <ChevronLeftIcon className="h-10 w-10" />
               </button>
               <button 
                 onClick={handleNext}
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-50"
               >
-                <ChevronRight size={40} />
+                <ChevronRightIcon className="h-10 w-10" />
               </button>
             </>
           )}

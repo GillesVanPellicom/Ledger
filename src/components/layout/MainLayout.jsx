@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidenav from './Sidenav';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 
 const MainLayout = () => {
@@ -34,7 +34,7 @@ const MainLayout = () => {
               onClick={() => navigate(-1)}
               className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-sm"
             >
-              <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
+              <ArrowLeftIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
             </button>
           </div>
         )}

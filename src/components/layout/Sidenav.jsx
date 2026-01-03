@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  Receipt, 
-  Package, 
-  BarChart3, 
-  ChevronLeft, 
-  ChevronRight,
-  Moon,
-  Sun
-} from 'lucide-react';
+  ReceiptPercentIcon, 
+  CubeIcon, 
+  ChartBarIcon, 
+  ChevronLeftIcon, 
+  ChevronRightIcon,
+  MoonIcon,
+  SunIcon
+} from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 
 const Sidenav = ({ isCollapsed, toggleSidebar }) => {
@@ -31,9 +31,9 @@ const Sidenav = ({ isCollapsed, toggleSidebar }) => {
   }, [isDarkMode]);
 
   const navItems = [
-    { path: '/', label: 'Receipts', icon: Receipt },
-    { path: '/products', label: 'Products', icon: Package },
-    { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/', label: 'Receipts', icon: ReceiptPercentIcon },
+    { path: '/products', label: 'Products', icon: CubeIcon },
+    { path: '/analytics', label: 'Analytics', icon: ChartBarIcon },
   ];
 
   return (
@@ -54,7 +54,7 @@ const Sidenav = ({ isCollapsed, toggleSidebar }) => {
           onClick={toggleSidebar}
           className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 transition-colors ml-auto"
         >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          {isCollapsed ? <ChevronRightIcon className="h-5 w-5" /> : <ChevronLeftIcon className="h-5 w-5" />}
         </button>
       </div>
 
@@ -72,7 +72,7 @@ const Sidenav = ({ isCollapsed, toggleSidebar }) => {
             )}
             title={isCollapsed ? item.label : undefined}
           >
-            <item.icon size={20} className={cn("shrink-0", isCollapsed && "mx-auto")} />
+            <item.icon className={cn("h-5 w-5 shrink-0", isCollapsed && "mx-auto")} />
             {!isCollapsed && (
               <span className="font-medium truncate">
                 {item.label}
@@ -92,7 +92,7 @@ const Sidenav = ({ isCollapsed, toggleSidebar }) => {
           )}
           title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          {isDarkMode ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
           {!isCollapsed && (
             <span className="font-medium">
               {isDarkMode ? 'Light Mode' : 'Dark Mode'}

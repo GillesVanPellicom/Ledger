@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { XMarkIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from './Button';
 
@@ -70,7 +70,7 @@ const Modal = ({
             onClick={onClose}
             className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500"
           >
-            <X size={20} />
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 

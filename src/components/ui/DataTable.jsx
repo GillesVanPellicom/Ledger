@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Input from './Input';
 import Button from './Button';
@@ -51,7 +51,7 @@ const DataTable = ({
           disabled={currentPage === 1 || loading}
           className="h-8 w-8 p-0"
         >
-          <ChevronLeft size={16} />
+          <ChevronLeftIcon className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Page {currentPage} of {totalPages || 1}
@@ -63,7 +63,7 @@ const DataTable = ({
           disabled={currentPage === totalPages || loading}
           className="h-8 w-8 p-0"
         >
-          <ChevronRight size={16} />
+          <ChevronRightIcon className="h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -74,7 +74,7 @@ const DataTable = ({
       {/* Top Controls */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder={searchPlaceholder}
             value={searchTerm}

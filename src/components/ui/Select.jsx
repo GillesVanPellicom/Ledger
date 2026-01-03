@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import { cn } from '../../utils/cn';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from '@heroicons/react/24/solid';
 
 const Select = forwardRef(({ className, error, label, options = [], placeholder, ...props }, ref) => {
   return (
@@ -27,7 +27,7 @@ const Select = forwardRef(({ className, error, label, options = [], placeholder,
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+        <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
       </div>
       {error && (
         <p className="mt-1 text-xs text-danger">{error}</p>

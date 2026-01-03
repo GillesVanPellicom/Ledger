@@ -1,10 +1,10 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
+import ProductsPage from './pages/ProductsPage';
 
 // Placeholder Pages
 const ReceiptsPage = () => <div className="text-2xl font-bold">Receipts</div>;
-const ProductsPage = () => <div className="text-2xl font-bold">Products</div>;
 const AnalyticsPage = () => <div className="text-2xl font-bold">Analytics</div>;
 
 function App() {
