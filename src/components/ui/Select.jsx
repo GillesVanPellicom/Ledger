@@ -20,7 +20,7 @@ const Select = forwardRef(({ className, error, label, options = [], placeholder,
           )}
           {...props}
         >
-          {placeholder && <option value="" disabled selected>{placeholder}</option>}
+          {placeholder && <option value="" disabled>{placeholder}</option>}
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}

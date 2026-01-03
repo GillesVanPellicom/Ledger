@@ -3,12 +3,14 @@ import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroico
 import { cn } from '../../utils/cn';
 import Input from './Input';
 import Button from './Button';
+import Select from './Select';
 
 const DataTable = ({
   data = [],
   columns = [],
   totalCount = 0,
   pageSize = 10,
+  onPageSizeChange,
   currentPage = 1,
   onPageChange,
   onSearch,
@@ -18,9 +20,13 @@ const DataTable = ({
   searchPlaceholder = "Search..."
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [pageInput, setPageInput] = useState(currentPage);
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  // Debounce search
+  useEffect(() => {
+    setPageInput(currentPage);
+  }, [currentPage]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (onSearch) onSearch(searchTerm);
@@ -28,41 +34,38 @@ const DataTable = ({
     return () => clearTimeout(timer);
   }, [searchTerm, onSearch]);
 
-  const handlePrev = () => {
-    if (currentPage > 1) onPageChange(currentPage - 1);
-  };
-
-  const handleNext = () => {
-    if (currentPage < totalPages) onPageChange(currentPage + 1);
+  const handlePageJump = (e) => {
+    e.preventDefault();
+    let newPage = parseInt(pageInput, 10);
+    if (!isNaN(newPage)) {
+      newPage = Math.max(1, Math.min(newPage, totalPages));
+      onPageChange(newPage);
+    }
   };
 
   const PaginationControls = () => (
     <div className="flex items-center justify-between px-2 py-2">
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        Showing <span className="font-medium">{Math.min((currentPage - 1) * pageSize + 1, totalCount)}</span> to{' '}
-        <span className="font-medium">{Math.min(currentPage * pageSize, totalCount)}</span> of{' '}
-        <span className="font-medium">{totalCount}</span> results
+        Total: <span className="font-medium">{totalCount}</span>
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handlePrev}
-          disabled={currentPage === 1 || loading}
-          className="h-8 w-8 p-0"
-        >
+        <Button variant="secondary" size="sm" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1 || loading} className="h-8 w-8 p-0">
           <ChevronLeftIcon className="h-4 w-4" />
         </Button>
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Page {currentPage} of {totalPages || 1}
-        </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleNext}
-          disabled={currentPage === totalPages || loading}
-          className="h-8 w-8 p-0"
-        >
+        <form onSubmit={handlePageJump} className="flex items-center gap-1 text-sm">
+          Page
+          <Input
+            type="number"
+            value={pageInput}
+            onChange={(e) => setPageInput(e.target.value)}
+            onBlur={handlePageJump}
+            className="h-8 w-14 text-center p-0"
+            min="1"
+            max={totalPages}
+          />
+          of {totalPages || 1}
+        </form>
+        <Button variant="secondary" size="sm" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages || loading} className="h-8 w-8 p-0">
           <ChevronRightIcon className="h-4 w-4" />
         </Button>
       </div>
@@ -71,37 +74,36 @@ const DataTable = ({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      {/* Top Controls */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative w-72">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
-        {/* Top Pagination (Optional, but requested in plan) */}
-        <div className="hidden sm:block">
-           <PaginationControls />
+        <div className="flex items-center gap-2 text-sm">
+          <span>Items per page:</span>
+          <Select
+            value={pageSize}
+            onChange={(e) => {
+              onPageSizeChange(Number(e.target.value));
+              onPageChange(1);
+            }}
+            options={[
+              { value: 10, label: '10' },
+              { value: 20, label: '20' },
+              { value: 50, label: '50' },
+            ]}
+            className="h-9 w-20"
+          />
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
               <tr>
                 {columns.map((col, idx) => (
-                  <th
-                    key={idx}
-                    className={cn(
-                      "px-4 py-3 font-medium text-gray-500 dark:text-gray-400",
-                      col.className
-                    )}
-                  >
+                  <th key={idx} className={cn("px-4 py-3 font-medium text-gray-500 dark:text-gray-400", col.className)}>
                     {col.header}
                   </th>
                 ))}
@@ -109,27 +111,12 @@ const DataTable = ({
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
               {loading ? (
-                <tr>
-                  <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
-                    Loading...
-                  </td>
-                </tr>
+                <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
               ) : data.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
-                    No results found.
-                  </td>
-                </tr>
+                <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">No results found.</td></tr>
               ) : (
                 data.map((row, rowIdx) => (
-                  <tr
-                    key={row.id || rowIdx}
-                    onClick={() => onRowClick && onRowClick(row)}
-                    className={cn(
-                      "transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50",
-                      onRowClick && "cursor-pointer"
-                    )}
-                  >
+                  <tr key={row.ProductID || rowIdx} onClick={() => onRowClick && onRowClick(row)} className={cn("transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50", onRowClick && "cursor-pointer")}>
                     {columns.map((col, colIdx) => (
                       <td key={colIdx} className="px-4 py-3 text-gray-900 dark:text-gray-100">
                         {col.render ? col.render(row) : row[col.accessor]}
@@ -143,7 +130,6 @@ const DataTable = ({
         </div>
       </div>
 
-      {/* Bottom Pagination */}
       <PaginationControls />
     </div>
   );

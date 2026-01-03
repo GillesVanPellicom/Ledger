@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PencilIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import ProductModal from '../components/products/ProductModal';
-import { ConfirmModal } from '../components/ui/Modal';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -14,15 +13,11 @@ const ProductsPage = () => {
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  
-  // Delete State
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -42,12 +37,10 @@ const ProductsPage = () => {
         params.push(`%${searchTerm}%`, `%${searchTerm}%`);
       }
       
-      // Count query
-      const countQuery = `SELECT COUNT(*) as count FROM (${query})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType', 'SELECT p.ProductID')})`;
       const countResult = await db.queryOne(countQuery, params);
-      setTotalCount(countResult.count);
+      setTotalCount(countResult ? countResult.count : 0);
       
-      // Data query
       query += ` ORDER BY p.ProductName ASC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       
@@ -58,11 +51,16 @@ const ProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, pageSize, searchTerm]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  const handleSearch = useCallback((term) => {
+    setSearchTerm(term);
+    setCurrentPage(1);
+  }, []);
 
   const handleAdd = () => {
     setEditingProduct(null);
@@ -72,27 +70,6 @@ const ProductsPage = () => {
   const handleEdit = (product) => {
     setEditingProduct(product);
     setIsModalOpen(true);
-  };
-
-  const handleDeleteClick = (product) => {
-    setProductToDelete(product);
-    setDeleteModalOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!productToDelete) return;
-    try {
-      // Soft delete
-      await db.execute(
-        'UPDATE Products SET ProductIsActive = 0 WHERE ProductID = ?', 
-        [productToDelete.ProductID]
-      );
-      fetchProducts();
-      setDeleteModalOpen(false);
-      setProductToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete product:", error);
-    }
   };
 
   const columns = [
@@ -115,15 +92,6 @@ const ProductsPage = () => {
           >
             <PencilIcon className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-danger hover:text-danger-hover hover:bg-red-50 dark:hover:bg-red-900/20"
-            onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }}
-            title="Delete"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </Button>
         </div>
       )
     }
@@ -144,12 +112,10 @@ const ProductsPage = () => {
         columns={columns}
         totalCount={totalCount}
         pageSize={pageSize}
+        onPageSizeChange={setPageSize}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        onSearch={(term) => {
-          setSearchTerm(term);
-          setCurrentPage(1); // Reset to page 1 on search
-        }}
+        onSearch={handleSearch}
         loading={loading}
         searchPlaceholder="Search products or brands..."
       />
@@ -159,14 +125,6 @@ const ProductsPage = () => {
         onClose={() => setIsModalOpen(false)}
         productToEdit={editingProduct}
         onSave={fetchProducts}
-      />
-
-      <ConfirmModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${productToDelete?.ProductName}"? This will not affect existing receipts.`}
       />
     </div>
   );
