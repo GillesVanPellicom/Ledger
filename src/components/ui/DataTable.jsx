@@ -5,6 +5,7 @@ import Input from './Input';
 import Button from './Button';
 import Select from './Select';
 import Tooltip from './Tooltip';
+import Spinner from './Spinner';
 
 const DataTable = ({
   data = [],
@@ -18,7 +19,8 @@ const DataTable = ({
   onRowClick,
   loading = false,
   className,
-  searchPlaceholder = "Search..."
+  searchPlaceholder = "Search...",
+  children
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pageInput, setPageInput] = useState(currentPage);
@@ -80,9 +82,12 @@ const DataTable = ({
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       <div className="flex items-center justify-between gap-4">
-        <div className="relative w-72">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+        <div className="flex items-center gap-4">
+          <div className="relative w-72">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+          </div>
+          {children}
         </div>
         <Tooltip content="Items per page" align="end">
           <Select
@@ -102,12 +107,7 @@ const DataTable = ({
       </div>
 
       <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm relative">
-        <div 
-          className={cn(
-            "overflow-x-auto transition-opacity duration-200",
-            loading && "opacity-50 pointer-events-none"
-          )}
-        >
+        <div className={cn("overflow-x-auto", loading && "blur-sm pointer-events-none")}>
           <table className="w-full text-left text-sm table-fixed">
             <colgroup>
               {columns.map((col, idx) => (
@@ -128,7 +128,7 @@ const DataTable = ({
                 <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">No results found.</td></tr>
               ) : (
                 data.map((row, rowIdx) => (
-                  <tr key={row.ProductID || rowIdx} onClick={() => onRowClick && onRowClick(row)} className={cn("transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50", onRowClick && "cursor-pointer")}>
+                  <tr key={row.ReceiptID || row.ProductID || rowIdx} onClick={() => onRowClick && onRowClick(row)} className={cn("transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50", onRowClick && "cursor-pointer")}>
                     {columns.map((col, colIdx) => (
                       <td key={colIdx} className="px-4 py-3 text-gray-900 dark:text-gray-100 break-words">
                         {col.render ? col.render(row) : row[col.accessor]}
@@ -140,6 +140,11 @@ const DataTable = ({
             </tbody>
           </table>
         </div>
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/30 dark:bg-gray-900/30">
+            <Spinner className="h-6 w-6 text-accent" />
+          </div>
+        )}
       </div>
 
       <PaginationControls />

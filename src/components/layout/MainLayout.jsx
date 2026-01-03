@@ -12,8 +12,12 @@ const MainLayout = () => {
   
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Log path changes to debug back button issue
+  useEffect(() => {
+    console.log('Navigated to:', location.pathname);
+  }, [location.pathname]);
   
-  // Routes that are "root" routes and shouldn't show a back button
   const rootRoutes = ['/', '/products', '/analytics'];
   const showBackButton = !rootRoutes.includes(location.pathname);
 
@@ -41,7 +45,7 @@ const MainLayout = () => {
         
         <div className={cn(
           "flex-1 overflow-auto p-6",
-          showBackButton && "pt-16" // Add padding if back button is present
+          showBackButton && "pt-16"
         )}>
           <Outlet />
         </div>
