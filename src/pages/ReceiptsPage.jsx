@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useDebugNavigate } from '../hooks/useDebugNavigate';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
@@ -22,7 +22,7 @@ const ReceiptsPage = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState(null);
 
-  const navigate = useDebugNavigate();
+  const navigate = useNavigate();
 
   const fetchReceipts = useCallback(async () => {
     setLoading(true);
@@ -108,7 +108,7 @@ const ReceiptsPage = () => {
       render: (row) => (
         <div className="flex justify-end gap-1">
           <Tooltip content="View Receipt" align="end">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/receipts/view/${row.ReceiptID}`)}>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/receipts/view/${row.ReceiptID}`); }}>
               <EyeIcon className="h-4 w-4" />
             </Button>
           </Tooltip>
