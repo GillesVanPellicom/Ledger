@@ -1,3 +1,5 @@
+const colors = require('tailwindcss/colors');
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
@@ -8,6 +10,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Replace the default gray with zinc for a more neutral dark theme
+        gray: colors.zinc,
         background: {
           light: '#FFFFFF',
           dark: '#000000',
