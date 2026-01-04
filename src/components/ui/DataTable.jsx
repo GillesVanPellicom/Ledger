@@ -138,7 +138,7 @@ const DataTable = ({
                 data.map((row, rowIdx) => (
                   <tr key={row.ReceiptID || row.ProductID || rowIdx} onClick={() => onRowClick && onRowClick(row)} className={cn("transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50", onRowClick && "cursor-pointer")}>
                     {columns.map((col, colIdx) => (
-                      <td key={colIdx} className="px-4 py-3 text-gray-900 dark:text-gray-100 break-words">
+                      <td key={colIdx} className={cn("px-4 py-3 text-gray-900 dark:text-gray-100 break-words", col.className)}>
                         {col.render ? col.render(row) : row[col.accessor]}
                       </td>
                     ))}

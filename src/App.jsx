@@ -5,9 +5,7 @@ import ProductsPage from './pages/ProductsPage';
 import ReceiptsPage from './pages/ReceiptsPage';
 import ReceiptFormPage from './pages/ReceiptFormPage';
 import ReceiptViewPage from './pages/ReceiptViewPage';
-
-// Placeholder Pages
-const AnalyticsPage = () => <div className="text-2xl font-bold">Analytics</div>;
+import AnalyticsPage from './pages/AnalyticsPage';
 
 function App() {
   return (
