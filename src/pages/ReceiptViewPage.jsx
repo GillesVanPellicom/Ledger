@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon } from '@heroicons/react/24/outline';
 
 const ReceiptViewPage = () => {
   const { id } = useParams();
@@ -39,7 +39,7 @@ const ReceiptViewPage = () => {
           setLineItems(lineItemData);
 
           const imageData = await db.query('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
-          setImages(imageData.map(img => ({ src: img.ImagePath }))); // Adapt for Gallery component
+          setImages(imageData.map(img => ({ src: img.ImagePath })));
         }
       } catch (error) {
         console.error("Failed to load receipt data:", error);
@@ -51,9 +51,9 @@ const ReceiptViewPage = () => {
     fetchReceiptData();
   }, [id]);
 
-  const calculateTotal = () => {
-    return lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0).toFixed(2);
-  };
+  const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
+  const totalItems = lineItems.length;
+  const totalQuantity = lineItems.reduce((total, item) => total + item.LineQuantity, 0);
 
   if (loading) {
     return (
@@ -90,6 +90,26 @@ const ReceiptViewPage = () => {
       )}
 
       <Card>
+        <div className="p-6 grid grid-cols-3 gap-4 text-center">
+          <div className="flex flex-col items-center gap-1">
+            <TagIcon className="h-6 w-6 text-gray-400" />
+            <span className="text-sm text-gray-500">Unique Items</span>
+            <span className="text-xl font-bold">{totalItems}</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <ShoppingCartIcon className="h-6 w-6 text-gray-400" />
+            <span className="text-sm text-gray-500">Total Quantity</span>
+            <span className="text-xl font-bold">{totalQuantity}</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <CurrencyEuroIcon className="h-6 w-6 text-gray-400" />
+            <span className="text-sm text-gray-500">Total Amount</span>
+            <span className="text-xl font-bold">€{totalAmount.toFixed(2)}</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
         <div className="p-6">
           <h2 className="text-lg font-semibold mb-4">Line Items</h2>
           <div className="overflow-x-auto">
@@ -121,7 +141,7 @@ const ReceiptViewPage = () => {
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 text-right font-bold text-lg rounded-b-xl">
-          Total: €{calculateTotal()}
+          Total: €{totalAmount.toFixed(2)}
         </div>
       </Card>
 

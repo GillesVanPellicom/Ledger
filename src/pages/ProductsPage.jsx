@@ -126,7 +126,6 @@ const ProductsPage = () => {
         onPageChange={setCurrentPage}
         onSearch={handleSearch}
         loading={loading}
-        searchPlaceholder="Search products or brands..."
       />
 
       <ProductModal

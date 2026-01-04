@@ -142,7 +142,6 @@ const ReceiptsPage = () => {
         onPageChange={setCurrentPage}
         onSearch={handleSearch}
         loading={loading}
-        searchPlaceholder="Search by store or note..."
         onRowClick={(row) => navigate(`/receipts/view/${row.ReceiptID}`)}
       >
         <DatePicker

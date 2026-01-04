@@ -8,6 +8,13 @@
   }
 }
 
+/* React Datepicker Overrides */
+.react-datepicker-wrapper,
+.react-datepicker__input-container {
+  width: 100%;
+  display: block;
+}
+
 /* Dark mode styles for react-datepicker */
 .dark .react-datepicker {
   @apply bg-gray-800 border-gray-700;

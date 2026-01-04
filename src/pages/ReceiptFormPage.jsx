@@ -82,21 +82,21 @@ const ReceiptFormPage = () => {
     if (!validate()) return;
     setSaving(true);
     try {
-      let currentReceiptId = id;
       if (isEditing) {
         await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, id]);
+        await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
+        for (const item of lineItems) {
+          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [id, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
+        }
+        navigate(-1); // Go back to the view page
       } else {
         const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote) VALUES (?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note]);
-        currentReceiptId = result.lastID;
+        const newId = result.lastID;
+        for (const item of lineItems) {
+          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [newId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
+        }
+        navigate(`/receipts/view/${newId}`, { replace: true });
       }
-
-      await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [currentReceiptId]);
-      for (const item of lineItems) {
-        await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [currentReceiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
-      }
-      
-      // Use replace: true to ensure back button goes to Receipts list, not back to Edit form
-      navigate(`/receipts/view/${currentReceiptId}`, { replace: true });
     } catch (error) {
       console.error("Failed to save receipt:", error);
     } finally {
@@ -111,10 +111,10 @@ const ReceiptFormPage = () => {
       <h1 className="text-2xl font-bold">{isEditing ? 'Edit Receipt' : 'Create New Receipt'}</h1>
       
       <Card>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Select label="Store" name="storeId" value={formData.storeId} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} />
-          <DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} />
-          <div className="md:col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
+        <div className="p-6 grid grid-cols-2 gap-6">
+          <div className="col-span-1"><Select label="Store" name="storeId" value={formData.storeId} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} /></div>
+          <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
+          <div className="col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
         </div>
       </Card>
 

@@ -84,7 +84,7 @@ const DataTable = ({
     <div className={cn("flex flex-col gap-4", className)}>
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="relative w-72">
+          <div className="relative w-96">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
           </div>
