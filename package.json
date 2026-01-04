@@ -21,6 +21,7 @@
     "chalk": "^5.4.1",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
+    "nanoid": "^5.0.7",
     "react": "^19.2.0",
     "react-datepicker": "^7.0.0-rc.2",
     "react-dom": "^19.2.0",

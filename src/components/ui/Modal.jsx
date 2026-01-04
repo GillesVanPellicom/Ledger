@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from './Button';
+
+// Global stack to track open modals
+const modalStack = [];
 
 const Modal = ({ 
   isOpen, 
@@ -15,28 +18,47 @@ const Modal = ({
 }) => {
   const [isRendered, setIsRendered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const modalId = useRef(Math.random().toString(36).substr(2, 9));
 
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
-      // Use a timeout to allow the component to mount before adding the 'open' classes
+      modalStack.push(modalId.current);
       const timer = setTimeout(() => setIsAnimating(true), 10);
       return () => clearTimeout(timer);
     } else {
       setIsAnimating(false);
+      // Remove from stack immediately on close trigger
+      const index = modalStack.indexOf(modalId.current);
+      if (index > -1) {
+        modalStack.splice(index, 1);
+      }
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (!isRendered) return;
+
     const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
+      // Only close if this modal is the top one in the stack
+      if (e.key === 'Escape' && modalStack[modalStack.length - 1] === modalId.current) {
+        onClose();
+      }
     };
+    
     document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
+    
+    // Only hide overflow if this is the first modal
+    if (modalStack.length === 1) {
+      document.body.style.overflow = 'hidden';
+    }
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      // Only restore overflow if no modals are left
+      if (modalStack.length === 0) {
+        document.body.style.overflow = 'unset';
+      }
     };
   }, [isRendered, onClose]);
 
@@ -56,7 +78,12 @@ const Modal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div 
         className={cn("fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300", isAnimating ? 'opacity-100' : 'opacity-0')}
-        onClick={onClose}
+        onClick={() => {
+          // Only close on backdrop click if top of stack
+          if (modalStack[modalStack.length - 1] === modalId.current) {
+            onClose();
+          }
+        }}
         aria-hidden="true"
       />
       <div 

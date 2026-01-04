@@ -69,7 +69,8 @@ const DataTable = ({
               min="1"
               max={totalPages}
             />
-            <span className="text-gray-500">/ {totalPages || 1}</span>
+            <span className="text-gray-500 text-lg leading-none mb-1">/</span>
+            <span className="text-gray-500">{totalPages || 1}</span>
           </form>
           <Button variant="secondary" size="sm" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages || loading} className="h-8 w-8 p-0">
             <ChevronRightIcon className="h-4 w-4" />
@@ -97,8 +98,15 @@ const DataTable = ({
               onPageChange(1);
             }}
             options={[
+              { value: 5, label: '5' },
               { value: 10, label: '10' },
+              { value: 15, label: '15' },
               { value: 20, label: '20' },
+              { value: 25, label: '25' },
+              { value: 30, label: '30' },
+              { value: 35, label: '35' },
+              { value: 40, label: '40' },
+              { value: 45, label: '45' },
               { value: 50, label: '50' },
             ]}
             className="h-9 w-20 text-center"

@@ -29,9 +29,22 @@ const ProductsPage = () => {
         WHERE p.ProductIsActive = 1
       `;
       const params = [];
+      
       if (searchTerm) {
-        query += ` AND (p.ProductName LIKE ? OR p.ProductBrand LIKE ?)`;
-        params.push(`%${searchTerm}%`, `%${searchTerm}%`);
+        const keywords = searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0);
+        if (keywords.length > 0) {
+          const conditions = keywords.map(() => `(
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(p.ProductName), 'é', 'e'), 'è', 'e'), 'ë', 'e'), 'á', 'a'), 'à', 'a'), 'ä', 'a') LIKE ? 
+            OR 
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(p.ProductBrand), 'é', 'e'), 'è', 'e'), 'ë', 'e'), 'á', 'a'), 'à', 'a'), 'ä', 'a') LIKE ?
+          )`).join(' AND ');
+          
+          query += ` AND (${conditions})`;
+          keywords.forEach(k => {
+            const term = `%${k}%`;
+            params.push(term, term);
+          });
+        }
       }
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType', 'SELECT p.ProductID')})`;
