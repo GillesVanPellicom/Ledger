@@ -11,6 +11,7 @@ import Select from '../components/ui/Select';
 import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
+import Input from '../components/ui/Input';
 
 const PaymentMethodDetailsPage = () => {
   const { id } = useParams();
@@ -22,6 +23,7 @@ const PaymentMethodDetailsPage = () => {
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [topUpToEdit, setTopUpToEdit] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -38,7 +40,8 @@ const PaymentMethodDetailsPage = () => {
         SELECT 
           r.ReceiptID as id, 
           r.ReceiptDate as date, 
-          s.StoreName as description, 
+          s.StoreName as name,
+          r.ReceiptNote as note,
           SUM(li.LineQuantity * li.LineUnitPrice) as amount, 
           'receipt' as type
         FROM Receipts r
@@ -52,7 +55,8 @@ const PaymentMethodDetailsPage = () => {
         SELECT 
           TopUpID as id, 
           TopUpDate as date, 
-          TopUpNote as description, 
+          '-' as name,
+          TopUpNote as note, 
           TopUpAmount as amount, 
           'topup' as type
         FROM TopUps 
@@ -100,12 +104,32 @@ const PaymentMethodDetailsPage = () => {
         TopUpID: fullTopUp.id,
         TopUpAmount: fullTopUp.amount,
         TopUpDate: fullTopUp.date,
-        TopUpNote: fullTopUp.description,
+        TopUpNote: fullTopUp.note,
       });
     }
   };
   
-  const filteredTransactions = transactions.filter(t => filter === 'all' || t.type === filter);
+  const filteredTransactions = useMemo(() => {
+    const lowercasedFilter = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return transactions.filter(t => {
+      const typeMatch = filter === 'all' || (filter === 'receipt' && t.amount < 0) || (filter === 'topup' && t.amount > 0);
+      if (!typeMatch) return false;
+
+      const searchMatch = [
+        t.name,
+        t.note,
+        format(new Date(t.date), 'dd/MM/yyyy')
+      ].some(field => field?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(lowercasedFilter));
+      
+      return searchMatch;
+    });
+  }, [transactions, filter, searchTerm]);
+
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredTransactions.slice(start, end);
+  }, [filteredTransactions, currentPage, pageSize]);
 
   const balanceChartOption = useMemo(() => {
     const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -136,14 +160,15 @@ const PaymentMethodDetailsPage = () => {
       },
       xAxis: { type: 'time' },
       yAxis: { type: 'value', axisLabel: { formatter: '€{value}' } },
-      series: [{ data, type: 'line', showSymbol: false }],
+      series: [{ data, type: 'line', showSymbol: false, smooth: true }],
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     };
   }, [transactions, method]);
 
   const columns = [
     { header: 'Date', render: (row) => format(new Date(row.date), 'dd/MM/yyyy') },
-    { header: 'Description', accessor: 'description' },
+    { header: 'Name', accessor: 'name' },
+    { header: 'Note', render: (row) => row.note || '-' },
     { 
       header: 'Amount',
       render: (row) => (
@@ -173,25 +198,33 @@ const PaymentMethodDetailsPage = () => {
       <Card>
         <div className="p-6">
           <h2 className="text-lg font-semibold mb-4">Balance Over Time</h2>
-          <ReactECharts option={balanceChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} />
+          <ReactECharts option={balanceChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} lazyUpdate={true} />
         </div>
       </Card>
 
-      <div className="flex justify-end">
-        <Select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          options={[
-            { value: 'all', label: 'All Transactions' },
-            { value: 'receipt', label: 'Receipts' },
-            { value: 'topup', label: 'Top-Ups' },
-          ]}
-          className="w-48"
-        />
+      <div className="flex justify-between items-center">
+        <div className="w-64">
+          <Input 
+            placeholder="Search transactions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="w-48">
+          <Select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            options={[
+              { value: 'all', label: 'All Transactions' },
+              { value: 'receipt', label: 'Receipts' },
+              { value: 'topup', label: 'Top-Ups' },
+            ]}
+          />
+        </div>
       </div>
 
       <DataTable
-        data={filteredTransactions}
+        data={paginatedTransactions}
         columns={columns}
         onRowClick={handleRowClick}
         itemKey={(row) => `${row.type}-${row.id}`}

@@ -209,7 +209,7 @@ const TopProducts = () => {
         ) : (
           <>
             <div className="h-80">
-              <ReactECharts option={chartOption} theme={theme} style={{ height: '100%', width: '100%' }} notMerge={true} />
+              <ReactECharts option={chartOption} theme={theme} style={{ height: '100%', width: '100%' }} notMerge={true} lazyUpdate={true} />
             </div>
             
             <div className="mt-8">

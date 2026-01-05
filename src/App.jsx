@@ -21,7 +21,7 @@ function App() {
           <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />
           
           <Route path="receipts/new" element={<ReceiptFormPage />} />
-          <Route path="receipts/edit/:id"- element={<ReceiptFormPage />} />
+          <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />
           <Route path="receipts/view/:id" element={<ReceiptViewPage />} />
         </Route>
       </Routes>

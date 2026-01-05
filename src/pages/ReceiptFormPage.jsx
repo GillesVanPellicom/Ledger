@@ -21,7 +21,7 @@ const ReceiptFormPage = () => {
 
   const [stores, setStores] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
-  const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '', paid: false });
+  const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '1' });
   const [lineItems, setLineItems] = useState([]);
   
   const [loading, setLoading] = useState(true);
@@ -62,8 +62,7 @@ const ReceiptFormPage = () => {
             storeId: receiptData.StoreID,
             receiptDate: parseISO(receiptData.ReceiptDate),
             note: receiptData.ReceiptNote || '',
-            paymentMethodId: receiptData.PaymentMethodID || '',
-            paid: receiptData.Paid === 1,
+            paymentMethodId: receiptData.PaymentMethodID || '1',
           });
           const lineItemData = await db.query(`
             SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
@@ -82,7 +81,6 @@ const ReceiptFormPage = () => {
 
   const handleFormChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleDateChange = (date) => setFormData(prev => ({ ...prev, receiptDate: date }));
-  const handleCheckboxChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.checked }));
 
   const handleProductSelect = (product) => {
     setLineItems(prev => [...prev, { 
@@ -114,17 +112,16 @@ const ReceiptFormPage = () => {
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
-    const totalAmount = calculateTotal();
     try {
       if (isEditing) {
-        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null, id]);
+        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId, id]);
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
         for (const item of lineItems) {
           await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [id, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
         }
-        navigate(-1); // Go back to the view page
+        navigate(-1);
       } else {
-        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID) VALUES (?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null]);
+        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID) VALUES (?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId]);
         const newId = result.lastID;
         for (const item of lineItems) {
           await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [newId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
