@@ -6,6 +6,7 @@ import ReceiptsPage from './pages/ReceiptsPage';
 import ReceiptFormPage from './pages/ReceiptFormPage';
 import ReceiptViewPage from './pages/ReceiptViewPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import PaymentMethodsPage from './pages/PaymentMethodsPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route index element={<ReceiptsPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="payment-methods" element={<PaymentMethodsPage />} />
           
           <Route path="receipts/new" element={<ReceiptFormPage />} />
           <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />

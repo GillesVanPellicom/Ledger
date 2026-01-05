@@ -10,14 +10,18 @@ import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { nanoid } from 'nanoid';
+import { useSettings } from '../context/SettingsContext';
 
 const ReceiptFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = !!id;
+  const { settings } = useSettings();
+  const paymentMethodsEnabled = settings.paymentMethods?.enabled;
 
   const [stores, setStores] = useState([]);
-  const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '' });
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '', paid: false });
   const [lineItems, setLineItems] = useState([]);
   
   const [loading, setLoading] = useState(true);
@@ -46,6 +50,11 @@ const ReceiptFormPage = () => {
       const storeData = await db.query('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
       setStores(storeData.map(s => ({ value: s.StoreID, label: s.StoreName })));
 
+      if (paymentMethodsEnabled) {
+        const paymentMethodData = await db.query('SELECT PaymentMethodID, MethodName FROM PaymentMethods ORDER BY MethodName');
+        setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.MethodName })));
+      }
+
       if (isEditing) {
         const receiptData = await db.queryOne('SELECT * FROM Receipts WHERE ReceiptID = ?', [id]);
         if (receiptData) {
@@ -53,6 +62,8 @@ const ReceiptFormPage = () => {
             storeId: receiptData.StoreID,
             receiptDate: parseISO(receiptData.ReceiptDate),
             note: receiptData.ReceiptNote || '',
+            paymentMethodId: receiptData.PaymentMethodID || '',
+            paid: receiptData.Paid === 1,
           });
           const lineItemData = await db.query(`
             SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
@@ -67,10 +78,11 @@ const ReceiptFormPage = () => {
       setLoading(false);
     };
     fetchData();
-  }, [id, isEditing]);
+  }, [id, isEditing, paymentMethodsEnabled]);
 
   const handleFormChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleDateChange = (date) => setFormData(prev => ({ ...prev, receiptDate: date }));
+  const handleCheckboxChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.checked }));
 
   const handleProductSelect = (product) => {
     setLineItems(prev => [...prev, { 
@@ -97,21 +109,22 @@ const ReceiptFormPage = () => {
   };
 
   const removeLineItem = (key) => setLineItems(prev => prev.filter(item => item.key !== key));
-  const calculateTotal = () => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0).toFixed(2);
+  const calculateTotal = () => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
 
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
+    const totalAmount = calculateTotal();
     try {
       if (isEditing) {
-        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, id]);
+        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, Paid = ?, TotalAmount = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null, formData.paid, totalAmount, id]);
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
         for (const item of lineItems) {
           await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [id, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
         }
         navigate(-1); // Go back to the view page
       } else {
-        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote) VALUES (?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note]);
+        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, Paid, TotalAmount) VALUES (?, ?, ?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null, formData.paid, totalAmount]);
         const newId = result.lastID;
         for (const item of lineItems) {
           await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [newId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
@@ -136,6 +149,17 @@ const ReceiptFormPage = () => {
           <div className="col-span-1"><Select label="Store" name="storeId" value={formData.storeId} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} /></div>
           <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
           <div className="col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
+          {paymentMethodsEnabled && (
+            <>
+              <div className="col-span-1"><Select label="Payment Method" name="paymentMethodId" value={formData.paymentMethodId} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
+              <div className="col-span-1 flex items-end pb-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" name="paid" checked={formData.paid} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
+                  Mark as Paid
+                </label>
+              </div>
+            </>
+          )}
         </div>
       </Card>
 
@@ -168,7 +192,7 @@ const ReceiptFormPage = () => {
           </div>
           <Button variant="secondary" onClick={() => setIsProductSelectorOpen(true)}><PlusIcon className="h-4 w-4 mr-2" />Add Item</Button>
         </div>
-        <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 text-right font-bold text-lg rounded-b-xl">Total: €{calculateTotal()}</div>
+        <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 text-right font-bold text-lg rounded-b-xl">Total: €{calculateTotal().toFixed(2)}</div>
       </Card>
 
       <div className="flex justify-end gap-4">

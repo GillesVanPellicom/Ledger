@@ -6,8 +6,9 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon } from '@heroicons/react/24/solid';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
+import { useSettings } from '../context/SettingsContext';
 
 const ReceiptViewPage = () => {
   const { id } = useParams();
@@ -16,15 +17,18 @@ const ReceiptViewPage = () => {
   const [lineItems, setLineItems] = useState([]);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSettings();
+  const paymentMethodsEnabled = settings.paymentMethods?.enabled;
 
   useEffect(() => {
     const fetchReceiptData = async () => {
       setLoading(true);
       try {
         const receiptData = await db.queryOne(`
-          SELECT r.*, s.StoreName 
+          SELECT r.*, s.StoreName, pm.MethodName as PaymentMethodName
           FROM Receipts r 
           JOIN Stores s ON r.StoreID = s.StoreID 
+          LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
           WHERE r.ReceiptID = ?
         `, [id]);
 
@@ -110,7 +114,7 @@ const ReceiptViewPage = () => {
       )}
 
       <Card>
-        <div className="p-6 grid grid-cols-3 gap-4 text-center">
+        <div className={`p-6 grid ${paymentMethodsEnabled ? 'grid-cols-4' : 'grid-cols-3'} gap-4 text-center`}>
           <div className="flex flex-col items-center gap-1">
             <TagIcon className="h-6 w-6 text-gray-400" />
             <span className="text-sm text-gray-500">Unique Items</span>
@@ -121,6 +125,13 @@ const ReceiptViewPage = () => {
             <span className="text-sm text-gray-500">Total Quantity</span>
             <span className="text-xl font-bold">{totalQuantity}</span>
           </div>
+          {paymentMethodsEnabled && (
+            <div className="flex flex-col items-center gap-1">
+              <CreditCardIcon className="h-6 w-6 text-gray-400" />
+              <span className="text-sm text-gray-500">Payment Method</span>
+              <span className="text-xl font-bold">{receipt.PaymentMethodName || 'N/A'}</span>
+            </div>
+          )}
           <div className="flex flex-col items-center gap-1">
             <CurrencyEuroIcon className="h-6 w-6 text-gray-400" />
             <span className="text-sm text-gray-500">Total Amount</span>

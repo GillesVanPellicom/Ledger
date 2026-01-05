@@ -6,20 +6,27 @@ import {
   ChartBarIcon, 
   ChevronLeftIcon, 
   ChevronRightIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import SettingsModal from '../settings/SettingsModal';
+import { useSettings } from '../../context/SettingsContext';
 
 const Sidenav = ({ isCollapsed, toggleSidebar }) => {
   const location = useLocation();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { settings } = useSettings();
 
   const navItems = [
     { path: '/', label: 'Receipts', icon: ReceiptPercentIcon, activePaths: ['/', '/receipts'] },
     { path: '/products', label: 'Products', icon: CubeIcon, activePaths: ['/products'] },
     { path: '/analytics', label: 'Analytics', icon: ChartBarIcon, activePaths: ['/analytics'] },
   ];
+
+  if (settings.paymentMethods?.enabled) {
+    navItems.push({ path: '/payment-methods', label: 'Payment Methods', icon: CreditCardIcon, activePaths: ['/payment-methods'] });
+  }
 
   return (
     <>

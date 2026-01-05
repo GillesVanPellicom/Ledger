@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon } from '@heroicons/react/24/solid';
+import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
+import { useSettings } from '../../context/SettingsContext';
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('appearance');
@@ -17,6 +18,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
   const [isDev, setIsDev] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [testError, setTestError] = useState(null);
+  const { settings, updateModuleSettings } = useSettings();
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -33,16 +35,10 @@ const SettingsModal = ({ isOpen, onClose }) => {
           document.documentElement.style.fontSize = `${settings.uiScale}%`;
         }
         
-        // Check if we are in dev mode
-        // Assuming electronAPI exposes some way to check env or we can infer it
-        // For now, let's assume we can check process.env.NODE_ENV if exposed or pass it through preload
-        // If not directly available, we might need to add it to preload.
-        // However, typically in Vite + Electron, import.meta.env.DEV is available in renderer
         if (import.meta.env.DEV) {
             setIsDev(true);
         }
       } else {
-        // Fallback to localStorage for web
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) {
           const isDark = savedTheme === 'dark';
@@ -69,7 +65,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
       const currentSettings = await window.electronAPI.getSettings();
       await window.electronAPI.saveSettings({ ...currentSettings, ...newSettings });
     } else {
-      // Fallback to localStorage
       if (newSettings.theme) localStorage.setItem('theme', newSettings.theme);
       if (newSettings.uiScale) localStorage.setItem('uiScale', newSettings.uiScale);
     }
@@ -109,6 +104,10 @@ const SettingsModal = ({ isOpen, onClose }) => {
         setTestError(e);
         setShowErrorModal(true);
     }
+  };
+
+  const handleModuleToggle = (module, isEnabled) => {
+    updateModuleSettings(module, { enabled: isEnabled });
   };
 
   const tabs = [
@@ -218,8 +217,37 @@ const SettingsModal = ({ isOpen, onClose }) => {
           )}
 
           {activeTab === 'modules' && (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-              <p>No modules available.</p>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Modules</h3>
+                <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                        <CreditCardIcon className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">Payment Methods</p>
+                        <p className="text-sm text-gray-500">Track spending across different payment methods.</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleModuleToggle('paymentMethods', !settings.paymentMethods?.enabled)}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+                        settings.paymentMethods?.enabled ? "bg-accent" : "bg-gray-200 dark:bg-gray-700"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          settings.paymentMethods?.enabled ? "translate-x-5" : "translate-x-0"
+                        )}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
