@@ -8,7 +8,7 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
-import { XMarkIcon, PlusIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, PlusIcon, PhotoIcon } from '@heroicons/react/24/solid';
 import { nanoid } from 'nanoid';
 import { useSettings } from '../context/SettingsContext';
 
@@ -23,6 +23,7 @@ const ReceiptFormPage = () => {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '1' });
   const [lineItems, setLineItems] = useState([]);
+  const [images, setImages] = useState([]);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,6 +73,9 @@ const ReceiptFormPage = () => {
             WHERE li.ReceiptID = ?
           `, [id]);
           setLineItems(lineItemData.map(li => ({ ...li, key: nanoid() })));
+
+          const imageData = await db.query('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+          setImages(imageData.map(img => ({ ...img, key: nanoid() })));
         }
       }
       setLoading(false);
@@ -109,24 +113,53 @@ const ReceiptFormPage = () => {
   const removeLineItem = (key) => setLineItems(prev => prev.filter(item => item.key !== key));
   const calculateTotal = () => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newImages = files.map(file => ({
+      key: nanoid(),
+      ImagePath: file.path,
+      file,
+    }));
+    setImages(prev => [...prev, ...newImages]);
+  };
+
+  const removeImage = (key) => {
+    setImages(prev => prev.filter(img => img.key !== key));
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
     try {
+      let receiptId = id;
       if (isEditing) {
         await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId, id]);
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
-        for (const item of lineItems) {
-          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [id, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
-        }
-        navigate(-1);
+        await db.execute('DELETE FROM ReceiptImages WHERE ReceiptID = ?', [id]);
       } else {
         const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID) VALUES (?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId]);
-        const newId = result.lastID;
-        for (const item of lineItems) {
-          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [newId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
+        receiptId = result.lastID;
+      }
+
+      for (const item of lineItems) {
+        await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
+      }
+
+      if (window.electronAPI && settings.datastore.folderPath) {
+        for (const image of images) {
+          if (image.file) {
+            const newPath = await window.electronAPI.saveImage(settings.datastore.folderPath, image.file.path);
+            await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, newPath]);
+          } else {
+            await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, image.ImagePath]);
+          }
         }
-        navigate(`/receipts/view/${newId}`, { replace: true });
+      }
+
+      if (isEditing) {
+        navigate(-1);
+      } else {
+        navigate(`/receipts/view/${receiptId}`, { replace: true });
       }
     } catch (error) {
       console.error("Failed to save receipt:", error);
@@ -151,6 +184,27 @@ const ReceiptFormPage = () => {
               <div className="col-span-1"><Select label="Payment Method" name="paymentMethodId" value={formData.paymentMethodId} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
             </>
           )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Images</h2>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+            {images.map(image => (
+              <div key={image.key} className="relative group">
+                <img src={image.file ? URL.createObjectURL(image.file) : `local-file://${image.ImagePath}`} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
+                <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <XMarkIcon className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <label className="w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-gray-600 hover:border-gray-400 cursor-pointer">
+              <PhotoIcon className="h-8 w-8" />
+              <span className="text-xs mt-1">Add Images</span>
+              <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+            </label>
+          </div>
         </div>
       </Card>
 

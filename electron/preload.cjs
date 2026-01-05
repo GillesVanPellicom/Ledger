@@ -7,5 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   savePdf: () => ipcRenderer.invoke('save-pdf'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  saveImage: (datastorePath, imagePath) => ipcRenderer.invoke('save-image', datastorePath, imagePath),
+  readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-base64', filePath),
   isDev: isDev,
 });

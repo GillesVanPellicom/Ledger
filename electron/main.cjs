@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron');
 const path = require('path');
 const sqlite3 = require('sqlite3');
 const fs = require('fs');
@@ -76,7 +76,13 @@ function createWindow() {
   });
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  protocol.handle('local-file', (request) => {
+    const filePath = request.url.slice('local-file://'.length);
+    return net.fetch(path.normalize(filePath));
+  });
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -174,5 +180,38 @@ ipcMain.handle('save-settings', async (event, settings) => {
   } catch (error) {
     console.error('Failed to save settings:', error);
     return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('select-directory', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory']
+  });
+  if (canceled) {
+    return '';
+  } else {
+    return filePaths[0];
+  }
+});
+
+ipcMain.handle('save-image', async (event, datastorePath, imagePath) => {
+  const { nanoid } = await import('nanoid');
+  const imageDir = path.join(datastorePath, 'receipt_images');
+  if (!fs.existsSync(imageDir)) {
+    fs.mkdirSync(imageDir, { recursive: true });
+  }
+  const newFileName = `${nanoid()}${path.extname(imagePath)}`;
+  const newPath = path.join(imageDir, newFileName);
+  fs.copyFileSync(imagePath, newPath);
+  return newPath;
+});
+
+ipcMain.handle('read-file-base64', async (event, filePath) => {
+  try {
+    const data = fs.readFileSync(filePath);
+    return data.toString('base64');
+  } catch (error) {
+    console.error('Failed to read file as base64:', error);
+    return null;
   }
 });

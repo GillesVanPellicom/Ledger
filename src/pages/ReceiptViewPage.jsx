@@ -6,12 +6,12 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import { useSettings } from '../context/SettingsContext';
 import { useError } from '../context/ErrorContext';
 
-const ReceiptViewPage = () => {
+const ReceiptViewPage = ({ openSettingsModal }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [receipt, setReceipt] = useState(null);
@@ -47,7 +47,7 @@ const ReceiptViewPage = () => {
           setLineItems(lineItemData);
 
           const imageData = await db.query('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
-          setImages(imageData.map(img => ({ src: img.ImagePath })));
+          setImages(imageData.map(img => ({ src: `local-file://${img.ImagePath}` })));
         }
       } catch (error) {
         showError(error);
@@ -56,8 +56,12 @@ const ReceiptViewPage = () => {
       }
     };
 
-    fetchReceiptData();
-  }, [id, showError]);
+    if (settings.datastore.folderPath || !window.electronAPI) {
+      fetchReceiptData();
+    } else {
+      setLoading(false);
+    }
+  }, [id, showError, settings.datastore.folderPath]);
 
   const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
   const totalItems = lineItems.length;
@@ -69,11 +73,25 @@ const ReceiptViewPage = () => {
     const fullReceipt = {
       ...receipt,
       lineItems: lineItems,
+      images: images,
       totalAmount: totalAmount
     };
 
     await generateReceiptsPdf([fullReceipt], settings.pdf);
   };
+
+  if (!settings.datastore.folderPath && window.electronAPI) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <ExclamationTriangleIcon className="h-16 w-16 text-yellow-400 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">Datastore Not Configured</h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          Please set the datastore folder in the settings to view receipts and their images.
+        </p>
+        <Button onClick={() => openSettingsModal('data')}>Go to Settings</Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

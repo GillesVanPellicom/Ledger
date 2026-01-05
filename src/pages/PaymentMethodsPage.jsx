@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, PaintBrushIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PaintBrushIcon, PencilIcon } from '@heroicons/react/24/solid';
 import Button from '../components/ui/Button';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import PaymentMethodStyleModal from '../components/payment/PaymentMethodStyleModal';
@@ -8,12 +8,47 @@ import { useSettings } from '../context/SettingsContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import * as SolidIcons from '@heroicons/react/24/solid';
+import Input from '../components/ui/Input';
+import Modal from '../components/ui/Modal';
 
-const PaymentMethodCard = ({ method, onStyleClick }) => {
+const EditPaymentMethodModal = ({ isOpen, onClose, onSave, method }) => {
+  const [name, setName] = useState(method?.PaymentMethodName || '');
+
+  useEffect(() => {
+    if (method) {
+      setName(method.PaymentMethodName);
+    }
+  }, [method]);
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    await db.execute('UPDATE PaymentMethods SET PaymentMethodName = ? WHERE PaymentMethodID = ?', [name, method.PaymentMethodID]);
+    onSave();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Payment Method">
+      <div className="p-6 space-y-4">
+        <Input
+          label="Method Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g., Main Bank Account"
+        />
+        <div className="flex justify-end gap-4">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave}>Save</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const PaymentMethodCard = ({ method, onStyleClick, onEditClick }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
-    const IconComponent = style?.type === 'icon' && style.symbol ? SolidIcons[style.symbol] : null;
+    const IconComponent = style?.type === 'icon' && style.symbol && SolidIcons[style.symbol];
 
     return (
         <div 
@@ -24,12 +59,20 @@ const PaymentMethodCard = ({ method, onStyleClick }) => {
             style={style ? { backgroundColor: style.color } : {}}
             onClick={() => navigate(`/payment-methods/${method.PaymentMethodID}`)}
         >
-            <button 
-                onClick={(e) => { e.stopPropagation(); onStyleClick(method); }}
-                className="absolute bottom-2 left-2 p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors opacity-0 group-hover:opacity-100"
-            >
-                <PaintBrushIcon className="h-4 w-4 text-white/80" />
-            </button>
+            <div className="absolute bottom-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                  onClick={(e) => { e.stopPropagation(); onStyleClick(method); }}
+                  className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
+              >
+                  <PaintBrushIcon className="h-4 w-4 text-white/80" />
+              </button>
+              <button 
+                  onClick={(e) => { e.stopPropagation(); onEditClick(method); }}
+                  className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
+              >
+                  <PencilIcon className="h-4 w-4 text-white/80" />
+              </button>
+            </div>
             <div className="flex items-center justify-between">
                 <h3 className={cn("text-lg font-bold", style ? 'text-white' : 'text-gray-900 dark:text-gray-100')}>{method.PaymentMethodName}</h3>
                 {IconComponent && <IconComponent className={cn("h-8 w-8", style ? 'text-white/70' : 'text-gray-400')} />}
@@ -50,6 +93,7 @@ const PaymentMethodsPage = () => {
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStyleModalOpen, setIsStyleModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState(null);
   const { settings, updateSettings } = useSettings();
   const navigate = useNavigate();
@@ -85,17 +129,23 @@ const PaymentMethodsPage = () => {
   const handleSave = () => {
     fetchPaymentMethods();
     setIsAddModalOpen(false);
+    setIsEditModalOpen(false);
   };
 
-  const handleStyleSave = (methodId, newStyle) => {
+  const handleStyleSave = async (methodId, newStyle) => {
     const newStyles = { ...settings.paymentMethodStyles, [methodId]: newStyle };
-    updateSettings({ ...settings, paymentMethodStyles: newStyles });
+    await updateSettings({ ...settings, paymentMethodStyles: newStyles });
     fetchPaymentMethods();
   };
 
   const openStyleModal = (method) => {
     setSelectedMethod(method);
     setIsStyleModalOpen(true);
+  };
+
+  const openEditModal = (method) => {
+    setSelectedMethod(method);
+    setIsEditModalOpen(true);
   };
 
   if (loading) {
@@ -114,7 +164,7 @@ const PaymentMethodsPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {methods.map(method => (
-          <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} />
+          <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
         ))}
       </div>
 
@@ -130,6 +180,14 @@ const PaymentMethodsPage = () => {
           onSave={handleStyleSave}
           method={selectedMethod}
           currentStyle={settings.paymentMethodStyles?.[selectedMethod.PaymentMethodID]}
+        />
+      )}
+      {selectedMethod && (
+        <EditPaymentMethodModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSave}
+          method={selectedMethod}
         />
       )}
     </div>

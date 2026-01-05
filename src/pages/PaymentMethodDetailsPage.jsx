@@ -12,7 +12,7 @@ import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import DatePicker from '../components/ui/DatePicker';
-import { ConfirmModal, Modal } from '../components/ui/Modal';
+import Modal, { ConfirmModal } from '../components/ui/Modal';
 import Tooltip from '../components/ui/Tooltip';
 import Input from '../components/ui/Input';
 

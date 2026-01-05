@@ -5,6 +5,7 @@ const SettingsContext = createContext();
 export const useSettings = () => useContext(SettingsContext);
 
 const initialSettings = {
+  theme: 'system',
   modules: {
     paymentMethods: {
       enabled: false,
@@ -15,8 +16,12 @@ const initialSettings = {
     showTotalQuantity: false,
     showPaymentMethod: false,
     addSummaryPage: false,
+    addReceiptImages: false,
   },
   paymentMethodStyles: {},
+  datastore: {
+    folderPath: '',
+  },
 };
 
 export const SettingsProvider = ({ children }) => {
@@ -36,11 +41,30 @@ export const SettingsProvider = ({ children }) => {
             loadedSettings = JSON.parse(localSettings);
           }
         }
+        
+        // Apply theme immediately
+        const theme = loadedSettings.theme || initialSettings.theme;
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (theme === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else {
+          // Handle 'system' theme
+          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }
+
         // Deep merge to ensure new settings are not lost
         setSettings(prev => ({
+          ...prev,
+          ...loadedSettings,
           modules: { ...prev.modules, ...loadedSettings.modules },
           pdf: { ...prev.pdf, ...loadedSettings.pdf },
           paymentMethodStyles: { ...prev.paymentMethodStyles, ...loadedSettings.paymentMethodStyles },
+          datastore: { ...prev.datastore, ...loadedSettings.datastore },
         }));
       } catch (error) {
         console.error("Failed to load settings:", error);

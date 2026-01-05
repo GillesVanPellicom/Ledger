@@ -2,6 +2,13 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
+const getImageAsBase64 = async (imagePath) => {
+  if (window.electronAPI) {
+    return await window.electronAPI.readFileAsBase64(imagePath);
+  }
+  return null;
+};
+
 export const generateReceiptsPdf = async (receipts, options = {}, onProgress) => {
   const doc = new jsPDF();
   let grandTotal = 0;
@@ -71,11 +78,42 @@ export const generateReceiptsPdf = async (receipts, options = {}, onProgress) =>
       },
     });
 
-    const finalY = doc.lastAutoTable.finalY || yPos;
+    let finalY = doc.lastAutoTable.finalY || yPos;
     doc.setFontSize(12);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
     doc.text(`Total: € ${receipt.totalAmount.toFixed(2)}`, 14, finalY + 15);
+
+    // Images
+    if (options.addReceiptImages && receipt.images && receipt.images.length > 0) {
+      doc.addPage();
+      doc.setFontSize(16);
+      doc.text('Receipt Images', 14, 22);
+      let imageY = 30;
+      for (const image of receipt.images) {
+        try {
+          const base64Image = await getImageAsBase64(image.src.replace('file://', ''));
+          if (base64Image) {
+            const img = new Image();
+            img.src = `data:image/jpeg;base64,${base64Image}`;
+            await new Promise(resolve => img.onload = resolve);
+            
+            const imgWidth = 180;
+            const imgHeight = (img.height * imgWidth) / img.width;
+            
+            if (imageY + imgHeight > 280) {
+              doc.addPage();
+              imageY = 22;
+            }
+            
+            doc.addImage(img.src, 'JPEG', 15, imageY, imgWidth, imgHeight);
+            imageY += imgHeight + 10;
+          }
+        } catch (error) {
+          console.error("Failed to add image to PDF:", error);
+        }
+      }
+    }
 
     if (onProgress) {
       const progress = Math.round(((i + 1) / receipts.length) * 100);

@@ -4,7 +4,7 @@ import Sidenav from './Sidenav';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 
-const MainLayout = () => {
+const MainLayout = ({ openSettingsModal }) => {
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidenav-collapsed');
     return saved === 'true';
@@ -29,7 +29,7 @@ const MainLayout = () => {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100">
-      <Sidenav isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+      <Sidenav isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} openSettingsModal={openSettingsModal} />
       
       <main className="flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300">
         {showBackButton && (
