@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.join(__dirname, '../../fin.db');
+const dbPath = path.join(__dirname, '../../datastore/fin.db');
 
 // --- Data Arrays ---
 const productUnits = [

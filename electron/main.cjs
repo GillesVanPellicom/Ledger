@@ -7,8 +7,8 @@ let mainWindow;
 let db;
 let store;
 
-// Dynamic import for electron-store
-(async () => {
+// Initialize electron-store
+async function initializeStore() {
   try {
     const { default: Store } = await import('electron-store');
     store = new Store();
@@ -16,10 +16,9 @@ let store;
   } catch (error) {
     console.error('Failed to initialize electron-store:', error);
   }
-})();
+}
 
-
-function connectDatabase(filePath) {
+function connectDatabase(dbPath) {
   return new Promise((resolve, reject) => {
     if (db) {
       db.close((err) => {
@@ -28,7 +27,17 @@ function connectDatabase(filePath) {
       });
     }
 
-    db = new sqlite3.Database(filePath, (err) => {
+    if (!dbPath) {
+      console.log('No database path provided. DB is disconnected.');
+      return resolve({ success: true, disconnected: true });
+    }
+
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+
+    db = new sqlite3.Database(dbPath, (err) => {
       if (err) {
         console.error('Database connection failed:', err);
         return reject({ success: false, error: err.message });
@@ -39,7 +48,7 @@ function connectDatabase(filePath) {
            console.error('Failed to set WAL mode:', walErr);
            return reject({ success: false, error: walErr.message });
         }
-        console.log(`Connected to database: ${filePath}`);
+        console.log(`Connected to database: ${dbPath}`);
         resolve({ success: true });
       });
     });
@@ -54,6 +63,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
     },
   });
 
@@ -61,14 +71,11 @@ function createWindow() {
   
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL(startUrl);
-    connectDatabase(path.join(app.getAppPath(), 'fin.db')).catch(console.error);
-    
     mainWindow.webContents.on('did-finish-load', () => {
       setTimeout(() => mainWindow.webContents.openDevTools(), 500);
     });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-    connectDatabase(path.join(app.getAppPath(), 'fin.db')).catch(console.error);
   }
 
   mainWindow.on('closed', () => {
@@ -76,11 +83,19 @@ function createWindow() {
   });
 }
 
-app.on('ready', () => {
+app.on('ready', async () => {
+  await initializeStore();
+
   protocol.handle('local-file', (request) => {
     const url = request.url.slice('local-file://'.length);
     return net.fetch(`file://${path.normalize(url)}`);
   });
+
+  const datastorePath = store.get('datastore.folderPath');
+  if (datastorePath) {
+    await connectDatabase(path.join(datastorePath, 'fin.db'));
+  }
+
   createWindow();
 });
 
@@ -175,7 +190,15 @@ ipcMain.handle('save-settings', async (event, settings) => {
     return { success: false, error: 'Store not initialized' };
   }
   try {
+    const oldDatastorePath = store.get('datastore.folderPath');
     store.set(settings);
+    const newDatastorePath = settings.datastore?.folderPath;
+
+    if (oldDatastorePath !== newDatastorePath) {
+      console.log('Datastore path changed. Reconnecting database...');
+      await connectDatabase(newDatastorePath ? path.join(newDatastorePath, 'fin.db') : null);
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Failed to save settings:', error);
@@ -203,7 +226,7 @@ ipcMain.handle('save-image', async (event, datastorePath, imagePath) => {
   const newFileName = `${nanoid()}${path.extname(imagePath)}`;
   const newPath = path.join(imageDir, newFileName);
   fs.copyFileSync(imagePath, newPath);
-  return newPath;
+  return newFileName;
 });
 
 ipcMain.handle('read-file-base64', async (event, filePath) => {

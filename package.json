@@ -13,7 +13,7 @@
     "electron:build": "vite build && electron-builder",
     "db:migrate": "node utils/db/migrate.js",
     "db:seed": "node utils/db/seed.js",
-    "db:clear": "rm -f fin.db && touch fin.db",
+    "db:clear": "rm -f datastore/fin.db && rm -f datastore/receipt_images && touch datastore/fin.db",
     "db:clear-and-setup": "npm run db:clear && npm run db:migrate && npm run db:seed"
   },
   "dependencies": {

@@ -117,7 +117,7 @@ const ReceiptFormPage = () => {
     const files = Array.from(e.target.files);
     const newImages = files.map(file => ({
       key: nanoid(),
-      ImagePath: file.path,
+      ImagePath: file.path, // This is a full path for new files
       file,
     }));
     setImages(prev => [...prev, ...newImages]);
@@ -125,6 +125,16 @@ const ReceiptFormPage = () => {
 
   const removeImage = (key) => {
     setImages(prev => prev.filter(img => img.key !== key));
+  };
+
+  const getImagePath = (image) => {
+    if (image.file) {
+      return URL.createObjectURL(image.file);
+    }
+    if (window.electronAPI) {
+      return `local-file://${settings.datastore.folderPath}/receipt_images/${image.ImagePath}`;
+    }
+    return image.ImagePath;
   };
 
   const handleSubmit = async () => {
@@ -148,9 +158,10 @@ const ReceiptFormPage = () => {
       if (window.electronAPI && settings.datastore.folderPath) {
         for (const image of images) {
           if (image.file) {
-            const newPath = await window.electronAPI.saveImage(settings.datastore.folderPath, image.file.path);
-            await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, newPath]);
+            const newFileName = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);
+            await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, newFileName]);
           } else {
+            // For existing images, just re-insert the filename
             await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, image.ImagePath]);
           }
         }
@@ -193,7 +204,7 @@ const ReceiptFormPage = () => {
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
             {images.map(image => (
               <div key={image.key} className="relative group">
-                <img src={image.file ? URL.createObjectURL(image.file) : `local-file://${image.ImagePath}`} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
+                <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
                 <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <XMarkIcon className="h-3 w-3" />
                 </button>
