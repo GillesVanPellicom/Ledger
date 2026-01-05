@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TopUpModal from '../components/payment/TopUpModal';
-import { BanknotesIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { BanknotesIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
@@ -12,8 +12,9 @@ import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import DatePicker from '../components/ui/DatePicker';
-import { ConfirmModal } from '../components/ui/Modal';
+import { ConfirmModal, Modal } from '../components/ui/Modal';
 import Tooltip from '../components/ui/Tooltip';
+import Input from '../components/ui/Input';
 
 const PaymentMethodDetailsPage = () => {
   const chartRef = useRef(null);
@@ -24,6 +25,8 @@ const PaymentMethodDetailsPage = () => {
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [methodName, setMethodName] = useState('');
   const [topUpToEdit, setTopUpToEdit] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -48,6 +51,7 @@ const PaymentMethodDetailsPage = () => {
     try {
       const methodData = await db.queryOne('SELECT * FROM PaymentMethods WHERE PaymentMethodID = ?', [id]);
       setMethod(methodData);
+      setMethodName(methodData?.PaymentMethodName || '');
 
       const receiptsData = await db.query(`
         SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note,
@@ -114,6 +118,17 @@ const PaymentMethodDetailsPage = () => {
       setItemToDelete(null);
     } catch (error) {
       console.error("Failed to delete item:", error);
+    }
+  };
+
+  const handleUpdateMethodName = async () => {
+    if (!methodName.trim()) return;
+    try {
+      await db.execute('UPDATE PaymentMethods SET PaymentMethodName = ? WHERE PaymentMethodID = ?', [methodName.trim(), id]);
+      fetchDetails();
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Failed to update payment method name:", error);
     }
   };
 
@@ -234,10 +249,14 @@ const PaymentMethodDetailsPage = () => {
             </p>
           </Card>
         </div>
-        <div className="col-span-1 flex justify-end">
+        <div className="col-span-1 flex justify-end space-x-2">
           <Button onClick={() => openTopUpModal()}>
             <BanknotesIcon className="h-5 w-5 mr-2" />
             Top-Up
+          </Button>
+          <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>
+            <PencilIcon className="h-5 w-5 mr-2" />
+            Edit
           </Button>
         </div>
       </div>
@@ -300,6 +319,21 @@ const PaymentMethodDetailsPage = () => {
         title={`Delete ${itemToDelete?.type}`}
         message={`Are you sure you want to permanently delete this ${itemToDelete?.type}? This action cannot be undone.`}
       />
+
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Payment Method">
+        <div className="space-y-4">
+          <Input
+            label="Method Name"
+            value={methodName}
+            onChange={(e) => setMethodName(e.target.value)}
+            placeholder="Enter new method name"
+          />
+          <div className="flex justify-end space-x-2">
+            <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateMethodName}>Save</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

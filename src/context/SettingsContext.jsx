@@ -11,11 +11,12 @@ const initialSettings = {
     },
   },
   pdf: {
-    showUniqueItems: true,
-    showTotalQuantity: true,
-    showPaymentMethod: true,
-    addSummaryPage: true,
+    showUniqueItems: false,
+    showTotalQuantity: false,
+    showPaymentMethod: false,
+    addSummaryPage: false,
   },
+  paymentMethodStyles: {},
 };
 
 export const SettingsProvider = ({ children }) => {
@@ -39,6 +40,7 @@ export const SettingsProvider = ({ children }) => {
         setSettings(prev => ({
           modules: { ...prev.modules, ...loadedSettings.modules },
           pdf: { ...prev.pdf, ...loadedSettings.pdf },
+          paymentMethodStyles: { ...prev.paymentMethodStyles, ...loadedSettings.paymentMethodStyles },
         }));
       } catch (error) {
         console.error("Failed to load settings:", error);
