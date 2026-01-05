@@ -4,5 +4,6 @@ const isDev = process.env.NODE_ENV === 'development';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   queryDb: (sql, params) => ipcRenderer.invoke('query-db', sql, params),
+  savePdf: () => ipcRenderer.invoke('save-pdf'),
   isDev: isDev,
 });

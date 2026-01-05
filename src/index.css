@@ -6,6 +6,36 @@
   body {
     @apply bg-background-light text-gray-900 dark:bg-background-dark dark:text-gray-100 transition-colors duration-200;
   }
+
+  /* Modern Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-600;
+  }
+
+  /* Checkbox Accent */
+  input[type="checkbox"] {
+    @apply accent-accent h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent;
+  }
+
+  /* Number Input Spinners */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    cursor: pointer;
+  }
 }
 
 /* React Datepicker Overrides */

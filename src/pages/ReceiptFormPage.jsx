@@ -54,7 +54,13 @@ const ReceiptFormPage = () => {
             receiptDate: parseISO(receiptData.ReceiptDate),
             note: receiptData.ReceiptNote || '',
           });
-          const lineItemData = await db.query('SELECT li.*, p.ProductName, p.ProductBrand FROM LineItems li JOIN Products p ON li.ProductID = p.ProductID WHERE li.ReceiptID = ?', [id]);
+          const lineItemData = await db.query(`
+            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
+            FROM LineItems li
+            JOIN Products p ON li.ProductID = p.ProductID
+            JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+            WHERE li.ReceiptID = ?
+          `, [id]);
           setLineItems(lineItemData.map(li => ({ ...li, key: nanoid() })));
         }
       }
@@ -67,12 +73,27 @@ const ReceiptFormPage = () => {
   const handleDateChange = (date) => setFormData(prev => ({ ...prev, receiptDate: date }));
 
   const handleProductSelect = (product) => {
-    setLineItems(prev => [...prev, { key: nanoid(), ProductID: product.ProductID, ProductName: product.ProductName, ProductBrand: product.ProductBrand, LineQuantity: 1, LineUnitPrice: 0.00 }]);
+    setLineItems(prev => [...prev, { 
+      key: nanoid(), 
+      ProductID: product.ProductID, 
+      ProductName: product.ProductName, 
+      ProductBrand: product.ProductBrand,
+      ProductSize: product.ProductSize,
+      ProductUnitType: product.ProductUnitType,
+      LineQuantity: 1, 
+      LineUnitPrice: 0.00 
+    }]);
     setIsProductSelectorOpen(false);
   };
 
   const handleLineItemChange = (key, field, value) => {
-    setLineItems(prev => prev.map(item => item.key === key ? { ...item, [field]: value } : item));
+    let processedValue = value;
+    if (field === 'LineQuantity') {
+      processedValue = Math.max(0, parseFloat(value) || 0);
+    } else if (field === 'LineUnitPrice') {
+      processedValue = Math.max(0, parseFloat(value) || 0);
+    }
+    setLineItems(prev => prev.map(item => item.key === key ? { ...item, [field]: processedValue } : item));
   };
 
   const removeLineItem = (key) => setLineItems(prev => prev.filter(item => item.key !== key));
@@ -121,7 +142,7 @@ const ReceiptFormPage = () => {
       <Card>
         <div className="p-6 space-y-4">
           <div className="flex justify-between items-start">
-            <h2 className="text-lg font-semibold">Line Items</h2>
+            <h2 className="text-lg font-semibold">Items</h2>
             {errors.lineItems && <p className="text-sm text-danger">{errors.lineItems}</p>}
           </div>
           <div className="overflow-x-auto">
@@ -132,9 +153,12 @@ const ReceiptFormPage = () => {
               <tbody>
                 {lineItems.map((item) => (
                   <tr key={item.key} className="border-b dark:border-gray-800">
-                    <td className="p-2"><p className="font-medium">{item.ProductName}</p><p className="text-xs text-gray-500">{item.ProductBrand}</p></td>
-                    <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', parseFloat(e.target.value) || 0)} className="h-9" error={errors[`qty_${item.key}`]} /></td>
-                    <td className="p-2"><Input type="number" value={item.LineUnitPrice} onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', parseFloat(e.target.value) || 0)} className="h-9" error={errors[`price_${item.key}`]} /></td>
+                    <td className="p-2">
+                      <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
+                      <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                    </td>
+                    <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} className="h-9" error={errors[`qty_${item.key}`]} min="0" /></td>
+                    <td className="p-2"><Input type="number" value={item.LineUnitPrice} onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} className="h-9" error={errors[`price_${item.key}`]} min="0" /></td>
                     <td className="p-2 text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</td>
                     <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button></td>
                   </tr>

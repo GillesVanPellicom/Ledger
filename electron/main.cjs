@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const sqlite3 = require('sqlite3');
+const fs = require('fs');
 
 let mainWindow;
 let db;
@@ -84,15 +85,13 @@ app.on('quit', () => {
   }
 });
 
-// IPC Handlers with enhanced logging
+// IPC Handlers
 ipcMain.handle('query-db', (event, sql, params = []) => {
   return new Promise((resolve, reject) => {
     if (!db) {
       console.error('[IPC query-db] Error: Database not connected.');
       return reject(new Error('Database not connected'));
     }
-
-    console.log(`[IPC query-db] Received query:\nSQL: ${sql}\nParams: ${JSON.stringify(params)}`);
 
     const isSelect = sql.trim().toLowerCase().startsWith('select');
     
@@ -102,18 +101,43 @@ ipcMain.handle('query-db', (event, sql, params = []) => {
           console.error('[IPC query-db] Query failed:', err);
           return reject({ error: err.message });
         }
-        console.log(`[IPC query-db] Query successful. Rows returned: ${rows.length}`);
         resolve(rows);
       });
     } else {
-      db.run(sql, params, function(err) { // Use function() to get `this`
+      db.run(sql, params, function(err) {
         if (err) {
           console.error('[IPC query-db] Query failed:', err);
           return reject({ error: err.message });
         }
-        console.log(`[IPC query-db] Query successful. Changes: ${this.changes}`);
         resolve({ changes: this.changes, lastID: this.lastID });
       });
     }
   });
+});
+
+ipcMain.handle('save-pdf', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  
+  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+    title: 'Save Receipt as PDF',
+    defaultPath: 'receipt.pdf',
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+  });
+
+  if (canceled || !filePath) return;
+
+  try {
+    const data = await win.webContents.printToPDF({
+      printBackground: true,
+      landscape: false,
+      pageSize: 'A4',
+      margins: { top: 0, bottom: 0, left: 0, right: 0 }
+    });
+    
+    fs.writeFileSync(filePath, data);
+    console.log('PDF saved successfully:', filePath);
+  } catch (error) {
+    console.error('Failed to save PDF:', error);
+    throw error;
+  }
 });

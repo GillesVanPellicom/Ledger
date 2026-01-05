@@ -6,7 +6,8 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon } from '@heroicons/react/24/solid';
+import { generateReceiptsPdf } from '../utils/pdfGenerator';
 
 const ReceiptViewPage = () => {
   const { id } = useParams();
@@ -31,9 +32,10 @@ const ReceiptViewPage = () => {
           setReceipt(receiptData);
 
           const lineItemData = await db.query(`
-            SELECT li.*, p.ProductName, p.ProductBrand
+            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
             FROM LineItems li
             JOIN Products p ON li.ProductID = p.ProductID
+            JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
             WHERE li.ReceiptID = ?
           `, [id]);
           setLineItems(lineItemData);
@@ -55,6 +57,18 @@ const ReceiptViewPage = () => {
   const totalItems = lineItems.length;
   const totalQuantity = lineItems.reduce((total, item) => total + item.LineQuantity, 0);
 
+  const handleSavePdf = async () => {
+    if (!receipt) return;
+    
+    const fullReceipt = {
+      ...receipt,
+      lineItems: lineItems,
+      totalAmount: totalAmount
+    };
+
+    await generateReceiptsPdf([fullReceipt]);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -74,10 +88,16 @@ const ReceiptViewPage = () => {
           <h1 className="text-2xl font-bold">{receipt.StoreName}</h1>
           <p className="text-gray-500">{format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}</p>
         </div>
-        <Button onClick={() => navigate(`/receipts/edit/${id}`)}>
-          <PencilIcon className="h-5 w-5 mr-2" />
-          Edit
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleSavePdf}>
+            <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+            Save PDF
+          </Button>
+          <Button onClick={() => navigate(`/receipts/edit/${id}`)}>
+            <PencilIcon className="h-5 w-5 mr-2" />
+            Edit
+          </Button>
+        </div>
       </div>
 
       {receipt.ReceiptNote && (
@@ -111,7 +131,7 @@ const ReceiptViewPage = () => {
 
       <Card>
         <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Line Items</h2>
+          <h2 className="text-lg font-semibold mb-4">Items</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-gray-500">
@@ -126,7 +146,7 @@ const ReceiptViewPage = () => {
                 {lineItems.map((item) => (
                   <tr key={item.LineItemID}>
                     <td className="p-2">
-                      <p className="font-medium">{item.ProductName}</p>
+                      <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
                       <p className="text-xs text-gray-500">{item.ProductBrand}</p>
                     </td>
                     <td className="p-2 text-center">{item.LineQuantity}</td>

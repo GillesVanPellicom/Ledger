@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, EyeIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, TrashIcon, DocumentArrowDownIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import { ConfirmModal } from '../components/ui/Modal';
-import Tooltip from '../components/ui/Tooltip';
 import DatePicker from '../components/ui/DatePicker';
+import { generateReceiptsPdf } from '../utils/pdfGenerator';
+import ProgressModal from '../components/ui/ProgressModal';
 
 const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
@@ -19,8 +20,11 @@ const ReceiptsPage = () => {
   const [pageSize, setPageSize] = useState(10);
   const [dateRange, setDateRange] = useState([null, null]);
 
+  const [selectedReceiptIds, setSelectedReceiptIds] = useState([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [receiptToDelete, setReceiptToDelete] = useState(null);
+  
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const navigate = useNavigate();
 
@@ -42,18 +46,10 @@ const ReceiptsPage = () => {
       }
 
       const [startDate, endDate] = dateRange;
-      if (startDate) {
-        whereClauses.push(`r.ReceiptDate >= ?`);
-        params.push(format(startDate, 'yyyy-MM-dd'));
-      }
-      if (endDate) {
-        whereClauses.push(`r.ReceiptDate <= ?`);
-        params.push(format(endDate, 'yyyy-MM-dd'));
-      }
+      if (startDate) { whereClauses.push(`r.ReceiptDate >= ?`); params.push(format(startDate, 'yyyy-MM-dd')); }
+      if (endDate) { whereClauses.push(`r.ReceiptDate <= ?`); params.push(format(endDate, 'yyyy-MM-dd')); }
 
-      if (whereClauses.length > 0) {
-        query += ` WHERE ${whereClauses.join(' AND ')}`;
-      }
+      if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName', 'SELECT r.ReceiptID')})`;
       const countResult = await db.queryOne(countQuery, params);
@@ -80,52 +76,88 @@ const ReceiptsPage = () => {
     setCurrentPage(1);
   }, []);
 
-  const handleDeleteClick = (receipt) => {
-    setReceiptToDelete(receipt);
-    setDeleteModalOpen(true);
+  const handleMassDelete = async () => {
+    try {
+      const placeholders = selectedReceiptIds.map(() => '?').join(',');
+      await db.execute(`DELETE FROM Receipts WHERE ReceiptID IN (${placeholders})`, selectedReceiptIds);
+      fetchReceipts();
+      setSelectedReceiptIds([]);
+      setDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Failed to delete receipts:", error);
+    }
   };
 
-  const handleConfirmDelete = async () => {
-    if (!receiptToDelete) return;
+  const handleMassPdfSave = async () => {
+    setIsGeneratingPdf(true);
+    setPdfProgress(0);
+
     try {
-      await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [receiptToDelete.ReceiptID]);
-      fetchReceipts();
-      setDeleteModalOpen(false);
-      setReceiptToDelete(null);
+      // Fetch full details for all selected receipts
+      const placeholders = selectedReceiptIds.map(() => '?').join(',');
+      const receiptsData = await db.query(`
+        SELECT r.*, s.StoreName 
+        FROM Receipts r 
+        JOIN Stores s ON r.StoreID = s.StoreID 
+        WHERE r.ReceiptID IN (${placeholders})
+        ORDER BY r.ReceiptDate DESC
+      `, selectedReceiptIds);
+
+      // Fetch line items for each receipt
+      // Optimization: Fetch all line items in one query and map them in JS
+      const lineItemsData = await db.query(`
+        SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
+        FROM LineItems li
+        JOIN Products p ON li.ProductID = p.ProductID
+        JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+        WHERE li.ReceiptID IN (${placeholders})
+      `, selectedReceiptIds);
+
+      const fullReceipts = receiptsData.map(receipt => {
+        const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
+        const total = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+        return {
+          ...receipt,
+          lineItems: items,
+          totalAmount: total
+        };
+      });
+
+      await generateReceiptsPdf(fullReceipts, (progress) => {
+        setPdfProgress(progress);
+      });
+
     } catch (error) {
-      console.error("Failed to delete receipt:", error);
+      console.error("Failed to generate PDF:", error);
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
   const columns = [
-    { header: 'Date', width: '20%', render: (row) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
-    { header: 'Store', accessor: 'StoreName', width: '30%' },
+    { header: 'Date', width: '25%', render: (row) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
+    { header: 'Store', accessor: 'StoreName', width: '35%' },
     { header: 'Note', accessor: 'ReceiptNote', width: '40%' },
-    {
-      header: 'Actions',
-      width: '10%',
-      className: 'text-right',
-      render: (row) => (
-        <div className="flex justify-end gap-1">
-          <Tooltip content="View Receipt" align="end">
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); navigate(`/receipts/view/${row.ReceiptID}`); }}>
-              <EyeIcon className="h-4 w-4" />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Delete Receipt" align="end">
-            <Button variant="ghost" size="icon" className="text-danger hover:text-danger-hover" onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }}>
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-          </Tooltip>
-        </div>
-      )
-    }
   ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Receipts</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Receipts</h1>
+          {selectedReceiptIds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button variant="danger" size="sm" onClick={() => setDeleteModalOpen(true)}>
+                <TrashIcon className="h-4 w-4 mr-2" />
+                Delete ({selectedReceiptIds.length})
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleMassPdfSave}>
+                <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
+                Save as PDF
+              </Button>
+            </div>
+          )}
+        </div>
         <Button onClick={() => navigate('/receipts/new')}>
           <PlusIcon className="h-5 w-5 mr-2" />
           New Receipt
@@ -143,15 +175,15 @@ const ReceiptsPage = () => {
         onSearch={handleSearch}
         loading={loading}
         onRowClick={(row) => navigate(`/receipts/view/${row.ReceiptID}`)}
+        selectable={true}
+        onSelectionChange={setSelectedReceiptIds}
+        itemKey="ReceiptID"
       >
         <DatePicker
           selectsRange
           startDate={dateRange[0]}
           endDate={dateRange[1]}
-          onChange={(update) => {
-            setDateRange(update);
-            setCurrentPage(1);
-          }}
+          onChange={(update) => { setDateRange(update); setCurrentPage(1); }}
           isClearable={true}
           placeholderText="Filter by date range"
         />
@@ -160,9 +192,15 @@ const ReceiptsPage = () => {
       <ConfirmModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Receipt"
-        message={`Are you sure you want to delete the receipt from ${receiptToDelete?.StoreName} on ${receiptToDelete ? format(new Date(receiptToDelete.ReceiptDate), 'dd/MM/yyyy') : ''}? This action cannot be undone.`}
+        onConfirm={handleMassDelete}
+        title={`Delete ${selectedReceiptIds.length} Receipts`}
+        message={`Are you sure you want to permanently delete ${selectedReceiptIds.length} selected receipts? This action cannot be undone.`}
+      />
+
+      <ProgressModal
+        isOpen={isGeneratingPdf}
+        progress={pdfProgress}
+        title="Generating PDF Report..."
       />
     </div>
   );
