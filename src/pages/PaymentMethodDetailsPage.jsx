@@ -11,6 +11,7 @@ import Select from '../components/ui/Select';
 import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
+import DatePicker from '../components/ui/DatePicker';
 
 const PaymentMethodDetailsPage = () => {
   const chartRef = useRef(null);
@@ -24,6 +25,7 @@ const PaymentMethodDetailsPage = () => {
   const [topUpToEdit, setTopUpToEdit] = useState(null);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState([null, null]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -44,28 +46,16 @@ const PaymentMethodDetailsPage = () => {
       setMethod(methodData);
 
       const receiptsData = await db.query(`
-        SELECT 
-          r.ReceiptID as id, 
-          r.ReceiptDate as date, 
-          s.StoreName as name,
-          r.ReceiptNote as note,
-          SUM(li.LineQuantity * li.LineUnitPrice) as amount, 
-          'receipt' as type
+        SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note,
+               (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as amount, 
+               'receipt' as type
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
-        JOIN LineItems li ON r.ReceiptID = li.ReceiptID
         WHERE r.PaymentMethodID = ?
-        GROUP BY r.ReceiptID
       `, [id]);
 
       const topupsData = await db.query(`
-        SELECT 
-          TopUpID as id, 
-          TopUpDate as date, 
-          '-' as name,
-          TopUpNote as note, 
-          TopUpAmount as amount, 
-          'topup' as type
+        SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount, 'topup' as type
         FROM TopUps 
         WHERE PaymentMethodID = ?
       `, [id]);
@@ -117,20 +107,23 @@ const PaymentMethodDetailsPage = () => {
   };
   
   const filteredTransactions = useMemo(() => {
-    const lowercasedFilter = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
+    const [startDate, endDate] = dateRange;
+
     return transactions.filter(t => {
       const typeMatch = filter === 'all' || (filter === 'receipt' && t.amount < 0) || (filter === 'topup' && t.amount > 0);
       if (!typeMatch) return false;
 
-      const searchMatch = [
-        t.name,
-        t.note,
-        format(new Date(t.date), 'dd/MM/yyyy')
-      ].some(field => field?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(lowercasedFilter));
-      
-      return searchMatch;
+      const date = new Date(t.date);
+      if (startDate && date < startDate) return false;
+      if (endDate && date > endDate) return false;
+
+      if (keywords.length === 0) return true;
+
+      const searchableText = [t.name, t.note, format(date, 'dd/MM/yyyy')].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return keywords.every(kw => searchableText.includes(kw));
     });
-  }, [transactions, filter, searchTerm]);
+  }, [transactions, filter, searchTerm, dateRange]);
 
   const paginatedTransactions = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -161,10 +154,7 @@ const PaymentMethodDetailsPage = () => {
 
     return {
       backgroundColor: 'transparent',
-      tooltip: { 
-        trigger: 'axis', 
-        valueFormatter: (value) => `€${value}`
-      },
+      tooltip: { trigger: 'axis', valueFormatter: (value) => `€${value}` },
       xAxis: { type: 'time' },
       yAxis: { type: 'value', axisLabel: { formatter: '€{value}' } },
       series: [{ data, type: 'line', showSymbol: false, smooth: true }],
@@ -222,6 +212,14 @@ const PaymentMethodDetailsPage = () => {
         onSearch={setSearchTerm}
         searchable={true}
       >
+        <DatePicker
+          selectsRange
+          startDate={dateRange[0]}
+          endDate={dateRange[1]}
+          onChange={(update) => { setDateRange(update); setCurrentPage(1); }}
+          isClearable={true}
+          placeholderText="Filter by date range"
+        />
         <div className="w-48">
           <Select
             value={filter}

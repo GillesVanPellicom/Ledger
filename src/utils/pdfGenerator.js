@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 export const generateReceiptsPdf = async (receipts, onProgress) => {
@@ -54,18 +54,8 @@ export const generateReceiptsPdf = async (receipts, onProgress) => {
       ];
       tableRows.push(itemData);
     });
-
-    // Use autoTable directly from the imported module if not attached to jsPDF prototype
-    // Or ensure it's attached. In newer versions, it might be attached differently.
-    // However, the standard way is doc.autoTable.
-    // If that fails, we can try importing applyPlugin
-
-    if (typeof doc.autoTable !== 'function') {
-       // Fallback or error handling if autoTable isn't attached
-       console.error("jsPDF-AutoTable plugin not correctly loaded");
-    }
-
-    doc.autoTable({
+    
+    autoTable(doc, {
       startY: 50,
       head: [tableColumn],
       body: tableRows,

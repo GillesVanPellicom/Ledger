@@ -32,7 +32,6 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
       if (searchTerm) {
         const keywords = searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0);
         
-        // Check for size query (number + optional unit)
         const sizeRegex = /^(\d+)\s*([a-z]+)?$/i;
         const sizeMatch = searchTerm.match(sizeRegex);
 
@@ -48,7 +47,6 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
             params.push(`${unit}%`);
           }
           
-          // If it looks like a size, prioritize that match OR standard text match
           query += ` AND (${sizeCondition} OR (
              REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(p.ProductName), 'é', 'e'), 'è', 'e'), 'ë', 'e'), 'á', 'a'), 'à', 'a'), 'ä', 'a') LIKE ? 
              OR 
@@ -72,7 +70,7 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
       }
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType', 'SELECT p.ProductID')})`;
-      const countResult = await db.queryOne(countQuery, params);
+      const countResult = await db.queryOne(countQuery, params.slice(0, params.length - (searchTerm ? (searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0).length * 2) : 0)));
       setTotalCount(countResult ? countResult.count : 0);
       
       query += ` ORDER BY p.ProductName ASC LIMIT ? OFFSET ?`;
@@ -93,11 +91,6 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
     }
   }, [isOpen, fetchProducts]);
 
-  const handleSearch = useCallback((term) => {
-    setSearchTerm(term);
-    setCurrentPage(1);
-  }, []);
-
   const handleProductCreated = () => {
     fetchProducts();
     setIsCreateModalOpen(false);
@@ -110,7 +103,7 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
     {
       header: '',
       width: '10%',
-      className: 'text-right pr-4', // Added padding right to cell
+      className: 'text-right pr-4',
       render: (row) => (
         <Button size="sm" onClick={() => onSelect(row)}>
           Select
@@ -138,7 +131,8 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
             onPageSizeChange={setPageSize}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
-            onSearch={handleSearch}
+            onSearch={setSearchTerm}
+            searchable={true}
             loading={loading}
             searchPlaceholder="Search (e.g. 'brand', 'name', '2l', '200g')..."
             className="border-none shadow-none"

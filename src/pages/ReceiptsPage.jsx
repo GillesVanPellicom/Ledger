@@ -9,7 +9,7 @@ import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
-import ErrorModal from '../components/ui/ErrorModal';
+import { useError } from '../context/ErrorContext';
 
 const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
@@ -27,9 +27,7 @@ const ReceiptsPage = () => {
   const [pdfProgress, setPdfProgress] = useState(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  const [error, setError] = useState(null);
-  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
-
+  const { showError } = useError();
   const navigate = useNavigate();
 
   const fetchReceipts = useCallback(async () => {
@@ -45,8 +43,14 @@ const ReceiptsPage = () => {
       const whereClauses = [];
 
       if (searchTerm) {
-        whereClauses.push(`(s.StoreName LIKE ? OR r.ReceiptNote LIKE ?)`);
-        params.push(`%${searchTerm}%`, `%${searchTerm}%`);
+        const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
+        keywords.forEach(keyword => {
+          whereClauses.push(`(
+            LOWER(s.StoreName) LIKE ? OR 
+            LOWER(r.ReceiptNote) LIKE ?
+          )`);
+          params.push(`%${keyword}%`, `%${keyword}%`);
+        });
       }
 
       const [startDate, endDate] = dateRange;
@@ -56,7 +60,7 @@ const ReceiptsPage = () => {
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName', 'SELECT r.ReceiptID')})`;
-      const countResult = await db.queryOne(countQuery, params);
+      const countResult = await db.queryOne(countQuery, params.slice(0, params.length - (searchTerm ? (searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k).length * 2) : 0)));
       setTotalCount(countResult ? countResult.count : 0);
       
       query += ` ORDER BY r.ReceiptDate DESC, r.ReceiptID DESC LIMIT ? OFFSET ?`;
@@ -65,22 +69,15 @@ const ReceiptsPage = () => {
       const results = await db.query(query, params);
       setReceipts(results);
     } catch (error) {
-      console.error("Failed to fetch receipts:", error);
-      setError(error);
-      setIsErrorModalOpen(true);
+      showError(error);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm, dateRange]);
+  }, [currentPage, pageSize, searchTerm, dateRange, showError]);
 
   useEffect(() => {
     fetchReceipts();
   }, [fetchReceipts]);
-
-  const handleSearch = useCallback((term) => {
-    setSearchTerm(term);
-    setCurrentPage(1);
-  }, []);
 
   const handleMassDelete = async () => {
     try {
@@ -90,18 +87,14 @@ const ReceiptsPage = () => {
       setSelectedReceiptIds([]);
       setDeleteModalOpen(false);
     } catch (error) {
-      console.error("Failed to delete receipts:", error);
-      setError(error);
-      setIsErrorModalOpen(true);
+      showError(error);
     }
   };
 
   const handleMassPdfSave = async () => {
     setIsGeneratingPdf(true);
     setPdfProgress(0);
-
     try {
-      // Fetch full details for all selected receipts
       const placeholders = selectedReceiptIds.map(() => '?').join(',');
       const receiptsData = await db.query(`
         SELECT r.*, s.StoreName 
@@ -111,8 +104,6 @@ const ReceiptsPage = () => {
         ORDER BY r.ReceiptDate DESC
       `, selectedReceiptIds);
 
-      // Fetch line items for each receipt
-      // Optimization: Fetch all line items in one query and map them in JS
       const lineItemsData = await db.query(`
         SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
         FROM LineItems li
@@ -124,21 +115,12 @@ const ReceiptsPage = () => {
       const fullReceipts = receiptsData.map(receipt => {
         const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
         const total = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-        return {
-          ...receipt,
-          lineItems: items,
-          totalAmount: total
-        };
+        return { ...receipt, lineItems: items, totalAmount: total };
       });
 
-      await generateReceiptsPdf(fullReceipts, (progress) => {
-        setPdfProgress(progress);
-      });
-
+      await generateReceiptsPdf(fullReceipts, (progress) => setPdfProgress(progress));
     } catch (error) {
-      console.error("Failed to generate PDF:", error);
-      setError(error);
-      setIsErrorModalOpen(true);
+      showError(error);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -182,7 +164,8 @@ const ReceiptsPage = () => {
         onPageSizeChange={setPageSize}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        onSearch={handleSearch}
+        onSearch={setSearchTerm}
+        searchable={true}
         loading={loading}
         onRowClick={(row) => navigate(`/receipts/view/${row.ReceiptID}`)}
         selectable={true}
@@ -211,12 +194,6 @@ const ReceiptsPage = () => {
         isOpen={isGeneratingPdf}
         progress={pdfProgress}
         title="Generating PDF Report..."
-      />
-
-      <ErrorModal
-        isOpen={isErrorModalOpen}
-        onClose={() => setIsErrorModalOpen(false)}
-        error={error}
       />
     </div>
   );

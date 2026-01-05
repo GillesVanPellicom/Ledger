@@ -48,7 +48,7 @@ const ProductsPage = () => {
       }
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType', 'SELECT p.ProductID')})`;
-      const countResult = await db.queryOne(countQuery, params);
+      const countResult = await db.queryOne(countQuery, params.slice(0, params.length - (searchTerm ? (searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0).length * 2) : 0)));
       setTotalCount(countResult ? countResult.count : 0);
       
       query += ` ORDER BY p.ProductName ASC LIMIT ? OFFSET ?`;
@@ -66,11 +66,6 @@ const ProductsPage = () => {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
-
-  const handleSearch = useCallback((term) => {
-    setSearchTerm(term);
-    setCurrentPage(1);
-  }, []);
 
   const handleAdd = () => {
     setEditingProduct(null);
@@ -124,7 +119,8 @@ const ProductsPage = () => {
         onPageSizeChange={setPageSize}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        onSearch={handleSearch}
+        onSearch={setSearchTerm}
+        searchable={true}
         loading={loading}
       />
 

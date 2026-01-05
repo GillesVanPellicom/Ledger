@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import ProductsPage from './pages/ProductsPage';
@@ -8,8 +8,29 @@ import ReceiptViewPage from './pages/ReceiptViewPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
+import { useError } from './context/ErrorContext';
 
 function App() {
+  const { showError } = useError();
+
+  useEffect(() => {
+    const unhandledRejectionHandler = (event) => {
+      showError(event.reason);
+    };
+
+    const errorHandler = (event) => {
+      showError(event.error);
+    };
+
+    window.addEventListener('unhandledrejection', unhandledRejectionHandler);
+    window.addEventListener('error', errorHandler);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', unhandledRejectionHandler);
+      window.removeEventListener('error', errorHandler);
+    };
+  }, [showError]);
+
   return (
     <Router>
       <Routes>
