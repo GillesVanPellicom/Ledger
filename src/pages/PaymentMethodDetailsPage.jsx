@@ -254,7 +254,7 @@ const PaymentMethodDetailsPage = () => {
             <BanknotesIcon className="h-5 w-5 mr-2" />
             Top-Up
           </Button>
-          <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>
+          <Button onClick={() => setIsEditModalOpen(true)}>
             <PencilIcon className="h-5 w-5 mr-2" />
             Edit
           </Button>
