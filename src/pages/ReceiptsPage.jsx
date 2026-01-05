@@ -9,6 +9,7 @@ import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
+import ErrorModal from '../components/ui/ErrorModal';
 
 const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
@@ -25,6 +26,9 @@ const ReceiptsPage = () => {
   
   const [pdfProgress, setPdfProgress] = useState(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  const [error, setError] = useState(null);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -62,6 +66,8 @@ const ReceiptsPage = () => {
       setReceipts(results);
     } catch (error) {
       console.error("Failed to fetch receipts:", error);
+      setError(error);
+      setIsErrorModalOpen(true);
     } finally {
       setLoading(false);
     }
@@ -85,6 +91,8 @@ const ReceiptsPage = () => {
       setDeleteModalOpen(false);
     } catch (error) {
       console.error("Failed to delete receipts:", error);
+      setError(error);
+      setIsErrorModalOpen(true);
     }
   };
 
@@ -129,6 +137,8 @@ const ReceiptsPage = () => {
 
     } catch (error) {
       console.error("Failed to generate PDF:", error);
+      setError(error);
+      setIsErrorModalOpen(true);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -201,6 +211,12 @@ const ReceiptsPage = () => {
         isOpen={isGeneratingPdf}
         progress={pdfProgress}
         title="Generating PDF Report..."
+      />
+
+      <ErrorModal
+        isOpen={isErrorModalOpen}
+        onClose={() => setIsErrorModalOpen(false)}
+        error={error}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
+import ErrorModal from '../ui/ErrorModal';
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('appearance');
@@ -13,6 +14,9 @@ const SettingsModal = ({ isOpen, onClose }) => {
     return false;
   });
   const [uiScale, setUiScale] = useState(100);
+  const [isDev, setIsDev] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [testError, setTestError] = useState(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -28,6 +32,15 @@ const SettingsModal = ({ isOpen, onClose }) => {
           setUiScale(settings.uiScale);
           document.documentElement.style.fontSize = `${settings.uiScale}%`;
         }
+        
+        // Check if we are in dev mode
+        // Assuming electronAPI exposes some way to check env or we can infer it
+        // For now, let's assume we can check process.env.NODE_ENV if exposed or pass it through preload
+        // If not directly available, we might need to add it to preload.
+        // However, typically in Vite + Electron, import.meta.env.DEV is available in renderer
+        if (import.meta.env.DEV) {
+            setIsDev(true);
+        }
       } else {
         // Fallback to localStorage for web
         const savedTheme = localStorage.getItem('theme');
@@ -42,6 +55,9 @@ const SettingsModal = ({ isOpen, onClose }) => {
           const scale = parseInt(savedScale, 10);
           setUiScale(scale);
           document.documentElement.style.fontSize = `${scale}%`;
+        }
+        if (import.meta.env.DEV) {
+            setIsDev(true);
         }
       }
     };
@@ -86,12 +102,26 @@ const SettingsModal = ({ isOpen, onClose }) => {
     saveSettings({ uiScale: 100 });
   };
 
+  const handleGenerateError = () => {
+    try {
+        throw new Error("This is a test error generated from Settings.");
+    } catch (e) {
+        setTestError(e);
+        setShowErrorModal(true);
+    }
+  };
+
   const tabs = [
     { id: 'appearance', label: 'Appearance' },
     { id: 'modules', label: 'Modules' },
   ];
 
+  if (isDev) {
+      tabs.push({ id: 'development', label: 'Development' });
+  }
+
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="lg">
       <div className="flex h-[400px]">
         {/* Sidebar */}
@@ -192,9 +222,39 @@ const SettingsModal = ({ isOpen, onClose }) => {
               <p>No modules available.</p>
             </div>
           )}
+
+          {activeTab === 'development' && isDev && (
+            <div className="space-y-6">
+                <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Development Tools</h3>
+                    <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 mr-4">
+                                <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                    <BugAntIcon className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900 dark:text-gray-100">Test Error Modal</p>
+                                    <p className="text-sm text-gray-500">Generate a fake error to test the error modal.</p>
+                                </div>
+                            </div>
+                            <Button variant="danger" onClick={handleGenerateError}>
+                                Generate Error
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          )}
         </div>
       </div>
     </Modal>
+    <ErrorModal 
+        isOpen={showErrorModal} 
+        onClose={() => setShowErrorModal(false)} 
+        error={testError} 
+    />
+    </>
   );
 };
 
