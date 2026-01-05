@@ -25,7 +25,7 @@ const ReceiptViewPage = () => {
       setLoading(true);
       try {
         const receiptData = await db.queryOne(`
-          SELECT r.*, s.StoreName, pm.MethodName as PaymentMethodName
+          SELECT r.*, s.StoreName, pm.PaymentMethodName
           FROM Receipts r 
           JOIN Stores s ON r.StoreID = s.StoreID 
           LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID

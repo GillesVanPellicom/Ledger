@@ -7,8 +7,12 @@ import { useSettings } from '../context/SettingsContext';
 import { useNavigate } from 'react-router-dom';
 
 const PaymentMethodCard = ({ method }) => {
+    const navigate = useNavigate();
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex flex-col justify-between">
+        <div 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex flex-col justify-between cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate(`/payment-methods/${method.PaymentMethodID}`)}
+        >
             <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h3>
             </div>

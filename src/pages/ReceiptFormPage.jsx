@@ -51,8 +51,8 @@ const ReceiptFormPage = () => {
       setStores(storeData.map(s => ({ value: s.StoreID, label: s.StoreName })));
 
       if (paymentMethodsEnabled) {
-        const paymentMethodData = await db.query('SELECT PaymentMethodID, MethodName FROM PaymentMethods ORDER BY MethodName');
-        setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.MethodName })));
+        const paymentMethodData = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
+        setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
       }
 
       if (isEditing) {
@@ -117,14 +117,14 @@ const ReceiptFormPage = () => {
     const totalAmount = calculateTotal();
     try {
       if (isEditing) {
-        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, Paid = ?, TotalAmount = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null, formData.paid, totalAmount, id]);
+        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null, id]);
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
         for (const item of lineItems) {
           await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [id, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
         }
         navigate(-1); // Go back to the view page
       } else {
-        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, Paid, TotalAmount) VALUES (?, ?, ?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null, formData.paid, totalAmount]);
+        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID) VALUES (?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId || null]);
         const newId = result.lastID;
         for (const item of lineItems) {
           await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [newId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
@@ -152,12 +152,6 @@ const ReceiptFormPage = () => {
           {paymentMethodsEnabled && (
             <>
               <div className="col-span-1"><Select label="Payment Method" name="paymentMethodId" value={formData.paymentMethodId} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
-              <div className="col-span-1 flex items-end pb-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <input type="checkbox" name="paid" checked={formData.paid} onChange={handleCheckboxChange} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
-                  Mark as Paid
-                </label>
-              </div>
             </>
           )}
         </div>

@@ -7,6 +7,7 @@ import ReceiptFormPage from './pages/ReceiptFormPage';
 import ReceiptViewPage from './pages/ReceiptViewPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
+import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
 
 function App() {
   return (
@@ -17,9 +18,10 @@ function App() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="payment-methods" element={<PaymentMethodsPage />} />
+          <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />
           
           <Route path="receipts/new" element={<ReceiptFormPage />} />
-          <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />
+          <Route path="receipts/edit/:id"- element={<ReceiptFormPage />} />
           <Route path="receipts/view/:id" element={<ReceiptViewPage />} />
         </Route>
       </Routes>
