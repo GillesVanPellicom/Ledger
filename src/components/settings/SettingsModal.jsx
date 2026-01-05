@@ -88,7 +88,10 @@ const SettingsModal = ({ isOpen, onClose }) => {
     const newScale = parseInt(e.target.value, 10);
     setUiScale(newScale);
     document.documentElement.style.fontSize = `${newScale}%`;
-    saveSettings({ uiScale: newScale });
+  };
+
+  const handleUiScaleSave = () => {
+    saveSettings({ uiScale });
   };
 
   const resetUiScale = () => {
@@ -207,6 +210,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
                     step="10"
                     value={uiScale}
                     onChange={handleUiScaleChange}
+                    onMouseUp={handleUiScaleSave}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                   />
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-12 text-right">{uiScale}%</span>

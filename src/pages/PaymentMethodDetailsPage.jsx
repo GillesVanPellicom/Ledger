@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TopUpModal from '../components/payment/TopUpModal';
-import { PlusIcon } from '@heroicons/react/24/solid';
+import { BanknotesIcon } from '@heroicons/react/24/solid';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
@@ -181,13 +181,18 @@ const PaymentMethodDetailsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h1>
-          <p className="text-lg text-gray-500 dark:text-gray-400">Current Balance: €{balance.toFixed(2)}</p>
         </div>
+        <Card className={cn("p-4 text-center", balance < 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20')}>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
+          <p className={cn("text-3xl font-bold", balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
+            €{balance.toFixed(2)}
+          </p>
+        </Card>
         <Button onClick={() => openTopUpModal()}>
-          <PlusIcon className="h-5 w-5 mr-2" />
+          <BanknotesIcon className="h-5 w-5 mr-2" />
           Top-Up
         </Button>
       </div>
@@ -212,14 +217,16 @@ const PaymentMethodDetailsPage = () => {
         onSearch={setSearchTerm}
         searchable={true}
       >
-        <DatePicker
-          selectsRange
-          startDate={dateRange[0]}
-          endDate={dateRange[1]}
-          onChange={(update) => { setDateRange(update); setCurrentPage(1); }}
-          isClearable={true}
-          placeholderText="Filter by date range"
-        />
+        <div className="w-64">
+          <DatePicker
+            selectsRange
+            startDate={dateRange[0]}
+            endDate={dateRange[1]}
+            onChange={(update) => { setDateRange(update); setCurrentPage(1); }}
+            isClearable={true}
+            placeholderText="Filter by date range"
+          />
+        </div>
         <div className="w-48">
           <Select
             value={filter}

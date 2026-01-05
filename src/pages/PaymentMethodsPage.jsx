@@ -5,12 +5,13 @@ import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import { db } from '../utils/db';
 import { useSettings } from '../context/SettingsContext';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '../utils/cn';
 
 const PaymentMethodCard = ({ method }) => {
     const navigate = useNavigate();
     return (
         <div 
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex flex-col justify-between cursor-pointer hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex flex-col justify-between cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
             onClick={() => navigate(`/payment-methods/${method.PaymentMethodID}`)}
         >
             <div>
@@ -18,7 +19,9 @@ const PaymentMethodCard = ({ method }) => {
             </div>
             <div className="mt-4">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Current Balance</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">€ {method.balance.toFixed(2)}</p>
+                <p className={cn("text-2xl font-semibold", method.balance < 0 ? 'text-red-500' : 'text-gray-900 dark:text-gray-100')}>
+                    € {method.balance.toFixed(2)}
+                </p>
             </div>
         </div>
     );

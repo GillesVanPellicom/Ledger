@@ -115,23 +115,10 @@ const AnalyticsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <div className="w-48"><Select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} options={availableYears.map(y => ({ value: y, label: y }))} /></div>
-      </div>
-
-      <Card><div className="p-6"><h2 className="text-lg font-semibold mb-4">Monthly Spending</h2>{loading ? <Spinner /> : <ReactECharts ref={monthlyChartRef} option={monthlyChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} />}</div></Card>
-      <Card><div className="p-4 overflow-x-auto"><table className="w-full text-sm text-center"><thead><tr><th className="p-2 text-left text-gray-500 font-medium w-24"></th>{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (<th key={m} className="p-2 font-medium text-gray-700 dark:text-gray-300 min-w-[60px]">{m}</th>))}</tr></thead><tbody className="divide-y dark:divide-gray-800"><tr><td className="p-2 text-left font-medium text-gray-600 dark:text-gray-400">vs Prev</td>{monthlySpending.map((month, i) => (<td key={i} className="p-2"><TrendIndicator current={month.total} previous={month.prevMonthTotal} /></td>))}</tr><tr><td className="p-2 text-left font-medium text-gray-600 dark:text-gray-400">vs Year</td>{monthlySpending.map((month, i) => (<td key={i} className="p-2"><TrendIndicator current={month.total} previous={month.prevYearMonthTotal} /></td>))}</tr></tbody></table></div></Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card><div className="p-6"><h2 className="text-lg font-semibold mb-4">Spending by Store</h2>{loading ? <Spinner /> : <ReactECharts ref={storeChartRef} option={storeChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} />}</div></Card>
-        <Card><div className="p-6"><h2 className="text-lg font-semibold mb-6">Receipt Averages</h2><div className="space-y-6"><div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg"><CurrencyEuroIcon className="h-6 w-6" /></div><span className="font-medium text-gray-600 dark:text-gray-300">Avg. Receipt Total</span></div><span className="text-xl font-bold">€{averages.avgPerReceipt.toFixed(2)}</span></div><div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div className="flex items-center gap-3"><div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg"><ShoppingBagIcon className="h-6 w-6" /></div><span className="font-medium text-gray-600 dark:text-gray-300">Avg. Items / Receipt</span></div><span className="text-xl font-bold">{averages.avgItemsPerReceipt.toFixed(1)}</span></div><div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg"><CalculatorIcon className="h-6 w-6" /></div><span className="font-medium text-gray-600 dark:text-gray-300">Avg. Price / Item</span></div><span className="text-xl font-bold">€{averages.avgPricePerItem.toFixed(2)}</span></div></div></div></Card>
-        <div className="col-span-1 lg:col-span-2 border-t border-gray-200 dark:border-gray-800 pt-6"><TopProducts /></div>
-      </div>
+      <h1 className="text-2xl font-bold">Analytics</h1>
 
       {paymentMethodsEnabled && (
-        <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
-          <h2 className="text-xl font-bold mb-4">Payment Method Overview</h2>
+        <div className="pt-2">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-1 p-6 flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50">
               <div className="p-4 bg-white/50 dark:bg-white/10 rounded-full mb-4"><BanknotesIcon className="h-10 w-10 text-indigo-600 dark:text-indigo-300" /></div>
@@ -149,8 +136,22 @@ const AnalyticsPage = () => {
               </div>
             </Card>
           </div>
+          <hr className="my-8 border-gray-200 dark:border-gray-800" />
         </div>
       )}
+
+      <div className="flex items-center justify-end">
+        <div className="w-48"><Select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} options={availableYears.map(y => ({ value: y, label: y }))} /></div>
+      </div>
+
+      <Card><div className="p-6"><h2 className="text-lg font-semibold mb-4">Monthly Spending</h2>{loading ? <Spinner /> : <ReactECharts ref={monthlyChartRef} option={monthlyChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} />}</div></Card>
+      <Card><div className="p-4 overflow-x-auto"><table className="w-full text-sm text-center"><thead><tr><th className="p-2 text-left text-gray-500 font-medium w-24"></th>{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (<th key={m} className="p-2 font-medium text-gray-700 dark:text-gray-300 min-w-[60px]">{m}</th>))}</tr></thead><tbody className="divide-y dark:divide-gray-800"><tr><td className="p-2 text-left font-medium text-gray-600 dark:text-gray-400">vs Prev</td>{monthlySpending.map((month, i) => (<td key={i} className="p-2"><TrendIndicator current={month.total} previous={month.prevMonthTotal} /></td>))}</tr><tr><td className="p-2 text-left font-medium text-gray-600 dark:text-gray-400">vs Year</td>{monthlySpending.map((month, i) => (<td key={i} className="p-2"><TrendIndicator current={month.total} previous={month.prevYearMonthTotal} /></td>))}</tr></tbody></table></div></Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card><div className="p-6"><h2 className="text-lg font-semibold mb-4">Spending by Store</h2>{loading ? <Spinner /> : <ReactECharts ref={storeChartRef} option={storeChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} />}</div></Card>
+        <Card><div className="p-6"><h2 className="text-lg font-semibold mb-6">Receipt Averages</h2><div className="space-y-6"><div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg"><CurrencyEuroIcon className="h-6 w-6" /></div><span className="font-medium text-gray-600 dark:text-gray-300">Avg. Receipt Total</span></div><span className="text-xl font-bold">€{averages.avgPerReceipt.toFixed(2)}</span></div><div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div className="flex items-center gap-3"><div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg"><ShoppingBagIcon className="h-6 w-6" /></div><span className="font-medium text-gray-600 dark:text-gray-300">Avg. Items / Receipt</span></div><span className="text-xl font-bold">{averages.avgItemsPerReceipt.toFixed(1)}</span></div><div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg"><CalculatorIcon className="h-6 w-6" /></div><span className="font-medium text-gray-600 dark:text-gray-300">Avg. Price / Item</span></div><span className="text-xl font-bold">€{averages.avgPricePerItem.toFixed(2)}</span></div></div></div></Card>
+        <div className="col-span-1 lg:col-span-2 border-t border-gray-200 dark:border-gray-800 pt-6"><TopProducts /></div>
+      </div>
     </div>
   );
 };
