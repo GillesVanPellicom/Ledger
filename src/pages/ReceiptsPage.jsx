@@ -11,6 +11,7 @@ import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
 import { useError } from '../context/ErrorContext';
 import Tooltip from '../components/ui/Tooltip';
+import { useSettings } from '../context/SettingsContext';
 
 const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
@@ -30,6 +31,7 @@ const ReceiptsPage = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const { showError } = useError();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const fetchReceipts = useCallback(async () => {
@@ -108,9 +110,10 @@ const ReceiptsPage = () => {
     try {
       const placeholders = selectedReceiptIds.map(() => '?').join(',');
       const receiptsData = await db.query(`
-        SELECT r.*, s.StoreName 
+        SELECT r.*, s.StoreName, pm.PaymentMethodName
         FROM Receipts r 
-        JOIN Stores s ON r.StoreID = s.StoreID 
+        JOIN Stores s ON r.StoreID = s.StoreID
+        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
         WHERE r.ReceiptID IN (${placeholders})
         ORDER BY r.ReceiptDate DESC
       `, selectedReceiptIds);
@@ -129,7 +132,7 @@ const ReceiptsPage = () => {
         return { ...receipt, lineItems: items, totalAmount: total };
       });
 
-      await generateReceiptsPdf(fullReceipts, (progress) => setPdfProgress(progress));
+      await generateReceiptsPdf(fullReceipts, settings.pdf, (progress) => setPdfProgress(progress));
     } catch (error) {
       showError(error);
     } finally {

@@ -17,7 +17,7 @@ const ReceiptFormPage = () => {
   const navigate = useNavigate();
   const isEditing = !!id;
   const { settings } = useSettings();
-  const paymentMethodsEnabled = settings.paymentMethods?.enabled;
+  const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
   const [stores, setStores] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);

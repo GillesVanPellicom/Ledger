@@ -24,7 +24,7 @@ const Sidenav = ({ isCollapsed, toggleSidebar }) => {
     { path: '/analytics', label: 'Analytics', icon: ChartBarIcon, activePaths: ['/analytics'] },
   ];
 
-  if (settings.paymentMethods?.enabled) {
+  if (settings.modules.paymentMethods?.enabled) {
     navItems.push({ path: '/payment-methods', label: 'Payment Methods', icon: CreditCardIcon, activePaths: ['/payment-methods'] });
   }
 

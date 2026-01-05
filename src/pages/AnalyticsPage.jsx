@@ -22,7 +22,7 @@ const AnalyticsPage = () => {
   const [loading, setLoading] = useState(true);
 
   const { settings } = useSettings();
-  const paymentMethodsEnabled = settings.paymentMethods?.enabled;
+  const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';

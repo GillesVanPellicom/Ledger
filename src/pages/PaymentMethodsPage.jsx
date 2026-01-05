@@ -66,12 +66,12 @@ const PaymentMethodsPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!settings.paymentMethods?.enabled) {
+    if (!settings.modules.paymentMethods?.enabled) {
       navigate('/');
     } else {
       fetchPaymentMethods();
     }
-  }, [settings.paymentMethods, fetchPaymentMethods, navigate]);
+  }, [settings.modules.paymentMethods, fetchPaymentMethods, navigate]);
 
   const handleSave = () => {
     fetchPaymentMethods();

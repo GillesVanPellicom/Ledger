@@ -4,31 +4,44 @@ const SettingsContext = createContext();
 
 export const useSettings = () => useContext(SettingsContext);
 
-export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState({
+const initialSettings = {
+  modules: {
     paymentMethods: {
       enabled: false,
     },
-  });
+  },
+  pdf: {
+    showUniqueItems: true,
+    showTotalQuantity: true,
+    showPaymentMethod: true,
+    addSummaryPage: true,
+  },
+};
+
+export const SettingsProvider = ({ children }) => {
+  const [settings, setSettings] = useState(initialSettings);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadSettings = async () => {
       setLoading(true);
       try {
+        let loadedSettings = {};
         if (window.electronAPI) {
-          const savedSettings = await window.electronAPI.getSettings();
-          if (savedSettings.modules) {
-            setSettings(prev => ({ ...prev, ...savedSettings.modules }));
-          }
+          loadedSettings = await window.electronAPI.getSettings();
         } else {
-          const localSettings = localStorage.getItem('modules');
+          const localSettings = localStorage.getItem('app-settings');
           if (localSettings) {
-            setSettings(prev => ({ ...prev, ...JSON.parse(localSettings) }));
+            loadedSettings = JSON.parse(localSettings);
           }
         }
+        // Deep merge to ensure new settings are not lost
+        setSettings(prev => ({
+          modules: { ...prev.modules, ...loadedSettings.modules },
+          pdf: { ...prev.pdf, ...loadedSettings.pdf },
+        }));
       } catch (error) {
-        console.error("Failed to load module settings:", error);
+        console.error("Failed to load settings:", error);
       } finally {
         setLoading(false);
       }
@@ -36,26 +49,25 @@ export const SettingsProvider = ({ children }) => {
     loadSettings();
   }, []);
 
-  const updateModuleSettings = async (module, newSettings) => {
-    const newModuleState = { ...settings, [module]: newSettings };
-    setSettings(newModuleState);
+  const updateSettings = async (newSettings) => {
+    const updatedSettings = { ...settings, ...newSettings };
+    setSettings(updatedSettings);
     
     try {
       if (window.electronAPI) {
-        const currentSettings = await window.electronAPI.getSettings();
-        await window.electronAPI.saveSettings({ ...currentSettings, modules: newModuleState });
+        await window.electronAPI.saveSettings(updatedSettings);
       } else {
-        localStorage.setItem('modules', JSON.stringify(newModuleState));
+        localStorage.setItem('app-settings', JSON.stringify(updatedSettings));
       }
     } catch (error) {
-      console.error("Failed to save module settings:", error);
+      console.error("Failed to save settings:", error);
     }
   };
 
   const value = {
     settings,
     loading,
-    updateModuleSettings,
+    updateSettings,
   };
 
   return (

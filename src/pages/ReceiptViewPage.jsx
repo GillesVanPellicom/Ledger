@@ -9,6 +9,7 @@ import Gallery from '../components/ui/Gallery';
 import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon } from '@heroicons/react/24/solid';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import { useSettings } from '../context/SettingsContext';
+import { useError } from '../context/ErrorContext';
 
 const ReceiptViewPage = () => {
   const { id } = useParams();
@@ -18,7 +19,8 @@ const ReceiptViewPage = () => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const { settings } = useSettings();
-  const paymentMethodsEnabled = settings.paymentMethods?.enabled;
+  const { showError } = useError();
+  const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
   useEffect(() => {
     const fetchReceiptData = async () => {
@@ -48,14 +50,14 @@ const ReceiptViewPage = () => {
           setImages(imageData.map(img => ({ src: img.ImagePath })));
         }
       } catch (error) {
-        console.error("Failed to load receipt data:", error);
+        showError(error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchReceiptData();
-  }, [id]);
+  }, [id, showError]);
 
   const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
   const totalItems = lineItems.length;
@@ -70,7 +72,7 @@ const ReceiptViewPage = () => {
       totalAmount: totalAmount
     };
 
-    await generateReceiptsPdf([fullReceipt]);
+    await generateReceiptsPdf([fullReceipt], settings.pdf);
   };
 
   if (loading) {
