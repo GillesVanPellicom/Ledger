@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TopUpModal from '../components/payment/TopUpModal';
-import { BanknotesIcon } from '@heroicons/react/24/solid';
+import { BanknotesIcon, TrashIcon } from '@heroicons/react/24/solid';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
@@ -12,6 +12,8 @@ import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import DatePicker from '../components/ui/DatePicker';
+import { ConfirmModal } from '../components/ui/Modal';
+import Tooltip from '../components/ui/Tooltip';
 
 const PaymentMethodDetailsPage = () => {
   const chartRef = useRef(null);
@@ -23,6 +25,8 @@ const PaymentMethodDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [topUpToEdit, setTopUpToEdit] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState([null, null]);
@@ -90,6 +94,27 @@ const PaymentMethodDetailsPage = () => {
   const openTopUpModal = (topup = null) => {
     setTopUpToEdit(topup);
     setIsTopUpModalOpen(true);
+  };
+
+  const openDeleteModal = (item) => {
+    setItemToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    try {
+      if (itemToDelete.type === 'receipt') {
+        await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [itemToDelete.id]);
+      } else if (itemToDelete.type === 'topup') {
+        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [itemToDelete.id]);
+      }
+      fetchDetails();
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete item:", error);
+    }
   };
 
   const handleRowClick = (row) => {
@@ -174,6 +199,22 @@ const PaymentMethodDetailsPage = () => {
         </span>
       )
     },
+    {
+      header: '',
+      render: (row) => (
+        <div className="flex justify-end">
+          <Tooltip content={`Delete ${row.type}`} align="end">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e) => { e.stopPropagation(); openDeleteModal(row); }}
+            >
+              <TrashIcon className="h-4 w-4 text-danger" />
+            </Button>
+          </Tooltip>
+        </div>
+      )
+    }
   ];
 
   if (loading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
@@ -181,20 +222,24 @@ const PaymentMethodDetailsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="grid grid-cols-3 gap-4 items-start">
+        <div className="col-span-1">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h1>
         </div>
-        <Card className={cn("p-4 text-center", balance < 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20')}>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
-          <p className={cn("text-3xl font-bold", balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
-            €{balance.toFixed(2)}
-          </p>
-        </Card>
-        <Button onClick={() => openTopUpModal()}>
-          <BanknotesIcon className="h-5 w-5 mr-2" />
-          Top-Up
-        </Button>
+        <div className="col-span-1">
+          <Card className={cn("p-4 text-center", balance < 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20')}>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
+            <p className={cn("text-3xl font-bold", balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
+              €{balance.toFixed(2)}
+            </p>
+          </Card>
+        </div>
+        <div className="col-span-1 flex justify-end">
+          <Button onClick={() => openTopUpModal()}>
+            <BanknotesIcon className="h-5 w-5 mr-2" />
+            Top-Up
+          </Button>
+        </div>
       </div>
       
       <Card>
@@ -246,6 +291,14 @@ const PaymentMethodDetailsPage = () => {
         onSave={handleTopUpSave}
         topUpToEdit={topUpToEdit}
         paymentMethodId={id}
+      />
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title={`Delete ${itemToDelete?.type}`}
+        message={`Are you sure you want to permanently delete this ${itemToDelete?.type}? This action cannot be undone.`}
       />
     </div>
   );

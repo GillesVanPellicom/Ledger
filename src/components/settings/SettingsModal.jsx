@@ -87,10 +87,10 @@ const SettingsModal = ({ isOpen, onClose }) => {
   const handleUiScaleChange = (e) => {
     const newScale = parseInt(e.target.value, 10);
     setUiScale(newScale);
-    document.documentElement.style.fontSize = `${newScale}%`;
   };
 
   const handleUiScaleSave = () => {
+    document.documentElement.style.fontSize = `${uiScale}%`;
     saveSettings({ uiScale });
   };
 

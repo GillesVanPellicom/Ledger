@@ -10,6 +10,7 @@ import DatePicker from '../components/ui/DatePicker';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
 import { useError } from '../context/ErrorContext';
+import Tooltip from '../components/ui/Tooltip';
 
 const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
@@ -23,6 +24,7 @@ const ReceiptsPage = () => {
 
   const [selectedReceiptIds, setSelectedReceiptIds] = useState([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [receiptToDelete, setReceiptToDelete] = useState(null);
   
   const [pdfProgress, setPdfProgress] = useState(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -79,16 +81,25 @@ const ReceiptsPage = () => {
     fetchReceipts();
   }, [fetchReceipts]);
 
-  const handleMassDelete = async () => {
+  const handleDelete = async () => {
+    const idsToDelete = receiptToDelete ? [receiptToDelete] : selectedReceiptIds;
+    if (idsToDelete.length === 0) return;
+
     try {
-      const placeholders = selectedReceiptIds.map(() => '?').join(',');
-      await db.execute(`DELETE FROM Receipts WHERE ReceiptID IN (${placeholders})`, selectedReceiptIds);
+      const placeholders = idsToDelete.map(() => '?').join(',');
+      await db.execute(`DELETE FROM Receipts WHERE ReceiptID IN (${placeholders})`, idsToDelete);
       fetchReceipts();
       setSelectedReceiptIds([]);
       setDeleteModalOpen(false);
+      setReceiptToDelete(null);
     } catch (error) {
       showError(error);
     }
+  };
+
+  const openDeleteModal = (id = null) => {
+    setReceiptToDelete(id);
+    setDeleteModalOpen(true);
   };
 
   const handleMassPdfSave = async () => {
@@ -129,7 +140,25 @@ const ReceiptsPage = () => {
   const columns = [
     { header: 'Date', width: '25%', render: (row) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
     { header: 'Store', accessor: 'StoreName', width: '35%' },
-    { header: 'Note', accessor: 'ReceiptNote', width: '40%' },
+    { header: 'Note', accessor: 'ReceiptNote', width: '30%' },
+    {
+      header: '',
+      width: '10%',
+      className: 'text-right',
+      render: (row) => (
+        <div className="flex justify-end">
+          <Tooltip content="Delete Receipt" align="end">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e) => { e.stopPropagation(); openDeleteModal(row.ReceiptID); }}
+            >
+              <TrashIcon className="h-4 w-4 text-danger" />
+            </Button>
+          </Tooltip>
+        </div>
+      )
+    }
   ];
 
   return (
@@ -139,7 +168,7 @@ const ReceiptsPage = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Receipts</h1>
           {selectedReceiptIds.length > 0 && (
             <div className="flex items-center gap-2">
-              <Button variant="danger" size="sm" onClick={() => setDeleteModalOpen(true)}>
+              <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
                 <TrashIcon className="h-4 w-4 mr-2" />
                 Delete ({selectedReceiptIds.length})
               </Button>
@@ -184,10 +213,10 @@ const ReceiptsPage = () => {
 
       <ConfirmModal
         isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleMassDelete}
-        title={`Delete ${selectedReceiptIds.length} Receipts`}
-        message={`Are you sure you want to permanently delete ${selectedReceiptIds.length} selected receipts? This action cannot be undone.`}
+        onClose={() => { setDeleteModalOpen(false); setReceiptToDelete(null); }}
+        onConfirm={handleDelete}
+        title={`Delete ${receiptToDelete ? 'Receipt' : `${selectedReceiptIds.length} Receipts`}`}
+        message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this receipt' : `${selectedReceiptIds.length} selected receipts`}? This action cannot be undone.`}
       />
 
       <ProgressModal
