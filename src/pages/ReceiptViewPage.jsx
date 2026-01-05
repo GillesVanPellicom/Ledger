@@ -162,7 +162,6 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
 
       <Card>
         <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Items</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-gray-500">
@@ -199,7 +198,6 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
       {images.length > 0 && (
         <Card>
           <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Images</h2>
             <Gallery images={images} />
           </div>
         </Card>

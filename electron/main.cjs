@@ -78,8 +78,8 @@ function createWindow() {
 
 app.on('ready', () => {
   protocol.handle('local-file', (request) => {
-    const filePath = request.url.slice('local-file://'.length);
-    return net.fetch(path.normalize(filePath));
+    const url = request.url.slice('local-file://'.length);
+    return net.fetch(`file://${path.normalize(url)}`);
   });
   createWindow();
 });
