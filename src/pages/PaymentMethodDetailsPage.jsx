@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../utils/db';
 import Button from '../components/ui/Button';
@@ -11,9 +11,9 @@ import Select from '../components/ui/Select';
 import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
-import Input from '../components/ui/Input';
 
 const PaymentMethodDetailsPage = () => {
+  const chartRef = useRef(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const [method, setMethod] = useState(null);
@@ -29,6 +29,13 @@ const PaymentMethodDetailsPage = () => {
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
+
+  useEffect(() => {
+    const chartInstance = chartRef.current?.getEchartsInstance();
+    return () => {
+      chartInstance?.dispose();
+    };
+  }, []);
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
@@ -173,7 +180,7 @@ const PaymentMethodDetailsPage = () => {
       header: 'Amount',
       render: (row) => (
         <span className={cn(row.amount > 0 ? 'text-green-600' : 'text-red-600')}>
-          {row.amount > 0 ? '+' : ''} €{row.amount.toFixed(2)}
+          {row.amount > 0 ? '+' : ''} €{Math.abs(row.amount).toFixed(2)}
         </span>
       )
     },
@@ -198,30 +205,9 @@ const PaymentMethodDetailsPage = () => {
       <Card>
         <div className="p-6">
           <h2 className="text-lg font-semibold mb-4">Balance Over Time</h2>
-          <ReactECharts option={balanceChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} lazyUpdate={true} />
+          <ReactECharts ref={chartRef} option={balanceChartOption} theme={theme} style={{ height: '300px' }} notMerge={true} />
         </div>
       </Card>
-
-      <div className="flex justify-between items-center">
-        <div className="w-64">
-          <Input 
-            placeholder="Search transactions..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="w-48">
-          <Select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            options={[
-              { value: 'all', label: 'All Transactions' },
-              { value: 'receipt', label: 'Receipts' },
-              { value: 'topup', label: 'Top-Ups' },
-            ]}
-          />
-        </div>
-      </div>
 
       <DataTable
         data={paginatedTransactions}
@@ -233,7 +219,21 @@ const PaymentMethodDetailsPage = () => {
         onPageChange={setCurrentPage}
         pageSize={pageSize}
         onPageSizeChange={setPageSize}
-      />
+        onSearch={setSearchTerm}
+        searchable={true}
+      >
+        <div className="w-48">
+          <Select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            options={[
+              { value: 'all', label: 'All Transactions' },
+              { value: 'receipt', label: 'Receipts' },
+              { value: 'topup', label: 'Top-Ups' },
+            ]}
+          />
+        </div>
+      </DataTable>
 
       <TopUpModal
         isOpen={isTopUpModalOpen}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format, getWeeksInMonth, setWeek, setMonth, setYear } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from 'date-fns';
 import { db } from '../../utils/db';
 import Card from '../ui/Card';
 import Select from '../ui/Select';
@@ -9,6 +9,7 @@ import Spinner from '../ui/Spinner';
 import { DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 const TopProducts = () => {
+  const chartRef = useRef(null);
   const [availableYears, setAvailableYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState('all');
@@ -22,6 +23,13 @@ const TopProducts = () => {
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
+
+  useEffect(() => {
+    const chartInstance = chartRef.current?.getEchartsInstance();
+    return () => {
+      chartInstance?.dispose();
+    };
+  }, []);
 
   // Fetch available years
   useEffect(() => {
@@ -43,27 +51,22 @@ const TopProducts = () => {
     let start, end;
     
     if (selectedYear === 'all') {
-      // Special case for all years - we'll handle this in the query logic
       return ['all', 'all'];
     }
 
     const year = parseInt(selectedYear);
 
     if (selectedMonth === 'all') {
-      // All months in selected year
       start = startOfYear(new Date(year, 0, 1));
       end = endOfYear(new Date(year, 0, 1));
     } else {
       const month = parseInt(selectedMonth);
       if (selectedWeek === 'all') {
-        // All weeks in selected month
         start = startOfMonth(new Date(year, month, 1));
         end = endOfMonth(new Date(year, month, 1));
       } else {
-        // Specific week in selected month
         start = new Date(year, month, 1 + (parseInt(selectedWeek) - 1) * 7);
         end = new Date(year, month, 1 + (parseInt(selectedWeek)) * 7 - 1);
-        // Clamp to month boundaries
         const monthEnd = endOfMonth(new Date(year, month, 1));
         if (end > monthEnd) end = monthEnd;
       }
@@ -209,7 +212,7 @@ const TopProducts = () => {
         ) : (
           <>
             <div className="h-80">
-              <ReactECharts option={chartOption} theme={theme} style={{ height: '100%', width: '100%' }} notMerge={true} lazyUpdate={true} />
+              <ReactECharts ref={chartRef} option={chartOption} theme={theme} style={{ height: '100%', width: '100%' }} notMerge={true} />
             </div>
             
             <div className="mt-8">

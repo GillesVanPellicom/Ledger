@@ -182,6 +182,7 @@ async function seed() {
         };
 
         const methodRoles = { 'KBC': 'affluent', 'Knab': 'going_up', 'Paypal': 'keeping_above_water', 'Argenta': 'debter' };
+        const topUpNotes = ['Monthly salary', 'Bonus', 'Gift', 'Project payment', 'Stock dividend', null];
 
         for (const pm of methods) {
             const roleName = methodRoles[pm.PaymentMethodName];
@@ -194,7 +195,8 @@ async function seed() {
             for (let i = 0; i < numTopUps; i++) {
                 const topUpAmount = getRandomInt(AVG_SPENT_PER_RECEIPT * 0.5, AVG_SPENT_PER_RECEIPT * role.topUpMultiplier);
                 const topUpDate = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
-                await runQuery(db, 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate) VALUES (?, ?, ?)', [pm.PaymentMethodID, topUpAmount, topUpDate]);
+                const topUpNote = Math.random() > 0.5 ? getRandomElement(topUpNotes) : null;
+                await runQuery(db, 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)', [pm.PaymentMethodID, topUpAmount, topUpDate, topUpNote]);
             }
         }
     });
