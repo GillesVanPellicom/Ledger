@@ -5,6 +5,19 @@ const fs = require('fs');
 
 let mainWindow;
 let db;
+let store;
+
+// Dynamic import for electron-store
+(async () => {
+  try {
+    const { default: Store } = await import('electron-store');
+    store = new Store();
+    console.log('electron-store initialized successfully.');
+  } catch (error) {
+    console.error('Failed to initialize electron-store:', error);
+  }
+})();
+
 
 function connectDatabase(filePath) {
   return new Promise((resolve, reject) => {
@@ -139,5 +152,27 @@ ipcMain.handle('save-pdf', async (event) => {
   } catch (error) {
     console.error('Failed to save PDF:', error);
     throw error;
+  }
+});
+
+ipcMain.handle('get-settings', async () => {
+  if (!store) {
+    console.error('Store not initialized');
+    return {};
+  }
+  return store.store;
+});
+
+ipcMain.handle('save-settings', async (event, settings) => {
+  if (!store) {
+    console.error('Store not initialized');
+    return { success: false, error: 'Store not initialized' };
+  }
+  try {
+    store.set(settings);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save settings:', error);
+    return { success: false, error: error.message };
   }
 });

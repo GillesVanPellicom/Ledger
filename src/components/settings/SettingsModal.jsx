@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon } from '@heroicons/react/24/solid';
+import { MoonIcon, SunIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
+import Button from '../ui/Button';
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('appearance');
@@ -11,17 +12,78 @@ const SettingsModal = ({ isOpen, onClose }) => {
     }
     return false;
   });
+  const [uiScale, setUiScale] = useState(100);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (window.electronAPI) {
+        const settings = await window.electronAPI.getSettings();
+        if (settings.theme) {
+          const isDark = settings.theme === 'dark';
+          setIsDarkMode(isDark);
+          if (isDark) document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+        }
+        if (settings.uiScale) {
+          setUiScale(settings.uiScale);
+          document.documentElement.style.fontSize = `${settings.uiScale}%`;
+        }
+      } else {
+        // Fallback to localStorage for web
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+          const isDark = savedTheme === 'dark';
+          setIsDarkMode(isDark);
+          if (isDark) document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+        }
+        const savedScale = localStorage.getItem('uiScale');
+        if (savedScale) {
+          const scale = parseInt(savedScale, 10);
+          setUiScale(scale);
+          document.documentElement.style.fontSize = `${scale}%`;
+        }
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const saveSettings = async (newSettings) => {
+    if (window.electronAPI) {
+      const currentSettings = await window.electronAPI.getSettings();
+      await window.electronAPI.saveSettings({ ...currentSettings, ...newSettings });
+    } else {
+      // Fallback to localStorage
+      if (newSettings.theme) localStorage.setItem('theme', newSettings.theme);
+      if (newSettings.uiScale) localStorage.setItem('uiScale', newSettings.uiScale);
+    }
+  };
 
   const toggleTheme = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
+    const theme = newMode ? 'dark' : 'light';
+    
     if (newMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
     }
+    
+    saveSettings({ theme });
+  };
+
+  const handleUiScaleChange = (e) => {
+    const newScale = parseInt(e.target.value, 10);
+    setUiScale(newScale);
+    document.documentElement.style.fontSize = `${newScale}%`;
+    saveSettings({ uiScale: newScale });
+  };
+
+  const resetUiScale = () => {
+    setUiScale(100);
+    document.documentElement.style.fontSize = '100%';
+    saveSettings({ uiScale: 100 });
   };
 
   const tabs = [
@@ -101,18 +163,26 @@ const SettingsModal = ({ isOpen, onClose }) => {
               </div>
 
               <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Font Size</h3>
-                <div className="flex gap-2">
-                  {['Small', 'Medium', 'Large'].map((size) => (
-                    <button
-                      key={size}
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      {size}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">UI Scale</h3>
+                  <Button variant="ghost" size="sm" onClick={resetUiScale} className="h-8 px-2 text-xs">
+                    <ArrowPathIcon className="h-3 w-3 mr-1" />
+                    Reset
+                  </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Font size adjustment coming soon.</p>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="50"
+                    max="200"
+                    step="10"
+                    value={uiScale}
+                    onChange={handleUiScaleChange}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                  />
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-12 text-right">{uiScale}%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Adjust the size of the user interface.</p>
               </div>
             </div>
           )}

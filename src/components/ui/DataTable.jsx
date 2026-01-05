@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Input from './Input';
@@ -30,6 +30,7 @@ const DataTable = ({
   const [pageInput, setPageInput] = useState(currentPage);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const totalPages = Math.ceil(totalCount / pageSize);
+  const inputRef = useRef(null);
 
   // Sync internal state with prop changes, ONLY if selectable is true and selectedIds is provided
   useEffect(() => {
@@ -65,12 +66,32 @@ const DataTable = ({
     return () => clearTimeout(timer);
   }, [searchTerm, onSearch]);
 
-  const handlePageJump = (e) => {
-    e.preventDefault();
+  const handlePageJump = () => {
     let newPage = parseInt(pageInput, 10);
     if (!isNaN(newPage)) {
       newPage = Math.max(1, Math.min(newPage, totalPages || 1));
       onPageChange(newPage);
+    } else if (pageInput === '') {
+        // Do nothing if empty, let user type
+    } else {
+        // Reset to current page if invalid
+        setPageInput(currentPage);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePageJump();
+      inputRef.current?.blur();
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    // Allow only numbers
+    if (value === '' || /^[0-9]+$/.test(value)) {
+      setPageInput(value);
     }
   };
 
@@ -98,39 +119,13 @@ const DataTable = ({
 
   const isAllSelected = useMemo(() => data.length > 0 && data.every(row => selectedRows.has(row[itemKey])), [data, selectedRows, itemKey]);
 
-  const PaginationControls = () => {
-    const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-    const endItem = Math.min(currentPage * pageSize, totalCount);
-
-    return (
-      <div className="flex items-center justify-between px-2 py-2">
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          Showing {startItem}-{endItem} of {totalCount}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1 || loading} className="h-8 w-8 p-0">
-            <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
-          <form onSubmit={handlePageJump} className="flex items-center gap-2 text-sm">
-            <Input
-              type="number"
-              value={pageInput}
-              onChange={(e) => setPageInput(e.target.value)}
-              onBlur={handlePageJump}
-              className="h-8 w-14 text-center p-0"
-              min="1"
-              max={totalPages}
-            />
-            <span className="text-gray-500 text-lg leading-none mb-1">/</span>
-            <span className="text-gray-500">{totalPages || 1}</span>
-          </form>
-          <Button variant="secondary" size="sm" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages || loading} className="h-8 w-8 p-0">
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
+  const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endItem = Math.min(currentPage * pageSize, totalCount);
+  
+  // Calculate dynamic width based on total pages digits + extra space for " / "
+  const totalPagesDigits = (totalPages || 1).toString().length;
+  // Base width (approx 2rem) + digits width (approx 0.6rem per digit) + padding
+  const inputWidth = `${1.5 + (totalPagesDigits * 0.6)}rem`;
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -175,8 +170,11 @@ const DataTable = ({
             <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
               <tr>
                 {selectable && (
-                  <th className="px-4 py-3">
-                    <Input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="h-4 w-4" />
+                  <th className="px-4 py-3 align-middle">
+                    <div className="checkbox-wrapper-13 flex items-center justify-center">
+                      <input id="select-all-checkbox" type="checkbox" checked={isAllSelected} onChange={handleSelectAll} />
+                      <label htmlFor="select-all-checkbox"></label>
+                    </div>
                   </th>
                 )}
                 {columns.map((col, idx) => (
@@ -193,8 +191,17 @@ const DataTable = ({
                 data.map((row, rowIdx) => (
                   <tr key={row[itemKey] || rowIdx} onClick={() => onRowClick && onRowClick(row)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50")}>
                     {selectable && (
-                      <td className="px-4 py-3">
-                        <Input type="checkbox" checked={selectedRows.has(row[itemKey])} onChange={(e) => handleSelectRow(e, row[itemKey])} onClick={(e) => e.stopPropagation()} className="h-4 w-4" />
+                      <td className="px-4 py-3 align-middle">
+                        <div className="checkbox-wrapper-13 flex items-center justify-center">
+                          <input 
+                            id={`checkbox-${row[itemKey]}`} 
+                            type="checkbox" 
+                            checked={selectedRows.has(row[itemKey])} 
+                            onChange={(e) => handleSelectRow(e, row[itemKey])} 
+                            onClick={(e) => e.stopPropagation()} 
+                          />
+                          <label htmlFor={`checkbox-${row[itemKey]}`}></label>
+                        </div>
                       </td>
                     )}
                     {columns.map((col, colIdx) => (
@@ -215,7 +222,48 @@ const DataTable = ({
         )}
       </div>
 
-      <PaginationControls />
+      <div className="flex items-center justify-between px-2 py-2">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          Showing {startItem}-{endItem} of {totalCount}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex items-center shadow-sm rounded-lg">
+            <button
+              type="button"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
+              className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-l-lg text-sm px-3 focus:outline-none h-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14"/></svg>
+            </button>
+            <div className="relative h-10 flex items-center bg-white dark:bg-gray-900 border-y border-gray-300 dark:border-gray-700">
+              <input
+                ref={inputRef}
+                type="text"
+                value={pageInput}
+                onChange={handleInputChange}
+                onBlur={handlePageJump}
+                onKeyDown={handleKeyDown}
+                className="border-0 h-full text-center bg-transparent py-2.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 px-1"
+                style={{ width: inputWidth, minWidth: '2rem' }}
+                placeholder="1"
+                required
+              />
+              <div className="flex items-center pr-3 pointer-events-none whitespace-nowrap">
+                <span className="text-gray-500 text-sm">/ {totalPages || 1}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
+              className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7 7V5"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

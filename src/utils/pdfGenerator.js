@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 export const generateReceiptsPdf = async (receipts, onProgress) => {
@@ -55,7 +55,7 @@ export const generateReceiptsPdf = async (receipts, onProgress) => {
       tableRows.push(itemData);
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 50,
       head: [tableColumn],
       body: tableRows,
