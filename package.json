@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development ELECTRON_START_URL=http://localhost:5173 electron .\"",
-    "electron:build": "vite build && electron-builder",
+    "electron:build:win": "vite build && electron-builder --win",
+    "electron:build:mac": "vite build && electron-builder --mac",
     "db:migrate": "node utils/db/migrate.js",
     "db:seed": "node utils/db/seed.js",
     "db:clear": "rm -f datastore/fin.db && rm -f datastore/receipt_images && touch datastore/fin.db",
@@ -68,7 +69,12 @@
       "minimumSystemVersion": "12.0"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "createDesktopShortcut": true
+      }
     }
   }
 }

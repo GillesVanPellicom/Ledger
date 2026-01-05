@@ -32,9 +32,16 @@ function connectDatabase(dbPath) {
       return resolve({ success: true, disconnected: true });
     }
 
+    const dbExists = fs.existsSync(dbPath);
     const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+    } catch (error) {
+      console.error('Failed to create database directory:', error);
+      return reject({ success: false, error: `Failed to create directory: ${error.message}` });
     }
 
     db = new sqlite3.Database(dbPath, (err) => {
@@ -48,8 +55,23 @@ function connectDatabase(dbPath) {
            console.error('Failed to set WAL mode:', walErr);
            return reject({ success: false, error: walErr.message });
         }
-        console.log(`Connected to database: ${dbPath}`);
-        resolve({ success: true });
+
+        if (!dbExists) {
+          console.log('Database not found. Initializing from schema...');
+          const schemaPath = path.join(__dirname, 'db_schema.sql');
+          const schema = fs.readFileSync(schemaPath, 'utf8');
+          db.exec(schema, (execErr) => {
+            if (execErr) {
+              console.error('Failed to initialize database:', execErr);
+              return reject({ success: false, error: execErr.message });
+            }
+            console.log('Database initialized successfully.');
+            resolve({ success: true });
+          });
+        } else {
+          console.log(`Connected to database: ${dbPath}`);
+          resolve({ success: true });
+        }
       });
     });
   });
@@ -93,7 +115,14 @@ app.on('ready', async () => {
 
   const datastorePath = store.get('datastore.folderPath');
   if (datastorePath) {
-    await connectDatabase(path.join(datastorePath, 'fin.db'));
+    try {
+      await connectDatabase(path.join(datastorePath, 'fin.db'));
+    } catch (error) {
+      dialog.showErrorBox(
+        'Database Connection Error',
+        `Failed to connect to the database at "${datastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`
+      );
+    }
   }
 
   createWindow();
@@ -189,21 +218,29 @@ ipcMain.handle('save-settings', async (event, settings) => {
     console.error('Store not initialized');
     return { success: false, error: 'Store not initialized' };
   }
-  try {
-    const oldDatastorePath = store.get('datastore.folderPath');
-    store.set(settings);
-    const newDatastorePath = settings.datastore?.folderPath;
+  
+  const oldDatastorePath = store.get('datastore.folderPath');
+  const newDatastorePath = settings.datastore?.folderPath;
 
-    if (oldDatastorePath !== newDatastorePath) {
+  if (oldDatastorePath !== newDatastorePath) {
+    try {
       console.log('Datastore path changed. Reconnecting database...');
       await connectDatabase(newDatastorePath ? path.join(newDatastorePath, 'fin.db') : null);
+      store.set(settings);
+    } catch (error) {
+      dialog.showErrorBox(
+        'Database Connection Error',
+        `Failed to connect to the database at "${newDatastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`
+      );
+      // Revert to old settings
+      mainWindow.webContents.send('settings-reverted', store.store);
+      return { success: false, error: error.message };
     }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to save settings:', error);
-    return { success: false, error: error.message };
+  } else {
+    store.set(settings);
   }
+
+  return { success: true };
 });
 
 ipcMain.handle('select-directory', async () => {

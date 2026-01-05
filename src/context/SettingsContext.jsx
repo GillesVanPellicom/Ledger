@@ -73,6 +73,20 @@ export const SettingsProvider = ({ children }) => {
       }
     };
     loadSettings();
+
+    const handleSettingsReverted = (event, revertedSettings) => {
+      setSettings(revertedSettings);
+    };
+
+    if (window.electronAPI) {
+      window.electronAPI.onSettingsReverted(handleSettingsReverted);
+    }
+
+    return () => {
+      if (window.electronAPI) {
+        window.electronAPI.removeSettingsRevertedListener(handleSettingsReverted);
+      }
+    };
   }, []);
 
   const updateSettings = async (newSettings) => {
@@ -81,7 +95,11 @@ export const SettingsProvider = ({ children }) => {
     
     try {
       if (window.electronAPI) {
-        await window.electronAPI.saveSettings(updatedSettings);
+        const result = await window.electronAPI.saveSettings(updatedSettings);
+        if (!result.success) {
+          // The main process will send a 'settings-reverted' event
+          console.error('Failed to save settings, waiting for revert.');
+        }
       } else {
         localStorage.setItem('app-settings', JSON.stringify(updatedSettings));
       }

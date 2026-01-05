@@ -7,7 +7,8 @@ import {
   ChevronLeftIcon, 
   ChevronRightIcon,
   Cog6ToothIcon,
-  CreditCardIcon
+  CreditCardIcon,
+  BuildingStorefrontIcon
 } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import { useSettings } from '../../context/SettingsContext';
@@ -19,6 +20,7 @@ const Sidenav = ({ isCollapsed, toggleSidebar, openSettingsModal }) => {
   const navItems = [
     { path: '/', label: 'Receipts', icon: ReceiptPercentIcon, activePaths: ['/', '/receipts'] },
     { path: '/products', label: 'Products', icon: CubeIcon, activePaths: ['/products'] },
+    { path: '/stores', label: 'Stores', icon: BuildingStorefrontIcon, activePaths: ['/stores'] },
     { path: '/analytics', label: 'Analytics', icon: ChartBarIcon, activePaths: ['/analytics'] },
   ];
 

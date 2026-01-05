@@ -8,6 +8,7 @@ import ReceiptViewPage from './pages/ReceiptViewPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
+import StoresPage from './pages/StoresPage';
 import { useError } from './context/ErrorContext';
 import { useSettings } from './context/SettingsContext';
 import WelcomeScreen from './components/layout/WelcomeScreen';
@@ -57,6 +58,7 @@ function App() {
           <Route path="/" element={<MainLayout openSettingsModal={openSettingsModal} />}>
             <Route index element={<ReceiptsPage />} />
             <Route path="products" element={<ProductsPage />} />
+            <Route path="stores" element={<StoresPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="payment-methods" element={<PaymentMethodsPage />} />
             <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />

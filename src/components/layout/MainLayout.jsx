@@ -18,7 +18,7 @@ const MainLayout = ({ openSettingsModal }) => {
     console.log('Navigated to:', location.pathname);
   }, [location.pathname]);
   
-  const rootRoutes = ['/', '/products', '/analytics'];
+  const rootRoutes = ['/', '/products', '/analytics', '/stores'];
   const showBackButton = !rootRoutes.includes(location.pathname);
 
   useEffect(() => {
