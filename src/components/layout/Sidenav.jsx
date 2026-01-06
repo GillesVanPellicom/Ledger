@@ -8,7 +8,8 @@ import {
   ChevronRightIcon,
   Cog6ToothIcon,
   CreditCardIcon,
-  BuildingStorefrontIcon
+  BuildingStorefrontIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import { useSettings } from '../../context/SettingsContext';
@@ -26,6 +27,10 @@ const Sidenav = ({ isCollapsed, toggleSidebar, openSettingsModal }) => {
 
   if (settings.modules.paymentMethods?.enabled) {
     navItems.push({ path: '/payment-methods', label: 'Payment Methods', icon: CreditCardIcon, activePaths: ['/payment-methods'] });
+  }
+
+  if (settings.modules.debt?.enabled) {
+    navItems.push({ path: '/debt', label: 'Debt', icon: UserGroupIcon, activePaths: ['/debt'] });
   }
 
   return (

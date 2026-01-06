@@ -61,8 +61,16 @@ CREATE TABLE People
   PersonName TEXT NOT NULL UNIQUE
 );
 
-INSERT INTO People (PersonID, PersonName)
-VALUES (1, 'me');
+--------------------------------------------------
+-- Debt Entities (for Debt Tracking module)
+--------------------------------------------------
+
+CREATE TABLE DebtEntities
+(
+  EntityID       INTEGER PRIMARY KEY,
+  EntityName     TEXT    NOT NULL UNIQUE,
+  EntityIsActive INTEGER NOT NULL DEFAULT 1
+);
 
 --------------------------------------------------
 -- Payment methods (cash, bank, card, etc.)
@@ -78,7 +86,7 @@ CREATE TABLE PaymentMethods
 INSERT INTO PaymentMethods
   (PaymentMethodID, PaymentMethodName, PaymentMethodFunds)
 VALUES
-  (1, 'cash', 0);
+  (1, 'Cash', 0);
 
 --------------------------------------------------
 -- Receipts
@@ -121,7 +129,7 @@ CREATE TABLE LineItems
   LineItemID    INTEGER PRIMARY KEY,
   ReceiptID     INTEGER NOT NULL,
   ProductID     INTEGER NOT NULL,
-  PersonID      INTEGER NOT NULL DEFAULT 1,
+  PersonID      INTEGER DEFAULT NULL,
   LineQuantity  INTEGER NOT NULL,
   LineUnitPrice NUMERIC NOT NULL,
   FOREIGN KEY (ReceiptID)
@@ -188,3 +196,6 @@ CREATE INDEX idx_topups_paymentmethod
 
 CREATE INDEX idx_topups_date
   ON TopUps (TopUpDate);
+
+CREATE INDEX idx_debtentities_active
+  ON DebtEntities (EntityIsActive);

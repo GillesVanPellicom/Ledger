@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon, UserGroupIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -146,10 +146,15 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   
   tabs.sort((a, b) => a.label.localeCompare(b.label));
 
-  const Toggle = ({ label, description, isEnabled, onToggle }) => (
+  const Toggle = ({ label, description, isEnabled, onToggle, icon: Icon, iconColorClass }) => (
     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
+          {Icon && (
+            <div className={cn("p-2 rounded-lg", iconColorClass)}>
+              <Icon className="h-6 w-6" />
+            </div>
+          )}
           <div>
             <p className="font-medium text-gray-900 dark:text-gray-100">{label}</p>
             <p className="text-sm text-gray-500">{description}</p>
@@ -210,7 +215,31 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                 </div>
               </div>
             )}
-            {activeTab === 'modules' && (<div className="space-y-6"><div><SectionTitle title="Modules" tooltip="Enable or disable optional features to customize your experience." /><div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"><CreditCardIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Payment Methods</p><p className="text-sm text-gray-500">Track spending across different payment methods.</p></div></div><button onClick={() => handleModuleToggle('paymentMethods')} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", settings.modules.paymentMethods.enabled ? "bg-accent" : "bg-gray-200 dark:bg-gray-700")}><span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", settings.modules.paymentMethods.enabled ? "translate-x-5" : "translate-x-0")} /></button></div></div></div></div>)}
+            {activeTab === 'modules' && (
+              <div className="space-y-6">
+                <div>
+                  <SectionTitle title="Modules" tooltip="Enable or disable optional features to customize your experience." />
+                  <div className="space-y-4">
+                    <Toggle 
+                      label="Payment Methods" 
+                      description="Track spending across different payment methods." 
+                      isEnabled={settings.modules.paymentMethods.enabled} 
+                      onToggle={() => handleModuleToggle('paymentMethods')}
+                      icon={CreditCardIcon}
+                      iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                    />
+                    <Toggle 
+                      label="Debt Tracking" 
+                      description="Track debts and shared expenses." 
+                      isEnabled={settings.modules.debt?.enabled} 
+                      onToggle={() => handleModuleToggle('debt')}
+                      icon={UserGroupIcon}
+                      iconColorClass="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             {activeTab === 'pdf' && (<div className="space-y-4"><div><SectionTitle title="Receipt Export" tooltip="Customize the content included when exporting individual receipts to PDF." /><Toggle label="Show Unique Item Count" description="Include the number of unique items on the receipt." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Toggle label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Toggle label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Toggle label="Add Receipt Images" description="Include receipt images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple receipts at once." /><Toggle label="Add Summary Page" description="Append a 'super-receipt' summarizing all receipts in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
             {activeTab === 'data' && (
               <div className="space-y-6">

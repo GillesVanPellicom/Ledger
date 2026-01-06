@@ -18,6 +18,9 @@ async function initializeStore() {
           paymentMethods: {
             enabled: false,
           },
+          debt: {
+            enabled: false,
+          },
         },
         pdf: {
           showUniqueItems: false,

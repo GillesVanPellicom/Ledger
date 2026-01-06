@@ -10,6 +10,9 @@ const initialSettings = {
     paymentMethods: {
       enabled: false,
     },
+    debt: {
+      enabled: false,
+    },
   },
   pdf: {
     showUniqueItems: false,
