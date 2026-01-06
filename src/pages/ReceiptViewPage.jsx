@@ -213,8 +213,6 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
     return <div className="text-center">Receipt not found.</div>;
   }
 
-  const allDebtorNames = receiptSplits.map(s => s.DebtorName).join(', ');
-
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between">
@@ -323,7 +321,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                     {isPaid ? (
                       <Button 
                         size="sm"
-                        className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
+                        className="w-full text-green-800 bg-green-200 border-green-300 hover:bg-green-300 border dark:text-green-100 dark:bg-green-800/50 dark:border-green-700 dark:hover:bg-green-800"
                         onClick={() => confirmUnsettleDebt(payment.PaymentID, payment.TopUpID)}
                       >
                         Unsettle
@@ -331,7 +329,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                     ) : (
                       <Button 
                         size="sm"
-                        className="w-full text-green-800 bg-green-200 border-green-300 hover:bg-green-300 border dark:text-green-100 dark:bg-green-800/50 dark:border-green-700 dark:hover:bg-green-800"
+                        className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
                         onClick={() => handleSettleDebt(debtor)}
                       >
                         Settle
@@ -356,7 +354,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                   <th className="p-2 w-24 text-center">Qty</th>
                   <th className="p-2 w-32 text-right">Unit Price (€)</th>
                   <th className="p-2 w-32 text-right">Total (€)</th>
-                  {debtEnabled && (splitType === 'line_item' || splitType === 'total_split') && <th className="p-2 w-40 text-right">Debtor(s)</th>}
+                  {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-800">
@@ -376,11 +374,6 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                       {debtEnabled && splitType === 'line_item' && (
                         <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
                           {item.DebtorName || '-'}
-                        </td>
-                      )}
-                      {debtEnabled && splitType === 'total_split' && (
-                        <td className="p-2 text-right text-gray-600 dark:text-gray-400 truncate">
-                          {allDebtorNames || '-'}
                         </td>
                       )}
                     </tr>

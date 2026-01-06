@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import { PlusIcon, PencilIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
@@ -7,6 +8,7 @@ import DebtModal from '../components/debt/DebtModal';
 import Tooltip from '../components/ui/Tooltip';
 
 const DebtPage = () => {
+  const navigate = useNavigate();
   const [debtors, setDebtors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -58,6 +60,10 @@ const DebtPage = () => {
   const handleEdit = (debtor) => {
     setEditingDebtor(debtor);
     setIsModalOpen(true);
+  };
+
+  const handleRowClick = (debtor) => {
+    navigate(`/debt/${debtor.DebtorID}`);
   };
 
   const columns = [
@@ -113,6 +119,8 @@ const DebtPage = () => {
         onSearch={setSearchTerm}
         searchable={true}
         loading={loading}
+        onRowClick={handleRowClick}
+        itemKey="DebtorID"
       />
 
       <DebtModal
