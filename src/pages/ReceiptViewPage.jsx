@@ -295,7 +295,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        className="w-full text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30"
+                        className="w-full text-red-600 border-red-300 dark:border-red-700 border hover:bg-red-100 dark:hover:bg-red-900/30"
                         onClick={() => handleUnsettleDebt(payment.PaymentID, payment.TopUpID)}
                       >
                         Unsettle
@@ -303,8 +303,8 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                     ) : (
                       <Button 
                         size="sm" 
-                        variant="secondary"
-                        className="w-full"
+                        variant="ghost"
+                        className="w-full text-green-600 border-green-300 dark:border-green-700 border hover:bg-green-100 dark:hover:bg-green-900/30"
                         onClick={() => handleSettleDebt(debtor)}
                       >
                         Settle

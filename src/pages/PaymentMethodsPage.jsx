@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, PaintBrushIcon, PencilIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PaintBrushIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 import Button from '../components/ui/Button';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import PaymentMethodStyleModal from '../components/payment/PaymentMethodStyleModal';
@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import * as SolidIcons from '@heroicons/react/24/solid';
 import Input from '../components/ui/Input';
-import Modal from '../components/ui/Modal';
+import Modal, { ConfirmModal } from '../components/ui/Modal';
+import Tooltip from '../components/ui/Tooltip';
 
 const EditPaymentMethodModal = ({ isOpen, onClose, onSave, method }) => {
   const [name, setName] = useState(method?.PaymentMethodName || '');
@@ -44,7 +45,7 @@ const EditPaymentMethodModal = ({ isOpen, onClose, onSave, method }) => {
   );
 };
 
-const PaymentMethodCard = ({ method, onStyleClick, onEditClick }) => {
+const PaymentMethodCard = ({ method, onStyleClick, onEditClick, onDeleteClick }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
@@ -59,19 +60,16 @@ const PaymentMethodCard = ({ method, onStyleClick, onEditClick }) => {
             style={style ? { backgroundColor: style.color } : {}}
             onClick={() => navigate(`/payment-methods/${method.PaymentMethodID}`)}
         >
-            <div className="absolute bottom-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                  onClick={(e) => { e.stopPropagation(); onStyleClick(method); }}
-                  className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
-              >
-                  <PaintBrushIcon className="h-4 w-4 text-white/80" />
-              </button>
-              <button 
-                  onClick={(e) => { e.stopPropagation(); onEditClick(method); }}
-                  className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
-              >
-                  <PencilIcon className="h-4 w-4 text-white/80" />
-              </button>
+            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Tooltip content="Edit Style">
+                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><PaintBrushIcon className="h-4 w-4 text-white/80" /></button>
+              </Tooltip>
+              <Tooltip content="Edit Name">
+                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><PencilIcon className="h-4 w-4 text-white/80" /></button>
+              </Tooltip>
+              <Tooltip content="Delete">
+                <button onClick={(e) => { e.stopPropagation(); onDeleteClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><TrashIcon className="h-4 w-4 text-white/80" /></button>
+              </Tooltip>
             </div>
             <div className="flex items-center justify-between">
                 <h3 className={cn("text-lg font-bold", style ? 'text-white' : 'text-gray-900 dark:text-gray-100')}>{method.PaymentMethodName}</h3>
@@ -94,6 +92,7 @@ const PaymentMethodsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStyleModalOpen, setIsStyleModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState(null);
   const { settings, updateSettings } = useSettings();
   const navigate = useNavigate();
@@ -148,6 +147,24 @@ const PaymentMethodsPage = () => {
     setIsEditModalOpen(true);
   };
 
+  const openDeleteModal = (method) => {
+    setSelectedMethod(method);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedMethod) return;
+    // Cannot delete Cash (ID 1)
+    if (selectedMethod.PaymentMethodID === 1) {
+      // Maybe show an error toast here
+      setIsDeleteModalOpen(false);
+      return;
+    }
+    await db.execute('DELETE FROM PaymentMethods WHERE PaymentMethodID = ?', [selectedMethod.PaymentMethodID]);
+    setIsDeleteModalOpen(false);
+    fetchPaymentMethods();
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -164,7 +181,7 @@ const PaymentMethodsPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {methods.map(method => (
-          <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
+          <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} onDeleteClick={openDeleteModal} />
         ))}
       </div>
 
@@ -188,6 +205,17 @@ const PaymentMethodsPage = () => {
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSave}
           method={selectedMethod}
+        />
+      )}
+      {selectedMethod && (
+        <ConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDelete}
+          title={`Delete ${selectedMethod.PaymentMethodName}`}
+          message={`Are you sure you want to delete this payment method? All associated receipts will be reassigned to 'Cash'. This action cannot be undone.`}
+          confirmText="Delete"
+          variant="danger"
         />
       )}
     </div>
