@@ -266,7 +266,55 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                 </div>
               </div>
             )}
-            {activeTab === 'development' && isDev && <div className="space-y-6">...</div>}
+            {activeTab === 'development' && isDev && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Development Tools</h3>
+                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 mr-4">
+                        <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                          <BugAntIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">Test Error Modal</p>
+                          <p className="text-sm text-gray-500">Generate a fake error to test the error modal.</p>
+                        </div>
+                      </div>
+                      <Button variant="warning" onClick={handleGenerateError}>Generate Error</Button>
+                    </div>
+                  </div>
+                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 mr-4">
+                        <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400">
+                          <TrashIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">Reset Datastore</p>
+                          <p className="text-sm text-gray-500">Remove the datastore folder path from settings.</p>
+                        </div>
+                      </div>
+                      <Button variant="warning" onClick={handleRemoveDatastore}>Reset</Button>
+                    </div>
+                  </div>
+                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 mr-4">
+                        <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                          <TrashIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">Reset All Settings</p>
+                          <p className="text-sm text-gray-500">Clear all settings stored in electron-store.</p>
+                        </div>
+                      </div>
+                      <Button variant="destructive" onClick={handleResetAllSettings}>Reset All</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

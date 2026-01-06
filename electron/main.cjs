@@ -117,6 +117,10 @@ function createWindow() {
     },
   });
 
+  if (process.platform === 'win32') {
+    mainWindow.setMenu(null);
+  }
+
   const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:5173';
   
   if (process.env.NODE_ENV === 'development') {
