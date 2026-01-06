@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 import { db } from '../../utils/db';
 import { cn } from '../../utils/cn';
 
-const DebtModal = ({ isOpen, onClose, onSave, entityToEdit }) => {
+const DebtModal = ({ isOpen, onClose, onSave, debtorToEdit }) => {
   const [name, setName] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -13,16 +13,16 @@ const DebtModal = ({ isOpen, onClose, onSave, entityToEdit }) => {
 
   useEffect(() => {
     if (isOpen) {
-      if (entityToEdit) {
-        setName(entityToEdit.EntityName);
-        setIsActive(entityToEdit.EntityIsActive === 1);
+      if (debtorToEdit) {
+        setName(debtorToEdit.DebtorName);
+        setIsActive(debtorToEdit.DebtorIsActive === 1);
       } else {
         setName('');
         setIsActive(true);
       }
       setError('');
     }
-  }, [isOpen, entityToEdit]);
+  }, [isOpen, debtorToEdit]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,14 +35,14 @@ const DebtModal = ({ isOpen, onClose, onSave, entityToEdit }) => {
     setError('');
 
     try {
-      if (entityToEdit) {
+      if (debtorToEdit) {
         await db.execute(
-          'UPDATE DebtEntities SET EntityName = ?, EntityIsActive = ? WHERE EntityID = ?',
-          [name.trim(), isActive ? 1 : 0, entityToEdit.EntityID]
+          'UPDATE Debtors SET DebtorName = ?, DebtorIsActive = ? WHERE DebtorID = ?',
+          [name.trim(), isActive ? 1 : 0, debtorToEdit.DebtorID]
         );
       } else {
         await db.execute(
-          'INSERT INTO DebtEntities (EntityName, EntityIsActive) VALUES (?, ?)',
+          'INSERT INTO Debtors (DebtorName, DebtorIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
       }
@@ -52,7 +52,7 @@ const DebtModal = ({ isOpen, onClose, onSave, entityToEdit }) => {
       if (err.message && err.message.includes('UNIQUE constraint failed')) {
         setError('This name already exists.');
       } else {
-        setError(err.message || 'Failed to save entity');
+        setError(err.message || 'Failed to save debtor');
       }
     } finally {
       setLoading(false);
@@ -63,7 +63,7 @@ const DebtModal = ({ isOpen, onClose, onSave, entityToEdit }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={entityToEdit ? 'Edit Entity' : 'Add New Entity'}
+      title={debtorToEdit ? 'Edit Debtor' : 'Add New Debtor'}
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <form onSubmit={handleSubmit} className="space-y-4">

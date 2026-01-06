@@ -8,9 +8,10 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
-import { XMarkIcon, PlusIcon, PhotoIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, PlusIcon, PhotoIcon, UserGroupIcon } from '@heroicons/react/24/solid';
 import { nanoid } from 'nanoid';
 import { useSettings } from '../context/SettingsContext';
+import { cn } from '../utils/cn';
 
 const ReceiptFormPage = () => {
   const { id } = useParams();
@@ -18,9 +19,11 @@ const ReceiptFormPage = () => {
   const isEditing = !!id;
   const { settings } = useSettings();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
+  const debtEnabled = settings.modules.debt?.enabled;
 
   const [stores, setStores] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [debtors, setDebtors] = useState([]);
   const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '1' });
   const [lineItems, setLineItems] = useState([]);
   const [images, setImages] = useState([]);
@@ -29,6 +32,13 @@ const ReceiptFormPage = () => {
   const [saving, setSaving] = useState(false);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Debt state
+  const [splitType, setSplitType] = useState('none');
+  const [receiptSplits, setReceiptSplits] = useState([]);
+  const [selectedLineItems, setSelectedLineItems] = useState([]);
+  const [lastSelectedLineItemIndex, setLastSelectedLineItemIndex] = useState(null);
+  const [debtSummary, setDebtSummary] = useState([]);
 
   const validate = () => {
     const newErrors = {};
@@ -56,6 +66,11 @@ const ReceiptFormPage = () => {
         setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
       }
 
+      if (debtEnabled) {
+        const debtorsData = await db.query('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+        setDebtors(debtorsData);
+      }
+
       if (isEditing) {
         const receiptData = await db.queryOne('SELECT * FROM Receipts WHERE ReceiptID = ?', [id]);
         if (receiptData) {
@@ -65,23 +80,70 @@ const ReceiptFormPage = () => {
             note: receiptData.ReceiptNote || '',
             paymentMethodId: receiptData.PaymentMethodID || '1',
           });
+          setSplitType(receiptData.SplitType || 'none');
+
           const lineItemData = await db.query(`
-            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
+            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName
             FROM LineItems li
             JOIN Products p ON li.ProductID = p.ProductID
             JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+            LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
             WHERE li.ReceiptID = ?
           `, [id]);
           setLineItems(lineItemData.map(li => ({ ...li, key: nanoid() })));
 
           const imageData = await db.query('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [id]);
           setImages(imageData.map(img => ({ ...img, key: nanoid() })));
+
+          if (debtEnabled && receiptData.SplitType === 'total_split') {
+            const splitsData = await db.query(`
+              SELECT rs.*, d.DebtorName 
+              FROM ReceiptSplits rs
+              JOIN Debtors d ON rs.DebtorID = d.DebtorID
+              WHERE rs.ReceiptID = ?
+            `, [id]);
+            setReceiptSplits(splitsData.map(s => ({ ...s, key: nanoid() })));
+          }
         }
       }
       setLoading(false);
     };
     fetchData();
-  }, [id, isEditing, paymentMethodsEnabled]);
+  }, [id, isEditing, paymentMethodsEnabled, debtEnabled]);
+
+  useEffect(() => {
+    if (!debtEnabled) return;
+
+    const calculateDebtSummary = () => {
+      const summary = {};
+      const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
+
+      if (splitType === 'total_split' && receiptSplits.length > 0) {
+        const totalParts = receiptSplits.reduce((acc, curr) => acc + parseInt(curr.SplitPart || 0), 0);
+        if (totalParts > 0) {
+          receiptSplits.forEach(split => {
+            const amount = (totalAmount * parseInt(split.SplitPart || 0)) / totalParts;
+            summary[split.DebtorName] = (summary[split.DebtorName] || 0) + amount;
+          });
+        }
+      } else if (splitType === 'line_item') {
+        lineItems.forEach(item => {
+          if (item.DebtorID) {
+            // Find debtor name if not present (e.g. newly added item)
+            const debtorName = item.DebtorName || debtors.find(d => d.DebtorID === parseInt(item.DebtorID))?.DebtorName;
+            if (debtorName) {
+              const amount = item.LineQuantity * item.LineUnitPrice;
+              summary[debtorName] = (summary[debtorName] || 0) + amount;
+            }
+          }
+        });
+      }
+
+      setDebtSummary(Object.entries(summary).map(([name, amount]) => ({ name, amount })));
+    };
+
+    calculateDebtSummary();
+  }, [lineItems, receiptSplits, splitType, debtEnabled, debtors]);
 
   const handleFormChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleDateChange = (date) => setFormData(prev => ({ ...prev, receiptDate: date }));
@@ -95,7 +157,8 @@ const ReceiptFormPage = () => {
       ProductSize: product.ProductSize,
       ProductUnitType: product.ProductUnitType,
       LineQuantity: 1, 
-      LineUnitPrice: 0.00 
+      LineUnitPrice: 0.00,
+      DebtorID: null
     }]);
     setIsProductSelectorOpen(false);
   };
@@ -117,7 +180,7 @@ const ReceiptFormPage = () => {
     const files = Array.from(e.target.files);
     const newImages = files.map(file => ({
       key: nanoid(),
-      ImagePath: file.path, // This is a full path for new files
+      ImagePath: file.path,
       file,
     }));
     setImages(prev => [...prev, ...newImages]);
@@ -137,22 +200,105 @@ const ReceiptFormPage = () => {
     return image.ImagePath;
   };
 
+  // Debt Handlers
+  const handleSplitTypeChange = (newType) => {
+    setSplitType(newType);
+    if (newType !== 'total_split') {
+      setReceiptSplits([]);
+    }
+    if (newType !== 'line_item') {
+      setLineItems(prev => prev.map(item => ({ ...item, DebtorID: null, DebtorName: null })));
+    }
+  };
+
+  const handleAddSplit = (debtorId) => {
+    if (!debtorId) return;
+    const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId));
+    if (debtor) {
+      setReceiptSplits(prev => [...prev, { key: nanoid(), DebtorID: debtor.DebtorID, DebtorName: debtor.DebtorName, SplitPart: 1 }]);
+    }
+  };
+
+  const handleUpdateSplitPart = (key, newPart) => {
+    setReceiptSplits(prev => prev.map(s => s.key === key ? { ...s, SplitPart: parseInt(newPart) || 1 } : s));
+  };
+
+  const handleRemoveSplit = (key) => {
+    setReceiptSplits(prev => prev.filter(s => s.key !== key));
+  };
+
+  const handleLineItemClick = (index, event) => {
+    if (splitType !== 'line_item') return;
+
+    let newSelected = [...selectedLineItems];
+    
+    if (event.shiftKey && lastSelectedLineItemIndex !== null) {
+      const start = Math.min(lastSelectedLineItemIndex, index);
+      const end = Math.max(lastSelectedLineItemIndex, index);
+      for (let i = start; i <= end; i++) {
+        if (!newSelected.includes(i)) newSelected.push(i);
+      }
+    } else if (event.ctrlKey || event.metaKey) {
+      if (newSelected.includes(index)) {
+        newSelected = newSelected.filter(i => i !== index);
+      } else {
+        newSelected.push(index);
+      }
+      setLastSelectedLineItemIndex(index);
+    } else {
+      if (newSelected.includes(index) && newSelected.length === 1) {
+          newSelected = [];
+          setLastSelectedLineItemIndex(null);
+      } else {
+          newSelected = [index];
+          setLastSelectedLineItemIndex(index);
+      }
+    }
+    
+    setSelectedLineItems(newSelected);
+  };
+
+  const handleAssignDebtorToLineItems = (debtorId) => {
+    if (selectedLineItems.length === 0) return;
+    
+    const debtorName = debtorId ? debtors.find(d => d.DebtorID === parseInt(debtorId))?.DebtorName : null;
+    
+    const updatedLineItems = [...lineItems];
+    selectedLineItems.forEach(idx => {
+      updatedLineItems[idx] = { 
+        ...updatedLineItems[idx], 
+        DebtorID: debtorId ? parseInt(debtorId) : null, 
+        DebtorName: debtorName 
+      };
+    });
+    setLineItems(updatedLineItems);
+    setSelectedLineItems([]);
+    setLastSelectedLineItemIndex(null);
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
     try {
       let receiptId = id;
       if (isEditing) {
-        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId, id]);
+        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, SplitType = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId, splitType, id]);
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
         await db.execute('DELETE FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        await db.execute('DELETE FROM ReceiptSplits WHERE ReceiptID = ?', [id]);
       } else {
-        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID) VALUES (?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId]);
+        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType) VALUES (?, ?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId, splitType]);
         receiptId = result.lastID;
       }
 
       for (const item of lineItems) {
-        await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)', [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice]);
+        await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID) VALUES (?, ?, ?, ?, ?)', [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice, item.DebtorID || null]);
+      }
+
+      if (splitType === 'total_split') {
+        for (const split of receiptSplits) {
+          await db.execute('INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
+        }
       }
 
       if (window.electronAPI && settings.datastore.folderPath) {
@@ -161,7 +307,6 @@ const ReceiptFormPage = () => {
             const newFileName = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);
             await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, newFileName]);
           } else {
-            // For existing images, just re-insert the filename
             await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, image.ImagePath]);
           }
         }
@@ -198,6 +343,88 @@ const ReceiptFormPage = () => {
         </div>
       </Card>
 
+      {debtEnabled && (
+        <Card>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserGroupIcon className="h-6 w-6 text-accent" />
+                <h2 className="text-lg font-semibold">Debt Management</h2>
+              </div>
+              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <button onClick={() => handleSplitTypeChange('none')} className={cn("px-3 py-1.5 text-sm font-medium rounded-md transition-colors", splitType === 'none' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>None</button>
+                <button onClick={() => handleSplitTypeChange('total_split')} className={cn("px-3 py-1.5 text-sm font-medium rounded-md transition-colors", splitType === 'total_split' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Split Total</button>
+                <button onClick={() => handleSplitTypeChange('line_item')} className={cn("px-3 py-1.5 text-sm font-medium rounded-md transition-colors", splitType === 'line_item' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Per Item</button>
+              </div>
+            </div>
+
+            {splitType === 'total_split' && (
+              <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <select 
+                    className="flex-1 rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
+                    onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); e.target.value = ""; } }}
+                  >
+                    <option value="">Add Debtor...</option>
+                    {debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => (
+                      <option key={d.DebtorID} value={d.DebtorID}>{d.DebtorName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  {receiptSplits.map(split => (
+                    <div key={split.key} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <span className="font-medium">{split.DebtorName}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Parts:</span>
+                          <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-700 text-sm" />
+                        </div>
+                        <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700">&times;</button>
+                      </div>
+                    </div>
+                  ))}
+                  {receiptSplits.length > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Parts: {receiptSplits.reduce((acc, curr) => acc + parseInt(curr.SplitPart || 0), 0)}</div>}
+                </div>
+              </div>
+            )}
+
+            {splitType === 'line_item' && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
+                <p className="text-sm text-blue-700 dark:text-blue-300">Select items below (Click, Ctrl+Click, Shift+Click) to assign debtors.</p>
+                <div className="flex items-center gap-2">
+                  <select 
+                    className="rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm disabled:opacity-50"
+                    disabled={selectedLineItems.length === 0}
+                    onChange={(e) => handleAssignDebtorToLineItems(e.target.value)}
+                    value=""
+                  >
+                    <option value="">Assign to...</option>
+                    <option value="">(Clear Assignment)</option>
+                    {debtors.map(d => <option key={d.DebtorID} value={d.DebtorID}>{d.DebtorName}</option>)}
+                  </select>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{selectedLineItems.length} selected</span>
+                </div>
+              </div>
+            )}
+
+            {splitType !== 'none' && debtSummary.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estimated Debt</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {debtSummary.map((debtor) => (
+                    <div key={debtor.name} className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 text-sm">
+                      <span className="text-gray-500 block">{debtor.name}</span>
+                      <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
       <Card>
         <div className="p-6">
           <h2 className="text-lg font-semibold mb-4">Images</h2>
@@ -226,13 +453,28 @@ const ReceiptFormPage = () => {
             {errors.lineItems && <p className="text-sm text-danger">{errors.lineItems}</p>}
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm select-none">
               <thead className="text-left text-gray-500">
-                <tr><th className="p-2">Product</th><th className="p-2 w-24">Qty</th><th className="p-2 w-32">Unit Price (€)</th><th className="p-2 w-32 text-right">Total (€)</th><th className="p-2 w-12"></th></tr>
+                <tr>
+                  <th className="p-2">Product</th>
+                  <th className="p-2 w-24">Qty</th>
+                  <th className="p-2 w-32">Unit Price (€)</th>
+                  <th className="p-2 w-32 text-right">Total (€)</th>
+                  {debtEnabled && splitType === 'line_item' && <th className="p-2 w-32 text-right">Debtor</th>}
+                  <th className="p-2 w-12"></th>
+                </tr>
               </thead>
-              <tbody>
-                {lineItems.map((item) => (
-                  <tr key={item.key} className="border-b dark:border-gray-800">
+              <tbody className="divide-y dark:divide-gray-800">
+                {lineItems.map((item, index) => (
+                  <tr 
+                    key={item.key} 
+                    onClick={(e) => handleLineItemClick(index, e)}
+                    className={cn(
+                      "transition-colors border-b dark:border-gray-800",
+                      splitType === 'line_item' ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" : "",
+                      selectedLineItems.includes(index) ? "bg-blue-50 dark:bg-blue-900/30" : ""
+                    )}
+                  >
                     <td className="p-2">
                       <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
                       <p className="text-xs text-gray-500">{item.ProductBrand}</p>
@@ -240,7 +482,12 @@ const ReceiptFormPage = () => {
                     <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} className="h-9" error={errors[`qty_${item.key}`]} min="0" /></td>
                     <td className="p-2"><Input type="number" value={item.LineUnitPrice} onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} className="h-9" error={errors[`price_${item.key}`]} min="0" /></td>
                     <td className="p-2 text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</td>
-                    <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button></td>
+                    {debtEnabled && splitType === 'line_item' && (
+                      <td className="p-2 text-right text-gray-600 dark:text-gray-400">
+                        {item.DebtorName || '-'}
+                      </td>
+                    )}
+                    <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); removeLineItem(item.key); }}><XMarkIcon className="h-4 w-4 text-danger" /></Button></td>
                   </tr>
                 ))}
               </tbody>

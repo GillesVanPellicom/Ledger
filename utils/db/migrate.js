@@ -23,8 +23,8 @@ async function migrate() {
   });
 
   const schema = await task('Reading schema file', () => {
-    const schemaPath = path.join(__dirname, 'db_schema.sql');
-    if (!fs.existsSync(schemaPath)) {x
+    const schemaPath = path.join(__dirname, '../../electron/db_schema.sql');
+    if (!fs.existsSync(schemaPath)) {
       throw new Error(`Schema file not found at ${schemaPath}`);
     }
     return fs.readFileSync(schemaPath, 'utf-8');

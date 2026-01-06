@@ -74,6 +74,8 @@ const productNames = [
 
 const sizes = [1, 2, 5, 10, 20, 50, 100, 150, 200, 250, 300, 330, 400, 500, 750, 1000, 1500, 2000];
 
+const debtors = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'];
+
 // --- Helper Functions ---
 function runQuery(db, sql, params = []) {
     return new Promise((resolve, reject) => db.run(sql, params, function (err) {
@@ -117,6 +119,11 @@ async function seed() {
         for (const store of stores) await runQuery(db, insert, [store]);
     });
 
+    await task('Seeding Debtors', async () => {
+        const insert = 'INSERT OR IGNORE INTO Debtors (DebtorName) VALUES (?)';
+        for (const debtor of debtors) await runQuery(db, insert, [debtor]);
+    });
+
     await task('Seeding Payment Methods', async () => {
         const paymentMethods = ['KBC', 'Knab', 'Paypal', 'Argenta'];
         for (const name of paymentMethods) {
@@ -134,31 +141,79 @@ async function seed() {
         }
     });
 
-    await task('Generating Receipts with Line Items', async () => {
+    await task('Generating Receipts with Line Items and Debt', async () => {
         const storeIds = (await getQuery(db, 'SELECT StoreID FROM Stores')).map(s => s.StoreID);
         const productIds = (await getQuery(db, 'SELECT ProductID FROM Products')).map(p => p.ProductID);
         const paymentMethodIds = (await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods')).map(pm => pm.PaymentMethodID);
+        const debtorIds = (await getQuery(db, 'SELECT DebtorID FROM Debtors')).map(d => d.DebtorID);
 
         if (productIds.length === 0) throw new Error('No products found. Cannot create receipts.');
 
-        const insertReceipt = 'INSERT INTO Receipts (ReceiptDate, StoreID, ReceiptNote, PaymentMethodID) VALUES (?, ?, ?, ?)';
-        const insertLineItem = 'INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice) VALUES (?, ?, ?, ?)';
+        const insertReceipt = 'INSERT INTO Receipts (ReceiptDate, StoreID, ReceiptNote, PaymentMethodID, SplitType) VALUES (?, ?, ?, ?, ?)';
+        const insertLineItem = 'INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID) VALUES (?, ?, ?, ?, ?)';
+        const insertReceiptSplit = 'INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)';
+
+        // Fetch payment methods to map names to IDs
+        const paymentMethods = await getQuery(db, 'SELECT * FROM PaymentMethods');
+        const pmMap = {};
+        paymentMethods.forEach(pm => pmMap[pm.PaymentMethodID] = pm.PaymentMethodName);
+        
+        const pmRoles = { 'KBC': 'affluent', 'Knab': 'going_up', 'Paypal': 'keeping_above_water', 'Argenta': 'debter' };
+        const roles = {
+            affluent: { debtProb: 0.8 },
+            going_up: { debtProb: 0.5 },
+            keeping_above_water: { debtProb: 0.2 },
+            debter: { debtProb: 0.05 },
+        };
 
         await new Promise((resolve, reject) => {
-            db.serialize(() => {
+             db.serialize(() => {
                 db.run('BEGIN TRANSACTION');
                 for (let i = 0; i < 4000; i++) {
                     const date = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
                     const storeId = getRandomElement(storeIds);
                     const note = Math.random() > 0.8 ? `Grote boodschappen week ${i % 52 + 1}` : null;
                     const paymentMethodId = getRandomElement(paymentMethodIds);
+                    
+                    const pmName = pmMap[paymentMethodId];
+                    const roleName = pmRoles[pmName];
+                    const role = roles[roleName] || { debtProb: 0.1 };
 
-                    db.run(insertReceipt, [date, storeId, note, paymentMethodId], function (err) {
+                    // Determine if this receipt has debt and what type
+                    const hasDebt = Math.random() < role.debtProb;
+                    let splitType = 'none';
+                    if (hasDebt) {
+                        splitType = Math.random() > 0.5 ? 'line_item' : 'total_split';
+                    }
+
+                    db.run(insertReceipt, [date, storeId, note, paymentMethodId, splitType], function (err) {
                         if (err) return reject(err);
                         const receiptId = this.lastID;
                         const numItems = getRandomInt(1, 25);
+                        
+                        // Handle total_split
+                        if (splitType === 'total_split') {
+                            const numDebtors = getRandomInt(1, 3);
+                            const selectedDebtors = [];
+                            while (selectedDebtors.length < numDebtors) {
+                                const d = getRandomElement(debtorIds);
+                                if (!selectedDebtors.includes(d)) selectedDebtors.push(d);
+                            }
+                            
+                            // Assign random parts (e.g., 1, 2, 1)
+                            selectedDebtors.forEach(debtorId => {
+                                db.run(insertReceiptSplit, [receiptId, debtorId, getRandomInt(1, 3)]);
+                            });
+                        }
+
                         for (let j = 0; j < numItems; j++) {
-                            db.run(insertLineItem, [receiptId, getRandomElement(productIds), getRandomInt(1, 5), (Math.random() * 20 + 0.5).toFixed(2)]);
+                            let debtorId = null;
+                            // Handle line_item split
+                            if (splitType === 'line_item' && Math.random() > 0.3) { 
+                                debtorId = getRandomElement(debtorIds);
+                            }
+                            
+                            db.run(insertLineItem, [receiptId, getRandomElement(productIds), getRandomInt(1, 5), (Math.random() * 20 + 0.5).toFixed(2), debtorId]);
                         }
                     });
                 }

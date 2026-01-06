@@ -7,7 +7,7 @@ import DebtModal from '../components/debt/DebtModal';
 import Tooltip from '../components/ui/Tooltip';
 
 const DebtPage = () => {
-  const [entities, setEntities] = useState([]);
+  const [debtors, setDebtors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   
@@ -16,57 +16,57 @@ const DebtPage = () => {
   const [pageSize, setPageSize] = useState(10);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEntity, setEditingEntity] = useState(null);
+  const [editingDebtor, setEditingDebtor] = useState(null);
 
-  const fetchEntities = useCallback(async () => {
+  const fetchDebtors = useCallback(async () => {
     setLoading(true);
     try {
       const offset = (currentPage - 1) * pageSize;
-      let query = `SELECT * FROM DebtEntities`;
+      let query = `SELECT * FROM Debtors`;
       const params = [];
       
       if (searchTerm) {
-        query += ` WHERE EntityName LIKE ?`;
+        query += ` WHERE DebtorName LIKE ?`;
         params.push(`%${searchTerm}%`);
       }
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT EntityID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT DebtorID')})`;
       const countResult = await db.queryOne(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
-      query += ` ORDER BY EntityName ASC LIMIT ? OFFSET ?`;
+      query += ` ORDER BY DebtorName ASC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       
       const results = await db.query(query, params);
-      setEntities(results);
+      setDebtors(results);
     } catch (error) {
-      console.error("Failed to fetch entities:", error);
+      console.error("Failed to fetch debtors:", error);
     } finally {
       setLoading(false);
     }
   }, [currentPage, pageSize, searchTerm]);
 
   useEffect(() => {
-    fetchEntities();
-  }, [fetchEntities]);
+    fetchDebtors();
+  }, [fetchDebtors]);
 
   const handleAdd = () => {
-    setEditingEntity(null);
+    setEditingDebtor(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (entity) => {
-    setEditingEntity(entity);
+  const handleEdit = (debtor) => {
+    setEditingDebtor(debtor);
     setIsModalOpen(true);
   };
 
   const columns = [
-    { header: 'Name', accessor: 'EntityName', width: '80%' },
+    { header: 'Name', accessor: 'DebtorName', width: '80%' },
     { 
       header: 'Active', 
       width: '10%',
       render: (row) => (
-        row.EntityIsActive ? 
+        row.DebtorIsActive ? 
         <CheckCircleIcon className="h-5 w-5 text-green-500" /> : 
         <XCircleIcon className="h-5 w-5 text-red-500" />
       )
@@ -77,7 +77,7 @@ const DebtPage = () => {
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end">
-          <Tooltip content="Edit Entity" align="end">
+          <Tooltip content="Edit Debtor" align="end">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -94,15 +94,15 @@ const DebtPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Debt Entities</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Debtors</h1>
         <Button onClick={handleAdd}>
           <PlusIcon className="h-5 w-5 mr-2" />
-          Add Entity
+          Add Debtor
         </Button>
       </div>
 
       <DataTable
-        data={entities}
+        data={debtors}
         columns={columns}
         totalCount={totalCount}
         pageSize={pageSize}
@@ -117,8 +117,8 @@ const DebtPage = () => {
       <DebtModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        entityToEdit={editingEntity}
-        onSave={fetchEntities}
+        debtorToEdit={editingDebtor}
+        onSave={fetchDebtors}
       />
     </div>
   );

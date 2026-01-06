@@ -52,24 +52,14 @@ CREATE TABLE Products
 );
 
 --------------------------------------------------
--- People (who owe you money)
+-- Debtors (formerly DebtEntities/People)
 --------------------------------------------------
 
-CREATE TABLE People
+CREATE TABLE Debtors
 (
-  PersonID   INTEGER PRIMARY KEY,
-  PersonName TEXT NOT NULL UNIQUE
-);
-
---------------------------------------------------
--- Debt Entities (for Debt Tracking module)
---------------------------------------------------
-
-CREATE TABLE DebtEntities
-(
-  EntityID       INTEGER PRIMARY KEY,
-  EntityName     TEXT    NOT NULL UNIQUE,
-  EntityIsActive INTEGER NOT NULL DEFAULT 1
+  DebtorID       INTEGER PRIMARY KEY,
+  DebtorName     TEXT    NOT NULL UNIQUE,
+  DebtorIsActive INTEGER NOT NULL DEFAULT 1
 );
 
 --------------------------------------------------
@@ -100,10 +90,28 @@ CREATE TABLE Receipts
   PaymentMethodID  INTEGER NOT NULL DEFAULT 1,
   ReceiptNote      TEXT,
   ReceiptEntryDate TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  SplitType        TEXT    DEFAULT 'none', -- 'none', 'line_item', 'total_split'
   FOREIGN KEY (StoreID)
     REFERENCES Stores (StoreID),
   FOREIGN KEY (PaymentMethodID)
     REFERENCES PaymentMethods (PaymentMethodID)
+);
+
+--------------------------------------------------
+-- Receipt Splits (for total_split mode)
+--------------------------------------------------
+
+CREATE TABLE ReceiptSplits
+(
+  SplitID   INTEGER PRIMARY KEY,
+  ReceiptID INTEGER NOT NULL,
+  DebtorID  INTEGER NOT NULL,
+  SplitPart INTEGER NOT NULL, -- The numerator of the fraction (e.g., 1 in 1/4)
+  FOREIGN KEY (ReceiptID)
+    REFERENCES Receipts (ReceiptID)
+    ON DELETE CASCADE,
+  FOREIGN KEY (DebtorID)
+    REFERENCES Debtors (DebtorID)
 );
 
 --------------------------------------------------
@@ -129,7 +137,7 @@ CREATE TABLE LineItems
   LineItemID    INTEGER PRIMARY KEY,
   ReceiptID     INTEGER NOT NULL,
   ProductID     INTEGER NOT NULL,
-  PersonID      INTEGER DEFAULT NULL,
+  DebtorID      INTEGER DEFAULT NULL, -- For line_item mode
   LineQuantity  INTEGER NOT NULL,
   LineUnitPrice NUMERIC NOT NULL,
   FOREIGN KEY (ReceiptID)
@@ -137,8 +145,8 @@ CREATE TABLE LineItems
     ON DELETE CASCADE,
   FOREIGN KEY (ProductID)
     REFERENCES Products (ProductID),
-  FOREIGN KEY (PersonID)
-    REFERENCES People (PersonID)
+  FOREIGN KEY (DebtorID)
+    REFERENCES Debtors (DebtorID)
 );
 
 --------------------------------------------------
@@ -188,8 +196,8 @@ CREATE INDEX idx_lineitems_receipt
 CREATE INDEX idx_lineitems_product
   ON LineItems (ProductID);
 
-CREATE INDEX idx_lineitems_person
-  ON LineItems (PersonID);
+CREATE INDEX idx_lineitems_debtor
+  ON LineItems (DebtorID);
 
 CREATE INDEX idx_topups_paymentmethod
   ON TopUps (PaymentMethodID);
@@ -197,5 +205,8 @@ CREATE INDEX idx_topups_paymentmethod
 CREATE INDEX idx_topups_date
   ON TopUps (TopUpDate);
 
-CREATE INDEX idx_debtentities_active
-  ON DebtEntities (EntityIsActive);
+CREATE INDEX idx_debtors_active
+  ON Debtors (DebtorIsActive);
+
+CREATE INDEX idx_receiptsplits_receipt
+  ON ReceiptSplits (ReceiptID);
