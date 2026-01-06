@@ -1,23 +1,62 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../utils/cn';
 
-const alignmentClasses = {
-  start: 'left-0',
-  center: 'left-1/2 -translate-x-1/2',
-  end: 'right-0',
-};
+const Tooltip = ({ children, content, className, ...props }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
 
-const Tooltip = ({ children, content, className, align = 'center', ...props }) => {
+  const updatePosition = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.top - 8, // 8px gap above the element
+        left: rect.left + rect.width / 2
+      });
+    }
+  };
+
+  const handleMouseEnter = () => {
+    updatePosition();
+    setIsVisible(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsVisible(false);
+  };
+
+  useEffect(() => {
+    if (isVisible) {
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isVisible]);
+
   return (
-    <div className={cn("relative group", className)} {...props}>
+    <div 
+      className={cn("inline-flex", className)} 
+      onMouseEnter={handleMouseEnter} 
+      onMouseLeave={handleMouseLeave}
+      ref={triggerRef}
+      {...props}
+    >
       {children}
-      {content && (
-        <div className={cn(
-          "absolute bottom-full mb-2 w-max max-w-xs px-3 py-1.5 text-sm font-medium text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10",
-          alignmentClasses[align]
-        )}>
+      {isVisible && content && createPortal(
+        <div 
+          className="fixed z-[9999] max-w-xs px-3 py-1.5 text-sm font-medium text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-sm pointer-events-none transform -translate-x-1/2 -translate-y-full"
+          style={{ 
+            top: `${coords.top}px`, 
+            left: `${coords.left}px`,
+          }}
+        >
           {content}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

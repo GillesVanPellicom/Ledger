@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -117,6 +117,14 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     updateSettings({ ...settings, datastore: { folderPath: '' } });
   };
 
+  const handleResetAllSettings = async () => {
+    if (window.electronAPI) {
+      await window.electronAPI.resetSettings();
+      // Reload the window to apply default settings
+      window.location.reload();
+    }
+  };
+
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(datastorePath);
     setTooltipText('Copied!');
@@ -160,6 +168,17 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     </div>
   );
 
+  const SectionTitle = ({ title, tooltip }) => (
+    <div className="flex items-center gap-2 mb-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+      {tooltip && (
+        <Tooltip content={tooltip}>
+          <InformationCircleIcon className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" />
+        </Tooltip>
+      )}
+    </div>
+  );
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="lg">
@@ -178,29 +197,28 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
             {activeTab === 'appearance' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Theme</h3>
+                  <SectionTitle title="Theme" tooltip="Choose between light and dark mode for the application interface." />
                   <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", !isDarkMode ? "bg-blue-100 text-blue-600" : "bg-gray-800 text-gray-400")}><SunIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Light Mode</p><p className="text-sm text-gray-500">Default appearance</p></div></div><button onClick={() => handleThemeChange('light')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", !isDarkMode ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{!isDarkMode && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
                   <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-3"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", isDarkMode ? "bg-blue-900/30 text-blue-400" : "bg-gray-100 text-gray-400")}><MoonIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</p><p className="text-sm text-gray-500">Easier on the eyes</p></div></div><button onClick={() => handleThemeChange('dark')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", isDarkMode ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{isDarkMode && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">UI Scale</h3><Button variant="ghost" size="sm" onClick={resetUiScale} className="h-8 px-2 text-xs"><ArrowPathIcon className="h-3 w-3 mr-1" />Reset</Button></div>
+                  <div className="flex items-center justify-between mb-4">
+                    <SectionTitle title="UI Scale" tooltip="Adjust the size of text and other interface elements." />
+                    <Button variant="ghost" size="sm" onClick={resetUiScale} className="h-8 px-2 text-xs"><ArrowPathIcon className="h-3 w-3 mr-1" />Reset</Button>
+                  </div>
                   <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" /><span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-12 text-right">{uiScale}%</span></div>
-                  <p className="text-xs text-gray-500 mt-2">Adjust the size of the user interface.</p>
                 </div>
               </div>
             )}
-            {activeTab === 'modules' && (<div className="space-y-6"><div><h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Modules</h3><div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"><CreditCardIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Payment Methods</p><p className="text-sm text-gray-500">Track spending across different payment methods.</p></div></div><button onClick={() => handleModuleToggle('paymentMethods')} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", settings.modules.paymentMethods.enabled ? "bg-accent" : "bg-gray-200 dark:bg-gray-700")}><span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", settings.modules.paymentMethods.enabled ? "translate-x-5" : "translate-x-0")} /></button></div></div></div></div>)}
-            {activeTab === 'pdf' && (<div className="space-y-4"><div><h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">PDF Content</h3><Toggle label="Show Unique Item Count" description="Include the number of unique items on the receipt." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Toggle label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Toggle label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Toggle label="Add Receipt Images" description="Include receipt images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Bulk Export</h3><Toggle label="Add Summary Page" description="Append a 'super-receipt' summarizing all receipts in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
+            {activeTab === 'modules' && (<div className="space-y-6"><div><SectionTitle title="Modules" tooltip="Enable or disable optional features to customize your experience." /><div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"><CreditCardIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Payment Methods</p><p className="text-sm text-gray-500">Track spending across different payment methods.</p></div></div><button onClick={() => handleModuleToggle('paymentMethods')} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", settings.modules.paymentMethods.enabled ? "bg-accent" : "bg-gray-200 dark:bg-gray-700")}><span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", settings.modules.paymentMethods.enabled ? "translate-x-5" : "translate-x-0")} /></button></div></div></div></div>)}
+            {activeTab === 'pdf' && (<div className="space-y-4"><div><SectionTitle title="Receipt Export" tooltip="Customize the content included when exporting individual receipts to PDF." /><Toggle label="Show Unique Item Count" description="Include the number of unique items on the receipt." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Toggle label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Toggle label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Toggle label="Add Receipt Images" description="Include receipt images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple receipts at once." /><Toggle label="Add Summary Page" description="Append a 'super-receipt' summarizing all receipts in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
             {activeTab === 'data' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Datastore</h3>
+                  <SectionTitle title="Datastore" tooltip="The location where this app will save all data. Preferrably placed in a folder which is backed up." />
                   <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex-shrink-0">
-                          <FolderIcon className="h-6 w-6" />
-                        </div>
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 dark:text-gray-100">Datastore Folder</p>
                           <Tooltip content={tooltipText}>
@@ -249,6 +267,20 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                         </div>
                       </div>
                       <Button variant="warning" onClick={handleRemoveDatastore}>Reset</Button>
+                    </div>
+                  </div>
+                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 mr-4">
+                        <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                          <TrashIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">Reset All Settings</p>
+                          <p className="text-sm text-gray-500">Clear all settings stored in electron-store.</p>
+                        </div>
+                      </div>
+                      <Button variant="destructive" onClick={handleResetAllSettings}>Reset All</Button>
                     </div>
                   </div>
                 </div>

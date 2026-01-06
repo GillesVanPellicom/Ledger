@@ -11,7 +11,27 @@ let store;
 async function initializeStore() {
   try {
     const { default: Store } = await import('electron-store');
-    store = new Store();
+    store = new Store({
+      defaults: {
+        theme: 'light',
+        modules: {
+          paymentMethods: {
+            enabled: false,
+          },
+        },
+        pdf: {
+          showUniqueItems: false,
+          showTotalQuantity: false,
+          showPaymentMethod: false,
+          addSummaryPage: false,
+          addReceiptImages: false,
+        },
+        paymentMethodStyles: {},
+        datastore: {
+          folderPath: '',
+        },
+      }
+    });
     console.log('electron-store initialized successfully.');
   } catch (error) {
     console.error('Failed to initialize electron-store:', error);
@@ -118,10 +138,16 @@ app.on('ready', async () => {
     try {
       await connectDatabase(path.join(datastorePath, 'fin.db'));
     } catch (error) {
-      dialog.showErrorBox(
-        'Database Connection Error',
-        `Failed to connect to the database at "${datastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`
-      );
+      // Send error to renderer instead of showing dialog
+      if (mainWindow) {
+        mainWindow.webContents.send('database-error', error.message);
+      } else {
+        // Fallback if window isn't ready yet, though unlikely with current flow
+         dialog.showErrorBox(
+          'Database Connection Error',
+          `Failed to connect to the database at "${datastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`
+        );
+      }
     }
   }
 
@@ -228,10 +254,7 @@ ipcMain.handle('save-settings', async (event, settings) => {
       await connectDatabase(newDatastorePath ? path.join(newDatastorePath, 'fin.db') : null);
       store.set(settings);
     } catch (error) {
-      dialog.showErrorBox(
-        'Database Connection Error',
-        `Failed to connect to the database at "${newDatastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`
-      );
+      // Send error to renderer instead of showing dialog
       // Revert to old settings
       mainWindow.webContents.send('settings-reverted', store.store);
       return { success: false, error: error.message };
@@ -240,6 +263,15 @@ ipcMain.handle('save-settings', async (event, settings) => {
     store.set(settings);
   }
 
+  return { success: true };
+});
+
+ipcMain.handle('reset-settings', async () => {
+  if (!store) {
+    console.error('Store not initialized');
+    return { success: false, error: 'Store not initialized' };
+  }
+  store.clear();
   return { success: true };
 });
 
