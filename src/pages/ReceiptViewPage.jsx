@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { db } from '../utils/db';
@@ -29,7 +29,6 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
 
   const [splitType, setSplitType] = useState('none');
   const [receiptSplits, setReceiptSplits] = useState([]);
-  const [debtSummary, setDebtSummary] = useState([]);
   const [payments, setPayments] = useState([]);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState(null);
@@ -99,41 +98,47 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
     }
   }, [id, showError, settings.datastore.folderPath, debtEnabled]);
 
-  useEffect(() => {
-    if (!debtEnabled || !receipt) return;
+  const debtSummary = useMemo(() => {
+    if (!debtEnabled || !receipt) return [];
 
-    const calculateDebtSummary = () => {
-      const summary = {};
-      const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
+    const summary = {};
+    const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
 
-      if (splitType === 'total_split' && receiptSplits.length > 0) {
-        const totalParts = receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0);
-        receiptSplits.forEach(split => {
-          const amount = (totalAmount * split.SplitPart) / totalParts;
-          summary[split.DebtorID] = {
-            name: split.DebtorName,
-            amount: (summary[split.DebtorID]?.amount || 0) + amount,
-            debtorId: split.DebtorID
-          };
-        });
-      } else if (splitType === 'line_item') {
-        lineItems.forEach(item => {
-          if (item.DebtorID) {
-            const amount = item.LineQuantity * item.LineUnitPrice;
-            summary[item.DebtorID] = {
-              name: item.DebtorName,
-              amount: (summary[item.DebtorID]?.amount || 0) + amount,
-              debtorId: item.DebtorID
-            };
+    if (splitType === 'total_split' && receiptSplits.length > 0) {
+      const totalShares = receipt.TotalShares > 0 ? receipt.TotalShares : receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0);
+      receiptSplits.forEach(split => {
+        const amount = (totalAmount * split.SplitPart) / totalShares;
+        summary[split.DebtorID] = {
+          name: split.DebtorName,
+          amount: (summary[split.DebtorID]?.amount || 0) + amount,
+          debtorId: split.DebtorID,
+          shares: split.SplitPart,
+          totalShares: totalShares,
+        };
+      });
+    } else if (splitType === 'line_item') {
+      const debtorItems = {};
+      lineItems.forEach(item => {
+        if (item.DebtorID) {
+          const amount = item.LineQuantity * item.LineUnitPrice;
+          if (!debtorItems[item.DebtorID]) {
+            debtorItems[item.DebtorID] = { count: 0, total: 0 };
           }
-        });
-      }
+          debtorItems[item.DebtorID].count += 1;
+          debtorItems[item.DebtorID].total += amount;
 
-      setDebtSummary(Object.values(summary));
-    };
-
-    calculateDebtSummary();
-  }, [lineItems, receiptSplits, splitType, debtEnabled, receipt]);
+          summary[item.DebtorID] = {
+            name: item.DebtorName,
+            amount: debtorItems[item.DebtorID].total,
+            debtorId: item.DebtorID,
+            itemCount: debtorItems[item.DebtorID].count,
+            totalItems: lineItems.length,
+          };
+        }
+      });
+    }
+    return Object.values(summary);
+  }, [lineItems, receipt, receiptSplits, splitType, debtEnabled]);
 
   const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
   const totalItems = lineItems.length;
@@ -172,7 +177,9 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
     const { paymentId, topUpId } = unsettleConfirmation;
     try {
       await db.execute('DELETE FROM ReceiptDebtorPayments WHERE PaymentID = ?', [paymentId]);
-      await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
+      if (topUpId) {
+        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
+      }
       fetchReceiptData();
     } catch (error) {
       showError(error);
@@ -205,6 +212,8 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
   if (!receipt) {
     return <div className="text-center">Receipt not found.</div>;
   }
+
+  const allDebtorNames = receiptSplits.map(s => s.DebtorName).join(', ');
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
@@ -304,15 +313,17 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                           </Tooltip>
                         )}
                       </div>
-                      <p className={cn("text-2xl font-bold mb-4", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")}>
+                      <p className={cn("text-2xl font-bold", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")}>
                         €{debtor.amount.toFixed(2)}
                       </p>
+                      {splitType === 'total_split' && <p className="text-sm text-gray-500 mb-4">{debtor.shares} / {debtor.totalShares} shares</p>}
+                      {splitType === 'line_item' && <p className="text-sm text-gray-500 mb-4">{debtor.itemCount} / {debtor.totalItems} items</p>}
                     </div>
                     
                     {isPaid ? (
                       <Button 
                         size="sm"
-                        className="w-full text-green-800 bg-green-200 border-green-300 hover:bg-green-300 border dark:text-green-100 dark:bg-green-800/50 dark:border-green-700 dark:hover:bg-green-800"
+                        className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
                         onClick={() => confirmUnsettleDebt(payment.PaymentID, payment.TopUpID)}
                       >
                         Unsettle
@@ -320,7 +331,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                     ) : (
                       <Button 
                         size="sm"
-                        className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
+                        className="w-full text-green-800 bg-green-200 border-green-300 hover:bg-green-300 border dark:text-green-100 dark:bg-green-800/50 dark:border-green-700 dark:hover:bg-green-800"
                         onClick={() => handleSettleDebt(debtor)}
                       >
                         Settle
@@ -345,7 +356,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                   <th className="p-2 w-24 text-center">Qty</th>
                   <th className="p-2 w-32 text-right">Unit Price (€)</th>
                   <th className="p-2 w-32 text-right">Total (€)</th>
-                  {debtEnabled && splitType === 'line_item' && <th className="p-2 w-32 text-right">Debtor</th>}
+                  {debtEnabled && (splitType === 'line_item' || splitType === 'total_split') && <th className="p-2 w-40 text-right">Debtor(s)</th>}
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-800">
@@ -365,6 +376,11 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                       {debtEnabled && splitType === 'line_item' && (
                         <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
                           {item.DebtorName || '-'}
+                        </td>
+                      )}
+                      {debtEnabled && splitType === 'total_split' && (
+                        <td className="p-2 text-right text-gray-600 dark:text-gray-400 truncate">
+                          {allDebtorNames || '-'}
                         </td>
                       )}
                     </tr>
