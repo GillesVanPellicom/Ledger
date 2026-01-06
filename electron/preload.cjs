@@ -13,5 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-base64', filePath),
   onSettingsReverted: (callback) => ipcRenderer.on('settings-reverted', callback),
   removeSettingsRevertedListener: (callback) => ipcRenderer.removeListener('settings-reverted', callback),
+  getBackupCount: () => ipcRenderer.invoke('get-backup-count'),
+  triggerBackup: () => ipcRenderer.invoke('trigger-backup'),
+  openBackupFolder: () => ipcRenderer.invoke('open-backup-folder'),
   isDev: isDev,
 });

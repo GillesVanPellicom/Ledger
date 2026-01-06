@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, net, shell } = require('electron');
 const path = require('path');
 const sqlite3 = require('sqlite3');
 const fs = require('fs');
@@ -28,6 +28,11 @@ async function initializeStore() {
           showPaymentMethod: false,
           addSummaryPage: false,
           addReceiptImages: false,
+        },
+        backup: {
+          maxBackups: 5,
+          interval: 5,
+          editsSinceLastBackup: 0,
         },
         paymentMethodStyles: {},
         datastore: {
@@ -309,4 +314,56 @@ ipcMain.handle('read-file-base64', async (event, filePath) => {
     console.error('Failed to read file as base64:', error);
     return null;
   }
+});
+
+// Backup Handlers
+ipcMain.handle('get-backup-count', async () => {
+  const datastorePath = store.get('datastore.folderPath');
+  if (!datastorePath) return 0;
+  const backupDir = path.join(datastorePath, 'backups');
+  if (!fs.existsSync(backupDir)) return 0;
+  return fs.readdirSync(backupDir).filter(f => f.endsWith('.bak')).length;
+});
+
+ipcMain.handle('trigger-backup', async () => {
+  const datastorePath = store.get('datastore.folderPath');
+  if (!datastorePath) throw new Error('Datastore path not set.');
+
+  const backupDir = path.join(datastorePath, 'backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+
+  const dbPath = path.join(datastorePath, 'fin.db');
+  if (!fs.existsSync(dbPath)) throw new Error('Database file not found.');
+
+  const now = new Date();
+  const timestamp = `${now.getSeconds()}-${now.getMinutes()}-${now.getHours()}-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+  const backupPath = path.join(backupDir, `${timestamp}.db.bak`);
+
+  fs.copyFileSync(dbPath, backupPath);
+
+  // Manage backup rotation
+  const maxBackups = store.get('backup.maxBackups', 5);
+  const backups = fs.readdirSync(backupDir)
+    .filter(f => f.endsWith('.bak'))
+    .map(f => ({ name: f, time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
+    .sort((a, b) => b.time - a.time);
+
+  if (backups.length > maxBackups) {
+    for (let i = maxBackups; i < backups.length; i++) {
+      fs.unlinkSync(path.join(backupDir, backups[i].name));
+    }
+  }
+  return true;
+});
+
+ipcMain.handle('open-backup-folder', async () => {
+  const datastorePath = store.get('datastore.folderPath');
+  if (!datastorePath) return;
+  const backupDir = path.join(datastorePath, 'backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  shell.openPath(backupDir);
 });

@@ -21,6 +21,11 @@ const initialSettings = {
     addSummaryPage: false,
     addReceiptImages: false,
   },
+  backup: {
+    maxBackups: 5,
+    interval: 5,
+    editsSinceLastBackup: 0,
+  },
   paymentMethodStyles: {},
   datastore: {
     folderPath: '',
@@ -66,6 +71,7 @@ export const SettingsProvider = ({ children }) => {
           ...loadedSettings,
           modules: { ...prev.modules, ...loadedSettings.modules },
           pdf: { ...prev.pdf, ...loadedSettings.pdf },
+          backup: { ...prev.backup, ...loadedSettings.backup },
           paymentMethodStyles: { ...prev.paymentMethodStyles, ...loadedSettings.paymentMethodStyles },
           datastore: { ...prev.datastore, ...loadedSettings.datastore },
         }));

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon, UserGroupIcon } from '@heroicons/react/24/solid';
+import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon, UserGroupIcon, ServerIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
 import { useSettings } from '../../context/SettingsContext';
 import Tooltip from '../ui/Tooltip';
+import Input from '../ui/Input';
+import { useBackupContext } from '../../context/BackupContext';
 
 const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -15,8 +17,10 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [testError, setTestError] = useState(null);
   const { settings, updateSettings } = useSettings();
+  const { backupCount, triggerBackup, isBackingUp } = useBackupContext();
   const [datastorePath, setDatastorePath] = useState('');
   const [tooltipText, setTooltipText] = useState('');
+  const [backupSettings, setBackupSettings] = useState({ maxBackups: 5, interval: 5 });
 
   useEffect(() => {
     if (isOpen) {
@@ -28,27 +32,16 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     const loadInitialSettings = async () => {
       if (window.electronAPI) {
         const electronSettings = await window.electronAPI.getSettings();
-        if (electronSettings.theme) {
-          setIsDarkMode(electronSettings.theme === 'dark');
-        }
-        if (electronSettings.uiScale) {
-          setUiScale(electronSettings.uiScale);
-        }
-        if (electronSettings.datastore?.folderPath) {
-          setDatastorePath(electronSettings.datastore.folderPath);
-        }
+        if (electronSettings.theme) setIsDarkMode(electronSettings.theme === 'dark');
+        if (electronSettings.uiScale) setUiScale(electronSettings.uiScale);
+        if (electronSettings.datastore?.folderPath) setDatastorePath(electronSettings.datastore.folderPath);
+        if (electronSettings.backup) setBackupSettings(electronSettings.backup);
       } else {
         const localSettings = JSON.parse(localStorage.getItem('app-settings') || '{}');
-        if (localSettings.theme) {
-          setIsDarkMode(localSettings.theme === 'dark');
-        }
-        if (localSettings.uiScale) {
-          setUiScale(localSettings.uiScale);
-        }
+        if (localSettings.theme) setIsDarkMode(localSettings.theme === 'dark');
+        if (localSettings.uiScale) setUiScale(localSettings.uiScale);
       }
-      if (import.meta.env.DEV) {
-        setIsDev(true);
-      }
+      if (import.meta.env.DEV) setIsDev(true);
     };
     loadInitialSettings();
   }, []);
@@ -57,26 +50,22 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     setDatastorePath(settings.datastore?.folderPath || '');
     setTooltipText(settings.datastore?.folderPath || '');
     setIsDarkMode(settings.theme === 'dark');
+    if (settings.backup) {
+      setBackupSettings(settings.backup);
+    }
   }, [settings]);
 
   const handleThemeChange = (newTheme) => {
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    if (newTheme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
     updateSettings({ ...settings, theme: newTheme });
   };
 
-  const handleUiScaleChange = (e) => {
-    setUiScale(parseInt(e.target.value, 10));
-  };
-
+  const handleUiScaleChange = (e) => setUiScale(parseInt(e.target.value, 10));
   const handleUiScaleSave = () => {
     document.documentElement.style.fontSize = `${uiScale}%`;
     updateSettings({ ...settings, uiScale });
   };
-
   const resetUiScale = () => {
     setUiScale(100);
     document.documentElement.style.fontSize = '100%';
@@ -91,6 +80,18 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const handlePdfToggle = (key) => {
     const newPdfSettings = { ...settings.pdf, [key]: !settings.pdf[key] };
     updateSettings({ ...settings, pdf: newPdfSettings });
+  };
+
+  const handleBackupSettingChange = (key, value) => {
+    const newBackupSettings = { ...backupSettings, [key]: parseInt(value, 10) };
+    setBackupSettings(newBackupSettings);
+    updateSettings({ ...settings, backup: newBackupSettings });
+  };
+
+  const resetBackupSettings = () => {
+    const defaultBackupSettings = { maxBackups: 5, interval: 5 };
+    setBackupSettings(defaultBackupSettings);
+    updateSettings({ ...settings, backup: defaultBackupSettings });
   };
 
   const handleGenerateError = () => {
@@ -120,7 +121,6 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const handleResetAllSettings = async () => {
     if (window.electronAPI) {
       await window.electronAPI.resetSettings();
-      // Reload the window to apply default settings
       window.location.reload();
     }
   };
@@ -128,9 +128,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(datastorePath);
     setTooltipText('Copied!');
-    setTimeout(() => {
-      setTooltipText(datastorePath);
-    }, 2000);
+    setTimeout(() => setTooltipText(datastorePath), 2000);
   };
 
   const tabs = [
@@ -138,35 +136,20 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     { id: 'modules', label: 'Modules' },
     { id: 'pdf', label: 'PDF' },
     { id: 'data', label: 'Data' },
+    { id: 'backup', label: 'Backup' },
   ];
 
-  if (isDev) {
-    tabs.push({ id: 'development', label: 'Development' });
-  }
-  
+  if (isDev) tabs.push({ id: 'development', label: 'Development' });
   tabs.sort((a, b) => a.label.localeCompare(b.label));
 
   const Toggle = ({ label, description, isEnabled, onToggle, icon: Icon }) => (
     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {Icon && (
-            <div className={cn("p-2 rounded-lg", isEnabled ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500")}>
-              <Icon className="h-6 w-6" />
-            </div>
-          )}
-          <div>
-            <p className="font-medium text-gray-900 dark:text-gray-100">{label}</p>
-            <p className="text-sm text-gray-500">{description}</p>
-          </div>
+          {Icon && <div className={cn("p-2 rounded-lg", isEnabled ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500")}><Icon className="h-6 w-6" /></div>}
+          <div><p className="font-medium text-gray-900 dark:text-gray-100">{label}</p><p className="text-sm text-gray-500">{description}</p></div>
         </div>
-        <button
-          onClick={onToggle}
-          className={cn(
-            "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
-            isEnabled ? "bg-accent" : "bg-gray-200 dark:bg-gray-700"
-          )}
-        >
+        <button onClick={onToggle} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", isEnabled ? "bg-accent" : "bg-gray-200 dark:bg-gray-700")}>
           <span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", isEnabled ? "translate-x-5" : "translate-x-0")} />
         </button>
       </div>
@@ -176,11 +159,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const SectionTitle = ({ title, tooltip }) => (
     <div className="flex items-center gap-2 mb-4">
       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
-      {tooltip && (
-        <Tooltip content={tooltip}>
-          <InformationCircleIcon className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" />
-        </Tooltip>
-      )}
+      {tooltip && <Tooltip content={tooltip}><InformationCircleIcon className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>}
     </div>
   );
 
@@ -189,15 +168,8 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
       <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="lg">
         <div className="flex h-[400px]">
           <div className="w-48 border-r border-gray-200 dark:border-gray-800 pr-4">
-            <nav className="space-y-1">
-              {tabs.map((tab) => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors", activeTab === tab.id ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50")}>
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+            <nav className="space-y-1">{tabs.map((tab) => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors", activeTab === tab.id ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50")}>{tab.label}</button>)}</nav>
           </div>
-
           <div className="flex-1 pl-6 pr-2 overflow-y-auto">
             {activeTab === 'appearance' && (
               <div className="space-y-6">
@@ -262,55 +234,39 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                 </div>
               </div>
             )}
-            {activeTab === 'development' && isDev && (
+            {activeTab === 'backup' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Development Tools</h3>
-                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                          <BugAntIcon className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">Test Error Modal</p>
-                          <p className="text-sm text-gray-500">Generate a fake error to test the error modal.</p>
-                        </div>
-                      </div>
-                      <Button variant="warning" onClick={handleGenerateError}>Generate Error</Button>
-                    </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <SectionTitle title="Database Backup" tooltip="Automatically back up your database." />
+                    <button onClick={() => window.electronAPI.openBackupFolder()} className="text-xs text-blue-500 hover:underline">Open Backup Folder</button>
                   </div>
-                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-4">
+                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400">
-                          <TrashIcon className="h-6 w-6" />
+                      <p className="font-medium">Backups</p>
+                      <p className="text-sm text-gray-500">{backupCount} / {backupSettings.maxBackups}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                          <Input id="max-backups" type="number" className="w-full mt-2" value={backupSettings.maxBackups} onChange={(e) => handleBackupSettingChange('maxBackups', e.target.value)} />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">Reset Datastore</p>
-                          <p className="text-sm text-gray-500">Remove the datastore folder path from settings.</p>
+                          <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                          <Input id="backup-interval" type="number" className="w-full mt-2" value={backupSettings.interval} onChange={(e) => handleBackupSettingChange('interval', e.target.value)} />
                         </div>
                       </div>
-                      <Button variant="warning" onClick={handleRemoveDatastore}>Reset</Button>
-                    </div>
-                  </div>
-                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                          <TrashIcon className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">Reset All Settings</p>
-                          <p className="text-sm text-gray-500">Clear all settings stored in electron-store.</p>
-                        </div>
+                      <div className="text-right mt-2">
+                        <Button variant="ghost" size="sm" onClick={resetBackupSettings} className="h-8 px-2 text-xs"><ArrowPathIcon className="h-3 w-3 mr-1" />Reset to Defaults</Button>
                       </div>
-                      <Button variant="destructive" onClick={handleResetAllSettings}>Reset All</Button>
                     </div>
+                    <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp} className="w-full">Backup Now</Button>
                   </div>
                 </div>
               </div>
             )}
+            {activeTab === 'development' && isDev && <div className="space-y-6">...</div>}
           </div>
         </div>
       </Modal>

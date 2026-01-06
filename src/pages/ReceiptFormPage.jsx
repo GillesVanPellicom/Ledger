@@ -14,12 +14,14 @@ import { useSettings } from '../context/SettingsContext';
 import { cn } from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
 import { ConfirmModal } from '../components/ui/Modal';
+import { useBackupContext } from '../context/BackupContext';
 
 const ReceiptFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = !!id;
   const { settings } = useSettings();
+  const { incrementEdits } = useBackupContext();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
@@ -401,6 +403,8 @@ const ReceiptFormPage = () => {
           await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, imagePathToSave]);
         }
       }
+      
+      await incrementEdits();
   
       navigate(`/receipts/view/${receiptId}`, { replace: true });
     } catch (error) {
