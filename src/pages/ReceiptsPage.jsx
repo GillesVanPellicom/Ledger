@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, TrashIcon, DocumentArrowDownIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -32,14 +32,31 @@ const ReceiptsPage = () => {
   
   const { showError } = useError();
   const { settings } = useSettings();
+  const debtEnabled = settings.modules.debt?.enabled;
   const navigate = useNavigate();
 
   const fetchReceipts = useCallback(async () => {
     setLoading(true);
     try {
       const offset = (currentPage - 1) * pageSize;
+      
+      let debtSubQuery = '';
+      if (debtEnabled) {
+        debtSubQuery = `,
+          (
+            SELECT COUNT(DISTINCT d.DebtorID)
+            FROM Debtors d
+            LEFT JOIN ReceiptDebtorPayments rdp ON d.DebtorID = rdp.DebtorID AND rdp.ReceiptID = r.ReceiptID
+            WHERE rdp.PaymentID IS NULL AND (
+              (r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID)) OR
+              (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID))
+            )
+          ) as UnpaidDebtorCount
+        `;
+      }
+
       let query = `
-        SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName 
+        SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName ${debtSubQuery}
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
       `;
@@ -63,8 +80,8 @@ const ReceiptsPage = () => {
 
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName', 'SELECT r.ReceiptID')})`;
-      const countResult = await db.queryOne(countQuery, params.slice(0, params.length - (searchTerm ? (searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k).length * 2) : 0)));
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(`SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName ${debtSubQuery}`, 'SELECT r.ReceiptID')})`;
+      const countResult = await db.queryOne(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
       query += ` ORDER BY r.ReceiptDate DESC, r.ReceiptID DESC LIMIT ? OFFSET ?`;
@@ -77,7 +94,7 @@ const ReceiptsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchTerm, dateRange, showError]);
+  }, [currentPage, pageSize, searchTerm, dateRange, showError, debtEnabled]);
 
   useEffect(() => {
     fetchReceipts();
@@ -149,7 +166,12 @@ const ReceiptsPage = () => {
       width: '10%',
       className: 'text-right',
       render: (row) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end items-center gap-2">
+          {debtEnabled && row.UnpaidDebtorCount > 0 && (
+            <Tooltip content={`${row.UnpaidDebtorCount} people have not paid their part in this receipt yet`}>
+              <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+            </Tooltip>
+          )}
           <Tooltip content="Delete Receipt" align="end">
             <Button 
               variant="ghost" 

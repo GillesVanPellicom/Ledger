@@ -6,11 +6,13 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import { useSettings } from '../context/SettingsContext';
 import { useError } from '../context/ErrorContext';
 import { cn } from '../utils/cn';
+import DebtSettlementModal from '../components/debt/DebtSettlementModal';
+import Tooltip from '../components/ui/Tooltip';
 
 const ReceiptViewPage = ({ openSettingsModal }) => {
   const { id } = useParams();
@@ -27,59 +29,67 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
   const [splitType, setSplitType] = useState('none');
   const [receiptSplits, setReceiptSplits] = useState([]);
   const [debtSummary, setDebtSummary] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState(null);
+
+  const fetchReceiptData = async () => {
+    setLoading(true);
+    try {
+      const receiptData = await db.queryOne(`
+        SELECT r.*, s.StoreName, pm.PaymentMethodName
+        FROM Receipts r 
+        JOIN Stores s ON r.StoreID = s.StoreID 
+        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        WHERE r.ReceiptID = ?
+      `, [id]);
+
+      if (receiptData) {
+        setReceipt(receiptData);
+        setSplitType(receiptData.SplitType || 'none');
+
+        const lineItemData = await db.query(`
+          SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
+          FROM LineItems li
+          JOIN Products p ON li.ProductID = p.ProductID
+          JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+          LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
+          WHERE li.ReceiptID = ?
+        `, [id]);
+        setLineItems(lineItemData);
+
+        const imageData = await db.query('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        if (window.electronAPI && settings.datastore.folderPath) {
+          setImages(imageData.map(img => ({ 
+            src: `local-file://${settings.datastore.folderPath}/receipt_images/${img.ImagePath}`
+          })));
+        }
+
+        if (debtEnabled) {
+          if (receiptData.SplitType === 'total_split') {
+            const splitsData = await db.query(`
+              SELECT rs.*, d.DebtorName 
+              FROM ReceiptSplits rs
+              JOIN Debtors d ON rs.DebtorID = d.DebtorID
+              WHERE rs.ReceiptID = ?
+            `, [id]);
+            setReceiptSplits(splitsData);
+          }
+
+          const paymentsData = await db.query(`
+            SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?
+          `, [id]);
+          setPayments(paymentsData);
+        }
+      }
+    } catch (error) {
+      showError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchReceiptData = async () => {
-      setLoading(true);
-      try {
-        const receiptData = await db.queryOne(`
-          SELECT r.*, s.StoreName, pm.PaymentMethodName
-          FROM Receipts r 
-          JOIN Stores s ON r.StoreID = s.StoreID 
-          LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-          WHERE r.ReceiptID = ?
-        `, [id]);
-
-        if (receiptData) {
-          setReceipt(receiptData);
-          setSplitType(receiptData.SplitType || 'none');
-
-          const lineItemData = await db.query(`
-            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName
-            FROM LineItems li
-            JOIN Products p ON li.ProductID = p.ProductID
-            JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-            LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-            WHERE li.ReceiptID = ?
-          `, [id]);
-          setLineItems(lineItemData);
-
-          const imageData = await db.query('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
-          if (window.electronAPI && settings.datastore.folderPath) {
-            setImages(imageData.map(img => ({ 
-              src: `local-file://${settings.datastore.folderPath}/receipt_images/${img.ImagePath}`
-            })));
-          }
-
-          if (debtEnabled) {
-            if (receiptData.SplitType === 'total_split') {
-              const splitsData = await db.query(`
-                SELECT rs.*, d.DebtorName 
-                FROM ReceiptSplits rs
-                JOIN Debtors d ON rs.DebtorID = d.DebtorID
-                WHERE rs.ReceiptID = ?
-              `, [id]);
-              setReceiptSplits(splitsData);
-            }
-          }
-        }
-      } catch (error) {
-        showError(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (settings.datastore.folderPath || !window.electronAPI) {
       fetchReceiptData();
     } else {
@@ -98,18 +108,26 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         const totalParts = receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0);
         receiptSplits.forEach(split => {
           const amount = (totalAmount * split.SplitPart) / totalParts;
-          summary[split.DebtorName] = (summary[split.DebtorName] || 0) + amount;
+          summary[split.DebtorID] = {
+            name: split.DebtorName,
+            amount: (summary[split.DebtorID]?.amount || 0) + amount,
+            debtorId: split.DebtorID
+          };
         });
       } else if (splitType === 'line_item') {
         lineItems.forEach(item => {
-          if (item.DebtorName) {
+          if (item.DebtorID) {
             const amount = item.LineQuantity * item.LineUnitPrice;
-            summary[item.DebtorName] = (summary[item.DebtorName] || 0) + amount;
+            summary[item.DebtorID] = {
+              name: item.DebtorName,
+              amount: (summary[item.DebtorID]?.amount || 0) + amount,
+              debtorId: item.DebtorID
+            };
           }
         });
       }
 
-      setDebtSummary(Object.entries(summary).map(([name, amount]) => ({ name, amount })));
+      setDebtSummary(Object.values(summary));
     };
 
     calculateDebtSummary();
@@ -130,6 +148,28 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
     };
 
     await generateReceiptsPdf([fullReceipt], settings.pdf);
+  };
+
+  const handleSettleDebt = (debtor) => {
+    setSelectedDebtForSettlement({
+      receiptId: receipt.ReceiptID,
+      debtorId: debtor.debtorId,
+      debtorName: debtor.name,
+      amount: debtor.amount,
+      receiptDate: receipt.ReceiptDate,
+      receiptPaymentMethodId: receipt.PaymentMethodID
+    });
+    setIsSettlementModalOpen(true);
+  };
+
+  const handleUnsettleDebt = async (paymentId, topUpId) => {
+    try {
+      await db.execute('DELETE FROM ReceiptDebtorPayments WHERE PaymentID = ?', [paymentId]);
+      await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
+      fetchReceiptData();
+    } catch (error) {
+      showError(error);
+    }
   };
 
   if (!settings.datastore.folderPath && window.electronAPI) {
@@ -219,13 +259,60 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
               <UserGroupIcon className="h-6 w-6 text-accent" />
               <h2 className="text-lg font-semibold">Debt Breakdown</h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {debtSummary.map((debtor) => (
-                <div key={debtor.name} className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <p className="text-sm text-gray-500">{debtor.name}</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">€{debtor.amount.toFixed(2)}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {debtSummary.map((debtor) => {
+                const payment = payments.find(p => p.DebtorID === debtor.debtorId);
+                const isPaid = !!payment;
+                
+                return (
+                  <div key={debtor.debtorId} className={cn(
+                    "p-4 rounded-lg border flex flex-col justify-between",
+                    isPaid 
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" 
+                      : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                  )}>
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <p className={cn("font-medium", isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>
+                          {debtor.name}
+                        </p>
+                        {isPaid ? (
+                          <Tooltip content={`Paid on ${payment.PaidDate}`}>
+                            <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          </Tooltip>
+                        ) : (
+                          <Tooltip content="Unpaid">
+                            <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                          </Tooltip>
+                        )}
+                      </div>
+                      <p className={cn("text-2xl font-bold mb-4", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")}>
+                        €{debtor.amount.toFixed(2)}
+                      </p>
+                    </div>
+                    
+                    {isPaid ? (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="w-full text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30"
+                        onClick={() => handleUnsettleDebt(payment.PaymentID, payment.TopUpID)}
+                      >
+                        Unsettle
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="secondary"
+                        className="w-full"
+                        onClick={() => handleSettleDebt(debtor)}
+                      >
+                        Settle
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Card>
@@ -246,24 +333,27 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-800">
-                {lineItems.map((item) => (
-                  <tr key={item.LineItemID}>
-                    <td className="p-2">
-                      <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
-                      <p className="text-xs text-gray-500">{item.ProductBrand}</p>
-                    </td>
-                    <td className="p-2 text-center">{item.LineQuantity}</td>
-                    <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
-                    <td className="p-2 text-right font-medium">
-                      {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                    </td>
-                    {debtEnabled && splitType === 'line_item' && (
-                      <td className="p-2 text-right text-gray-600 dark:text-gray-400">
-                        {item.DebtorName || '-'}
+                {lineItems.map((item) => {
+                  const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
+                  return (
+                    <tr key={item.LineItemID}>
+                      <td className="p-2">
+                        <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
+                        <p className="text-xs text-gray-500">{item.ProductBrand}</p>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="p-2 text-center">{item.LineQuantity}</td>
+                      <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
+                      <td className="p-2 text-right font-medium">
+                        {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                      </td>
+                      {debtEnabled && splitType === 'line_item' && (
+                        <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
+                          {item.DebtorName || '-'}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -281,6 +371,13 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
           </div>
         </Card>
       )}
+
+      <DebtSettlementModal
+        isOpen={isSettlementModalOpen}
+        onClose={() => setIsSettlementModalOpen(false)}
+        onSave={fetchReceiptData}
+        debtInfo={selectedDebtForSettlement}
+      />
     </div>
   );
 };

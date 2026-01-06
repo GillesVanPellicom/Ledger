@@ -52,7 +52,7 @@ CREATE TABLE Products
 );
 
 --------------------------------------------------
--- Debtors (formerly DebtEntities/People)
+-- Debtors
 --------------------------------------------------
 
 CREATE TABLE Debtors
@@ -63,7 +63,7 @@ CREATE TABLE Debtors
 );
 
 --------------------------------------------------
--- Payment methods (cash, bank, card, etc.)
+-- Payment methods
 --------------------------------------------------
 
 CREATE TABLE PaymentMethods
@@ -106,7 +106,7 @@ CREATE TABLE ReceiptSplits
   SplitID   INTEGER PRIMARY KEY,
   ReceiptID INTEGER NOT NULL,
   DebtorID  INTEGER NOT NULL,
-  SplitPart INTEGER NOT NULL, -- The numerator of the fraction (e.g., 1 in 1/4)
+  SplitPart INTEGER NOT NULL,
   FOREIGN KEY (ReceiptID)
     REFERENCES Receipts (ReceiptID)
     ON DELETE CASCADE,
@@ -129,7 +129,7 @@ CREATE TABLE ReceiptImages
 );
 
 --------------------------------------------------
--- Line items (per-product, per-person)
+-- Line items
 --------------------------------------------------
 
 CREATE TABLE LineItems
@@ -150,7 +150,7 @@ CREATE TABLE LineItems
 );
 
 --------------------------------------------------
--- Top-ups (adding money to payment methods)
+-- Top-ups
 --------------------------------------------------
 
 CREATE TABLE TopUps
@@ -164,6 +164,23 @@ CREATE TABLE TopUps
     REFERENCES PaymentMethods (PaymentMethodID)
     ON DELETE CASCADE
 );
+
+--------------------------------------------------
+-- Receipt Debtor Payments
+--------------------------------------------------
+
+CREATE TABLE ReceiptDebtorPayments
+(
+    PaymentID INTEGER PRIMARY KEY,
+    ReceiptID INTEGER NOT NULL,
+    DebtorID  INTEGER NOT NULL,
+    PaidDate  TEXT    NOT NULL,
+    TopUpID   INTEGER NOT NULL,
+    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE,
+    FOREIGN KEY (DebtorID) REFERENCES Debtors (DebtorID) ON DELETE CASCADE,
+    FOREIGN KEY (TopUpID) REFERENCES TopUps (TopUpID) ON DELETE CASCADE
+);
+
 
 --------------------------------------------------
 -- Indexes
@@ -210,3 +227,6 @@ CREATE INDEX idx_debtors_active
 
 CREATE INDEX idx_receiptsplits_receipt
   ON ReceiptSplits (ReceiptID);
+
+CREATE INDEX idx_receiptdebtorpayments_receipt_debtor
+  ON ReceiptDebtorPayments (ReceiptID, DebtorID);
