@@ -34,8 +34,8 @@ const DataTable = ({
   const inputRef = useRef(null);
 
   useEffect(() => {
-    if (selectable && selectedIds) {
-      setSelectedRows(new Set(selectedIds));
+    if (selectable) {
+      setSelectedRows(new Set(selectedIds || []));
     }
   }, [selectable, selectedIds]);
 
@@ -92,10 +92,15 @@ const DataTable = ({
   };
 
   const handleSelectAll = (e) => {
-    const newSelectedRows = new Set();
+    const newSelectedRows = new Set(selectedRows);
+    const currentIds = data.map(row => row[itemKey]);
+    
     if (e.target.checked) {
-      data.forEach(row => newSelectedRows.add(row[itemKey]));
+      currentIds.forEach(id => newSelectedRows.add(id));
+    } else {
+      currentIds.forEach(id => newSelectedRows.delete(id));
     }
+    
     setSelectedRows(newSelectedRows);
     if (onSelectionChange) onSelectionChange(Array.from(newSelectedRows));
   };
@@ -111,7 +116,10 @@ const DataTable = ({
     if (onSelectionChange) onSelectionChange(Array.from(newSelectedRows));
   };
 
-  const isAllSelected = useMemo(() => data.length > 0 && data.every(row => selectedRows.has(row[itemKey])), [data, selectedRows, itemKey]);
+  const isAllOnPageSelected = useMemo(() => {
+    if (data.length === 0) return false;
+    return data.every(row => selectedRows.has(row[itemKey]));
+  }, [data, selectedRows, itemKey]);
 
   const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endItem = Math.min(currentPage * pageSize, totalCount);
@@ -158,7 +166,7 @@ const DataTable = ({
                 {selectable && (
                   <th className="px-4 py-3 align-middle">
                     <div className="checkbox-wrapper-13 flex items-center justify-center">
-                      <input id="select-all-checkbox" type="checkbox" checked={isAllSelected} onChange={handleSelectAll} />
+                      <input id="select-all-checkbox" type="checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} />
                       <label htmlFor="select-all-checkbox"></label>
                     </div>
                   </th>
@@ -217,6 +225,9 @@ const DataTable = ({
 
       <div className="flex items-center justify-between px-2 py-2">
         <div className="text-xs text-gray-500 dark:text-gray-400">
+          {selectable && selectedRows.size > 0 
+            ? `${selectedRows.size} selected. `
+            : ''}
           Showing {startItem}-{endItem} of {totalCount}
         </div>
         <div className="flex items-center gap-2">
