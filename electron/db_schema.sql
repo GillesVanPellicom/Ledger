@@ -90,7 +90,9 @@ CREATE TABLE Receipts
   PaymentMethodID  INTEGER NOT NULL DEFAULT 1,
   ReceiptNote      TEXT,
   ReceiptEntryDate TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  SplitType        TEXT    DEFAULT 'none', -- 'none', 'line_item', 'total_split'
+  SplitType        TEXT    DEFAULT 'none', -- 'none', 'line_item', 'total_split',
+  OwnShares        INTEGER,
+  TotalShares      INTEGER,
   FOREIGN KEY (StoreID)
     REFERENCES Stores (StoreID),
   FOREIGN KEY (PaymentMethodID)

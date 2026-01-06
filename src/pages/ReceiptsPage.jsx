@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -12,6 +12,7 @@ import ProgressModal from '../components/ui/ProgressModal';
 import { useError } from '../context/ErrorContext';
 import Tooltip from '../components/ui/Tooltip';
 import { useSettings } from '../context/SettingsContext';
+import BulkDebtModal from '../components/debt/BulkDebtModal';
 
 const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
@@ -29,6 +30,7 @@ const ReceiptsPage = () => {
   
   const [pdfProgress, setPdfProgress] = useState(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isBulkDebtModalOpen, setIsBulkDebtModalOpen] = useState(false);
   
   const { showError } = useError();
   const { settings } = useSettings();
@@ -217,6 +219,12 @@ const ReceiptsPage = () => {
                 <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
                 Save as PDF
               </Button>
+              {debtEnabled && (
+                <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
+                  <UserGroupIcon className="h-4 w-4 mr-2" />
+                  Bulk Debt
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -240,6 +248,7 @@ const ReceiptsPage = () => {
         onRowClick={(row) => navigate(`/receipts/view/${row.ReceiptID}`)}
         selectable={true}
         onSelectionChange={setSelectedReceiptIds}
+        selectedIds={selectedReceiptIds}
         itemKey="ReceiptID"
       >
         <DatePicker
@@ -265,6 +274,18 @@ const ReceiptsPage = () => {
         progress={pdfProgress}
         title="Generating PDF Report..."
       />
+
+      {debtEnabled && (
+        <BulkDebtModal
+          isOpen={isBulkDebtModalOpen}
+          onClose={() => setIsBulkDebtModalOpen(false)}
+          receiptIds={selectedReceiptIds}
+          onComplete={() => {
+            fetchReceipts();
+            setSelectedReceiptIds([]);
+          }}
+        />
+      )}
     </div>
   );
 };

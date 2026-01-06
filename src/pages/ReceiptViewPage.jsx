@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon, UserIcon } from '@heroicons/react/24/solid';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import { useSettings } from '../context/SettingsContext';
 import { useError } from '../context/ErrorContext';
@@ -99,13 +99,17 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
   }, [id, showError, settings.datastore.folderPath, debtEnabled]);
 
   const debtSummary = useMemo(() => {
-    if (!debtEnabled || !receipt) return [];
+    if (!debtEnabled || !receipt) return { debtors: [], ownShare: null };
 
     const summary = {};
     const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
+    let ownShare = null;
 
-    if (splitType === 'total_split' && receiptSplits.length > 0) {
-      const totalShares = receipt.TotalShares > 0 ? receipt.TotalShares : receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0);
+    if (splitType === 'total_split' && (receiptSplits.length > 0 || receipt.OwnShares > 0)) {
+      const totalShares = receipt.TotalShares > 0 
+        ? receipt.TotalShares 
+        : receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0) + (receipt.OwnShares || 0);
+
       receiptSplits.forEach(split => {
         const amount = (totalAmount * split.SplitPart) / totalShares;
         summary[split.DebtorID] = {
@@ -116,6 +120,15 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
           totalShares: totalShares,
         };
       });
+
+      if (receipt.OwnShares > 0) {
+        const ownAmount = (totalAmount * receipt.OwnShares) / totalShares;
+        ownShare = {
+          amount: ownAmount,
+          shares: receipt.OwnShares,
+          totalShares: totalShares,
+        };
+      }
     } else if (splitType === 'line_item') {
       const debtorItems = {};
       lineItems.forEach(item => {
@@ -137,7 +150,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         }
       });
     }
-    return Object.values(summary);
+    return { debtors: Object.values(summary), ownShare };
   }, [lineItems, receipt, receiptSplits, splitType, debtEnabled]);
 
   const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
@@ -277,7 +290,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         </Card>
       )}
 
-      {debtEnabled && splitType !== 'none' && debtSummary.length > 0 && (
+      {debtEnabled && splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
         <Card>
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -285,7 +298,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
               <h2 className="text-lg font-semibold">Debt Breakdown</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {debtSummary.map((debtor) => {
+              {debtSummary.debtors.map((debtor) => {
                 const payment = payments.find(p => p.DebtorID === debtor.debtorId);
                 const isPaid = !!payment;
                 
@@ -327,6 +340,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                         Unsettle
                       </Button>
                     ) : (
+      
                       <Button 
                         size="sm"
                         className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
@@ -338,6 +352,22 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                   </div>
                 );
               })}
+              {debtSummary.ownShare && (
+                <div className="p-4 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-medium text-blue-900 dark:text-blue-100">Own Share</p>
+                      <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                      €{debtSummary.ownShare.amount.toFixed(2)}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Card>

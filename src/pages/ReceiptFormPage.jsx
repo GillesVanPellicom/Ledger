@@ -26,7 +26,7 @@ const ReceiptFormPage = () => {
   const [stores, setStores] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [debtors, setDebtors] = useState([]);
-  const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '1', totalShares: 0 });
+  const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '1', ownShares: 0 });
   const [lineItems, setLineItems] = useState([]);
   const [images, setImages] = useState([]);
   
@@ -35,7 +35,6 @@ const ReceiptFormPage = () => {
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Debt state
   const [splitType, setSplitType] = useState('none');
   const [receiptSplits, setReceiptSplits] = useState([]);
   const [selectedLineItems, setSelectedLineItems] = useState([]);
@@ -79,13 +78,14 @@ const ReceiptFormPage = () => {
       if (isEditing) {
         const receiptData = await db.queryOne('SELECT * FROM Receipts WHERE ReceiptID = ?', [id]);
         if (receiptData) {
-          setFormData({
+          setFormData(prev => ({
+            ...prev,
             storeId: receiptData.StoreID,
             receiptDate: parseISO(receiptData.ReceiptDate),
             note: receiptData.ReceiptNote || '',
             paymentMethodId: receiptData.PaymentMethodID || '1',
-            totalShares: receiptData.TotalShares || 0,
-          });
+            ownShares: receiptData.OwnShares || 0,
+          }));
           setSplitType(receiptData.SplitType || 'none');
 
           const lineItemData = await db.query(`
@@ -122,19 +122,26 @@ const ReceiptFormPage = () => {
     fetchData();
   }, [id, isEditing, paymentMethodsEnabled, debtEnabled]);
 
+  const totalShares = useMemo(() => {
+    const debtorShares = receiptSplits.reduce((acc, curr) => acc + parseInt(curr.SplitPart || 0), 0);
+    const ownShares = parseInt(formData.ownShares) || 0;
+    return debtorShares + ownShares;
+  }, [receiptSplits, formData.ownShares]);
+
   const debtSummary = useMemo(() => {
-    if (!debtEnabled) return [];
+    if (!debtEnabled) return { debtors: [], self: null };
     
     const summary = {};
     const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
+    let selfAmount = null;
 
-    if (splitType === 'total_split' && receiptSplits.length > 0) {
-      const totalParts = formData.totalShares > 0 ? formData.totalShares : receiptSplits.reduce((acc, curr) => acc + parseInt(curr.SplitPart || 0), 0);
-      if (totalParts > 0) {
-        receiptSplits.forEach(split => {
-          const amount = (totalAmount * parseInt(split.SplitPart || 0)) / totalParts;
-          summary[split.DebtorName] = (summary[split.DebtorName] || 0) + amount;
-        });
+    if (splitType === 'total_split' && totalShares > 0) {
+      receiptSplits.forEach(split => {
+        const amount = (totalAmount * parseInt(split.SplitPart || 0)) / totalShares;
+        summary[split.DebtorName] = (summary[split.DebtorName] || 0) + amount;
+      });
+      if (formData.ownShares > 0) {
+        selfAmount = (totalAmount * parseInt(formData.ownShares)) / totalShares;
       }
     } else if (splitType === 'line_item') {
       lineItems.forEach(item => {
@@ -148,8 +155,11 @@ const ReceiptFormPage = () => {
       });
     }
 
-    return Object.entries(summary).map(([name, amount]) => ({ name, amount }));
-  }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, formData.totalShares]);
+    return { 
+      debtors: Object.entries(summary).map(([name, amount]) => ({ name, amount })),
+      self: selfAmount
+    };
+  }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, totalShares, formData.ownShares]);
 
   const handleFormChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleDateChange = (date) => setFormData(prev => ({ ...prev, receiptDate: date }));
@@ -206,7 +216,6 @@ const ReceiptFormPage = () => {
     return image.ImagePath;
   };
 
-  // Debt Handlers
   const handleSplitTypeChange = (newType) => {
     if (hasSettledDebts) return;
     const hasUnsavedDebt = (splitType === 'total_split' && receiptSplits.length > 0) || (splitType === 'line_item' && lineItems.some(li => li.DebtorID));
@@ -226,9 +235,9 @@ const ReceiptFormPage = () => {
   };
 
   const handleAddSplit = (debtorId) => {
-    if (!debtorId) return;
+    if (!debtorId || hasSettledDebts) return;
     const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId));
-    if (debtor && !paidDebtorIds.includes(debtor.DebtorID)) {
+    if (debtor) {
       setReceiptSplits(prev => [...prev, { key: nanoid(), DebtorID: debtor.DebtorID, DebtorName: debtor.DebtorName, SplitPart: 1 }]);
     }
   };
@@ -242,7 +251,7 @@ const ReceiptFormPage = () => {
   };
 
   const handleLineItemClick = (index, event) => {
-    if (splitType !== 'line_item' || paidDebtorIds.includes(lineItems[index].DebtorID)) return;
+    if (splitType !== 'line_item' || hasSettledDebts) return;
 
     let newSelected = [...selectedLineItems];
     
@@ -250,7 +259,7 @@ const ReceiptFormPage = () => {
       const start = Math.min(lastSelectedLineItemIndex, index);
       const end = Math.max(lastSelectedLineItemIndex, index);
       for (let i = start; i <= end; i++) {
-        if (!newSelected.includes(i) && !paidDebtorIds.includes(lineItems[i].DebtorID)) newSelected.push(i);
+        if (!newSelected.includes(i)) newSelected.push(i);
       }
     } else if (event.ctrlKey || event.metaKey) {
       if (newSelected.includes(index)) {
@@ -273,7 +282,7 @@ const ReceiptFormPage = () => {
   };
 
   const handleAssignDebtorToLineItems = (debtorId) => {
-    if (debtorId === '_placeholder_') return;
+    if (debtorId === '_placeholder_' || hasSettledDebts) return;
     const debtorName = debtorId && debtorId !== '_clear_' ? debtors.find(d => d.DebtorID === parseInt(debtorId))?.DebtorName : null;
     
     const updatedLineItems = [...lineItems];
@@ -290,15 +299,14 @@ const ReceiptFormPage = () => {
   };
 
   const handleRemoveDebtorFromItem = (index) => {
+    if (hasSettledDebts) return;
     const updatedLineItems = [...lineItems];
     updatedLineItems[index] = { ...updatedLineItems[index], DebtorID: null, DebtorName: null };
     setLineItems(updatedLineItems);
   };
 
   const handleRemoveDebtorFromReceipt = (debtorName) => {
-    const debtor = debtors.find(d => d.DebtorName === debtorName);
-    if (paidDebtorIds.includes(debtor?.DebtorID)) return;
-
+    if (hasSettledDebts) return;
     if (splitType === 'total_split') {
       setReceiptSplits(prev => prev.filter(s => s.DebtorName !== debtorName));
     } else if (splitType === 'line_item') {
@@ -316,21 +324,35 @@ const ReceiptFormPage = () => {
         formData.storeId, 
         format(formData.receiptDate, 'yyyy-MM-dd'), 
         formData.note, 
-        formData.paymentMethodId, 
+        paymentMethodsEnabled ? formData.paymentMethodId : 1,
         splitType,
-        splitType === 'total_split' ? formData.totalShares : null
+        splitType === 'total_split' ? (formData.ownShares || 0) : null,
+        splitType === 'total_split' ? totalShares : null,
       ];
 
       if (isEditing) {
-        await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, SplitType = ?, TotalShares = ? WHERE ReceiptID = ?', [...receiptPayload, id]);
+        await db.execute(
+          'UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?', 
+          [...receiptPayload, id]
+        );
         
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
         await db.execute('DELETE FROM ReceiptSplits WHERE ReceiptID = ?', [id]);
-        await db.execute('DELETE FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        
+        const existingImages = await db.query('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        const imagesToKeep = images.filter(img => !img.file).map(img => img.ImagePath);
+        const imagesToDelete = existingImages.filter(img => !imagesToKeep.includes(img.ImagePath));
+        if (imagesToDelete.length > 0) {
+          const placeholders = imagesToDelete.map(() => '?').join(',');
+          await db.execute(`DELETE FROM ReceiptImages WHERE ReceiptID = ? AND ImagePath IN (${placeholders})`, [id, ...imagesToDelete.map(i => i.ImagePath)]);
+        }
         
         receiptId = id;
       } else {
-        const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, TotalShares) VALUES (?, ?, ?, ?, ?, ?)', receiptPayload);
+        const result = await db.execute(
+          'INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, OwnShares, TotalShares) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+          receiptPayload
+        );
         receiptId = result.lastID;
       }
   
@@ -345,11 +367,9 @@ const ReceiptFormPage = () => {
       }
   
       if (window.electronAPI && settings.datastore.folderPath) {
-        for (const image of images) {
-          let imagePathToSave = image.ImagePath;
-          if (image.file) {
-            imagePathToSave = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);
-          }
+        const newImages = images.filter(img => img.file);
+        for (const image of newImages) {
+          const imagePathToSave = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);
           await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, imagePathToSave]);
         }
       }
@@ -377,13 +397,13 @@ const ReceiptFormPage = () => {
           <button 
             key={btn.type}
             onClick={() => handleSplitTypeChange(btn.type)} 
-            disabled={hasSettledDebts && splitType !== btn.type}
+            disabled={hasSettledDebts}
             className={cn(
               "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
               splitType === btn.type 
                 ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" 
                 : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
-              hasSettledDebts && splitType !== btn.type ? "opacity-50 cursor-not-allowed" : ""
+              hasSettledDebts ? "opacity-50 cursor-not-allowed" : ""
             )}
           >
             {btn.label}
@@ -449,55 +469,48 @@ const ReceiptFormPage = () => {
               <SplitTypeSelector />
             </div>
 
+            {hasSettledDebts && (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-center gap-2">
+                <LockClosedIcon className="h-5 w-5" />
+                <span>One or more debts on this receipt have been settled. Debt configuration is now locked.</span>
+              </div>
+            )}
+
             {splitType === 'total_split' && (
               <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Select 
-                      value=""
-                      onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
-                      options={[{ value: '', label: 'Add Debtor...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID) && !paidDebtorIds.includes(d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                      className="bg-white dark:bg-gray-800"
-                      disabled={hasSettledDebts}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Input 
-                      label="Total Shares (for self)"
-                      type="number"
-                      name="totalShares"
-                      value={formData.totalShares}
-                      onChange={handleFormChange}
-                      min={receiptSplits.reduce((acc, curr) => acc + parseInt(curr.SplitPart || 0), 0)}
-                      disabled={hasSettledDebts}
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-4 items-end">
+                  <Select 
+                    label="Add Debtor"
+                    value=""
+                    onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
+                    options={[{ value: '', label: 'Choose...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                    className="bg-white dark:bg-gray-800"
+                    disabled={hasSettledDebts}
+                  />
+                  <Input 
+                    label="Own Shares"
+                    type="number"
+                    name="ownShares"
+                    value={formData.ownShares}
+                    onChange={handleFormChange}
+                    min="0"
+                    disabled={hasSettledDebts}
+                  />
                 </div>
                 <div className="space-y-2">
-                  {receiptSplits.map(split => {
-                    const isPaid = paidDebtorIds.includes(split.DebtorID);
-                    return (
-                      <div key={split.key} className={cn("flex items-center justify-between p-3 rounded-lg border", isPaid ? "bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700")}>
-                        <span className="font-medium">{split.DebtorName}</span>
-                        <div className="flex items-center gap-3">
-                          {isPaid ? (
-                            <Tooltip content="This debt has been settled and cannot be edited.">
-                              <LockClosedIcon className="h-5 w-5 text-gray-400" />
-                            </Tooltip>
-                          ) : (
-                            <>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-500">Parts:</span>
-                                <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-700 text-sm" />
-                              </div>
-                              <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>
-                            </>
-                          )}
+                  {receiptSplits.map(split => (
+                    <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <span className="font-medium">{split.DebtorName}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Shares:</span>
+                          <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-700 text-sm" disabled={hasSettledDebts} />
                         </div>
+                        {!hasSettledDebts && <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
                       </div>
-                    );
-                  })}
-                  {receiptSplits.length > 0 && <div className="text-sm text-gray-500 text-right mt-2">Debtor Shares: {receiptSplits.reduce((acc, curr) => acc + parseInt(curr.SplitPart || 0), 0)}</div>}
+                    </div>
+                  ))}
+                  {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
                 </div>
               </div>
             )}
@@ -510,7 +523,7 @@ const ReceiptFormPage = () => {
                     <Select 
                       value="_placeholder_"
                       onChange={(e) => handleAssignDebtorToLineItems(e.target.value)}
-                      options={[{ value: '_placeholder_', label: 'Assign to...' }, { value: '_clear_', label: '(Clear Assignment)' }, ...debtors.filter(d => !paidDebtorIds.includes(d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                      options={[{ value: '_placeholder_', label: 'Assign to...' }, { value: '_clear_', label: '(Clear Assignment)' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
                       disabled={selectedLineItems.length === 0 || hasSettledDebts}
                       className="bg-white dark:bg-gray-800"
                     />
@@ -520,19 +533,15 @@ const ReceiptFormPage = () => {
               </div>
             )}
 
-            {splitType !== 'none' && debtSummary.length > 0 && (
+            {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estimated Debt</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {debtSummary.map((debtor) => {
-                    const isPaid = paidDebtorIds.includes(debtors.find(d => d.DebtorName === debtor.name)?.DebtorID);
-                    const DebtCard = (
-                      <div className={cn("relative group p-2 rounded border text-sm w-full", isPaid ? "bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700")}>
+                  {debtSummary.debtors.map((debtor) => (
+                    <div key={debtor.name} className="w-full">
+                      <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                         <span className="text-gray-500 block">{debtor.name}</span>
                         <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
-                        {isPaid ? (
-                          <LockClosedIcon className="h-4 w-4 text-gray-400 absolute top-2 right-2" />
-                        ) : (
+                        {!hasSettledDebts && (
                           <button 
                             onClick={() => handleRemoveDebtorFromReceipt(debtor.name)}
                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -541,20 +550,16 @@ const ReceiptFormPage = () => {
                           </button>
                         )}
                       </div>
-                    );
-
-                    return (
-                      <div key={debtor.name} className="w-full">
-                        {isPaid ? (
-                          <Tooltip content="Settled debt cannot be changed.">
-                            {DebtCard}
-                          </Tooltip>
-                        ) : (
-                          DebtCard
-                        )}
+                    </div>
+                  ))}
+                  {debtSummary.self && (
+                    <div className="w-full">
+                      <div className="p-2 rounded border text-sm w-full bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+                        <span className="text-blue-500 block">Self</span>
+                        <span className="font-bold text-blue-800 dark:text-blue-200">€{debtSummary.self.toFixed(2)}</span>
                       </div>
-                    );
-                  })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -581,57 +586,52 @@ const ReceiptFormPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-800">
-                {lineItems.map((item, index) => {
-                  const isPaid = paidDebtorIds.includes(item.DebtorID);
-                  return (
-                    <tr 
-                      key={item.key} 
-                      onClick={(e) => handleLineItemClick(index, e)}
-                      className={cn(
-                        "transition-colors border-b dark:border-gray-800",
-                        splitType === 'line_item' && !isPaid ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" : "",
-                        selectedLineItems.includes(index) ? "bg-blue-50 dark:bg-blue-900/30" : "",
-                        isPaid ? "bg-gray-50 dark:bg-gray-800/50" : ""
-                      )}
-                    >
-                      <td className="p-2">
-                        <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
-                        <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                {lineItems.map((item, index) => (
+                  <tr 
+                    key={item.key} 
+                    onClick={(e) => handleLineItemClick(index, e)}
+                    className={cn(
+                      "transition-colors border-b dark:border-gray-800",
+                      splitType === 'line_item' && !hasSettledDebts ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" : "",
+                      selectedLineItems.includes(index) ? "bg-blue-50 dark:bg-blue-900/30" : "",
+                      hasSettledDebts ? "bg-gray-50 dark:bg-gray-800/50" : ""
+                    )}
+                  >
+                    <td className="p-2">
+                      <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
+                      <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                    </td>
+                    <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} className="h-9" error={errors[`qty_${item.key}`]} min="0" disabled={hasSettledDebts} /></td>
+                    <td className="p-2"><Input type="number" value={item.LineUnitPrice} onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} className="h-9" error={errors[`price_${item.key}`]} min="0" disabled={hasSettledDebts} /></td>
+                    <td className="p-2 text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</td>
+                    {debtEnabled && splitType === 'line_item' && (
+                      <td className="p-2 text-right text-gray-600 dark:text-gray-400">
+                        {item.DebtorName ? (
+                          <div className="flex items-center justify-end gap-2 group">
+                            <span>{item.DebtorName}</span>
+                            {hasSettledDebts ? (
+                              <LockClosedIcon className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleRemoveDebtorFromItem(index); }}
+                                className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <XMarkIcon className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ) : '-'}
                       </td>
-                      <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} className="h-9" error={errors[`qty_${item.key}`]} min="0" disabled={isPaid} /></td>
-                      <td className="p-2"><Input type="number" value={item.LineUnitPrice} onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} className="h-9" error={errors[`price_${item.key}`]} min="0" disabled={isPaid} /></td>
-                      <td className="p-2 text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</td>
-                      {debtEnabled && splitType === 'line_item' && (
-                        <td className="p-2 text-right text-gray-600 dark:text-gray-400">
-                          {item.DebtorName ? (
-                            <div className="flex items-center justify-end gap-2 group">
-                              <span>{item.DebtorName}</span>
-                              {isPaid ? (
-                                <Tooltip content="Settled debt cannot be changed.">
-                                  <LockClosedIcon className="h-4 w-4 text-gray-400" />
-                                </Tooltip>
-                              ) : (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveDebtorFromItem(index); }}
-                                  className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <XMarkIcon className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          ) : '-'}
-                        </td>
-                      )}
-                      <td className="p-2 text-center">
-                        {!isPaid && <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); removeLineItem(item.key); }}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
-                      </td>
-                    </tr>
-                  );
-                })}
+                    )}
+                    <td className="p-2 text-center">
+                      {!hasSettledDebts && <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); removeLineItem(item.key); }}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          <Button variant="secondary" onClick={() => setIsProductSelectorOpen(true)}><PlusIcon className="h-4 w-4 mr-2" />Add Item</Button>
+          <Button variant="secondary" onClick={() => setIsProductSelectorOpen(true)} disabled={hasSettledDebts}><PlusIcon className="h-4 w-4 mr-2" />Add Item</Button>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 text-right font-bold text-lg rounded-b-xl">Total: €{calculateTotal().toFixed(2)}</div>
       </Card>
