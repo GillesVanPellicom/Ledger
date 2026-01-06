@@ -65,14 +65,15 @@ const StoresPage = () => {
     { 
       header: 'Active', 
       width: '10%',
+      className: 'text-center',
       render: (row) => (
         row.StoreIsActive ? 
-        <CheckCircleIcon className="h-5 w-5 text-green-500" /> : 
-        <XCircleIcon className="h-5 w-5 text-red-500" />
+        <CheckCircleIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+        <XCircleIcon className="h-5 w-5 text-red-500 inline-block" />
       )
     },
     {
-      header: 'Actions',
+      header: '',
       width: '10%',
       className: 'text-right',
       render: (row) => (

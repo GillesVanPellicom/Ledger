@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -40,9 +40,17 @@ const ReceiptsPage = () => {
     try {
       const offset = (currentPage - 1) * pageSize;
       
-      let debtSubQuery = '';
+      let debtSubQueries = '';
       if (debtEnabled) {
-        debtSubQuery = `,
+        debtSubQueries = `,
+          (
+            SELECT COUNT(DISTINCT d.DebtorID)
+            FROM Debtors d
+            WHERE (
+              (r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID)) OR
+              (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID))
+            )
+          ) as TotalDebtorCount,
           (
             SELECT COUNT(DISTINCT d.DebtorID)
             FROM Debtors d
@@ -56,7 +64,9 @@ const ReceiptsPage = () => {
       }
 
       let query = `
-        SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName ${debtSubQuery}
+        SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName,
+        (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as TotalAmount
+        ${debtSubQueries}
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
       `;
@@ -80,7 +90,7 @@ const ReceiptsPage = () => {
 
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(`SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName ${debtSubQuery}`, 'SELECT r.ReceiptID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(`SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName, (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as TotalAmount ${debtSubQueries}`, 'SELECT r.ReceiptID')})`;
       const countResult = await db.queryOne(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
@@ -158,9 +168,10 @@ const ReceiptsPage = () => {
   };
 
   const columns = [
-    { header: 'Date', width: '25%', render: (row) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
-    { header: 'Store', accessor: 'StoreName', width: '35%' },
-    { header: 'Note', accessor: 'ReceiptNote', width: '30%' },
+    { header: 'Date', width: '20%', render: (row) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
+    { header: 'Store', accessor: 'StoreName', width: '30%' },
+    { header: 'Note', accessor: 'ReceiptNote', width: '25%' },
+    { header: 'Total', width: '15%', className: 'text-right', render: (row) => `€${(row.TotalAmount || 0).toFixed(2)}` },
     {
       header: '',
       width: '10%',
@@ -172,12 +183,16 @@ const ReceiptsPage = () => {
               <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
             </Tooltip>
           )}
+          {debtEnabled && row.TotalDebtorCount > 0 && row.UnpaidDebtorCount === 0 && (
+            <Tooltip content="All debts settled for this receipt">
+              <CheckCircleIcon className="h-5 w-5 text-green-500" />
+            </Tooltip>
+          )}
           <Tooltip content="Delete Receipt" align="end">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={(e) => { e.stopPropagation(); openDeleteModal(row.ReceiptID); }}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <TrashIcon className="h-4 w-4" />
             </Button>

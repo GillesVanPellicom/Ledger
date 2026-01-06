@@ -13,6 +13,7 @@ import { useError } from '../context/ErrorContext';
 import { cn } from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import Tooltip from '../components/ui/Tooltip';
+import { ConfirmModal } from '../components/ui/Modal';
 
 const ReceiptViewPage = ({ openSettingsModal }) => {
   const { id } = useParams();
@@ -32,6 +33,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
   const [payments, setPayments] = useState([]);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState(null);
+  const [unsettleConfirmation, setUnsettleConfirmation] = useState({ isOpen: false, paymentId: null, topUpId: null });
 
   const fetchReceiptData = async () => {
     setLoading(true);
@@ -162,13 +164,20 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
     setIsSettlementModalOpen(true);
   };
 
-  const handleUnsettleDebt = async (paymentId, topUpId) => {
+  const confirmUnsettleDebt = (paymentId, topUpId) => {
+    setUnsettleConfirmation({ isOpen: true, paymentId, topUpId });
+  };
+
+  const handleUnsettleDebt = async () => {
+    const { paymentId, topUpId } = unsettleConfirmation;
     try {
       await db.execute('DELETE FROM ReceiptDebtorPayments WHERE PaymentID = ?', [paymentId]);
       await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
       fetchReceiptData();
     } catch (error) {
       showError(error);
+    } finally {
+      setUnsettleConfirmation({ isOpen: false, paymentId: null, topUpId: null });
     }
   };
 
@@ -251,6 +260,15 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
           </div>
         </div>
       </Card>
+      
+      {images.length > 0 && (
+        <Card>
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Images</h2>
+            <Gallery images={images} />
+          </div>
+        </Card>
+      )}
 
       {debtEnabled && splitType !== 'none' && debtSummary.length > 0 && (
         <Card>
@@ -293,18 +311,16 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                     
                     {isPaid ? (
                       <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="w-full text-red-600 border-red-300 dark:border-red-700 border hover:bg-red-100 dark:hover:bg-red-900/30"
-                        onClick={() => handleUnsettleDebt(payment.PaymentID, payment.TopUpID)}
+                        size="sm"
+                        className="w-full text-green-800 bg-green-200 border-green-300 hover:bg-green-300 border dark:text-green-100 dark:bg-green-800/50 dark:border-green-700 dark:hover:bg-green-800"
+                        onClick={() => confirmUnsettleDebt(payment.PaymentID, payment.TopUpID)}
                       >
                         Unsettle
                       </Button>
                     ) : (
                       <Button 
-                        size="sm" 
-                        variant="ghost"
-                        className="w-full text-green-600 border-green-300 dark:border-green-700 border hover:bg-green-100 dark:hover:bg-green-900/30"
+                        size="sm"
+                        className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
                         onClick={() => handleSettleDebt(debtor)}
                       >
                         Settle
@@ -363,20 +379,19 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         </div>
       </Card>
 
-      {images.length > 0 && (
-        <Card>
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Images</h2>
-            <Gallery images={images} />
-          </div>
-        </Card>
-      )}
-
       <DebtSettlementModal
         isOpen={isSettlementModalOpen}
         onClose={() => setIsSettlementModalOpen(false)}
         onSave={fetchReceiptData}
         debtInfo={selectedDebtForSettlement}
+      />
+
+      <ConfirmModal
+        isOpen={unsettleConfirmation.isOpen}
+        onClose={() => setUnsettleConfirmation({ isOpen: false, paymentId: null, topUpId: null })}
+        onConfirm={handleUnsettleDebt}
+        title="Unsettle Debt"
+        message="Are you sure you want to mark this debt as unpaid? This will also delete the associated top-up transaction."
       />
     </div>
   );

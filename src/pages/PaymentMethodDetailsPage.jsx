@@ -224,7 +224,7 @@ const PaymentMethodDetailsPage = () => {
               size="icon" 
               onClick={(e) => { e.stopPropagation(); openDeleteModal(row); }}
             >
-              <TrashIcon className="h-4 w-4 text-danger" />
+              <TrashIcon className="h-4 w-4" />
             </Button>
           </Tooltip>
         </div>
