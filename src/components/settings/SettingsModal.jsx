@@ -146,12 +146,12 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   
   tabs.sort((a, b) => a.label.localeCompare(b.label));
 
-  const Toggle = ({ label, description, isEnabled, onToggle, icon: Icon, iconColorClass }) => (
+  const Toggle = ({ label, description, isEnabled, onToggle, icon: Icon }) => (
     <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {Icon && (
-            <div className={cn("p-2 rounded-lg", iconColorClass)}>
+            <div className={cn("p-2 rounded-lg", isEnabled ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500")}>
               <Icon className="h-6 w-6" />
             </div>
           )}
@@ -226,7 +226,6 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                       isEnabled={settings.modules.paymentMethods.enabled} 
                       onToggle={() => handleModuleToggle('paymentMethods')}
                       icon={CreditCardIcon}
-                      iconColorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
                     />
                     <Toggle 
                       label="Debt Tracking" 
@@ -234,7 +233,6 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                       isEnabled={settings.modules.debt?.enabled} 
                       onToggle={() => handleModuleToggle('debt')}
                       icon={UserGroupIcon}
-                      iconColorClass="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                     />
                   </div>
                 </div>
@@ -247,18 +245,16 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                   <SectionTitle title="Datastore" tooltip="The location where this app will save all data. Preferrably placed in a folder which is backed up." />
                   <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">Datastore Folder</p>
-                          <Tooltip content={tooltipText}>
-                            <p 
-                              className="text-sm text-gray-500 truncate cursor-pointer" 
-                              onClick={handleCopyToClipboard}
-                            >
-                              {datastorePath || 'No folder selected'}
-                            </p>
-                          </Tooltip>
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">Datastore Folder</p>
+                        <Tooltip content={tooltipText}>
+                          <p 
+                            className="text-sm text-gray-500 truncate cursor-pointer" 
+                            onClick={handleCopyToClipboard}
+                          >
+                            {datastorePath || 'No folder selected'}
+                          </p>
+                        </Tooltip>
                       </div>
                       <Button onClick={handleSelectDatastore} className="flex-shrink-0 ml-4">Select Folder</Button>
                     </div>

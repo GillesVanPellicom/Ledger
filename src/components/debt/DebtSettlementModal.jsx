@@ -90,6 +90,7 @@ const DebtSettlementModal = ({ isOpen, onClose, onSave, debtInfo }) => {
           label="Payment Date"
           selected={paidDate}
           onChange={setPaidDate}
+          popperClassName="react-datepicker-in-modal"
         />
         {paymentMethodsEnabled && (
           <Select
