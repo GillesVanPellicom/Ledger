@@ -6,7 +6,7 @@ import { CalendarIcon } from '@heroicons/react/24/outline';
 
 const DatePicker = ({ className, label, error, ...props }) => {
   return (
-    <div className="w-full relative">
+    <div className="w-full">
       {label && (
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {label}
@@ -20,8 +20,8 @@ const DatePicker = ({ className, label, error, ...props }) => {
             className
           )}
           dateFormat="dd/MM/yyyy"
+          popperPlacement="top-start"
           popperClassName="z-[9999]"
-          portalId="root-portal"
           {...props}
         />
         <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />

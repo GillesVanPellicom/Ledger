@@ -6,7 +6,8 @@ import Card from '../ui/Card';
 import Select from '../ui/Select';
 import DataTable from '../ui/DataTable';
 import Spinner from '../ui/Spinner';
-import { DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { DocumentMagnifyingGlassIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import Tooltip from '../ui/Tooltip';
 
 const TopProducts = () => {
   const chartRef = useRef(null);
@@ -167,11 +168,18 @@ const TopProducts = () => {
     return `${format(dateRange[0], 'dd/MM/yyyy')} - ${format(dateRange[1], 'dd/MM/yyyy')}`;
   };
 
+  const CardHeader = ({ title, tooltipText }) => (
+    <div className="flex items-center gap-2">
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <Tooltip content={tooltipText}><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+    </div>
+  );
+
   return (
     <Card className="col-span-1 lg:col-span-2">
       <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-lg font-semibold">Product Spending</h2>
+          <CardHeader title="Product Spending" tooltipText="Shows the top 10 products by total amount spent in the selected period." />
           <div className="flex flex-wrap gap-2">
             <div className="w-32">
               <Select
