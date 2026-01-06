@@ -73,9 +73,11 @@ const DebtPage = () => {
       width: '10%',
       className: 'text-center',
       render: (row) => (
-        row.DebtorIsActive ? 
-        <CheckCircleIcon className="h-5 w-5 text-green-500 inline-block" /> : 
-        <XCircleIcon className="h-5 w-5 text-red-500 inline-block" />
+        <Tooltip content={row.DebtorIsActive ? 'Active debtors appear in selection lists.' : 'Inactive debtors are hidden from selection lists.'}>
+          {row.DebtorIsActive ? 
+          <CheckCircleIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+          <XCircleIcon className="h-5 w-5 text-red-500 inline-block" />}
+        </Tooltip>
       )
     },
     {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
@@ -15,6 +15,14 @@ import DatePicker from '../components/ui/DatePicker';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import Tooltip from '../components/ui/Tooltip';
 import Input from '../components/ui/Input';
+
+const tryParseJson = (str) => {
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return null;
+  }
+};
 
 const PaymentMethodDetailsPage = () => {
   const chartRef = useRef(null);
@@ -202,10 +210,25 @@ const PaymentMethodDetailsPage = () => {
     };
   }, [transactions, method]);
 
+  const renderNote = (note) => {
+    const parsedNote = tryParseJson(note);
+    if (parsedNote && parsedNote.type === 'debt_settlement') {
+      return (
+        <>
+          Debt settled by{' '}
+          <Link to={`/receipts/view/${parsedNote.receiptId}`} className="text-accent hover:underline">
+            {parsedNote.debtorName}
+          </Link>
+        </>
+      );
+    }
+    return note || '-';
+  };
+
   const columns = [
     { header: 'Date', render: (row) => format(new Date(row.date), 'dd/MM/yyyy') },
     { header: 'Name', accessor: 'name' },
-    { header: 'Note', render: (row) => row.note || '-' },
+    { header: 'Note', render: (row) => renderNote(row.note) },
     { 
       header: 'Amount',
       render: (row) => (

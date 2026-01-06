@@ -9,6 +9,14 @@ import Select from '../components/ui/Select';
 import ReactECharts from 'echarts-for-react';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
+import Button from '../components/ui/Button';
+import { DocumentArrowDownIcon } from '@heroicons/react/24/solid';
+import Modal, { ConfirmModal } from '../components/ui/Modal';
+import { generateReceiptsPdf } from '../utils/pdfGenerator';
+import ProgressModal from '../components/ui/ProgressModal';
+import { useError } from '../context/ErrorContext';
+import { useSettings } from '../context/SettingsContext';
+import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 
 const DebtorDetailsPage = () => {
   const { id } = useParams();
@@ -23,6 +31,18 @@ const DebtorDetailsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState('all');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
+
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState(null);
+  const [unsettleConfirmation, setUnsettleConfirmation] = useState({ isOpen: false, receiptId: null });
+
+  const { showError } = useError();
+  const { settings } = useSettings();
+
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
 
@@ -33,16 +53,30 @@ const DebtorDetailsPage = () => {
       setDebtor(debtorData);
 
       const receiptData = await db.query(`
-        SELECT r.ReceiptID, r.ReceiptDate, s.StoreName, r.ReceiptTotal, r.ReceiptIsSettled
+        SELECT
+          r.ReceiptID,
+          r.ReceiptDate,
+          r.PaymentMethodID,
+          s.StoreName,
+          (rdp.PaymentID IS NOT NULL) as ReceiptIsSettled,
+          (
+            SELECT SUM(li.LineQuantity * li.LineUnitPrice)
+            FROM LineItems li
+            WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID = ?
+          ) as DebtorTotal
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
-        WHERE r.DebtorID = ?
+        LEFT JOIN ReceiptDebtorPayments rdp ON r.ReceiptID = rdp.ReceiptID AND rdp.DebtorID = ?
+        WHERE r.ReceiptID IN (
+          SELECT DISTINCT li.ReceiptID FROM LineItems li WHERE li.DebtorID = ?
+        )
         ORDER BY r.ReceiptDate DESC
-      `, [id]);
+      `, [id, id, id]);
+
       setReceipts(receiptData);
 
-      const totalDebt = receiptData.reduce((sum, r) => sum + r.ReceiptTotal, 0);
-      const paidDebt = receiptData.filter(r => r.ReceiptIsSettled).reduce((sum, r) => sum + r.ReceiptTotal, 0);
+      const totalDebt = receiptData.reduce((sum, r) => sum + (r.DebtorTotal || 0), 0);
+      const paidDebt = receiptData.filter(r => r.ReceiptIsSettled).reduce((sum, r) => sum + (r.DebtorTotal || 0), 0);
       setStats({
         total: totalDebt,
         paid: paidDebt,
@@ -50,18 +84,100 @@ const DebtorDetailsPage = () => {
       });
 
     } catch (error) {
-      console.error("Failed to fetch debtor details:", error);
+      showError(error);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, showError]);
 
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
 
+  const handlePdfSave = async () => {
+    setIsGeneratingPdf(true);
+    setPdfProgress(0);
+    try {
+      let receiptsToProcess = [...receipts];
+      if (pdfStatus === 'paid') {
+        receiptsToProcess = receipts.filter(r => r.ReceiptIsSettled);
+      } else if (pdfStatus === 'unpaid') {
+        receiptsToProcess = receipts.filter(r => !r.ReceiptIsSettled);
+      }
+
+      const receiptIds = receiptsToProcess.map(r => r.ReceiptID);
+      if (receiptIds.length === 0) {
+        showError("No receipts to export for the selected status.");
+        return;
+      }
+
+      const placeholders = receiptIds.map(() => '?').join(',');
+      const receiptsData = await db.query(`
+        SELECT r.*, s.StoreName, pm.PaymentMethodName
+        FROM Receipts r 
+        JOIN Stores s ON r.StoreID = s.StoreID
+        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        WHERE r.ReceiptID IN (${placeholders})
+        ORDER BY r.ReceiptDate DESC
+      `, receiptIds);
+
+      const lineItemsData = await db.query(`
+        SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
+        FROM LineItems li
+        JOIN Products p ON li.ProductID = p.ProductID
+        JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+        WHERE li.ReceiptID IN (${placeholders}) AND li.DebtorID = ?
+      `, [...receiptIds, id]);
+
+      const fullReceipts = receiptsData.map(receipt => {
+        const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
+        const total = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+        return { ...receipt, lineItems: items, totalAmount: total };
+      });
+
+      await generateReceiptsPdf(fullReceipts, settings.pdf, (progress) => setPdfProgress(progress), settings.pdf.appendSuperReceipt);
+    } catch (error) {
+      showError(error);
+    } finally {
+      setIsGeneratingPdf(false);
+      setIsPdfModalOpen(false);
+    }
+  };
+
   const handleRowClick = (row) => {
     navigate(`/receipts/view/${row.ReceiptID}`);
+  };
+
+  const handleSettleClick = (receipt) => {
+    if (receipt.ReceiptIsSettled) {
+      setUnsettleConfirmation({ isOpen: true, receiptId: receipt.ReceiptID });
+    } else {
+      setSelectedDebtForSettlement({
+        receiptId: receipt.ReceiptID,
+        debtorId: id,
+        debtorName: debtor.DebtorName,
+        amount: receipt.DebtorTotal,
+        receiptDate: receipt.ReceiptDate,
+        receiptPaymentMethodId: receipt.PaymentMethodID
+      });
+      setIsSettlementModalOpen(true);
+    }
+  };
+
+  const handleUnsettleDebt = async () => {
+    const { receiptId } = unsettleConfirmation;
+    try {
+      const payment = await db.queryOne('SELECT TopUpID FROM ReceiptDebtorPayments WHERE ReceiptID = ? AND DebtorID = ?', [receiptId, id]);
+      await db.execute('DELETE FROM ReceiptDebtorPayments WHERE ReceiptID = ? AND DebtorID = ?', [receiptId, id]);
+      if (payment && payment.TopUpID) {
+        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [payment.TopUpID]);
+      }
+      await fetchDetails();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setUnsettleConfirmation({ isOpen: false, receiptId: null });
+    }
   };
 
   const filteredReceipts = useMemo(() => {
@@ -91,58 +207,38 @@ const DebtorDetailsPage = () => {
 
   const chartOption = {
     backgroundColor: 'transparent',
-    tooltip: { trigger: 'item' },
-    legend: {
-      top: '5%',
-      left: 'center',
-      textStyle: {
-        color: isDarkMode ? '#fff' : '#333'
-      }
-    },
-    series: [
-      {
-        name: 'Debt Stats',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 10,
-          borderColor: isDarkMode ? '#1f2937' : '#fff',
-          borderWidth: 2
-        },
-        label: {
-          show: false,
-          position: 'center'
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: '20',
-            fontWeight: 'bold'
-          }
-        },
-        labelLine: {
-          show: false
-        },
-        data: [
-          { value: stats.open, name: 'Open Debt' },
-          { value: stats.paid, name: 'Paid Debt' },
-        ]
-      }
-    ]
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'category', data: ['Total Debt', 'Paid Debt', 'Open Debt'], axisLabel: { color: isDarkMode ? '#fff' : '#333' } },
+    yAxis: { type: 'value', axisLabel: { formatter: '€{value}', color: isDarkMode ? '#fff' : '#333' } },
+    series: [{
+      name: 'Debt Stats',
+      type: 'bar',
+      data: [
+        { value: stats.total, itemStyle: { color: '#5470c6' } },
+        { value: stats.paid, itemStyle: { color: '#91cc75' } },
+        { value: stats.open, itemStyle: { color: '#ee6666' } }
+      ],
+      barWidth: '40%'
+    }]
   };
 
   const columns = [
     { header: 'Date', render: (row) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
     { header: 'Store', accessor: 'StoreName' },
-    { header: 'Total', render: (row) => `€${row.ReceiptTotal.toFixed(2)}` },
+    { header: 'Your Total', render: (row) => `€${(row.DebtorTotal || 0).toFixed(2)}` },
     {
       header: 'Status',
       render: (row) => (
-        <span className={cn(
-          'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
-          row.ReceiptIsSettled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        )}>
+        <span 
+          className={cn(
+            'px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer',
+            row.ReceiptIsSettled 
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
+              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+          )}
+          onClick={(e) => { e.stopPropagation(); handleSettleClick(row); }}
+        >
           {row.ReceiptIsSettled ? 'Settled' : 'Unsettled'}
         </span>
       )
@@ -154,7 +250,13 @@ const DebtorDetailsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{debtor.DebtorName}</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{debtor.DebtorName}</h1>
+        <Button onClick={() => setIsPdfModalOpen(true)}>
+          <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+          Save as PDF
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4 text-center">
@@ -213,6 +315,46 @@ const DebtorDetailsPage = () => {
           />
         </div>
       </DataTable>
+
+      <Modal isOpen={isPdfModalOpen} onClose={() => setIsPdfModalOpen(false)} title="Generate PDF Report">
+        <div className="space-y-4">
+          <Select
+            label="Include receipts that are:"
+            value={pdfStatus}
+            onChange={(e) => setPdfStatus(e.target.value)}
+            options={[
+              { value: 'all', label: 'Paid and unpaid' },
+              { value: 'unpaid', label: 'Unpaid' },
+              { value: 'paid', label: 'Paid' },
+            ]}
+          />
+          <div className="flex justify-end space-x-2">
+            <Button variant="ghost" onClick={() => setIsPdfModalOpen(false)}>Cancel</Button>
+            <Button onClick={handlePdfSave}>Generate</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <DebtSettlementModal
+        isOpen={isSettlementModalOpen}
+        onClose={() => setIsSettlementModalOpen(false)}
+        onSave={fetchDetails}
+        debtInfo={selectedDebtForSettlement}
+      />
+
+      <ConfirmModal
+        isOpen={unsettleConfirmation.isOpen}
+        onClose={() => setUnsettleConfirmation({ isOpen: false, receiptId: null })}
+        onConfirm={handleUnsettleDebt}
+        title="Unsettle Debt"
+        message={`Are you sure you want to mark this debt as unpaid for ${debtor?.DebtorName}? This will also delete the associated top-up transaction if it exists.`}
+      />
+
+      <ProgressModal
+        isOpen={isGeneratingPdf}
+        progress={pdfProgress}
+        title="Generating PDF Report..."
+      />
     </div>
   );
 };

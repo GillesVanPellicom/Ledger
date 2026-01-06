@@ -4,7 +4,7 @@ import Button from '../ui/Button';
 import DatePicker from '../ui/DatePicker';
 import Select from '../ui/Select';
 import { db } from '../../utils/db';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { useSettings } from '../../context/SettingsContext';
 
 const DebtSettlementModal = ({ isOpen, onClose, onSave, debtInfo }) => {
@@ -23,15 +23,13 @@ const DebtSettlementModal = ({ isOpen, onClose, onSave, debtInfo }) => {
           const methods = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
           setPaymentMethods(methods.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
           
-          // Set default to receipt's payment method if available, otherwise first method
           if (debtInfo.receiptPaymentMethodId) {
             setPaymentMethodId(debtInfo.receiptPaymentMethodId);
           } else if (methods.length > 0) {
             setPaymentMethodId(methods[0].PaymentMethodID);
           }
         } else {
-          // Default to Cash (ID 1) if module disabled
-          setPaymentMethodId(1);
+          setPaymentMethodId(1); // Default to Cash
         }
       };
       fetchPaymentMethods();
@@ -49,15 +47,18 @@ const DebtSettlementModal = ({ isOpen, onClose, onSave, debtInfo }) => {
     setError('');
 
     try {
-      // 1. Create a TopUp entry
-      const topUpNote = `Debt settled by ${debtInfo.debtorName} for receipt on ${format(parseISO(debtInfo.receiptDate), 'yyyy-MM-dd')}`;
+      const topUpNote = JSON.stringify({
+        type: 'debt_settlement',
+        debtorName: debtInfo.debtorName,
+        receiptId: debtInfo.receiptId,
+      });
+
       const topUpResult = await db.execute(
         'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
         [paymentMethodId, debtInfo.amount, format(paidDate, 'yyyy-MM-dd'), topUpNote]
       );
       const topUpId = topUpResult.lastID;
 
-      // 2. Create a ReceiptDebtorPayments entry
       await db.execute(
         'INSERT INTO ReceiptDebtorPayments (ReceiptID, DebtorID, PaidDate, TopUpID) VALUES (?, ?, ?, ?)',
         [debtInfo.receiptId, debtInfo.debtorId, format(paidDate, 'yyyy-MM-dd'), topUpId]

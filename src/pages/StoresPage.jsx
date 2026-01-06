@@ -67,9 +67,11 @@ const StoresPage = () => {
       width: '10%',
       className: 'text-center',
       render: (row) => (
-        row.StoreIsActive ? 
-        <CheckCircleIcon className="h-5 w-5 text-green-500 inline-block" /> : 
-        <XCircleIcon className="h-5 w-5 text-red-500 inline-block" />
+        <Tooltip content={row.StoreIsActive ? 'Active stores appear in selection lists.' : 'Inactive stores are hidden from selection lists.'}>
+          {row.StoreIsActive ? 
+          <CheckCircleIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+          <XCircleIcon className="h-5 w-5 text-red-500 inline-block" />}
+        </Tooltip>
       )
     },
     {
