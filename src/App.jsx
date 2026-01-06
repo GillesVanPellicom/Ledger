@@ -9,8 +9,8 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
 import StoresPage from './pages/StoresPage';
-import DebtPage from './pages/DebtPage';
-import DebtorDetailsPage from './pages/DebtorDetailsPage';
+import EntitiesPage from './pages/EntitiesPage';
+import EntityDetailsPage from './pages/EntityDetailsPage';
 import { useError } from './context/ErrorContext';
 import { useSettings } from './context/SettingsContext';
 import WelcomeScreen from './components/layout/WelcomeScreen';
@@ -64,8 +64,8 @@ function App() {
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="payment-methods" element={<PaymentMethodsPage />} />
             <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />
-            <Route path="debt" element={<DebtPage />} />
-            <Route path="debt/:id" element={<DebtorDetailsPage />} />
+            <Route path="entities" element={<EntitiesPage />} />
+            <Route path="entities/:id" element={<EntityDetailsPage />} />
             
             <Route path="receipts/new" element={<ReceiptFormPage />} />
             <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />

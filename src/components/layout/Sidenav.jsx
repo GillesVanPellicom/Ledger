@@ -30,7 +30,7 @@ const Sidenav = ({ isCollapsed, toggleSidebar, openSettingsModal }) => {
   }
 
   if (settings.modules.debt?.enabled) {
-    navItems.push({ path: '/debt', label: 'Debtors', icon: UserGroupIcon, activePaths: ['/debt'] });
+    navItems.push({ path: '/entities', label: 'Entities', icon: UserGroupIcon, activePaths: ['/entities'] });
   }
 
   return (
