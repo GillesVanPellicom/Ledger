@@ -274,13 +274,14 @@ const ReceiptFormPage = () => {
   };
 
   const handleAssignDebtorToLineItems = (debtorId) => {
-    const debtorName = debtorId ? debtors.find(d => d.DebtorID === parseInt(debtorId))?.DebtorName : null;
+    if (debtorId === '_placeholder_') return;
+    const debtorName = debtorId && debtorId !== '_clear_' ? debtors.find(d => d.DebtorID === parseInt(debtorId))?.DebtorName : null;
     
     const updatedLineItems = [...lineItems];
     selectedLineItems.forEach(idx => {
       updatedLineItems[idx] = { 
         ...updatedLineItems[idx], 
-        DebtorID: debtorId ? parseInt(debtorId) : null, 
+        DebtorID: debtorId && debtorId !== '_clear_' ? parseInt(debtorId) : null, 
         DebtorName: debtorName 
       };
     });
@@ -311,45 +312,51 @@ const ReceiptFormPage = () => {
     setSaving(true);
     try {
       let receiptId = id;
+  
       if (isEditing) {
+        // Update top-level receipt info
         await db.execute('UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, SplitType = ? WHERE ReceiptID = ?', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId, splitType, id]);
-        
-        const lineItemsToDelete = await db.query('SELECT LineItemID FROM LineItems WHERE ReceiptID = ? AND DebtorID NOT IN (SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?)', [id, id]);
-        if (lineItemsToDelete.length > 0) {
-          const placeholders = lineItemsToDelete.map(() => '?').join(',');
-          await db.execute(`DELETE FROM LineItems WHERE LineItemID IN (${placeholders})`, lineItemsToDelete.map(li => li.LineItemID));
-        }
-        
+  
+        // Sync line items, splits, and images
+        // Delete all non-paid items/splits first, then re-insert from state.
+        await db.execute('DELETE FROM LineItems WHERE ReceiptID = ? AND (DebtorID IS NULL OR DebtorID NOT IN (SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?))', [id, id]);
         await db.execute('DELETE FROM ReceiptSplits WHERE ReceiptID = ? AND DebtorID NOT IN (SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?)', [id, id]);
+        await db.execute('DELETE FROM ReceiptImages WHERE ReceiptID = ?', [id]);
         
-        // This assumes we don't want to delete images on edit, just add new ones.
-        // If we need to sync (delete removed), we'd need more complex logic.
+        receiptId = id;
       } else {
+        // Create new receipt
         const result = await db.execute('INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType) VALUES (?, ?, ?, ?, ?)', [formData.storeId, format(formData.receiptDate, 'yyyy-MM-dd'), formData.note, formData.paymentMethodId, splitType]);
         receiptId = result.lastID;
       }
-
-      for (const item of lineItems.filter(li => !li.LineItemID)) { // Only insert new items
-        await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID) VALUES (?, ?, ?, ?, ?)', [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice, item.DebtorID || null]);
-      }
-
-      if (splitType === 'total_split') {
-        for (const split of receiptSplits.filter(s => !s.ReceiptSplitID)) { // Only insert new splits
-          await db.execute('INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
+  
+      // Insert all current line items (for new receipts) or non-paid line items (for edits)
+      for (const item of lineItems) {
+        if (!isEditing || !paidDebtorIds.includes(item.DebtorID)) {
+          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID) VALUES (?, ?, ?, ?, ?)', [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice, item.DebtorID || null]);
         }
       }
-
-      if (window.electronAPI && settings.datastore.folderPath) {
-        for (const image of images) {
-          if (image.file) {
-            const newFileName = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);
-            await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, newFileName]);
-          } else if (!image.ReceiptImageID) { // Only insert new images that are not yet in DB
-            await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, image.ImagePath]);
+  
+      // Insert all current splits (for new receipts) or non-paid splits (for edits)
+      if (splitType === 'total_split') {
+        for (const split of receiptSplits) {
+          if (!isEditing || !paidDebtorIds.includes(split.DebtorID)) {
+            await db.execute('INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
           }
         }
       }
-
+  
+      // Sync images
+      if (window.electronAPI && settings.datastore.folderPath) {
+        for (const image of images) {
+          let imagePathToSave = image.ImagePath;
+          if (image.file) { // New file was uploaded
+            imagePathToSave = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);
+          }
+          await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, imagePathToSave]);
+        }
+      }
+  
       if (isEditing) {
         navigate(-1);
       } else {
@@ -464,9 +471,9 @@ const ReceiptFormPage = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-48">
                     <Select 
-                      value=""
+                      value="_placeholder_"
                       onChange={(e) => handleAssignDebtorToLineItems(e.target.value)}
-                      options={[{ value: '', label: 'Assign to...' }, { value: '', label: '(Clear Assignment)' }, ...debtors.filter(d => !paidDebtorIds.includes(d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                      options={[{ value: '_placeholder_', label: 'Assign to...' }, { value: '_clear_', label: '(Clear Assignment)' }, ...debtors.filter(d => !paidDebtorIds.includes(d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
                       disabled={selectedLineItems.length === 0}
                       className="bg-white dark:bg-gray-800"
                     />
@@ -482,17 +489,31 @@ const ReceiptFormPage = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {debtSummary.map((debtor) => {
                     const isPaid = paidDebtorIds.includes(debtors.find(d => d.DebtorName === debtor.name)?.DebtorID);
-                    return (
-                      <div key={debtor.name} className={cn("relative group p-2 rounded border text-sm", isPaid ? "bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700")}>
+                    const DebtCard = (
+                      <div className={cn("relative group p-2 rounded border text-sm", isPaid ? "bg-gray-100 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700")}>
                         <span className="text-gray-500 block">{debtor.name}</span>
                         <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
-                        {!isPaid && (
+                        {isPaid ? (
+                          <LockClosedIcon className="h-4 w-4 text-gray-400 absolute top-2 right-2" />
+                        ) : (
                           <button 
                             onClick={() => handleRemoveDebtorFromReceipt(debtor.name)}
                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <XMarkIcon className="h-3 w-3" />
                           </button>
+                        )}
+                      </div>
+                    );
+
+                    return (
+                      <div key={debtor.name}>
+                        {isPaid ? (
+                          <Tooltip content="Settled debt cannot be changed.">
+                            {DebtCard}
+                          </Tooltip>
+                        ) : (
+                          DebtCard
                         )}
                       </div>
                     );
