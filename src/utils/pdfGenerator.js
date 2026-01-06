@@ -3,8 +3,8 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 const getImageAsBase64 = async (imagePath) => {
-  if (window.electronAPI) {
-    return await window.electronAPI.readFileAsBase64(imagePath);
+  if (window.electronAPI && imagePath) {
+    return await window.electronAPI.readFileAsBase64(imagePath.replace('file://', ''));
   }
   return null;
 };
@@ -30,6 +30,15 @@ export const generateReceiptsPdf = async (receipts, options = {}, onProgress) =>
     doc.text(format(new Date(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy'), 14, 30);
 
     let yPos = 40;
+
+    // Debt Info
+    if (receipt.debtInfo) {
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'bold');
+      doc.text(receipt.debtInfo.direction, 14, yPos);
+      yPos += 10;
+    }
 
     // Optional Details
     if (receipt.ReceiptNote) {
@@ -92,7 +101,7 @@ export const generateReceiptsPdf = async (receipts, options = {}, onProgress) =>
       let imageY = 30;
       for (const image of receipt.images) {
         try {
-          const base64Image = await getImageAsBase64(image.src.replace('file://', ''));
+          const base64Image = await getImageAsBase64(image.src);
           if (base64Image) {
             const img = new Image();
             img.src = `data:image/jpeg;base64,${base64Image}`;
@@ -144,7 +153,7 @@ export const generateReceiptsPdf = async (receipts, options = {}, onProgress) =>
       theme: 'grid',
       headStyles: { fillColor: [22, 160, 133] },
       foot: [['', '', 'Grand Total', `€ ${grandTotal.toFixed(2)}`]],
-      footStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 0 },
+      footStyles: { fontStyle: 'bold', fillColor: [220, 220, 220], textColor: 0, halign: 'right' },
     });
   }
 

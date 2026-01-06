@@ -198,7 +198,7 @@ const AnalyticsPage = () => {
               <p className="text-2xl font-bold text-red-600 dark:text-red-400">€{debtStats.totalOwedByMe.toFixed(2)}</p>
             </Card>
             <Card className={cn("p-4 text-center", (debtStats.totalOwedToMe - debtStats.totalOwedByMe) >= 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-purple-50 dark:bg-purple-900/20")}>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Overall Net Balance</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Overall Debt Balance</p>
               <p className={cn("text-2xl font-bold", (debtStats.totalOwedToMe - debtStats.totalOwedByMe) >= 0 ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400")}>
                 €{(debtStats.totalOwedToMe - debtStats.totalOwedByMe).toFixed(2)}
               </p>

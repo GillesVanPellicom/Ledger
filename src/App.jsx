@@ -14,6 +14,7 @@ import EntityDetailsPage from './pages/EntityDetailsPage';
 import { useError } from './context/ErrorContext';
 import { useSettings } from './context/SettingsContext';
 import WelcomeScreen from './components/layout/WelcomeScreen';
+import UserNameSetup from './components/layout/UserNameSetup';
 import SettingsModal from './components/settings/SettingsModal';
 import { BackupProvider } from './context/BackupContext';
 
@@ -50,8 +51,13 @@ function App() {
     return null; // Or a loading spinner
   }
 
-  if (!settings.datastore.folderPath && window.electronAPI) {
-    return <WelcomeScreen />;
+  if (window.electronAPI) {
+    if (!settings.datastore.folderPath) {
+      return <WelcomeScreen />;
+    }
+    if (!settings.userName) {
+      return <UserNameSetup />;
+    }
   }
 
   return (

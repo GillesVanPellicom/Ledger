@@ -8,6 +8,7 @@ import { useSettings } from '../../context/SettingsContext';
 import Tooltip from '../ui/Tooltip';
 import Input from '../ui/Input';
 import { useBackupContext } from '../../context/BackupContext';
+import Card from '../ui/Card';
 
 const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -21,6 +22,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const [datastorePath, setDatastorePath] = useState('');
   const [tooltipText, setTooltipText] = useState('');
   const [backupSettings, setBackupSettings] = useState({ maxBackups: 5, interval: 5 });
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -36,10 +38,12 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
         if (electronSettings.uiScale) setUiScale(electronSettings.uiScale);
         if (electronSettings.datastore?.folderPath) setDatastorePath(electronSettings.datastore.folderPath);
         if (electronSettings.backup) setBackupSettings(electronSettings.backup);
+        if (electronSettings.userName) setUserName(electronSettings.userName);
       } else {
         const localSettings = JSON.parse(localStorage.getItem('app-settings') || '{}');
         if (localSettings.theme) setIsDarkMode(localSettings.theme === 'dark');
         if (localSettings.uiScale) setUiScale(localSettings.uiScale);
+        if (localSettings.userName) setUserName(localSettings.userName);
       }
       if (import.meta.env.DEV) setIsDev(true);
     };
@@ -52,6 +56,9 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     setIsDarkMode(settings.theme === 'dark');
     if (settings.backup) {
       setBackupSettings(settings.backup);
+    }
+    if (settings.userName) {
+      setUserName(settings.userName);
     }
   }, [settings]);
 
@@ -94,6 +101,17 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     updateSettings({ ...settings, backup: defaultBackupSettings });
   };
 
+  const handleUserNameChange = (e) => {
+    setUserName(e.target.value);
+  };
+
+  const handleUserNameSave = () => {
+    if (userName.trim()) {
+      const capitalizedName = userName.trim().charAt(0).toUpperCase() + userName.trim().slice(1);
+      updateSettings({ ...settings, userName: capitalizedName });
+    }
+  };
+
   const handleGenerateError = () => {
     try {
       throw new Error("This is a test error generated from Settings.");
@@ -121,7 +139,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const handleResetAllSettings = async () => {
     if (window.electronAPI) {
       await window.electronAPI.resetSettings();
-      window.location.reload();
+      await window.electronAPI.quitApp();
     }
   };
 
@@ -213,9 +231,25 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
             {activeTab === 'pdf' && (<div className="space-y-4"><div><SectionTitle title="Receipt Export" tooltip="Customize the content included when exporting individual receipts to PDF." /><Toggle label="Show Unique Item Count" description="Include the number of unique items on the receipt." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Toggle label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Toggle label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Toggle label="Add Receipt Images" description="Include receipt images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple receipts at once." /><Toggle label="Add Summary Page" description="Append a 'super-receipt' summarizing all receipts in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
             {activeTab === 'data' && (
               <div className="space-y-6">
-                <div>
-                  <SectionTitle title="Datastore" tooltip="The location where this app will save all data. Preferrably placed in a folder which is backed up." />
-                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
+                <Card>
+                  <div className="p-4">
+                    <SectionTitle title="Your Name" tooltip="This name is used on generated documents like PDF receipts to identify you." />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter your name"
+                        value={userName}
+                        onChange={handleUserNameChange}
+                        onBlur={handleUserNameSave}
+                        className="w-full"
+                      />
+                      <Button onClick={handleUserNameSave}>Save</Button>
+                    </div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="p-4">
+                    <SectionTitle title="Datastore" tooltip="The location where this app will save all data. Preferrably placed in a folder which is backed up." />
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 dark:text-gray-100">Datastore Folder</p>
@@ -231,7 +265,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                       <Button onClick={handleSelectDatastore} className="flex-shrink-0 ml-4">Select Folder</Button>
                     </div>
                   </div>
-                </div>
+                </Card>
               </div>
             )}
             {activeTab === 'backup' && (
@@ -306,7 +340,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">Reset All Settings</p>
-                          <p className="text-sm text-gray-500">Clear all settings stored in electron-store.</p>
+                          <p className="text-sm text-gray-500">Clear all settings and quit the application.</p>
                         </div>
                       </div>
                       <Button variant="destructive" onClick={handleResetAllSettings}>Reset All</Button>

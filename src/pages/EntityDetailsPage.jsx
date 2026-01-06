@@ -10,13 +10,15 @@ import ReactECharts from 'echarts-for-react';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
-import { DocumentArrowDownIcon, ArrowUpCircleIcon, ArrowDownCircleIcon } from '@heroicons/react/24/solid';
+import { DocumentArrowDownIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, PencilIcon } from '@heroicons/react/24/solid';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
 import { useError } from '../context/ErrorContext';
 import { useSettings } from '../context/SettingsContext';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
+import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
+import EntityModal from '../components/debt/EntityModal';
 
 const MarkAsPaidModal = ({ isOpen, onClose, onConfirm, paymentMethods }) => {
   const [paymentMethodId, setPaymentMethodId] = useState(paymentMethods[0]?.value || '');
@@ -62,8 +64,7 @@ const EntityDetailsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  const [pdfStatus, setPdfStatus] = useState('all');
+  const [isPdfOptionsModalOpen, setIsPdfOptionsModalOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
 
@@ -73,6 +74,7 @@ const EntityDetailsPage = () => {
   const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState(false);
   const [receiptToMarkAsPaid, setReceiptToMarkAsPaid] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [isEditEntityModalOpen, setIsEditEntityModalOpen] = useState(false);
 
   const { showError } = useError();
   const { settings } = useSettings();
@@ -144,8 +146,73 @@ const EntityDetailsPage = () => {
     fetchDetails();
   }, [fetchDetails]);
 
-  const handlePdfSave = async () => {
-    showError("PDF generation for entities is not yet implemented.");
+  const handleGeneratePdf = async (direction, status) => {
+    setIsPdfOptionsModalOpen(false);
+    setIsGeneratingPdf(true);
+    setPdfProgress(0);
+
+    try {
+      let receiptsToProcess = filteredReceipts;
+
+      if (direction !== 'all') {
+        receiptsToProcess = receiptsToProcess.filter(r => r.type === direction);
+      }
+      if (status !== 'all') {
+        receiptsToProcess = receiptsToProcess.filter(r => (status === 'settled' ? r.isSettled : !r.isSettled));
+      }
+
+      if (receiptsToProcess.length === 0) {
+        showError("No receipts match the selected criteria.");
+        return;
+      }
+
+      const fullReceiptsData = [];
+      for (let i = 0; i < receiptsToProcess.length; i++) {
+        const r = receiptsToProcess[i];
+        const receiptDetails = await db.queryOne(`
+          SELECT r.*, s.StoreName, pm.PaymentMethodName
+          FROM Receipts r
+          JOIN Stores s ON r.StoreID = s.StoreID
+          LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+          WHERE r.ReceiptID = ?
+        `, [r.ReceiptID]);
+
+        const lineItems = await db.query(`
+          SELECT li.*, p.ProductName, p.ProductBrand
+          FROM LineItems li
+          JOIN Products p ON li.ProductID = p.ProductID
+          WHERE li.ReceiptID = ?
+        `, [r.ReceiptID]);
+        
+        const images = await db.query('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [r.ReceiptID]);
+
+        let totalAmount = r.amount;
+        if (r.type === 'to_me') {
+            const fullTotal = await db.queryOne('SELECT SUM(LineQuantity * LineUnitPrice) as total FROM LineItems WHERE ReceiptID = ?', [r.ReceiptID]);
+            totalAmount = fullTotal.total;
+        }
+
+        fullReceiptsData.push({
+          ...receiptDetails,
+          lineItems,
+          images,
+          totalAmount,
+          debtInfo: {
+            entityName: entity.DebtorName,
+            direction: r.type === 'to_me' ? `Owed to ${settings.userName || 'you'}` : `Owed to ${entity.DebtorName}`,
+          }
+        });
+        
+        setPdfProgress(Math.round(((i + 1) / receiptsToProcess.length) * 50));
+      }
+
+      await generateReceiptsPdf(fullReceiptsData, settings.pdf, (progress) => setPdfProgress(50 + progress / 2));
+
+    } catch (error) {
+      showError(error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleRowClick = (row) => {
@@ -297,10 +364,16 @@ const EntityDetailsPage = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{entity.DebtorName}</h1>
-        <Button onClick={() => setIsPdfModalOpen(true)} disabled>
-          <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
-          Save as PDF
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setIsPdfOptionsModalOpen(true)}>
+            <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+            Save as PDF
+          </Button>
+          <Button onClick={() => setIsEditEntityModalOpen(true)}>
+            <PencilIcon className="h-5 w-5 mr-2" />
+            Edit
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -385,11 +458,29 @@ const EntityDetailsPage = () => {
         paymentMethods={paymentMethods}
       />
 
+      <DebtPdfOptionsModal
+        isOpen={isPdfOptionsModalOpen}
+        onClose={() => setIsPdfOptionsModalOpen(false)}
+        onConfirm={handleGeneratePdf}
+      />
+
       <ProgressModal
         isOpen={isGeneratingPdf}
         progress={pdfProgress}
         title="Generating PDF Report..."
       />
+
+      {entity && (
+        <EntityModal
+          isOpen={isEditEntityModalOpen}
+          onClose={() => setIsEditEntityModalOpen(false)}
+          entityToEdit={entity}
+          onSave={() => {
+            setIsEditEntityModalOpen(false);
+            fetchDetails();
+          }}
+        />
+      )}
     </div>
   );
 };

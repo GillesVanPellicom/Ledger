@@ -281,16 +281,16 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
           <p className="text-gray-500">{format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleSavePdf}>
+            <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+            Save PDF
+          </Button>
           {receipt.Status === 'unpaid' && (
             <Button onClick={() => setIsMarkAsPaidModalOpen(true)}>
               <BanknotesIcon className="h-5 w-5 mr-2" />
               Mark as Paid
             </Button>
           )}
-          <Button variant="secondary" onClick={handleSavePdf}>
-            <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
-            Save PDF
-          </Button>
           <Button onClick={() => navigate(`/receipts/edit/${id}`)}>
             <PencilIcon className="h-5 w-5 mr-2" />
             Edit
