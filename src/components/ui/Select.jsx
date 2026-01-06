@@ -3,6 +3,8 @@ import { cn } from '../../utils/cn';
 import { ChevronDownIcon } from '@heroicons/react/24/solid';
 
 const Select = forwardRef(({ className, error, label, options = [], placeholder, ...props }, ref) => {
+  const value = props.value === null ? '' : props.value;
+
   return (
     <div className="w-full relative">
       {label && (
@@ -19,6 +21,7 @@ const Select = forwardRef(({ className, error, label, options = [], placeholder,
             className
           )}
           {...props}
+          value={value}
         >
           {placeholder && <option value="" disabled>{placeholder}</option>}
           {options.map((opt) => (

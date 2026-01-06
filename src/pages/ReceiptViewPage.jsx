@@ -6,14 +6,40 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon, UserIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon, UserIcon, BanknotesIcon } from '@heroicons/react/24/solid';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import { useSettings } from '../context/SettingsContext';
 import { useError } from '../context/ErrorContext';
 import { cn } from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import Tooltip from '../components/ui/Tooltip';
-import { ConfirmModal } from '../components/ui/Modal';
+import Modal, { ConfirmModal } from '../components/ui/Modal';
+import Select from '../components/ui/Select';
+
+const MarkAsPaidModal = ({ isOpen, onClose, onConfirm, paymentMethods }) => {
+  const [paymentMethodId, setPaymentMethodId] = useState(paymentMethods[0]?.value || '');
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Mark as Paid"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => onConfirm(paymentMethodId)} disabled={!paymentMethodId}>Confirm Payment</Button>
+        </>
+      }
+    >
+      <Select
+        label="Payment Method"
+        value={paymentMethodId}
+        onChange={(e) => setPaymentMethodId(e.target.value)}
+        options={paymentMethods}
+      />
+    </Modal>
+  );
+};
 
 const ReceiptViewPage = ({ openSettingsModal }) => {
   const { id } = useParams();
@@ -33,15 +59,18 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState(null);
   const [unsettleConfirmation, setUnsettleConfirmation] = useState({ isOpen: false, paymentId: null, topUpId: null });
+  const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
 
   const fetchReceiptData = async () => {
     setLoading(true);
     try {
       const receiptData = await db.queryOne(`
-        SELECT r.*, s.StoreName, pm.PaymentMethodName
+        SELECT r.*, s.StoreName, pm.PaymentMethodName, d.DebtorName as OwedToDebtorName
         FROM Receipts r 
         JOIN Stores s ON r.StoreID = s.StoreID 
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        LEFT JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
         WHERE r.ReceiptID = ?
       `, [id]);
 
@@ -77,10 +106,13 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
             setReceiptSplits(splitsData);
           }
 
-          const paymentsData = await db.query(`
-            SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?
-          `, [id]);
+          const paymentsData = await db.query('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
           setPayments(paymentsData);
+        }
+        
+        if (paymentMethodsEnabled) {
+          const pmData = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
+          setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
         }
       }
     } catch (error) {
@@ -201,6 +233,21 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
     }
   };
 
+  const handleMarkAsPaid = async (paymentMethodId) => {
+    if (!receipt || !paymentMethodId) return;
+    try {
+      await db.execute(
+        'UPDATE Receipts SET Status = ?, PaymentMethodID = ? WHERE ReceiptID = ?',
+        ['paid', paymentMethodId, id]
+      );
+      fetchReceiptData();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setIsMarkAsPaidModalOpen(false);
+    }
+  };
+
   if (!settings.datastore.folderPath && window.electronAPI) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
@@ -234,6 +281,12 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
           <p className="text-gray-500">{format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <div className="flex gap-2">
+          {receipt.Status === 'unpaid' && (
+            <Button onClick={() => setIsMarkAsPaidModalOpen(true)}>
+              <BanknotesIcon className="h-5 w-5 mr-2" />
+              Mark as Paid
+            </Button>
+          )}
           <Button variant="secondary" onClick={handleSavePdf}>
             <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
             Save PDF
@@ -244,6 +297,20 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
           </Button>
         </div>
       </div>
+
+      {receipt.Status === 'unpaid' && (
+        <Card>
+          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center gap-4">
+            <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500" />
+            <div className="text-center">
+              <p className="font-semibold text-yellow-800 dark:text-yellow-200">This receipt is unpaid.</p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                Total amount is owed to <span className="font-bold">{receipt.OwedToDebtorName}</span>.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {receipt.ReceiptNote && (
         <Card>
@@ -431,6 +498,13 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         onConfirm={handleUnsettleDebt}
         title="Unsettle Debt"
         message="Are you sure you want to mark this debt as unpaid? This will also delete the associated top-up transaction."
+      />
+
+      <MarkAsPaidModal
+        isOpen={isMarkAsPaidModalOpen}
+        onClose={() => setIsMarkAsPaidModalOpen(false)}
+        onConfirm={handleMarkAsPaid}
+        paymentMethods={paymentMethods}
       />
     </div>
   );

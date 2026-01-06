@@ -87,16 +87,20 @@ CREATE TABLE Receipts
   ReceiptID        INTEGER PRIMARY KEY,
   ReceiptDate      TEXT    NOT NULL,
   StoreID          INTEGER NOT NULL,
-  PaymentMethodID  INTEGER NOT NULL DEFAULT 1,
+  PaymentMethodID  INTEGER, -- Null for unpaid receipts
   ReceiptNote      TEXT,
   ReceiptEntryDate TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  SplitType        TEXT    DEFAULT 'none', -- 'none', 'line_item', 'total_split',
+  SplitType        TEXT    DEFAULT 'none', -- 'none', 'line_item', 'total_split'
   OwnShares        INTEGER,
   TotalShares      INTEGER,
+  Status           TEXT    NOT NULL DEFAULT 'paid', -- 'paid', 'unpaid'
+  OwedToDebtorID   INTEGER,
   FOREIGN KEY (StoreID)
     REFERENCES Stores (StoreID),
   FOREIGN KEY (PaymentMethodID)
-    REFERENCES PaymentMethods (PaymentMethodID)
+    REFERENCES PaymentMethods (PaymentMethodID),
+  FOREIGN KEY (OwedToDebtorID)
+    REFERENCES Debtors (DebtorID)
 );
 
 --------------------------------------------------

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -13,6 +13,7 @@ import { useError } from '../context/ErrorContext';
 import Tooltip from '../components/ui/Tooltip';
 import { useSettings } from '../context/SettingsContext';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
+import { cn } from '../utils/cn';
 
 const ReceiptsPage = () => {
   const [receipts, setReceipts] = useState([]);
@@ -45,6 +46,7 @@ const ReceiptsPage = () => {
       let debtSubQueries = '';
       if (debtEnabled) {
         debtSubQueries = `,
+          r.Status,
           (
             SELECT COUNT(DISTINCT d.DebtorID)
             FROM Debtors d
@@ -92,7 +94,7 @@ const ReceiptsPage = () => {
 
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(`SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName, (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as TotalAmount ${debtSubQueries}`, 'SELECT r.ReceiptID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(/SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName,.*?as TotalAmount/s, 'SELECT r.ReceiptID')})`;
       const countResult = await db.queryOne(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
@@ -180,6 +182,11 @@ const ReceiptsPage = () => {
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end items-center gap-2">
+          {row.Status === 'unpaid' && (
+            <Tooltip content="This receipt is unpaid">
+              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+            </Tooltip>
+          )}
           {debtEnabled && row.UnpaidDebtorCount > 0 && (
             <Tooltip content={`${row.UnpaidDebtorCount} people have not paid their part in this receipt yet`}>
               <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
@@ -246,6 +253,7 @@ const ReceiptsPage = () => {
         searchable={true}
         loading={loading}
         onRowClick={(row) => navigate(`/receipts/view/${row.ReceiptID}`)}
+        rowClassName={(row) => cn(row.Status === 'unpaid' && 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30')}
         selectable={true}
         onSelectionChange={setSelectedReceiptIds}
         selectedIds={selectedReceiptIds}

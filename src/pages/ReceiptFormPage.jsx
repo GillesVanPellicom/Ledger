@@ -26,7 +26,15 @@ const ReceiptFormPage = () => {
   const [stores, setStores] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [debtors, setDebtors] = useState([]);
-  const [formData, setFormData] = useState({ storeId: '', receiptDate: new Date(), note: '', paymentMethodId: '1', ownShares: 0 });
+  const [formData, setFormData] = useState({ 
+    storeId: '', 
+    receiptDate: new Date(), 
+    note: '', 
+    paymentMethodId: '1', 
+    ownShares: 0,
+    status: 'paid',
+    owedToDebtorId: null,
+  });
   const [lineItems, setLineItems] = useState([]);
   const [images, setImages] = useState([]);
   
@@ -48,6 +56,7 @@ const ReceiptFormPage = () => {
     const newErrors = {};
     if (!formData.storeId) newErrors.storeId = 'Store is required.';
     if (!formData.receiptDate) newErrors.receiptDate = 'Date is required.';
+    if (formData.status === 'unpaid' && !formData.owedToDebtorId) newErrors.owedToDebtorId = 'Owed to is required.';
     if (lineItems.length === 0) newErrors.lineItems = 'At least one line item is required.';
     
     lineItems.forEach(item => {
@@ -83,8 +92,10 @@ const ReceiptFormPage = () => {
             storeId: receiptData.StoreID,
             receiptDate: parseISO(receiptData.ReceiptDate),
             note: receiptData.ReceiptNote || '',
-            paymentMethodId: receiptData.PaymentMethodID || '1',
+            paymentMethodId: receiptData.PaymentMethodID,
             ownShares: receiptData.OwnShares || 0,
+            status: receiptData.Status || 'paid',
+            owedToDebtorId: receiptData.OwedToDebtorID,
           }));
           setSplitType(receiptData.SplitType || 'none');
 
@@ -161,7 +172,17 @@ const ReceiptFormPage = () => {
     };
   }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, totalShares, formData.ownShares]);
 
-  const handleFormChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'status') {
+      setFormData(prev => ({
+        ...prev,
+        paymentMethodId: value === 'paid' ? '1' : null,
+        owedToDebtorId: value === 'unpaid' ? prev.owedToDebtorId : null,
+      }));
+    }
+  };
   const handleDateChange = (date) => setFormData(prev => ({ ...prev, receiptDate: date }));
 
   const handleProductSelect = (product) => {
@@ -320,20 +341,25 @@ const ReceiptFormPage = () => {
     try {
       let receiptId = id;
   
-      const receiptPayload = [
-        formData.storeId, 
-        format(formData.receiptDate, 'yyyy-MM-dd'), 
-        formData.note, 
-        paymentMethodsEnabled ? formData.paymentMethodId : 1,
-        splitType,
-        splitType === 'total_split' ? (formData.ownShares || 0) : null,
-        splitType === 'total_split' ? totalShares : null,
-      ];
+      const receiptPayload = {
+        StoreID: formData.storeId,
+        ReceiptDate: format(formData.receiptDate, 'yyyy-MM-dd'),
+        ReceiptNote: formData.note,
+        PaymentMethodID: formData.status === 'paid' ? formData.paymentMethodId : null,
+        SplitType: splitType,
+        OwnShares: splitType === 'total_split' ? (formData.ownShares || 0) : null,
+        TotalShares: splitType === 'total_split' ? totalShares : null,
+        Status: formData.status,
+        OwedToDebtorID: formData.status === 'unpaid' ? formData.owedToDebtorId : null,
+      };
 
       if (isEditing) {
         await db.execute(
-          'UPDATE Receipts SET StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?', 
-          [...receiptPayload, id]
+          `UPDATE Receipts SET 
+            StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, 
+            SplitType = ?, OwnShares = ?, TotalShares = ?, Status = ?, OwedToDebtorID = ? 
+           WHERE ReceiptID = ?`, 
+          [...Object.values(receiptPayload), id]
         );
         
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
@@ -350,8 +376,10 @@ const ReceiptFormPage = () => {
         receiptId = id;
       } else {
         const result = await db.execute(
-          'INSERT INTO Receipts (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, OwnShares, TotalShares) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-          receiptPayload
+          `INSERT INTO Receipts 
+            (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, OwnShares, TotalShares, Status, OwedToDebtorID) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+          Object.values(receiptPayload)
         );
         receiptId = result.lastID;
       }
@@ -428,11 +456,22 @@ const ReceiptFormPage = () => {
       
       <Card>
         <div className="p-6 grid grid-cols-2 gap-6">
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Receipt Type</label>
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button onClick={() => handleFormChange({ target: { name: 'status', value: 'paid' }})} className={cn("flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'paid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Paid</button>
+              <button onClick={() => handleFormChange({ target: { name: 'status', value: 'unpaid' }})} className={cn("flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'unpaid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Unpaid</button>
+            </div>
+          </div>
           <div className="col-span-1"><Select label="Store" name="storeId" value={formData.storeId} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} /></div>
           <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
           <div className="col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
-          {paymentMethodsEnabled && (
-            <div className="col-span-1"><Select label="Payment Method" name="paymentMethodId" value={formData.paymentMethodId} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
+          
+          {formData.status === 'paid' && paymentMethodsEnabled && (
+            <div className="col-span-2"><Select label="Payment Method" name="paymentMethodId" value={formData.paymentMethodId} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
+          )}
+          {formData.status === 'unpaid' && (
+            <div className="col-span-2"><Select label="Owed To" name="owedToDebtorId" value={formData.owedToDebtorId} onChange={handleFormChange} options={debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))} placeholder="Select a person" error={errors.owedToDebtorId} /></div>
           )}
         </div>
       </Card>
@@ -535,6 +574,7 @@ const ReceiptFormPage = () => {
 
             {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estimated Debt</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {debtSummary.debtors.map((debtor) => (
                     <div key={debtor.name} className="w-full">
