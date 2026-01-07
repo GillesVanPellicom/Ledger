@@ -42,9 +42,9 @@ CREATE TABLE Products
 (
   ProductID       INTEGER PRIMARY KEY,
   ProductName     TEXT    NOT NULL,
-  ProductBrand    TEXT    NOT NULL,
-  ProductSize     INTEGER NOT NULL,
-  ProductUnitID   INTEGER NOT NULL,
+  ProductBrand    TEXT,
+  ProductSize     INTEGER,
+  ProductUnitID   INTEGER,
   ProductIsActive INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (ProductUnitID)
     REFERENCES ProductUnits (ProductUnitID),

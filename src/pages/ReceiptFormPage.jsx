@@ -105,7 +105,7 @@ const ReceiptFormPage = () => {
             SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName
             FROM LineItems li
             JOIN Products p ON li.ProductID = p.ProductID
-            JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+            LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
             LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
             WHERE li.ReceiptID = ?
           `, [id]);
@@ -642,7 +642,7 @@ const ReceiptFormPage = () => {
                     )}
                   >
                     <td className="p-2">
-                      <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
+                      <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
                       <p className="text-xs text-gray-500">{item.ProductBrand}</p>
                     </td>
                     <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} className="h-9" error={errors[`qty_${item.key}`]} min="0" disabled={hasSettledDebts} /></td>

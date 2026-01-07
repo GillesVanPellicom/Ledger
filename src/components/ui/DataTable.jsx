@@ -205,11 +205,18 @@ const DataTable = ({
                         </div>
                       </td>
                     )}
-                    {columns.map((col, colIdx) => (
-                      <td key={colIdx} className={cn("px-4 py-3 text-gray-900 dark:text-gray-100 break-words", col.className)}>
-                        {col.render ? col.render(row) : row[col.accessor]}
-                      </td>
-                    ))}
+                    {columns.map((col, colIdx) => {
+                      const content = col.render ? col.render(row) : row[col.accessor];
+                      let displayContent = content;
+                      if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
+                        displayContent = <span className="text-gray-300 dark:text-gray-600">-</span>;
+                      }
+                      return (
+                        <td key={colIdx} className={cn("px-4 py-3 text-gray-900 dark:text-gray-100 break-words", col.className)}>
+                          {displayContent}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))
               )}

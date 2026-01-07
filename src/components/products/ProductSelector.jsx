@@ -24,7 +24,7 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
       let query = `
         SELECT p.*, u.ProductUnitType 
         FROM Products p
-        JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
+        LEFT JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
         WHERE p.ProductIsActive = 1
       `;
       const params = [];
@@ -96,10 +96,31 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
     setIsCreateModalOpen(false);
   };
 
+  const handleSaveAndSelect = async (newProductId) => {
+    setIsCreateModalOpen(false);
+    if (newProductId) {
+      try {
+        const query = `
+          SELECT p.*, u.ProductUnitType 
+          FROM Products p
+          LEFT JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
+          WHERE p.ProductID = ?
+        `;
+        const newProduct = await db.queryOne(query, [newProductId]);
+        if (newProduct) {
+          onSelect(newProduct);
+        }
+      } catch (error) {
+        console.error("Failed to fetch new product:", error);
+        fetchProducts();
+      }
+    }
+  };
+
   const columns = [
     { header: 'Name', accessor: 'ProductName', width: '40%' },
     { header: 'Brand', accessor: 'ProductBrand', width: '35%' },
-    { header: 'Size', width: '15%', render: (row) => `${row.ProductSize} ${row.ProductUnitType}` },
+    { header: 'Size', width: '15%', render: (row) => row.ProductSize && row.ProductUnitType ? `${row.ProductSize} ${row.ProductUnitType}` : '' },
     {
       header: '',
       width: '10%',
@@ -144,6 +165,8 @@ const ProductSelector = ({ isOpen, onClose, onSelect }) => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSave={handleProductCreated}
+        showSaveAndSelect={true}
+        onSaveAndSelect={handleSaveAndSelect}
       />
     </>
   );

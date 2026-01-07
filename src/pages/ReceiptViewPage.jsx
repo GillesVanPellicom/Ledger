@@ -82,7 +82,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
           SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
           FROM LineItems li
           JOIN Products p ON li.ProductID = p.ProductID
-          JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+          LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
           LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
           WHERE li.ReceiptID = ?
         `, [id]);
@@ -460,7 +460,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                   return (
                     <tr key={item.LineItemID}>
                       <td className="p-2">
-                        <p className="font-medium">{item.ProductName} - {item.ProductSize}{item.ProductUnitType}</p>
+                        <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
                         <p className="text-xs text-gray-500">{item.ProductBrand}</p>
                       </td>
                       <td className="p-2 text-center">{item.LineQuantity}</td>

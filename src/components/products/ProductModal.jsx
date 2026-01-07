@@ -5,7 +5,7 @@ import Select from '../ui/Select';
 import Button from '../ui/Button';
 import { db } from '../../utils/db';
 
-const ProductModal = ({ isOpen, onClose, productToEdit, onSave }) => {
+const ProductModal = ({ isOpen, onClose, productToEdit, onSave, showSaveAndSelect, onSaveAndSelect }) => {
   const [formData, setFormData] = useState({ ProductName: '', ProductBrand: '', ProductSize: '', ProductUnitID: '' });
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -14,9 +14,7 @@ const ProductModal = ({ isOpen, onClose, productToEdit, onSave }) => {
   const validate = () => {
     const newErrors = {};
     if (!formData.ProductName) newErrors.ProductName = 'Product name is required.';
-    if (!formData.ProductBrand) newErrors.ProductBrand = 'Brand is required.';
-    if (!formData.ProductSize || formData.ProductSize <= 0) newErrors.ProductSize = 'Size must be > 0.';
-    if (!formData.ProductUnitID) newErrors.ProductUnitID = 'Unit is required.';
+    // Brand, Size, and Unit are now optional
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -54,20 +52,33 @@ const ProductModal = ({ isOpen, onClose, productToEdit, onSave }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSave = async (shouldSelect = false) => {
     if (!validate()) return;
 
     setLoading(true);
     setErrors({});
 
     try {
+      const productData = {
+        ProductName: formData.ProductName,
+        ProductBrand: formData.ProductBrand || null,
+        ProductSize: formData.ProductSize || null,
+        ProductUnitID: formData.ProductUnitID || null
+      };
+
+      let result;
       if (productToEdit) {
-        await db.execute('UPDATE Products SET ProductName = ?, ProductBrand = ?, ProductSize = ?, ProductUnitID = ? WHERE ProductID = ?', [formData.ProductName, formData.ProductBrand, formData.ProductSize, formData.ProductUnitID, productToEdit.ProductID]);
+        await db.execute('UPDATE Products SET ProductName = ?, ProductBrand = ?, ProductSize = ?, ProductUnitID = ? WHERE ProductID = ?', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productToEdit.ProductID]);
+        result = { lastID: productToEdit.ProductID };
       } else {
-        await db.execute('INSERT INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID) VALUES (?, ?, ?, ?)', [formData.ProductName, formData.ProductBrand, formData.ProductSize, formData.ProductUnitID]);
+        result = await db.execute('INSERT INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID) VALUES (?, ?, ?, ?)', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID]);
       }
-      onSave();
+      
+      if (shouldSelect && onSaveAndSelect) {
+        onSaveAndSelect(result.lastID);
+      } else {
+        onSave();
+      }
       onClose();
     } catch (err) {
       if (err.message && err.message.includes('UNIQUE constraint failed')) {
@@ -80,16 +91,39 @@ const ProductModal = ({ isOpen, onClose, productToEdit, onSave }) => {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleSave(false);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={productToEdit ? "Edit Product" : "Add New Product"}
-      footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+          {showSaveAndSelect && !productToEdit && (
+            <Button variant="secondary" onClick={() => handleSave(true)} loading={loading}>Save & Select</Button>
+          )}
+          <Button onClick={handleSubmit} loading={loading}>Save</Button>
+        </>
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {errors.form && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{errors.form}</div>}
         <Input label="Product Name" name="ProductName" value={formData.ProductName} onChange={handleChange} placeholder="e.g. gouda cheese" error={errors.ProductName} />
+        
+        <div className="relative py-2">
+          <div className="absolute inset-0 flex items-center" aria-hidden="true">
+            <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
+          </div>
+          <div className="relative flex justify-center">
+            <span className="px-2 bg-white dark:bg-gray-800 text-sm text-gray-500">Optional Details</span>
+          </div>
+        </div>
+
         <Input label="Brand" name="ProductBrand" value={formData.ProductBrand} onChange={handleChange} placeholder="e.g. Old Amsterdam" error={errors.ProductBrand} />
         
         <div className="grid grid-cols-2 gap-4">
