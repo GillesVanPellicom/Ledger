@@ -1,4 +1,4 @@
-# Project Plan: HomeFin Receipt Manager
+# Project Plan: Receipt Manager
 
 ## Goals
 - **Data Integrity**: Track receipts with line-item detail, preventing duplicate products and ensuring no "garbage data" enters the system via strict validation.
