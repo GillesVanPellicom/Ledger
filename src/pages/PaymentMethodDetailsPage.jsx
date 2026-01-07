@@ -62,8 +62,8 @@ const PaymentMethodDetailsPage = () => {
       setMethodName(methodData?.PaymentMethodName || '');
 
       const receiptsData = await db.query(`
-        SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note,
-               (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as amount, 
+        SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note, r.Discount,
+               (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as subtotal, 
                'receipt' as type
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
@@ -77,13 +77,21 @@ const PaymentMethodDetailsPage = () => {
       `, [id]);
 
       const allTransactions = [
-        ...receiptsData.map(r => ({...r, amount: -r.amount})), 
+        ...receiptsData.map(r => {
+            const discountAmount = (r.subtotal * (r.Discount || 0)) / 100;
+            const total = Math.max(0, r.subtotal - discountAmount);
+            return {...r, amount: -total};
+        }), 
         ...topupsData
       ].sort((a, b) => new Date(b.date) - new Date(a.date));
       
       setTransactions(allTransactions);
 
-      const expenses = receiptsData.reduce((sum, r) => sum + r.amount, 0);
+      const expenses = receiptsData.reduce((sum, r) => {
+          const discountAmount = (r.subtotal * (r.Discount || 0)) / 100;
+          const total = Math.max(0, r.subtotal - discountAmount);
+          return sum + total;
+      }, 0);
       const topups = topupsData.reduce((sum, t) => sum + t.amount, 0);
       setBalance((methodData.PaymentMethodFunds || 0) + topups - expenses);
 

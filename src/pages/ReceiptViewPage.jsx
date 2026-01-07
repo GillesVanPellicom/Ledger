@@ -130,11 +130,16 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
     }
   }, [id, showError, settings.datastore.folderPath, debtEnabled]);
 
+  const subtotal = useMemo(() => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0), [lineItems]);
+  const totalAmount = useMemo(() => {
+    const discountAmount = (subtotal * (receipt?.Discount || 0)) / 100;
+    return Math.max(0, subtotal - discountAmount);
+  }, [subtotal, receipt]);
+
   const debtSummary = useMemo(() => {
     if (!debtEnabled || !receipt) return { debtors: [], ownShare: null };
 
     const summary = {};
-    const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
     let ownShare = null;
 
     if (splitType === 'total_split' && (receiptSplits.length > 0 || receipt.OwnShares > 0)) {
@@ -163,9 +168,11 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
       }
     } else if (splitType === 'line_item') {
       const debtorItems = {};
+      const discountFactor = 1 - ((receipt.Discount || 0) / 100);
+
       lineItems.forEach(item => {
         if (item.DebtorID) {
-          const amount = item.LineQuantity * item.LineUnitPrice;
+          const amount = item.LineQuantity * item.LineUnitPrice * discountFactor;
           if (!debtorItems[item.DebtorID]) {
             debtorItems[item.DebtorID] = { count: 0, total: 0 };
           }
@@ -183,9 +190,8 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
       });
     }
     return { debtors: Object.values(summary), ownShare };
-  }, [lineItems, receipt, receiptSplits, splitType, debtEnabled]);
+  }, [lineItems, receipt, receiptSplits, splitType, debtEnabled, totalAmount]);
 
-  const totalAmount = lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
   const totalItems = lineItems.length;
   const totalQuantity = lineItems.reduce((total, item) => total + item.LineQuantity, 0);
 
@@ -361,7 +367,6 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         <Card>
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
-              <UserGroupIcon className="h-6 w-6 text-accent" />
               <h2 className="text-lg font-semibold">Debt Breakdown</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -480,8 +485,25 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
             </table>
           </div>
         </div>
-        <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-3 text-right font-bold text-lg rounded-b-xl">
-          Total: €{totalAmount.toFixed(2)}
+        <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
+          <div className="flex flex-col items-end gap-2">
+            {receipt.Discount > 0 && (
+              <div className="flex items-center gap-4 text-gray-500">
+                <span className="text-sm">Subtotal</span>
+                <span className="font-medium">€{subtotal.toFixed(2)}</span>
+              </div>
+            )}
+            {receipt.Discount > 0 && (
+              <div className="flex items-center gap-4 text-gray-500">
+                <span className="text-sm">Discount ({receipt.Discount}%)</span>
+                <span className="font-medium">-€{(subtotal * receipt.Discount / 100).toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-4 text-lg font-bold">
+              <span>Total</span>
+              <span>€{totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
       </Card>
 

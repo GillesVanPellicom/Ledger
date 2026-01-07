@@ -88,6 +88,19 @@ export const generateReceiptsPdf = async (receipts, options = {}, onProgress) =>
     });
 
     let finalY = doc.lastAutoTable.finalY || yPos;
+    
+    if (receipt.Discount > 0) {
+      const subtotal = receipt.lineItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+      const discountAmount = (subtotal * receipt.Discount) / 100;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Subtotal: € ${subtotal.toFixed(2)}`, 14, finalY + 10);
+      doc.text(`Discount (${receipt.Discount}%): -€ ${discountAmount.toFixed(2)}`, 14, finalY + 15);
+      finalY += 10;
+    }
+
     doc.setFontSize(12);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');

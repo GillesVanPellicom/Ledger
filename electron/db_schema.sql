@@ -95,6 +95,7 @@ CREATE TABLE Receipts
   TotalShares      INTEGER,
   Status           TEXT    NOT NULL DEFAULT 'paid', -- 'paid', 'unpaid'
   OwedToDebtorID   INTEGER,
+  Discount         NUMERIC DEFAULT 0,
   FOREIGN KEY (StoreID)
     REFERENCES Stores (StoreID),
   FOREIGN KEY (PaymentMethodID)

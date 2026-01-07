@@ -36,6 +36,7 @@ const ReceiptsPage = () => {
   const { showError } = useError();
   const { settings } = useSettings();
   const debtEnabled = settings.modules.debt?.enabled;
+  const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const navigate = useNavigate();
 
   const fetchReceipts = useCallback(async () => {
@@ -68,11 +69,12 @@ const ReceiptsPage = () => {
       }
 
       let query = `
-        SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName,
-        (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as TotalAmount
+        SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, r.Discount, s.StoreName, pm.PaymentMethodName,
+        (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as SubTotal
         ${debtSubQueries}
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
+        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
       `;
       const params = [];
       const whereClauses = [];
@@ -94,7 +96,7 @@ const ReceiptsPage = () => {
 
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(/SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, s.StoreName,.*?as TotalAmount/s, 'SELECT r.ReceiptID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(/SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, r.Discount, s.StoreName, pm.PaymentMethodName,.*?as SubTotal/s, 'SELECT r.ReceiptID')})`;
       const countResult = await db.queryOne(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
@@ -153,13 +155,15 @@ const ReceiptsPage = () => {
         SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
         FROM LineItems li
         JOIN Products p ON li.ProductID = p.ProductID
-        JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+        LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
         WHERE li.ReceiptID IN (${placeholders})
       `, selectedReceiptIds);
 
       const fullReceipts = receiptsData.map(receipt => {
         const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
-        const total = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+        const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+        const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
+        const total = Math.max(0, subtotal - discountAmount);
         return { ...receipt, lineItems: items, totalAmount: total };
       });
 
@@ -175,41 +179,57 @@ const ReceiptsPage = () => {
     { header: 'Date', width: '20%', render: (row) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
     { header: 'Store', accessor: 'StoreName', width: '30%' },
     { header: 'Note', accessor: 'ReceiptNote', width: '25%' },
-    { header: 'Total', width: '15%', className: 'text-right', render: (row) => `€${(row.TotalAmount || 0).toFixed(2)}` },
-    {
-      header: '',
-      width: '10%',
-      className: 'text-right',
-      render: (row) => (
-        <div className="flex justify-end items-center gap-2">
-          {row.Status === 'unpaid' && (
-            <Tooltip content="This receipt is unpaid">
-              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
-            </Tooltip>
-          )}
-          {debtEnabled && row.UnpaidDebtorCount > 0 && (
-            <Tooltip content={`${row.UnpaidDebtorCount} people have not paid their part in this receipt yet`}>
-              <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
-            </Tooltip>
-          )}
-          {debtEnabled && row.TotalDebtorCount > 0 && row.UnpaidDebtorCount === 0 && (
-            <Tooltip content="All debts settled for this receipt">
-              <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            </Tooltip>
-          )}
-          <Tooltip content="Delete Receipt" align="end">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={(e) => { e.stopPropagation(); openDeleteModal(row.ReceiptID); }}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-          </Tooltip>
-        </div>
-      )
-    }
   ];
+
+  if (paymentMethodsEnabled) {
+    columns.push({ header: 'Payment Method', accessor: 'PaymentMethodName', width: '15%' });
+  }
+
+  columns.push({ 
+    header: 'Total', 
+    width: '15%', 
+    className: 'text-right', 
+    render: (row) => {
+      const subtotal = row.SubTotal || 0;
+      const discountAmount = (subtotal * (row.Discount || 0)) / 100;
+      const total = Math.max(0, subtotal - discountAmount);
+      return `€${total.toFixed(2)}`;
+    } 
+  });
+
+  columns.push({
+    header: '',
+    width: '10%',
+    className: 'text-right',
+    render: (row) => (
+      <div className="flex justify-end items-center gap-2">
+        {row.Status === 'unpaid' && (
+          <Tooltip content="This receipt is unpaid">
+            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+          </Tooltip>
+        )}
+        {debtEnabled && row.UnpaidDebtorCount > 0 && (
+          <Tooltip content={`${row.UnpaidDebtorCount} people have not paid their part in this receipt yet`}>
+            <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+          </Tooltip>
+        )}
+        {debtEnabled && row.TotalDebtorCount > 0 && row.UnpaidDebtorCount === 0 && (
+          <Tooltip content="All debts settled for this receipt">
+            <CheckCircleIcon className="h-5 w-5 text-green-500" />
+          </Tooltip>
+        )}
+        <Tooltip content="Delete Receipt" align="end">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => { e.stopPropagation(); openDeleteModal(row.ReceiptID); }}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </Button>
+        </Tooltip>
+      </div>
+    )
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">

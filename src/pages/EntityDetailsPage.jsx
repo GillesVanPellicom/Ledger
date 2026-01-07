@@ -94,40 +94,75 @@ const EntityDetailsPage = () => {
       // Debt to entity (I owe them)
       const debtToEntityData = await db.query(`
         SELECT
-          r.ReceiptID, r.ReceiptDate, r.Status, s.StoreName,
-          (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as TotalAmount
+          r.ReceiptID, r.ReceiptDate, r.Status, s.StoreName, r.Discount,
+          (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as SubTotal
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
         WHERE r.OwedToDebtorID = ?
       `, [id]);
 
+      const processedDebtToEntity = debtToEntityData.map(r => {
+        const discountAmount = (r.SubTotal * (r.Discount || 0)) / 100;
+        const total = Math.max(0, r.SubTotal - discountAmount);
+        return { ...r, type: 'to_entity', amount: total, isSettled: r.Status === 'paid' };
+      });
+
       // Debt to me (they owe me)
-      const debtToMeData = await db.query(`
-        SELECT
-          r.ReceiptID, r.ReceiptDate, s.StoreName, r.PaymentMethodID,
-          (rdp.PaymentID IS NOT NULL) as ReceiptIsSettled,
-          (
-            SELECT SUM(li.LineQuantity * li.LineUnitPrice)
-            FROM LineItems li
-            WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID = ?
-          ) as DebtorTotal
+      const debtToMeReceipts = await db.query(`
+        SELECT r.*, s.StoreName,
+        (rdp.PaymentID IS NOT NULL) as ReceiptIsSettled
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
         LEFT JOIN ReceiptDebtorPayments rdp ON r.ReceiptID = rdp.ReceiptID AND rdp.DebtorID = ?
-        WHERE r.ReceiptID IN (
-          SELECT DISTINCT li.ReceiptID FROM LineItems li WHERE li.DebtorID = ?
-        )
+        WHERE 
+          (r.SplitType = 'line_item' AND r.ReceiptID IN (SELECT li.ReceiptID FROM LineItems li WHERE li.DebtorID = ?))
+          OR
+          (r.SplitType = 'total_split' AND r.ReceiptID IN (SELECT rs.ReceiptID FROM ReceiptSplits rs WHERE rs.DebtorID = ?))
       `, [id, id, id]);
 
+      let processedDebtToMe = [];
+      if (debtToMeReceipts.length > 0) {
+        const receiptIds = debtToMeReceipts.map(r => r.ReceiptID);
+        const placeholders = receiptIds.map(() => '?').join(',');
+        const allLineItems = await db.query(`SELECT * FROM LineItems WHERE ReceiptID IN (${placeholders})`, receiptIds);
+        const allSplits = await db.query(`SELECT * FROM ReceiptSplits WHERE ReceiptID IN (${placeholders})`, receiptIds);
+
+        processedDebtToMe = debtToMeReceipts.map(r => {
+          let debtorAmount = 0;
+          const items = allLineItems.filter(li => li.ReceiptID === r.ReceiptID);
+          const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+          const discountFactor = 1 - ((r.Discount || 0) / 100);
+
+          if (r.SplitType === 'total_split') {
+            const splits = allSplits.filter(rs => rs.ReceiptID === r.ReceiptID);
+            const debtorSplit = splits.find(rs => rs.DebtorID === parseInt(id));
+            
+            if (debtorSplit) {
+              const totalShares = (r.TotalShares > 0) ? r.TotalShares : (splits.reduce((sum, s) => sum + s.SplitPart, 0) + (r.OwnShares || 0));
+              const totalAmount = Math.max(0, subtotal * discountFactor);
+              if (totalShares > 0) {
+                debtorAmount = (totalAmount * debtorSplit.SplitPart) / totalShares;
+              }
+            }
+          } else if (r.SplitType === 'line_item') {
+            const debtorItems = items.filter(li => li.DebtorID === parseInt(id));
+            const debtorSubtotal = debtorItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+            debtorAmount = debtorSubtotal * discountFactor;
+          }
+
+          return { ...r, type: 'to_me', amount: debtorAmount, isSettled: !!r.ReceiptIsSettled };
+        });
+      }
+
       const combinedReceipts = [
-        ...debtToEntityData.map(r => ({ ...r, type: 'to_entity', amount: r.TotalAmount, isSettled: r.Status === 'paid' })),
-        ...debtToMeData.map(r => ({ ...r, type: 'to_me', amount: r.DebtorTotal, isSettled: !!r.ReceiptIsSettled }))
+        ...processedDebtToEntity,
+        ...processedDebtToMe
       ].sort((a, b) => new Date(b.ReceiptDate) - new Date(a.ReceiptDate));
       
       setReceipts(combinedReceipts);
 
-      const debtToEntityTotal = debtToEntityData.filter(r => r.Status === 'unpaid').reduce((sum, r) => sum + r.TotalAmount, 0);
-      const debtToMeTotal = debtToMeData.filter(r => !r.ReceiptIsSettled).reduce((sum, r) => sum + r.DebtorTotal, 0);
+      const debtToEntityTotal = processedDebtToEntity.filter(r => !r.isSettled).reduce((sum, r) => sum + r.amount, 0);
+      const debtToMeTotal = processedDebtToMe.filter(r => !r.isSettled).reduce((sum, r) => sum + r.amount, 0);
       
       setStats({
         debtToEntity: debtToEntityTotal,
@@ -188,8 +223,21 @@ const EntityDetailsPage = () => {
 
         let totalAmount = r.amount;
         if (r.type === 'to_me') {
-            const fullTotal = await db.queryOne('SELECT SUM(LineQuantity * LineUnitPrice) as total FROM LineItems WHERE ReceiptID = ?', [r.ReceiptID]);
-            totalAmount = fullTotal.total;
+            // For PDF, we might want to show the full receipt total, or just the debt part.
+            // Usually PDF export shows the full receipt context.
+            // But here we are exporting debt details.
+            // Let's keep it as the debt amount for now as per previous logic, 
+            // or maybe we should show full receipt and highlight debt?
+            // The previous code used:
+            // if (r.type === 'to_me') {
+            //     const fullTotal = await db.queryOne('SELECT SUM(LineQuantity * LineUnitPrice) as total FROM LineItems WHERE ReceiptID = ?', [r.ReceiptID]);
+            //     totalAmount = fullTotal.total;
+            // }
+            // This suggests it wanted to show full receipt total.
+            // Let's recalculate full total with discount.
+            const subtotal = lineItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+            const discountAmount = (subtotal * (receiptDetails.Discount || 0)) / 100;
+            totalAmount = Math.max(0, subtotal - discountAmount);
         }
 
         fullReceiptsData.push({
