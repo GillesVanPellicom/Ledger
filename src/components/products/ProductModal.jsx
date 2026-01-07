@@ -4,12 +4,14 @@ import Input from '../ui/Input';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
 import { db } from '../../utils/db';
+import { useSettings } from '../../context/SettingsContext';
 
 const ProductModal = ({ isOpen, onClose, productToEdit, onSave, showSaveAndSelect, onSaveAndSelect }) => {
   const [formData, setFormData] = useState({ ProductName: '', ProductBrand: '', ProductSize: '', ProductUnitID: '' });
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const { settings } = useSettings();
 
   const validate = () => {
     const newErrors = {};
@@ -43,10 +45,12 @@ const ProductModal = ({ isOpen, onClose, productToEdit, onSave, showSaveAndSelec
   const handleChange = (e) => {
     let { name, value } = e.target;
     
-    if (name === 'ProductName') {
-      value = value.toLowerCase();
-    } else if (name === 'ProductBrand') {
-      value = capitalizeWords(value);
+    if (settings.modules.capitalizationProtection?.enabled) {
+      if (name === 'ProductName') {
+        value = value.toLowerCase();
+      } else if (name === 'ProductBrand') {
+        value = capitalizeWords(value);
+      }
     }
 
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -105,7 +109,7 @@ const ProductModal = ({ isOpen, onClose, productToEdit, onSave, showSaveAndSelec
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
           {showSaveAndSelect && !productToEdit && (
-            <Button variant="secondary" onClick={() => handleSave(true)} loading={loading}>Save & Select</Button>
+            <Button onClick={() => handleSave(true)} loading={loading}>Save & Select</Button>
           )}
           <Button onClick={handleSubmit} loading={loading}>Save</Button>
         </>

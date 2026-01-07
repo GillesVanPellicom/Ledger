@@ -15,6 +15,7 @@ import { cn } from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
 import { ConfirmModal } from '../components/ui/Modal';
 import { useBackupContext } from '../context/BackupContext';
+import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
 
 const ReceiptFormPage = () => {
   const { id } = useParams();
@@ -48,14 +49,14 @@ const ReceiptFormPage = () => {
 
   const [splitType, setSplitType] = useState('none');
   const [receiptSplits, setReceiptSplits] = useState([]);
-  const [selectedLineItems, setSelectedLineItems] = useState([]);
-  const [lastSelectedLineItemIndex, setLastSelectedLineItemIndex] = useState(null);
   const [paidDebtorIds, setPaidDebtorIds] = useState([]);
   const [splitTypeChangeModal, setSplitTypeChangeModal] = useState({ isOpen: false, newType: null });
+  const [unpaidConfirmModalOpen, setUnpaidConfirmModalOpen] = useState(false);
   const [isConcept, setIsConcept] = useState(false);
   const [excludedLineItemKeys, setExcludedLineItemKeys] = useState(new Set());
   const [isExclusionMode, setIsExclusionMode] = useState(false);
   const [exclusionConfirmModalOpen, setExclusionConfirmModalOpen] = useState(false);
+  const [selectionModal, setSelectionModal] = useState({ isOpen: false, mode: null });
 
   const hasSettledDebts = useMemo(() => paidDebtorIds.length > 0, [paidDebtorIds]);
   const isUnpaid = formData.status === 'unpaid';
@@ -67,11 +68,13 @@ const ReceiptFormPage = () => {
     if (!formData.receiptDate) newErrors.receiptDate = 'Date is required.';
     if (formData.status === 'unpaid' && !formData.owedToDebtorId) newErrors.owedToDebtorId = 'Owed to is required.';
     if (lineItems.length === 0) newErrors.lineItems = 'At least one line item is required.';
-    if (formData.discount < 0 || formData.discount > 100) newErrors.discount = 'Discount must be between 0 and 100.';
     
+    const discount = parseFloat(formData.discount);
+    if (isNaN(discount) || discount < 0 || discount > 100) newErrors.discount = 'Must be 0-100.';
+
     lineItems.forEach(item => {
-      if (item.LineQuantity <= 0) newErrors[`qty_${item.key}`] = 'Must be > 0';
-      if (item.LineUnitPrice < 0) newErrors[`price_${item.key}`] = 'Cannot be negative';
+      if (parseFloat(item.LineQuantity) <= 0) newErrors[`qty_${item.key}`] = 'Must be > 0';
+      if (parseFloat(item.LineUnitPrice) < 0) newErrors[`price_${item.key}`] = 'Cannot be negative';
     });
 
     setErrors(newErrors);
@@ -292,20 +295,24 @@ const ReceiptFormPage = () => {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (name === 'status') {
-      setFormData(prev => ({
-        ...prev,
-        paymentMethodId: value === 'paid' ? '1' : null,
-        owedToDebtorId: value === 'unpaid' ? prev.owedToDebtorId : null,
-      }));
-      // Reset split type if changing to unpaid
-      if (value === 'unpaid') {
-        setSplitType('none');
-        setReceiptSplits([]);
-        setLineItems(prev => prev.map(item => ({ ...item, DebtorID: null, DebtorName: null })));
-      }
+  };
+
+  const handleStatusChange = (newStatus) => {
+    if (newStatus === 'unpaid' && (splitType !== 'none' || receiptSplits.length > 0 || lineItems.some(li => li.DebtorID))) {
+      setUnpaidConfirmModalOpen(true);
+    } else {
+      setFormData(prev => ({ ...prev, status: newStatus, paymentMethodId: newStatus === 'paid' ? '1' : null }));
     }
   };
+
+  const confirmStatusChange = () => {
+    setFormData(prev => ({ ...prev, status: 'unpaid', paymentMethodId: null }));
+    setSplitType('none');
+    setReceiptSplits([]);
+    setLineItems(prev => prev.map(item => ({ ...item, DebtorID: null, DebtorName: null })));
+    setUnpaidConfirmModalOpen(false);
+  };
+
   const handleDateChange = (date) => setFormData(prev => ({ ...prev, receiptDate: date }));
 
   const handleProductSelect = (product) => {
@@ -324,6 +331,10 @@ const ReceiptFormPage = () => {
   };
 
   const handleLineItemChange = (key, field, value) => {
+    setLineItems(prev => prev.map(item => item.key === key ? { ...item, [field]: value } : item));
+  };
+
+  const handleLineItemBlur = (key, field, value) => {
     let processedValue = value;
     if (field === 'LineQuantity') {
       processedValue = Math.max(0, parseFloat(value) || 0);
@@ -400,79 +411,24 @@ const ReceiptFormPage = () => {
     setReceiptSplits(prev => prev.filter(s => s.key !== key));
   };
 
-  const handleLineItemClick = (index, event) => {
-    if (isExclusionMode) {
-      const itemKey = lineItems[index].key;
-      const newExcluded = new Set(excludedLineItemKeys);
-      if (newExcluded.has(itemKey)) {
-        newExcluded.delete(itemKey);
-      } else {
-        newExcluded.add(itemKey);
+  const handleAssignDebtorSave = (assignments) => {
+    const assignmentsMap = new Map(assignments.map(a => [a.key, a.debtorId]));
+    setLineItems(prev => prev.map(item => {
+      if (assignmentsMap.has(item.key)) {
+        const debtorId = assignmentsMap.get(item.key);
+        const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId));
+        return { ...item, DebtorID: debtor ? parseInt(debtorId) : null, DebtorName: debtor ? debtor.DebtorName : null };
       }
-      setExcludedLineItemKeys(newExcluded);
-      return;
-    }
+      return item;
+    }));
+  };
 
-    if (splitType !== 'line_item' || isDebtDisabled) return;
-
-    let newSelected = [...selectedLineItems];
-    
-    if (event.shiftKey && lastSelectedLineItemIndex !== null) {
-      const start = Math.min(lastSelectedLineItemIndex, index);
-      const end = Math.max(lastSelectedLineItemIndex, index);
-      for (let i = start; i <= end; i++) {
-        if (!newSelected.includes(i)) newSelected.push(i);
-      }
-    } else if (event.ctrlKey || event.metaKey) {
-      if (newSelected.includes(index)) {
-        newSelected = newSelected.filter(i => i !== index);
-      } else {
-        newSelected.push(index);
-      }
-      setLastSelectedLineItemIndex(index);
+  const handleDiscountExclusionSave = (excludedKeys) => {
+    setExcludedLineItemKeys(new Set(excludedKeys));
+    if (excludedKeys.length > 0) {
+      setIsExclusionMode(true);
     } else {
-      if (newSelected.includes(index) && newSelected.length === 1) {
-          newSelected = [];
-          setLastSelectedLineItemIndex(null);
-      } else {
-          newSelected = [index];
-          setLastSelectedLineItemIndex(index);
-      }
-    }
-    
-    setSelectedLineItems(newSelected);
-  };
-
-  const handleAssignDebtorToLineItems = (debtorId) => {
-    if (debtorId === '_placeholder_' || isDebtDisabled) return;
-    const debtorName = debtorId && debtorId !== '_clear_' ? debtors.find(d => d.DebtorID === parseInt(debtorId))?.DebtorName : null;
-    
-    const updatedLineItems = [...lineItems];
-    selectedLineItems.forEach(idx => {
-      updatedLineItems[idx] = { 
-        ...updatedLineItems[idx], 
-        DebtorID: debtorId && debtorId !== '_clear_' ? parseInt(debtorId) : null, 
-        DebtorName: debtorName 
-      };
-    });
-    setLineItems(updatedLineItems);
-    setSelectedLineItems([]);
-    setLastSelectedLineItemIndex(null);
-  };
-
-  const handleRemoveDebtorFromItem = (index) => {
-    if (isDebtDisabled) return;
-    const updatedLineItems = [...lineItems];
-    updatedLineItems[index] = { ...updatedLineItems[index], DebtorID: null, DebtorName: null };
-    setLineItems(updatedLineItems);
-  };
-
-  const handleRemoveDebtorFromReceipt = (debtorName) => {
-    if (isDebtDisabled) return;
-    if (splitType === 'total_split') {
-      setReceiptSplits(prev => prev.filter(s => s.DebtorName !== debtorName));
-    } else if (splitType === 'line_item') {
-      setLineItems(prev => prev.map(item => item.DebtorName === debtorName ? { ...item, DebtorID: null, DebtorName: null } : item));
+      setIsExclusionMode(false);
     }
   };
 
@@ -485,9 +441,6 @@ const ReceiptFormPage = () => {
       }
     } else {
       setIsExclusionMode(true);
-      // Clear selection when entering exclusion mode to avoid confusion
-      setSelectedLineItems([]);
-      setLastSelectedLineItemIndex(null);
     }
   };
 
@@ -639,11 +592,15 @@ const ReceiptFormPage = () => {
             <div className="col-span-2">
               <div className="flex items-center gap-2 mb-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Receipt Type</label>
-                <Tooltip content="Paid receipts are expenses you've already paid for. Unpaid receipts are expenses owed to someone else."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                <Tooltip content="Define if this is a receipt you paid for, or one that you owe."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
               </div>
-              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                <button onClick={() => handleFormChange({ target: { name: 'status', value: 'paid' }})} className={cn("flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'paid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Paid</button>
-                <button onClick={() => handleFormChange({ target: { name: 'status', value: 'unpaid' }})} className={cn("flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'unpaid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Unpaid</button>
+              <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <Tooltip content="A standard expense you've paid.">
+                  <button onClick={() => handleStatusChange('paid')} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'paid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Paid</button>
+                </Tooltip>
+                <Tooltip content="An expense you owe to someone else.">
+                  <button onClick={() => handleStatusChange('unpaid')} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'unpaid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Unpaid</button>
+                </Tooltip>
               </div>
             </div>
           )}
@@ -755,19 +712,10 @@ const ReceiptFormPage = () => {
 
             {splitType === 'line_item' && (
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
-                <p className="text-sm text-blue-700 dark:text-blue-300">Select items below to assign debtors. Settled debts cannot be changed.</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-48">
-                    <Select 
-                      value="_placeholder_"
-                      onChange={(e) => handleAssignDebtorToLineItems(e.target.value)}
-                      options={[{ value: '_placeholder_', label: 'Assign to...' }, { value: '_clear_', label: '(Clear Assignment)' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                      disabled={selectedLineItems.length === 0 || isDebtDisabled}
-                      className="bg-white dark:bg-gray-800"
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{selectedLineItems.length} selected</span>
-                </div>
+                <p className="text-sm text-blue-700 dark:text-blue-300">Assign items to debtors.</p>
+                <Button onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
+                  Assign Debtors
+                </Button>
               </div>
             )}
 
@@ -783,14 +731,6 @@ const ReceiptFormPage = () => {
                       <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                         <span className="text-gray-500 block">{debtor.name}</span>
                         <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
-                        {!isDebtDisabled && (
-                          <button 
-                            onClick={() => handleRemoveDebtorFromReceipt(debtor.name)}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <XMarkIcon className="h-3 w-3" />
-                          </button>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -816,7 +756,7 @@ const ReceiptFormPage = () => {
             {errors.lineItems && <p className="text-sm text-danger">{errors.lineItems}</p>}
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm select-none">
+            <table className="w-full text-sm">
               <thead className="text-left text-gray-500">
                 <tr>
                   <th className="p-2">Product</th>
@@ -829,21 +769,13 @@ const ReceiptFormPage = () => {
               </thead>
               <tbody className="divide-y dark:divide-gray-800">
                 {lineItems.map((item, index) => (
-                  <tr 
-                    key={item.key} 
-                    onClick={(e) => handleLineItemClick(index, e)}
-                    className={cn(
-                      "transition-colors border-b dark:border-gray-800",
-                      splitType === 'line_item' && !isDebtDisabled ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" : "",
-                      selectedLineItems.includes(index) ? "bg-blue-50 dark:bg-blue-900/30" : "",
-                      isDebtDisabled ? "bg-gray-50 dark:bg-gray-800/50" : "",
-                      isExclusionMode && excludedLineItemKeys.has(item.key) ? "opacity-50 bg-gray-100 dark:bg-gray-800" : ""
-                    )}
-                  >
+                  <tr key={item.key}>
                     <td className="p-2">
                       <div className="flex items-center gap-2">
-                        {isExclusionMode && (
-                          <div className={cn("w-2 h-2 rounded-full", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                        {parseFloat(formData.discount) > 0 && (
+                          <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
+                            <div className={cn("w-2 h-2 rounded-full", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                          </Tooltip>
                         )}
                         <div>
                           <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
@@ -851,30 +783,38 @@ const ReceiptFormPage = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} className="h-9" error={errors[`qty_${item.key}`]} min="0" disabled={isDebtDisabled} /></td>
-                    <td className="p-2"><Input type="number" value={item.LineUnitPrice} onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} className="h-9" error={errors[`price_${item.key}`]} min="0" disabled={isDebtDisabled} /></td>
-                    <td className="p-2 text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</td>
+                    <td className="p-2">
+                      <Input 
+                        type="text" 
+                        value={item.LineQuantity} 
+                        onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} 
+                        onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
+                        className="h-9" 
+                        error={errors[`qty_${item.key}`]} 
+                        disabled={isDebtDisabled} 
+                      />
+                    </td>
+                    <td className="p-2">
+                      <Input 
+                        type="text" 
+                        value={item.LineUnitPrice} 
+                        onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} 
+                        onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
+                        className="h-9" 
+                        error={errors[`price_${item.key}`]} 
+                        disabled={isDebtDisabled} 
+                      />
+                    </td>
+                    <td className="p-2 text-right font-medium">
+                      {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                    </td>
                     {debtEnabled && splitType === 'line_item' && (
                       <td className="p-2 text-right text-gray-600 dark:text-gray-400">
-                        {item.DebtorName ? (
-                          <div className="flex items-center justify-end gap-2 group">
-                            <span>{item.DebtorName}</span>
-                            {isDebtDisabled ? (
-                              <LockClosedIcon className="h-4 w-4 text-gray-400" />
-                            ) : (
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleRemoveDebtorFromItem(index); }}
-                                className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <XMarkIcon className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        ) : '-'}
+                        {item.DebtorName || '-'}
                       </td>
                     )}
                     <td className="p-2 text-center">
-                      {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); removeLineItem(item.key); }}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
+                      {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
                     </td>
                   </tr>
                 ))}
@@ -889,12 +829,15 @@ const ReceiptFormPage = () => {
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
               <div className="w-24">
                 <Input 
-                  type="number" 
+                  type="text" 
                   name="discount" 
                   value={formData.discount} 
-                  onChange={handleFormChange} 
-                  min="0" 
-                  max="100" 
+                  onChange={handleFormChange}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (isNaN(val) || val < 0) setFormData(prev => ({ ...prev, discount: 0 }));
+                    else if (val > 100) setFormData(prev => ({ ...prev, discount: 100 }));
+                  }}
                   className="h-8 text-right"
                   error={errors.discount}
                 />
@@ -904,10 +847,10 @@ const ReceiptFormPage = () => {
               <>
                 <div className="flex items-center gap-2 mb-1">
                   <button 
-                    onClick={toggleExclusionMode}
+                    onClick={() => setSelectionModal({ isOpen: true, mode: 'discount' })}
                     className="text-xs text-accent hover:underline flex items-center gap-1"
                   >
-                    {isExclusionMode ? "Done Excluding" : "Exclude Items"}
+                    {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
                   </button>
                 </div>
                 <div className="flex items-center gap-4 text-gray-500">
@@ -940,11 +883,29 @@ const ReceiptFormPage = () => {
       />
 
       <ConfirmModal
+        isOpen={unpaidConfirmModalOpen}
+        onClose={() => setUnpaidConfirmModalOpen(false)}
+        onConfirm={confirmStatusChange}
+        title="Discard Debt Information?"
+        message="Changing status to 'Unpaid' will clear all existing debt splits and assignments for this receipt. Are you sure?"
+      />
+
+      <ConfirmModal
         isOpen={exclusionConfirmModalOpen}
         onClose={() => setExclusionConfirmModalOpen(false)}
         onConfirm={confirmDisableExclusion}
         title="Discard Exclusions?"
         message="Turning off exclusion mode will discard your current item exclusions. Are you sure?"
+      />
+
+      <LineItemSelectionModal
+        isOpen={selectionModal.isOpen}
+        onClose={() => setSelectionModal({ isOpen: false, mode: null })}
+        lineItems={lineItems}
+        onSave={selectionModal.mode === 'debtor' ? handleAssignDebtorSave : handleDiscountExclusionSave}
+        selectionMode={selectionModal.mode}
+        debtors={debtors}
+        initialSelectedKeys={selectionModal.mode === 'debtor' ? [] : Array.from(excludedLineItemKeys)}
       />
     </div>
   );

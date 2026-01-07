@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon, UserGroupIcon, ServerIcon } from '@heroicons/react/24/solid';
+import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon, UserGroupIcon, ServerIcon, PencilIcon as PencilIconSolid } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -155,6 +155,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
     { id: 'pdf', label: 'PDF' },
     { id: 'data', label: 'Data' },
     { id: 'backup', label: 'Backup' },
+    { id: 'formatting', label: 'Formatting' },
   ];
 
   if (isDev) tabs.push({ id: 'development', label: 'Development' });
@@ -223,6 +224,21 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'appearance' }) => {
                       isEnabled={settings.modules.debt?.enabled} 
                       onToggle={() => handleModuleToggle('debt')}
                       icon={UserGroupIcon}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {activeTab === 'formatting' && (
+              <div className="space-y-6">
+                <div>
+                  <SectionTitle title="Formatting" tooltip="Manage automatic text formatting and capitalization rules." />
+                  <div className="space-y-4">
+                    <Toggle 
+                      label="Capitalization Protection" 
+                      description="Enforce capitalization rules for product names and brands." 
+                      isEnabled={settings.modules.capitalizationProtection?.enabled} 
+                      onToggle={() => handleModuleToggle('capitalizationProtection')}
                     />
                   </div>
                 </div>

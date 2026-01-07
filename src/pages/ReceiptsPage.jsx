@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -204,17 +204,17 @@ const ReceiptsPage = () => {
     render: (row) => (
       <div className="flex justify-end items-center gap-2">
         {row.Status === 'unpaid' && (
-          <Tooltip content="This receipt is unpaid">
+          <Tooltip content="This is an unpaid receipt, meaning it is owed to the person who paid it by you.">
             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
           </Tooltip>
         )}
         {debtEnabled && row.UnpaidDebtorCount > 0 && (
-          <Tooltip content={`${row.UnpaidDebtorCount} people have not paid their part in this receipt yet`}>
+          <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
             <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
           </Tooltip>
         )}
         {debtEnabled && row.TotalDebtorCount > 0 && row.UnpaidDebtorCount === 0 && (
-          <Tooltip content="All debts settled for this receipt">
+          <Tooltip content="All debts settled">
             <CheckCircleIcon className="h-5 w-5 text-green-500" />
           </Tooltip>
         )}
@@ -255,10 +255,12 @@ const ReceiptsPage = () => {
             </div>
           )}
         </div>
-        <Button onClick={() => navigate('/receipts/new')}>
-          <PlusIcon className="h-5 w-5 mr-2" />
-          New Receipt
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate('/receipts/new')}>
+            <PlusIcon className="h-5 w-5 mr-2" />
+            New Receipt
+          </Button>
+        </div>
       </div>
 
       <DataTable

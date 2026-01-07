@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon, UserIcon, BanknotesIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon, UserIcon, BanknotesIcon, LinkIcon } from '@heroicons/react/24/solid';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import { useSettings } from '../context/SettingsContext';
 import { useError } from '../context/ErrorContext';
@@ -399,9 +399,10 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                   )}>
                     <div>
                       <div className="flex justify-between items-start mb-2">
-                        <p className={cn("font-medium", isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>
-                          {debtor.name}
-                        </p>
+                        <Link to={`/entities/${debtor.debtorId}`} className="font-medium hover:underline flex items-center gap-1.5 group">
+                          <span className={cn(isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>{debtor.name}</span>
+                          <LinkIcon className={cn("h-4 w-4", isPaid ? "text-green-700" : "text-red-700")} />
+                        </Link>
                         {isPaid ? (
                           <Tooltip content={`Paid on ${payment.PaidDate}`}>
                             <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -479,11 +480,13 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                 {lineItems.map((item) => {
                   const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
                   return (
-                    <tr key={item.LineItemID} className={item.IsExcludedFromDiscount ? "opacity-50 bg-gray-100 dark:bg-gray-800" : ""}>
+                    <tr key={item.LineItemID}>
                       <td className="p-2">
                         <div className="flex items-center gap-2">
-                          {item.IsExcludedFromDiscount && (
-                            <div className="w-2 h-2 rounded-full bg-gray-400" title="Excluded from discount"></div>
+                          {receipt.Discount > 0 && (
+                            <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
+                              <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+                            </Tooltip>
                           )}
                           <div>
                             <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>

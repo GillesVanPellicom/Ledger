@@ -13,6 +13,9 @@ const initialSettings = {
     debt: {
       enabled: false,
     },
+    capitalizationProtection: {
+      enabled: true,
+    },
   },
   pdf: {
     showUniqueItems: false,

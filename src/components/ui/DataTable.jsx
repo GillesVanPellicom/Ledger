@@ -25,12 +25,13 @@ const DataTable = ({
   selectable = false,
   onSelectionChange,
   selectedIds,
-  itemKey = "id"
+  itemKey = "id",
+  minWidth = "600px"
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pageInput, setPageInput] = useState(currentPage);
   const [selectedRows, setSelectedRows] = useState(new Set());
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -142,7 +143,14 @@ const DataTable = ({
         <Tooltip content="Items per page" align="end">
           <Select 
             value={pageSize} 
-            onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }} 
+            onChange={(e) => { 
+              if (typeof onPageSizeChange === 'function') {
+                onPageSizeChange(Number(e.target.value));
+              }
+              if (typeof onPageChange === 'function') {
+                onPageChange(1);
+              }
+            }} 
             options={[
               { value: 5, label: '5' }, { value: 10, label: '10' }, { value: 15, label: '15' }, 
               { value: 20, label: '20' }, { value: 25, label: '25' }, { value: 30, label: '30' }, 
@@ -156,7 +164,7 @@ const DataTable = ({
 
       <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm relative">
         <div className={cn("overflow-x-auto", loading && "blur-sm pointer-events-none")}>
-          <table className="w-full text-left text-sm table-fixed">
+          <table className="w-full text-left text-sm" style={{ minWidth }}>
             <colgroup>
               {selectable && <col style={{ width: '40px' }} />}
               {columns.map((col, idx) => <col key={idx} style={{ width: col.width }} />)}
@@ -190,7 +198,7 @@ const DataTable = ({
                 </tr>
               ) : (
                 data.map((row, rowIdx) => (
-                  <tr key={row[itemKey] || rowIdx} onClick={() => onRowClick && onRowClick(row)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50")}>
+                  <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50")}>
                     {selectable && (
                       <td className="px-4 py-3 align-middle">
                         <div className="checkbox-wrapper-13 flex items-center justify-center">
@@ -267,7 +275,7 @@ const DataTable = ({
             <button
               type="button"
               onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || loading}
+              disabled={currentPage === totalPages || loading || totalCount === 0}
               className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRightIcon className="h-4 w-4" />
