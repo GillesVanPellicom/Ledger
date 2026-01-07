@@ -111,7 +111,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         }
         
         if (paymentMethodsEnabled) {
-          const pmData = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
+          const pmData = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
           setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
         }
       }
@@ -132,9 +132,19 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
 
   const subtotal = useMemo(() => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0), [lineItems]);
   const totalAmount = useMemo(() => {
-    const discountAmount = (subtotal * (receipt?.Discount || 0)) / 100;
+    const discountPercentage = receipt?.Discount || 0;
+    if (discountPercentage === 0) return subtotal;
+
+    const discountableAmount = lineItems.reduce((sum, item) => {
+      if (!item.IsExcludedFromDiscount) {
+        return sum + (item.LineQuantity * item.LineUnitPrice);
+      }
+      return sum;
+    }, 0);
+
+    const discountAmount = (discountableAmount * discountPercentage) / 100;
     return Math.max(0, subtotal - discountAmount);
-  }, [subtotal, receipt]);
+  }, [subtotal, receipt, lineItems]);
 
   const debtSummary = useMemo(() => {
     if (!debtEnabled || !receipt) return { debtors: [], ownShare: null };
@@ -168,16 +178,21 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
       }
     } else if (splitType === 'line_item') {
       const debtorItems = {};
-      const discountFactor = 1 - ((receipt.Discount || 0) / 100);
+      const discountPercentage = receipt.Discount || 0;
+      const discountFactor = 1 - (discountPercentage / 100);
 
       lineItems.forEach(item => {
         if (item.DebtorID) {
-          const amount = item.LineQuantity * item.LineUnitPrice * discountFactor;
+          let itemAmount = item.LineQuantity * item.LineUnitPrice;
+          if (discountPercentage > 0 && !item.IsExcludedFromDiscount) {
+            itemAmount *= discountFactor;
+          }
+
           if (!debtorItems[item.DebtorID]) {
             debtorItems[item.DebtorID] = { count: 0, total: 0 };
           }
           debtorItems[item.DebtorID].count += 1;
-          debtorItems[item.DebtorID].total += amount;
+          debtorItems[item.DebtorID].total += itemAmount;
 
           summary[item.DebtorID] = {
             name: item.DebtorName,
@@ -367,6 +382,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
         <Card>
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
+              <UserGroupIcon className="h-6 w-6 text-accent" />
               <h2 className="text-lg font-semibold">Debt Breakdown</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -463,10 +479,17 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
                 {lineItems.map((item) => {
                   const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
                   return (
-                    <tr key={item.LineItemID}>
+                    <tr key={item.LineItemID} className={item.IsExcludedFromDiscount ? "opacity-50 bg-gray-100 dark:bg-gray-800" : ""}>
                       <td className="p-2">
-                        <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                        <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                        <div className="flex items-center gap-2">
+                          {item.IsExcludedFromDiscount && (
+                            <div className="w-2 h-2 rounded-full bg-gray-400" title="Excluded from discount"></div>
+                          )}
+                          <div>
+                            <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                            <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-2 text-center">{item.LineQuantity}</td>
                       <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
@@ -496,7 +519,7 @@ const ReceiptViewPage = ({ openSettingsModal }) => {
             {receipt.Discount > 0 && (
               <div className="flex items-center gap-4 text-gray-500">
                 <span className="text-sm">Discount ({receipt.Discount}%)</span>
-                <span className="font-medium">-€{(subtotal * receipt.Discount / 100).toFixed(2)}</span>
+                <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
               </div>
             )}
             <div className="flex items-center gap-4 text-lg font-bold">

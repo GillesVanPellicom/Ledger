@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, PaintBrushIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PaintBrushIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 import Button from '../components/ui/Button';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import PaymentMethodStyleModal from '../components/payment/PaymentMethodStyleModal';
@@ -8,44 +8,9 @@ import { useSettings } from '../context/SettingsContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import * as SolidIcons from '@heroicons/react/24/solid';
-import Input from '../components/ui/Input';
-import Modal, { ConfirmModal } from '../components/ui/Modal';
 import Tooltip from '../components/ui/Tooltip';
 
-const EditPaymentMethodModal = ({ isOpen, onClose, onSave, method }) => {
-  const [name, setName] = useState(method?.PaymentMethodName || '');
-
-  useEffect(() => {
-    if (method) {
-      setName(method.PaymentMethodName);
-    }
-  }, [method]);
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-    await db.execute('UPDATE PaymentMethods SET PaymentMethodName = ? WHERE PaymentMethodID = ?', [name, method.PaymentMethodID]);
-    onSave();
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Payment Method">
-      <div className="p-6 space-y-4">
-        <Input
-          label="Method Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g., Main Bank Account"
-        />
-        <div className="flex justify-end gap-4">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save</Button>
-        </div>
-      </div>
-    </Modal>
-  );
-};
-
-const PaymentMethodCard = ({ method, onStyleClick, onEditClick, onDeleteClick }) => {
+const PaymentMethodCard = ({ method, onStyleClick, onEditClick }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
@@ -55,7 +20,8 @@ const PaymentMethodCard = ({ method, onStyleClick, onEditClick, onDeleteClick })
         <div 
             className={cn(
                 "rounded-lg shadow-md p-6 flex flex-col justify-between cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200 relative group",
-                !style && "bg-white dark:bg-gray-800"
+                !style && "bg-white dark:bg-gray-800",
+                method.PaymentMethodIsActive === 0 && "opacity-60"
             )}
             style={style ? { backgroundColor: style.color } : {}}
             onClick={() => navigate(`/payment-methods/${method.PaymentMethodID}`)}
@@ -64,11 +30,8 @@ const PaymentMethodCard = ({ method, onStyleClick, onEditClick, onDeleteClick })
               <Tooltip content="Edit Style">
                 <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><PaintBrushIcon className="h-4 w-4 text-white/80" /></button>
               </Tooltip>
-              <Tooltip content="Edit Name">
+              <Tooltip content="Edit">
                 <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><PencilIcon className="h-4 w-4 text-white/80" /></button>
-              </Tooltip>
-              <Tooltip content="Delete">
-                <button onClick={(e) => { e.stopPropagation(); onDeleteClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><TrashIcon className="h-4 w-4 text-white/80" /></button>
               </Tooltip>
             </div>
             <div className="flex items-center justify-between">
@@ -82,6 +45,13 @@ const PaymentMethodCard = ({ method, onStyleClick, onEditClick, onDeleteClick })
                     € {method.balance.toFixed(2)}
                 </p>
             </div>
+            {method.PaymentMethodIsActive === 0 && (
+              <div className="absolute bottom-2 left-2">
+                <Tooltip content="Hidden">
+                  <EyeSlashIcon className={cn("h-5 w-5", style ? 'text-white/60' : 'text-gray-400')} />
+                </Tooltip>
+              </div>
+            )}
         </div>
     );
 };
@@ -92,8 +62,8 @@ const PaymentMethodsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStyleModalOpen, setIsStyleModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState(null);
+  const [showHidden, setShowHidden] = useState(false);
   const { settings, updateSettings } = useSettings();
   const navigate = useNavigate();
 
@@ -147,23 +117,7 @@ const PaymentMethodsPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const openDeleteModal = (method) => {
-    setSelectedMethod(method);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!selectedMethod) return;
-    // Cannot delete Cash (ID 1)
-    if (selectedMethod.PaymentMethodID === 1) {
-      // Maybe show an error toast here
-      setIsDeleteModalOpen(false);
-      return;
-    }
-    await db.execute('DELETE FROM PaymentMethods WHERE PaymentMethodID = ?', [selectedMethod.PaymentMethodID]);
-    setIsDeleteModalOpen(false);
-    fetchPaymentMethods();
-  };
+  const filteredMethods = methods.filter(m => showHidden || m.PaymentMethodIsActive === 1);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -173,22 +127,29 @@ const PaymentMethodsPage = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payment Methods</h1>
-        <Button onClick={() => setIsAddModalOpen(true)}>
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Method
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setShowHidden(!showHidden)}>
+            {showHidden ? <EyeSlashIcon className="h-5 w-5 mr-2" /> : <EyeIcon className="h-5 w-5 mr-2" />}
+            {showHidden ? 'Hide Inactive' : 'Show Hidden'}
+          </Button>
+          <Button onClick={() => { setSelectedMethod(null); setIsAddModalOpen(true); }}>
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add Method
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {methods.map(method => (
-          <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} onDeleteClick={openDeleteModal} />
+        {filteredMethods.map(method => (
+          <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
         ))}
       </div>
 
       <PaymentMethodModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        isOpen={isAddModalOpen || isEditModalOpen}
+        onClose={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); setSelectedMethod(null); }}
         onSave={handleSave}
+        methodToEdit={selectedMethod}
       />
       {selectedMethod && (
         <PaymentMethodStyleModal
@@ -197,25 +158,6 @@ const PaymentMethodsPage = () => {
           onSave={handleStyleSave}
           method={selectedMethod}
           currentStyle={settings.paymentMethodStyles?.[selectedMethod.PaymentMethodID]}
-        />
-      )}
-      {selectedMethod && (
-        <EditPaymentMethodModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSave={handleSave}
-          method={selectedMethod}
-        />
-      )}
-      {selectedMethod && (
-        <ConfirmModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={handleDelete}
-          title={`Delete ${selectedMethod.PaymentMethodName}`}
-          message={`Are you sure you want to delete this payment method? All associated receipts will be reassigned to 'Cash'. This action cannot be undone.`}
-          confirmText="Delete"
-          variant="danger"
         />
       )}
     </div>

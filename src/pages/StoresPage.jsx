@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, PencilIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import StoreModal from '../components/stores/StoreModal';
 import Tooltip from '../components/ui/Tooltip';
@@ -63,14 +63,14 @@ const StoresPage = () => {
   const columns = [
     { header: 'Name', accessor: 'StoreName', width: '80%' },
     { 
-      header: 'Active', 
+      header: 'Visibility', 
       width: '10%',
       className: 'text-center',
       render: (row) => (
-        <Tooltip content={row.StoreIsActive ? 'Active stores appear in selection lists.' : 'Inactive stores are hidden from selection lists.'}>
+        <Tooltip content={row.StoreIsActive ? 'Shown in lists' : 'Hidden from lists'}>
           {row.StoreIsActive ? 
-          <CheckCircleIcon className="h-5 w-5 text-green-500 inline-block" /> : 
-          <XCircleIcon className="h-5 w-5 text-red-500 inline-block" />}
+          <EyeIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+          <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
         </Tooltip>
       )
     },

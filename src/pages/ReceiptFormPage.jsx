@@ -53,6 +53,9 @@ const ReceiptFormPage = () => {
   const [paidDebtorIds, setPaidDebtorIds] = useState([]);
   const [splitTypeChangeModal, setSplitTypeChangeModal] = useState({ isOpen: false, newType: null });
   const [isConcept, setIsConcept] = useState(false);
+  const [excludedLineItemKeys, setExcludedLineItemKeys] = useState(new Set());
+  const [isExclusionMode, setIsExclusionMode] = useState(false);
+  const [exclusionConfirmModalOpen, setExclusionConfirmModalOpen] = useState(false);
 
   const hasSettledDebts = useMemo(() => paidDebtorIds.length > 0, [paidDebtorIds]);
   const isUnpaid = formData.status === 'unpaid';
@@ -82,7 +85,7 @@ const ReceiptFormPage = () => {
       setStores(storeData.map(s => ({ value: s.StoreID, label: s.StoreName })));
 
       if (paymentMethodsEnabled) {
-        const paymentMethodData = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
+        const paymentMethodData = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
         setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
       }
 
@@ -115,7 +118,20 @@ const ReceiptFormPage = () => {
             LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
             WHERE li.ReceiptID = ?
           `, [id]);
-          setLineItems(lineItemData.map(li => ({ ...li, key: nanoid() })));
+          
+          const items = lineItemData.map(li => ({ ...li, key: nanoid() }));
+          setLineItems(items);
+          
+          const excludedKeys = new Set();
+          items.forEach(item => {
+            if (item.IsExcludedFromDiscount) {
+              excludedKeys.add(item.key);
+            }
+          });
+          setExcludedLineItemKeys(excludedKeys);
+          if (excludedKeys.size > 0) {
+            setIsExclusionMode(true);
+          }
 
           const imageData = await db.query('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [id]);
           setImages(imageData.map(img => ({ ...img, key: nanoid() })));
@@ -149,6 +165,10 @@ const ReceiptFormPage = () => {
             setImages(parsedConcept.images); // Note: file objects won't be restored, only paths/keys
             setSplitType(parsedConcept.splitType);
             setReceiptSplits(parsedConcept.receiptSplits);
+            if (parsedConcept.excludedLineItemKeys) {
+              setExcludedLineItemKeys(new Set(parsedConcept.excludedLineItemKeys));
+              setIsExclusionMode(parsedConcept.isExclusionMode);
+            }
             setIsConcept(true);
           } catch (e) {
             console.error("Failed to load concept", e);
@@ -168,12 +188,14 @@ const ReceiptFormPage = () => {
         lineItems,
         images: images.filter(img => !img.file), // Only save images that are already paths (not file objects)
         splitType,
-        receiptSplits
+        receiptSplits,
+        excludedLineItemKeys: Array.from(excludedLineItemKeys),
+        isExclusionMode
       };
       localStorage.setItem('receipt_concept', JSON.stringify(concept));
       setIsConcept(true);
     }
-  }, [formData, lineItems, images, splitType, receiptSplits, isEditing, loading]);
+  }, [formData, lineItems, images, splitType, receiptSplits, isEditing, loading, excludedLineItemKeys, isExclusionMode]);
 
   const clearConcept = () => {
     localStorage.removeItem('receipt_concept');
@@ -191,6 +213,8 @@ const ReceiptFormPage = () => {
     setImages([]);
     setSplitType('none');
     setReceiptSplits([]);
+    setExcludedLineItemKeys(new Set());
+    setIsExclusionMode(false);
     setIsConcept(false);
   };
 
@@ -201,9 +225,26 @@ const ReceiptFormPage = () => {
   }, [receiptSplits, formData.ownShares]);
 
   const calculateSubtotal = () => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
+  
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
-    const discountAmount = (subtotal * (parseFloat(formData.discount) || 0)) / 100;
+    const discountPercentage = parseFloat(formData.discount) || 0;
+    
+    if (discountPercentage === 0) return subtotal;
+
+    let discountAmount = 0;
+    if (isExclusionMode) {
+      const discountableAmount = lineItems.reduce((sum, item) => {
+        if (!excludedLineItemKeys.has(item.key)) {
+          return sum + (item.LineQuantity * item.LineUnitPrice);
+        }
+        return sum;
+      }, 0);
+      discountAmount = (discountableAmount * discountPercentage) / 100;
+    } else {
+      discountAmount = (subtotal * discountPercentage) / 100;
+    }
+    
     return Math.max(0, subtotal - discountAmount);
   };
 
@@ -223,14 +264,20 @@ const ReceiptFormPage = () => {
         selfAmount = (totalAmount * parseInt(formData.ownShares)) / totalShares;
       }
     } else if (splitType === 'line_item') {
-      const discountFactor = 1 - ((parseFloat(formData.discount) || 0) / 100);
+      const discountPercentage = parseFloat(formData.discount) || 0;
+      const discountFactor = 1 - (discountPercentage / 100);
       
       lineItems.forEach(item => {
         if (item.DebtorID) {
           const debtorName = item.DebtorName || debtors.find(d => d.DebtorID === parseInt(item.DebtorID))?.DebtorName;
           if (debtorName) {
-            const amount = item.LineQuantity * item.LineUnitPrice * discountFactor;
-            summary[debtorName] = (summary[debtorName] || 0) + amount;
+            let itemAmount = item.LineQuantity * item.LineUnitPrice;
+            if (discountPercentage > 0) {
+               if (!isExclusionMode || (isExclusionMode && !excludedLineItemKeys.has(item.key))) {
+                 itemAmount *= discountFactor;
+               }
+            }
+            summary[debtorName] = (summary[debtorName] || 0) + itemAmount;
           }
         }
       });
@@ -240,7 +287,7 @@ const ReceiptFormPage = () => {
       debtors: Object.entries(summary).map(([name, amount]) => ({ name, amount })),
       self: selfAmount
     };
-  }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, totalShares, formData.ownShares, formData.discount]);
+  }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, totalShares, formData.ownShares, formData.discount, isExclusionMode, excludedLineItemKeys]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -286,7 +333,14 @@ const ReceiptFormPage = () => {
     setLineItems(prev => prev.map(item => item.key === key ? { ...item, [field]: processedValue } : item));
   };
 
-  const removeLineItem = (key) => setLineItems(prev => prev.filter(item => item.key !== key));
+  const removeLineItem = (key) => {
+    setLineItems(prev => prev.filter(item => item.key !== key));
+    if (excludedLineItemKeys.has(key)) {
+      const newExcluded = new Set(excludedLineItemKeys);
+      newExcluded.delete(key);
+      setExcludedLineItemKeys(newExcluded);
+    }
+  };
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -347,6 +401,18 @@ const ReceiptFormPage = () => {
   };
 
   const handleLineItemClick = (index, event) => {
+    if (isExclusionMode) {
+      const itemKey = lineItems[index].key;
+      const newExcluded = new Set(excludedLineItemKeys);
+      if (newExcluded.has(itemKey)) {
+        newExcluded.delete(itemKey);
+      } else {
+        newExcluded.add(itemKey);
+      }
+      setExcludedLineItemKeys(newExcluded);
+      return;
+    }
+
     if (splitType !== 'line_item' || isDebtDisabled) return;
 
     let newSelected = [...selectedLineItems];
@@ -410,6 +476,27 @@ const ReceiptFormPage = () => {
     }
   };
 
+  const toggleExclusionMode = () => {
+    if (isExclusionMode) {
+      if (excludedLineItemKeys.size > 0) {
+        setExclusionConfirmModalOpen(true);
+      } else {
+        setIsExclusionMode(false);
+      }
+    } else {
+      setIsExclusionMode(true);
+      // Clear selection when entering exclusion mode to avoid confusion
+      setSelectedLineItems([]);
+      setLastSelectedLineItemIndex(null);
+    }
+  };
+
+  const confirmDisableExclusion = () => {
+    setExcludedLineItemKeys(new Set());
+    setIsExclusionMode(false);
+    setExclusionConfirmModalOpen(false);
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
@@ -461,7 +548,8 @@ const ReceiptFormPage = () => {
       }
   
       for (const item of lineItems) {
-        await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID) VALUES (?, ?, ?, ?, ?)', [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice, item.DebtorID || null]);
+        await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)', 
+          [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice, item.DebtorID || null, excludedLineItemKeys.has(item.key) ? 1 : 0]);
       }
   
       if (splitType === 'total_split') {
@@ -748,12 +836,20 @@ const ReceiptFormPage = () => {
                       "transition-colors border-b dark:border-gray-800",
                       splitType === 'line_item' && !isDebtDisabled ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" : "",
                       selectedLineItems.includes(index) ? "bg-blue-50 dark:bg-blue-900/30" : "",
-                      isDebtDisabled ? "bg-gray-50 dark:bg-gray-800/50" : ""
+                      isDebtDisabled ? "bg-gray-50 dark:bg-gray-800/50" : "",
+                      isExclusionMode && excludedLineItemKeys.has(item.key) ? "opacity-50 bg-gray-100 dark:bg-gray-800" : ""
                     )}
                   >
                     <td className="p-2">
-                      <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                      <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                      <div className="flex items-center gap-2">
+                        {isExclusionMode && (
+                          <div className={cn("w-2 h-2 rounded-full", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                        )}
+                        <div>
+                          <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                          <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="p-2"><Input type="number" value={item.LineQuantity} onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} className="h-9" error={errors[`qty_${item.key}`]} min="0" disabled={isDebtDisabled} /></td>
                     <td className="p-2"><Input type="number" value={item.LineUnitPrice} onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} className="h-9" error={errors[`price_${item.key}`]} min="0" disabled={isDebtDisabled} /></td>
@@ -805,10 +901,20 @@ const ReceiptFormPage = () => {
               </div>
             </div>
             {parseFloat(formData.discount) > 0 && (
-              <div className="flex items-center gap-4 text-gray-500">
-                <span className="text-sm">Subtotal</span>
-                <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
-              </div>
+              <>
+                <div className="flex items-center gap-2 mb-1">
+                  <button 
+                    onClick={toggleExclusionMode}
+                    className="text-xs text-accent hover:underline flex items-center gap-1"
+                  >
+                    {isExclusionMode ? "Done Excluding" : "Exclude Items"}
+                  </button>
+                </div>
+                <div className="flex items-center gap-4 text-gray-500">
+                  <span className="text-sm">Subtotal</span>
+                  <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
+                </div>
+              </>
             )}
             <div className="flex items-center gap-4 text-lg font-bold">
               <span>Total</span>
@@ -831,6 +937,14 @@ const ReceiptFormPage = () => {
         onConfirm={confirmSplitTypeChange}
         title="Discard Unsaved Debt?"
         message="You have unsaved debt assignments. Are you sure you want to discard them by changing the split type?"
+      />
+
+      <ConfirmModal
+        isOpen={exclusionConfirmModalOpen}
+        onClose={() => setExclusionConfirmModalOpen(false)}
+        onConfirm={confirmDisableExclusion}
+        title="Discard Exclusions?"
+        message="Turning off exclusion mode will discard your current item exclusions. Are you sure?"
       />
     </div>
   );

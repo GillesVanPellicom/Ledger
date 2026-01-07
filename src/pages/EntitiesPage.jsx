@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, PencilIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
@@ -69,14 +69,14 @@ const EntitiesPage = () => {
   const columns = [
     { header: 'Name', accessor: 'DebtorName', width: '80%' },
     { 
-      header: 'Active', 
+      header: 'Visibility', 
       width: '10%',
       className: 'text-center',
       render: (row) => (
-        <Tooltip content={row.DebtorIsActive ? 'Active entities appear in selection lists.' : 'Inactive entities are hidden from selection lists.'}>
+        <Tooltip content={row.DebtorIsActive ? 'Shown in lists' : 'Hidden from lists'}>
           {row.DebtorIsActive ? 
-          <CheckCircleIcon className="h-5 w-5 text-green-500 inline-block" /> : 
-          <XCircleIcon className="h-5 w-5 text-red-500 inline-block" />}
+          <EyeIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+          <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
         </Tooltip>
       )
     },

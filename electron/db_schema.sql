@@ -70,7 +70,8 @@ CREATE TABLE PaymentMethods
 (
   PaymentMethodID    INTEGER PRIMARY KEY,
   PaymentMethodName  TEXT NOT NULL UNIQUE,
-  PaymentMethodFunds NUMERIC NOT NULL
+  PaymentMethodFunds NUMERIC NOT NULL,
+  PaymentMethodIsActive INTEGER NOT NULL DEFAULT 1
 );
 
 INSERT INTO PaymentMethods
@@ -147,6 +148,7 @@ CREATE TABLE LineItems
   DebtorID      INTEGER DEFAULT NULL, -- For line_item mode
   LineQuantity  INTEGER NOT NULL,
   LineUnitPrice NUMERIC NOT NULL,
+  IsExcludedFromDiscount INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (ReceiptID)
     REFERENCES Receipts (ReceiptID)
     ON DELETE CASCADE,
