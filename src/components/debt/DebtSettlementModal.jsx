@@ -51,7 +51,6 @@ const DebtSettlementModal = ({ isOpen, onClose, onSave, debtInfo }) => {
         type: 'debt_settlement',
         debtorName: debtInfo.debtorName,
         receiptId: debtInfo.receiptId,
-        debtorId: debtInfo.debtorId,
       });
 
       const topUpResult = await db.execute(

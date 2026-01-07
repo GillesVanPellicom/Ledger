@@ -63,6 +63,7 @@ const PaymentMethodDetailsPage = () => {
 
       const receiptsData = await db.query(`
         SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note, r.Discount,
+               (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as subtotal, 
                'receipt' as type
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
@@ -92,14 +93,7 @@ const PaymentMethodDetailsPage = () => {
             return {...r, amount: -total};
         }), 
         ...topupsData
-      ].sort((a, b) => {
-        const dateComparison = new Date(b.date) - new Date(a.date);
-        if (dateComparison !== 0) return dateComparison;
-        if (a.type !== b.type) {
-          return b.type === 'topup' ? 1 : -1;
-        }
-        return b.id - a.id;
-      });
+      ].sort((a, b) => new Date(b.date) - new Date(a.date));
       
       setTransactions(allTransactions);
 
@@ -235,11 +229,8 @@ const PaymentMethodDetailsPage = () => {
     if (parsedNote && parsedNote.type === 'debt_settlement') {
       return (
         <>
+          Debt settled by{' '}
           <Link to={`/receipts/view/${parsedNote.receiptId}`} className="text-accent hover:underline">
-            Debt
-          </Link>
-          {' '}settled by{' '}
-          <Link to={`/entities/${parsedNote.debtorId}`} className="text-accent hover:underline">
             {parsedNote.debtorName}
           </Link>
         </>
@@ -256,7 +247,7 @@ const PaymentMethodDetailsPage = () => {
       header: 'Amount',
       render: (row) => (
         <span className={cn(row.amount > 0 ? 'text-green-600' : 'text-red-600')}>
-          {row.amount > 0 ? '+' : '-'} €{Math.abs(row.amount).toFixed(2)}
+          {row.amount > 0 ? '+' : ''} €{Math.abs(row.amount).toFixed(2)}
         </span>
       )
     },

@@ -269,9 +269,6 @@ const ReceiptsPage = () => {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Tooltip content="A receipt can be 'paid' or 'unpaid'. This is managed in the receipt details.">
-            <InformationCircleIcon className="h-5 w-5 text-gray-400" />
-          </Tooltip>
           <Button onClick={() => navigate('/receipts/new')}>
             <PlusIcon className="h-5 w-5 mr-2" />
             New Receipt

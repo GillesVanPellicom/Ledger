@@ -16,6 +16,7 @@ import Tooltip from '../components/ui/Tooltip';
 import { ConfirmModal } from '../components/ui/Modal';
 import { useBackupContext } from '../context/BackupContext';
 import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
+import StoreModal from '../components/stores/StoreModal';
 
 const ReceiptFormPage = () => {
   const { id } = useParams();
@@ -45,6 +46,7 @@ const ReceiptFormPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
+  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [errors, setErrors] = useState({});
 
   const [splitType, setSplitType] = useState('none');
@@ -81,11 +83,21 @@ const ReceiptFormPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const fetchStores = async () => {
+    const storeData = await db.query('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
+    setStores(storeData.map(s => ({ value: s.StoreID, label: s.StoreName })));
+  };
+
+  const handleStoreSave = async (newStoreId) => {
+    await fetchStores();
+    setFormData(prev => ({ ...prev, storeId: newStoreId }));
+    setIsStoreModalOpen(false);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const storeData = await db.query('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
-      setStores(storeData.map(s => ({ value: s.StoreID, label: s.StoreName })));
+      await fetchStores();
 
       if (paymentMethodsEnabled) {
         const paymentMethodData = await db.query('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
@@ -604,7 +616,18 @@ const ReceiptFormPage = () => {
               </div>
             </div>
           )}
-          <div className="col-span-1"><Select label="Store" name="storeId" value={formData.storeId} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} /></div>
+          <div className="col-span-1">
+            <div className="flex items-end gap-2">
+              <div className="flex-grow">
+                <Select label="Store" name="storeId" value={formData.storeId} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} />
+              </div>
+              <Tooltip content="Add Store">
+                <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsStoreModalOpen(true)}>
+                  <PlusIcon className="h-5 w-5" />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
           <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
           <div className="col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
           
@@ -873,6 +896,12 @@ const ReceiptFormPage = () => {
       </div>
 
       <ProductSelector isOpen={isProductSelectorOpen} onClose={() => setIsProductSelectorOpen(false)} onSelect={handleProductSelect} />
+      
+      <StoreModal 
+        isOpen={isStoreModalOpen}
+        onClose={() => setIsStoreModalOpen(false)}
+        onSave={handleStoreSave}
+      />
 
       <ConfirmModal
         isOpen={splitTypeChangeModal.isOpen}

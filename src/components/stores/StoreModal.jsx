@@ -40,13 +40,14 @@ const StoreModal = ({ isOpen, onClose, onSave, storeToEdit }) => {
           'UPDATE Stores SET StoreName = ?, StoreIsActive = ? WHERE StoreID = ?',
           [name.trim(), isActive ? 1 : 0, storeToEdit.StoreID]
         );
+        onSave();
       } else {
-        await db.execute(
+        const result = await db.execute(
           'INSERT INTO Stores (StoreName, StoreIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
+        onSave(result.lastID);
       }
-      onSave();
       onClose();
     } catch (err) {
       if (err.message && err.message.includes('UNIQUE constraint failed')) {
@@ -68,10 +69,10 @@ const StoreModal = ({ isOpen, onClose, onSave, storeToEdit }) => {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
-        <Input 
-          label="Store Name" 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
+        <Input
+          label="Store Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="e.g., Aldi"
         />
         <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
