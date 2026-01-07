@@ -69,9 +69,27 @@ const ReceiptsPage = () => {
       }
 
       let query = `
-        SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, r.Discount, s.StoreName, pm.PaymentMethodName,
-        (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as SubTotal
-        ${debtSubQueries}
+        SELECT 
+          r.ReceiptID, 
+          r.ReceiptDate, 
+          r.ReceiptNote, 
+          r.Discount, 
+          s.StoreName, 
+          pm.PaymentMethodName,
+          (
+            SELECT SUM(li.LineQuantity * li.LineUnitPrice) 
+            FROM LineItems li 
+            WHERE li.ReceiptID = r.ReceiptID
+          ) as SubTotal,
+          (
+            (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) - 
+            IFNULL((
+              SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
+              FROM LineItems li_discountable
+              WHERE li_discountable.ReceiptID = r.ReceiptID AND (li_discountable.IsExcludedFromDiscount = 0 OR li_discountable.IsExcludedFromDiscount IS NULL)
+            ), 0) * r.Discount / 100
+          ) as Total
+          ${debtSubQueries}
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
@@ -96,7 +114,7 @@ const ReceiptsPage = () => {
 
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(/SELECT r.ReceiptID, r.ReceiptDate, r.ReceiptNote, r.Discount, s.StoreName, pm.PaymentMethodName,.*?as SubTotal/s, 'SELECT r.ReceiptID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(/SELECT r.ReceiptID,.*?as Total/s, 'SELECT r.ReceiptID')})`;
       const countResult = await db.queryOne(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
@@ -189,12 +207,7 @@ const ReceiptsPage = () => {
     header: 'Total', 
     width: '15%', 
     className: 'text-right', 
-    render: (row) => {
-      const subtotal = row.SubTotal || 0;
-      const discountAmount = (subtotal * (row.Discount || 0)) / 100;
-      const total = Math.max(0, subtotal - discountAmount);
-      return `€${total.toFixed(2)}`;
-    } 
+    render: (row) => `€${(row.Total || 0).toFixed(2)}`
   });
 
   columns.push({
@@ -256,6 +269,9 @@ const ReceiptsPage = () => {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Tooltip content="A receipt can be 'paid' or 'unpaid'. This is managed in the receipt details.">
+            <InformationCircleIcon className="h-5 w-5 text-gray-400" />
+          </Tooltip>
           <Button onClick={() => navigate('/receipts/new')}>
             <PlusIcon className="h-5 w-5 mr-2" />
             New Receipt

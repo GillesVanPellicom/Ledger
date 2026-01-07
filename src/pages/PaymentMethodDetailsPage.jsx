@@ -70,6 +70,11 @@ const PaymentMethodDetailsPage = () => {
         WHERE r.PaymentMethodID = ?
       `, [id]);
 
+      const receiptIds = receiptsData.map(r => r.id);
+      const allLineItems = receiptIds.length > 0 
+        ? await db.query(`SELECT * FROM LineItems WHERE ReceiptID IN (${receiptIds.map(() => '?').join(',')})`, receiptIds)
+        : [];
+
       const topupsData = await db.query(`
         SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount, 'topup' as type
         FROM TopUps 
@@ -78,8 +83,13 @@ const PaymentMethodDetailsPage = () => {
 
       const allTransactions = [
         ...receiptsData.map(r => {
-            const discountAmount = (r.subtotal * (r.Discount || 0)) / 100;
-            const total = Math.max(0, r.subtotal - discountAmount);
+            const items = allLineItems.filter(li => li.ReceiptID === r.id);
+            const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+            const discountableAmount = items
+              .filter(item => !item.IsExcludedFromDiscount)
+              .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+            const discountAmount = (discountableAmount * (r.Discount || 0)) / 100;
+            const total = subtotal - discountAmount;
             return {...r, amount: -total};
         }), 
         ...topupsData
@@ -87,12 +97,8 @@ const PaymentMethodDetailsPage = () => {
       
       setTransactions(allTransactions);
 
-      const expenses = receiptsData.reduce((sum, r) => {
-          const discountAmount = (r.subtotal * (r.Discount || 0)) / 100;
-          const total = Math.max(0, r.subtotal - discountAmount);
-          return sum + total;
-      }, 0);
-      const topups = topupsData.reduce((sum, t) => sum + t.amount, 0);
+      const expenses = allTransactions.filter(t => t.type === 'receipt').reduce((sum, r) => sum - r.amount, 0);
+      const topups = allTransactions.filter(t => t.type === 'topup').reduce((sum, t) => sum + t.amount, 0);
       setBalance((methodData.PaymentMethodFunds || 0) + topups - expenses);
 
     } catch (error) {
