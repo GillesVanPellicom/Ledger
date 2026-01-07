@@ -43,7 +43,7 @@ const Sidenav = ({ isCollapsed, toggleSidebar, openSettingsModal }) => {
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-800">
         {!isCollapsed && (
           <span className="font-bold text-xl tracking-tight text-accent">
-            HomeFin
+            Ledger
           </span>
         )}
         <button 

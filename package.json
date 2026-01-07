@@ -1,7 +1,7 @@
 {
-  "name": "homefin",
+  "name": "ledger",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -56,8 +56,8 @@
     "wait-on": "^8.0.2"
   },
   "build": {
-    "appId": "com.homefin.app",
-    "productName": "HomeFin",
+    "appId": "com.ledger.app",
+    "productName": "Ledger",
     "directories": {
       "output": "dist-electron"
     },
