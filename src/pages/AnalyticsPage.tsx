@@ -11,6 +11,7 @@ import { useSettings } from '../context/SettingsContext';
 import { cn } from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
 import { MonthlySpending, StoreSpending, Averages, PaymentMethodStats, DebtStats } from '../types';
+import InfoCard from '../components/ui/InfoCard';
 
 const AnalyticsPage: React.FC = () => {
   const monthlyChartRef = useRef<ReactECharts>(null);
@@ -24,6 +25,7 @@ const AnalyticsPage: React.FC = () => {
   const [averages, setAverages] = useState<Averages>({ avgPerReceipt: 0, avgItemsPerReceipt: 0, avgPricePerItem: 0 });
   const [paymentMethodStats, setPaymentMethodStats] = useState<PaymentMethodStats>({ totalCapacity: 0, methods: [] });
   const [debtStats, setDebtStats] = useState<DebtStats>({ netBalances: [], totalOwedToMe: 0, totalOwedByMe: 0 });
+  const [hasItemlessReceipts, setHasItemlessReceipts] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   const { settings } = useSettings();
@@ -44,7 +46,7 @@ const AnalyticsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchYears = async () => {
-      const result = await db.query<{ year: string }[]>("SELECT DISTINCT STRFTIME('%Y', ReceiptDate) as year FROM Receipts ORDER BY year DESC");
+      const result = await db.query<{ year: string }[]>("SELECT DISTINCT STRFTIME('%Y', ReceiptDate) as year FROM Receipts WHERE IsTentative = 0 ORDER BY year DESC");
       const years = result.map(r => r.year);
       if (years.length > 0) {
         setAvailableYears(years);
@@ -65,10 +67,14 @@ const AnalyticsPage: React.FC = () => {
       setLoading(true);
       
       const totalQueryPart = `SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END)`;
+      const baseWhere = `r.IsTentative = 0`;
 
-      const monthlyResult = await db.query<{ month: string, total: number }[]>(`SELECT STRFTIME('%m', r.ReceiptDate) as month, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y', r.ReceiptDate) = ? GROUP BY month ORDER BY month ASC`, [selectedYear.toString()]);
-      const prevYearMonthlyResult = await db.query<{ month: string, total: number }[]>(`SELECT STRFTIME('%m', r.ReceiptDate) as month, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y', r.ReceiptDate) = ? GROUP BY month`, [(parseInt(selectedYear) - 1).toString()]);
-      const prevDecResult = await db.queryOne<{ total: number }>(`SELECT ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y-%m', r.ReceiptDate) = ?`, [`${parseInt(selectedYear) - 1}-12`]);
+      const itemlessCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Receipts r WHERE r.IsNonItemised = 1 AND ${baseWhere}`);
+      setHasItemlessReceipts(itemlessCheck ? itemlessCheck.count > 0 : false);
+
+      const monthlyResult = await db.query<{ month: string, total: number }[]>(`SELECT STRFTIME('%m', r.ReceiptDate) as month, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y', r.ReceiptDate) = ? AND ${baseWhere} GROUP BY month ORDER BY month ASC`, [selectedYear.toString()]);
+      const prevYearMonthlyResult = await db.query<{ month: string, total: number }[]>(`SELECT STRFTIME('%m', r.ReceiptDate) as month, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y', r.ReceiptDate) = ? AND ${baseWhere} GROUP BY month`, [(parseInt(selectedYear) - 1).toString()]);
+      const prevDecResult = await db.queryOne<{ total: number }>(`SELECT ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y-%m', r.ReceiptDate) = ? AND ${baseWhere}`, [`${parseInt(selectedYear) - 1}-12`]);
       const prevDecTotal = prevDecResult?.total || 0;
 
       const formattedMonthly: MonthlySpending[] = Array(12).fill(0).map((_, i) => {
@@ -80,17 +86,17 @@ const AnalyticsPage: React.FC = () => {
       });
       setMonthlySpending(formattedMonthly);
 
-      const storeResult = await db.query<{ StoreName: string, total: number }[]>(`SELECT s.StoreName, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID JOIN Stores s ON r.StoreID = s.StoreID WHERE STRFTIME('%Y', r.ReceiptDate) = ? GROUP BY s.StoreName ORDER BY total DESC`, [selectedYear.toString()]);
+      const storeResult = await db.query<{ StoreName: string, total: number }[]>(`SELECT s.StoreName, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID JOIN Stores s ON r.StoreID = s.StoreID WHERE STRFTIME('%Y', r.ReceiptDate) = ? AND ${baseWhere} GROUP BY s.StoreName ORDER BY total DESC`, [selectedYear.toString()]);
       setStoreSpending(storeResult.map(s => ({ name: s.StoreName, value: s.total })));
 
-      const averagesResult = await db.queryOne<{ receiptCount: number, totalItems: number, totalSpent: number }>(`SELECT COUNT(DISTINCT r.ReceiptID) as receiptCount, SUM(li.LineQuantity) as totalItems, SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as totalSpent FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y', r.ReceiptDate) = ?`, [selectedYear.toString()]);
+      const averagesResult = await db.queryOne<{ receiptCount: number, totalItems: number, totalSpent: number }>(`SELECT COUNT(DISTINCT r.ReceiptID) as receiptCount, SUM(li.LineQuantity) as totalItems, SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as totalSpent FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y', r.ReceiptDate) = ? AND ${baseWhere}`, [selectedYear.toString()]);
       setAverages(averagesResult && averagesResult.receiptCount > 0 ? { avgPerReceipt: averagesResult.totalSpent / averagesResult.receiptCount, avgItemsPerReceipt: averagesResult.totalItems / averagesResult.receiptCount, avgPricePerItem: averagesResult.totalSpent / averagesResult.totalItems } : { avgPerReceipt: 0, avgItemsPerReceipt: 0, avgPricePerItem: 0 });
 
       if (paymentMethodsEnabled) {
         const methods = await db.query<{ PaymentMethodID: number, PaymentMethodName: string, PaymentMethodFunds: number }[]>('SELECT * FROM PaymentMethods');
         let totalCapacity = 0;
         const methodDetails = await Promise.all(methods.map(async (method) => {
-          const expensesResult = await db.queryOne<{ total: number }>(`SELECT SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE r.PaymentMethodID = ?`, [method.PaymentMethodID]);
+          const expensesResult = await db.queryOne<{ total: number }>(`SELECT SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE r.PaymentMethodID = ? AND ${baseWhere}`, [method.PaymentMethodID]);
           const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?', [method.PaymentMethodID]);
           const balance = (method.PaymentMethodFunds || 0) + (topupsResult?.total || 0) - (expensesResult?.total || 0);
           totalCapacity += balance;
@@ -105,8 +111,21 @@ const AnalyticsPage: React.FC = () => {
         let totalOwedToMe = 0;
         let totalOwedByMe = 0;
         for (const debtor of debtors) {
-          const toMeResult = await db.queryOne<{ total: number }>(`SELECT SUM(CASE WHEN r.IsNonItemised = 1 THEN (r.NonItemisedTotal / r.TotalShares) * rs.SplitPart ELSE li.LineQuantity * li.LineUnitPrice END) as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID LEFT JOIN ReceiptSplits rs ON r.ReceiptID = rs.ReceiptID AND rs.DebtorID = ? WHERE (li.DebtorID = ? OR rs.DebtorID = ?) AND NOT EXISTS (SELECT 1 FROM ReceiptDebtorPayments rdp WHERE rdp.ReceiptID = r.ReceiptID AND rdp.DebtorID = ?)`, [debtor.DebtorID, debtor.DebtorID, debtor.DebtorID, debtor.DebtorID]);
-          const toThemResult = await db.queryOne<{ total: number }>(`SELECT SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE r.OwedToDebtorID = ? AND r.Status = 'unpaid'`, [debtor.DebtorID]);
+          const toMeResult = await db.queryOne<{ total: number }>(`
+            SELECT SUM(
+              CASE
+                WHEN r.IsNonItemised = 1 THEN (r.NonItemisedTotal / r.TotalShares) * rs.SplitPart
+                ELSE (li.LineQuantity * li.LineUnitPrice) * (1 - IFNULL(r.Discount, 0) / 100.0)
+              END
+            ) as total
+            FROM Receipts r
+            LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID
+            LEFT JOIN ReceiptSplits rs ON r.ReceiptID = rs.ReceiptID AND rs.DebtorID = ?
+            WHERE (li.DebtorID = ? OR rs.DebtorID = ?)
+            AND NOT EXISTS (SELECT 1 FROM ReceiptDebtorPayments rdp WHERE rdp.ReceiptID = r.ReceiptID AND rdp.DebtorID = ?)
+            AND ${baseWhere}
+          `, [debtor.DebtorID, debtor.DebtorID, debtor.DebtorID, debtor.DebtorID]);
+          const toThemResult = await db.queryOne<{ total: number }>(`SELECT SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE r.OwedToDebtorID = ? AND r.Status = 'unpaid' AND ${baseWhere}`, [debtor.DebtorID]);
           const totalToMe = toMeResult?.total || 0;
           const totalToThem = toThemResult?.total || 0;
           totalOwedToMe += totalToMe;
@@ -188,7 +207,6 @@ const AnalyticsPage: React.FC = () => {
       {debtEnabled && (
         <div className="pt-2">
           <div className="flex items-center gap-2 mb-4">
-            <UserGroupIcon className="h-6 w-6 text-accent" />
             <h2 className="text-xl font-semibold">Debt Analytics</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -271,7 +289,18 @@ const AnalyticsPage: React.FC = () => {
             </div>
           </div>
         </Card>
-        <div className="col-span-1 lg:col-span-2 border-t border-gray-200 dark:border-gray-800 pt-6"><TopProducts /></div>
+        <div className="col-span-1 lg:col-span-2 border-t border-gray-200 dark:border-gray-800 pt-6">
+          {hasItemlessReceipts && (
+            <div className="mb-6">
+              <InfoCard
+                variant="warning"
+                title="Data Accuracy"
+                message="The following analytics may not be entirely accurate as item-less receipts are excluded from product-based calculations."
+              />
+            </div>
+          )}
+          <TopProducts />
+        </div>
       </div>
     </div>
   );

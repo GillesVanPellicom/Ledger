@@ -8,7 +8,7 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
-import { XMarkIcon, PlusIcon, PhotoIcon, LockClosedIcon, ArrowPathIcon, InformationCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, PlusIcon, PhotoIcon, LockClosedIcon, ArrowPathIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 import { nanoid } from 'nanoid';
 import { useSettings } from '../context/SettingsContext';
 import { cn } from '../utils/cn';
@@ -18,6 +18,7 @@ import { useBackupContext } from '../context/BackupContext';
 import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
 import StoreModal from '../components/stores/StoreModal';
 import { Debtor, LineItem, ReceiptImage, ReceiptSplit, Store } from '../types';
+import InfoCard from '../components/ui/InfoCard';
 import '../electron.d';
 
 const ReceiptFormPage: React.FC = () => {
@@ -61,6 +62,7 @@ const ReceiptFormPage: React.FC = () => {
   const [splitTypeChangeModal, setSplitTypeChangeModal] = useState<{ isOpen: boolean, newType: 'none' | 'total_split' | 'line_item' | null }>({ isOpen: false, newType: null });
   const [unpaidConfirmModalOpen, setUnpaidConfirmModalOpen] = useState<boolean>(false);
   const [isConcept, setIsConcept] = useState<boolean>(false);
+  const [initialIsTentative, setInitialIsTentative] = useState<boolean>(false);
   const [excludedLineItemKeys, setExcludedLineItemKeys] = useState<Set<string>>(new Set());
   const [isExclusionMode, setIsExclusionMode] = useState<boolean>(false);
   const [exclusionConfirmModalOpen, setExclusionConfirmModalOpen] = useState<boolean>(false);
@@ -131,6 +133,7 @@ const ReceiptFormPage: React.FC = () => {
       if (isEditing) {
         const receiptData = await db.queryOne<any>('SELECT * FROM Receipts WHERE ReceiptID = ?', [id]);
         if (receiptData) {
+          setInitialIsTentative(receiptData.IsTentative === 1);
           setReceiptFormat(receiptData.IsNonItemised ? 'item-less' : 'itemised');
           if (receiptData.IsNonItemised) {
             setNonItemisedTotal(receiptData.NonItemisedTotal);
@@ -538,7 +541,7 @@ const ReceiptFormPage: React.FC = () => {
     setLineItems(prev => prev.map(item => item.DebtorID === debtorId ? { ...item, DebtorID: null, DebtorName: null } : item));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (isTentative: boolean) => {
     if (!validate()) return;
     setSaving(true);
     try {
@@ -557,6 +560,7 @@ const ReceiptFormPage: React.FC = () => {
         Discount: receiptFormat === 'item-less' ? 0 : formData.discount,
         IsNonItemised: receiptFormat === 'item-less' ? 1 : 0,
         NonItemisedTotal: receiptFormat === 'item-less' ? nonItemisedTotal : null,
+        IsTentative: isTentative ? 1 : 0,
       };
 
       if (isEditing) {
@@ -564,7 +568,7 @@ const ReceiptFormPage: React.FC = () => {
           `UPDATE Receipts SET 
             StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, 
             SplitType = ?, OwnShares = ?, TotalShares = ?, Status = ?, OwedToDebtorID = ?, 
-            Discount = ?, IsNonItemised = ?, NonItemisedTotal = ?
+            Discount = ?, IsNonItemised = ?, NonItemisedTotal = ?, IsTentative = ?
            WHERE ReceiptID = ?`, 
           [...Object.values(receiptPayload), id]
         );
@@ -585,8 +589,8 @@ const ReceiptFormPage: React.FC = () => {
         const result = await db.execute(
           `INSERT INTO Receipts 
             (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, OwnShares, 
-             TotalShares, Status, OwedToDebtorID, Discount, IsNonItemised, NonItemisedTotal) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+             TotalShares, Status, OwedToDebtorID, Discount, IsNonItemised, NonItemisedTotal, IsTentative) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
           Object.values(receiptPayload)
         );
         receiptId = String(result.lastID);
@@ -674,17 +678,19 @@ const ReceiptFormPage: React.FC = () => {
       </div>
 
       {hasSettledDebts && (
-        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-center gap-2">
-          <LockClosedIcon className="h-5 w-5" />
-          <span>One or more debts on this receipt have been settled. Debt configuration is now locked.</span>
-        </div>
+        <InfoCard
+          variant="warning"
+          title="Debts Settled"
+          message="One or more debts on this receipt have been settled. Debt configuration is now locked."
+        />
       )}
 
       {isUnpaid && (
-        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-center gap-2">
-          <ExclamationTriangleIcon className="h-5 w-5" />
-          <span>Debt management is disabled for unpaid receipts.</span>
-        </div>
+        <InfoCard
+          variant="warning"
+          title="Unpaid Receipt"
+          message="Debt management is disabled for unpaid receipts."
+        />
       )}
       
       <Card>
@@ -1035,7 +1041,23 @@ const ReceiptFormPage: React.FC = () => {
 
           <div className="flex justify-end gap-4">
             <Button variant="secondary" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
-            <Button onClick={handleSubmit} loading={saving}>Save</Button>
+            {isEditing && initialIsTentative && (
+              <Tooltip content="This receipt is currently tentative. Saving it will make it permanent.">
+                <Button onClick={() => handleSubmit(false)} loading={saving}>
+                  Save as Permanent
+                </Button>
+              </Tooltip>
+            )}
+            {!isEditing && (
+              <Tooltip content="Tentative receipts are drafts and won't affect analytics or debts until made permanent.">
+                <Button onClick={() => handleSubmit(true)} loading={saving}>
+                  Save Tentatively
+                </Button>
+              </Tooltip>
+            )}
+            <Button onClick={() => handleSubmit(isEditing ? initialIsTentative : false)} loading={saving}>
+              {isEditing ? (initialIsTentative ? 'Update Tentative Receipt' : 'Save') : 'Save'}
+            </Button>
           </div>
         </>
       )}

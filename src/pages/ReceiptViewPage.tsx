@@ -13,14 +13,13 @@ import {
   CurrencyEuroIcon,
   DocumentArrowDownIcon,
   CreditCardIcon,
-  ExclamationTriangleIcon,
   UserGroupIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
   UserIcon,
   BanknotesIcon,
   LinkIcon,
-  InformationCircleIcon
+  TrashIcon
 } from '@heroicons/react/24/solid';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import {useSettings} from '../context/SettingsContext';
@@ -31,6 +30,7 @@ import Tooltip from '../components/ui/Tooltip';
 import Modal, {ConfirmModal} from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} from '../types';
+import InfoCard from '../components/ui/InfoCard';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -92,6 +92,8 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
   }>({isOpen: false, paymentId: null, topUpId: null});
   const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState<boolean>(false);
   const [paymentMethods, setPaymentMethods] = useState<{ value: number; label: string }[]>([]);
+  const [makePermanentModalOpen, setMakePermanentModalOpen] = useState<boolean>(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
 
   const fetchReceiptData = async () => {
     setLoading(true);
@@ -313,15 +315,40 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
     }
   };
 
+  const handleMakePermanent = async () => {
+    if (!receipt) return;
+    try {
+      await db.execute('UPDATE Receipts SET IsTentative = 0 WHERE ReceiptID = ?', [id]);
+      fetchReceiptData();
+    } catch (error) {
+      showError(error as Error);
+    } finally {
+      setMakePermanentModalOpen(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!receipt) return;
+    try {
+      await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [id]);
+      navigate('/receipts');
+    } catch (error) {
+      showError(error as Error);
+    } finally {
+      setDeleteModalOpen(false);
+    }
+  };
+
   if (!settings.datastore.folderPath && window.electronAPI) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <ExclamationTriangleIcon className="h-16 w-16 text-yellow-400 mb-4"/>
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">Datastore Not Configured</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Please set the datastore folder in the settings to view receipts and their images.
-        </p>
-        <Button onClick={() => openSettingsModal('data')}>Go to Settings</Button>
+        <InfoCard
+          variant="warning"
+          title="Datastore Not Configured"
+          message="Please set the datastore folder in the settings to view receipts and their images."
+        >
+          <Button onClick={() => openSettingsModal('data')}>Go to Settings</Button>
+        </InfoCard>
       </div>
     );
   }
@@ -354,10 +381,12 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           <p className="text-gray-500">{format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={handleSavePdf}>
-            <DocumentArrowDownIcon className="h-5 w-5 mr-2"/>
-            Save PDF
-          </Button>
+          <Tooltip content="Feature broken, WIP">
+            <Button variant="secondary" onClick={handleSavePdf} disabled>
+              <DocumentArrowDownIcon className="h-5 w-5 mr-2"/>
+              Save PDF
+            </Button>
+          </Tooltip>
           {receipt.Status === 'unpaid' && (
             <Button onClick={() => setIsMarkAsPaidModalOpen(true)}>
               <BanknotesIcon className="h-5 w-5 mr-2"/>
@@ -368,36 +397,40 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
             <PencilIcon className="h-5 w-5 mr-2"/>
             Edit
           </Button>
+          <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
+            <TrashIcon className="h-5 w-5 mr-2"/>
+            Delete
+          </Button>
         </div>
       </div>
 
-      {receipt.Status === 'unpaid' && (
-        <Card>
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center gap-4">
-            <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500"/>
-            <div className="text-center">
-              <p className="font-semibold text-yellow-800 dark:text-yellow-200">This receipt is unpaid.</p>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Total amount is owed to <span className="font-bold">{receipt.OwedToDebtorName}</span>.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
+      <div className="space-y-6">
+        {receipt.IsTentative && (
+          <InfoCard
+            variant="info"
+            title="Tentative Receipt"
+            message="This is a draft receipt. It won't affect analytics or debts until made permanent."
+          >
+            <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
+          </InfoCard>
+        )}
 
-      {receipt.IsNonItemised && (
-        <Card>
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center gap-4">
-            <InformationCircleIcon className="h-8 w-8 text-blue-500"/>
-            <div className="text-center">
-              <p className="font-semibold text-blue-800 dark:text-blue-200">This is an item-less receipt.</p>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Only the total amount was recorded.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
+        {receipt.Status === 'unpaid' && (
+          <InfoCard
+            variant="warning"
+            title="Unpaid Receipt"
+            message={`Total amount is owed to ${receipt.OwedToDebtorName}.`}
+          />
+        )}
+
+        {receipt.IsNonItemised && (
+          <InfoCard
+            variant="info"
+            title="Item-less Receipt"
+            message="Only the total amount was recorded for this receipt."
+          />
+        )}
+      </div>
 
       {receipt.ReceiptNote && (
         <Card>
@@ -474,15 +507,17 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                           <span className={cn(isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>{debtor.name}</span>
                           <LinkIcon className={cn("h-4 w-4", isPaid ? "text-green-700" : "text-red-700")}/>
                         </Link>
-                        {isPaid ? (
-                          <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                            <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip content="Unpaid">
-                            <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
-                          </Tooltip>
-                        )}
+                        <div className="flex items-center">
+                          {isPaid ? (
+                            <Tooltip content={`Paid on ${payment.PaidDate}`}>
+                              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip content="Unpaid">
+                              <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
+                            </Tooltip>
+                          )}
+                        </div>
                       </div>
                       <p className={cn("text-2xl font-bold", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")}>
                         €{debtor.amount.toFixed(2)}
@@ -628,6 +663,22 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         onClose={() => setIsMarkAsPaidModalOpen(false)}
         onConfirm={handleMarkAsPaid}
         paymentMethods={paymentMethods}
+      />
+
+      <ConfirmModal
+        isOpen={makePermanentModalOpen}
+        onClose={() => setMakePermanentModalOpen(false)}
+        onConfirm={handleMakePermanent}
+        title="Make Receipt Permanent"
+        message="Are you sure you want to make this receipt permanent? This action is irreversible."
+      />
+
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Receipt"
+        message="Are you sure you want to permanently delete this receipt? This action cannot be undone."
       />
     </div>
   );

@@ -79,7 +79,7 @@ const PaymentMethodsPage: React.FC = () => {
     try {
       const methodsData = await db.query<PaymentMethod[]>('SELECT * FROM PaymentMethods');
       const methodsWithBalance = await Promise.all(methodsData.map(async (method) => {
-        const expensesResult = await db.queryOne<{ total: number }>('SELECT SUM(li.LineQuantity * li.LineUnitPrice) as total FROM LineItems li JOIN Receipts r ON li.ReceiptID = r.ReceiptID WHERE r.PaymentMethodID = ?', [method.PaymentMethodID]);
+        const expensesResult = await db.queryOne<{ total: number }>('SELECT SUM(li.LineQuantity * li.LineUnitPrice) as total FROM LineItems li JOIN Receipts r ON li.ReceiptID = r.ReceiptID WHERE r.PaymentMethodID = ? AND r.IsTentative = 0', [method.PaymentMethodID]);
         const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?', [method.PaymentMethodID]);
         const expenses = expensesResult?.total || 0;
         const topups = topupsResult?.total || 0;

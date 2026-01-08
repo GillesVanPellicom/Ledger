@@ -1,25 +1,36 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import React, {useState, useEffect, useCallback} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {format} from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ExclamationTriangleIcon, ClipboardDocumentListIcon, ClipboardIcon } from '@heroicons/react/24/solid';
-import { db } from '../utils/db';
-import { ConfirmModal } from '../components/ui/Modal';
+import {
+  PlusIcon,
+  TrashIcon,
+  DocumentArrowDownIcon,
+  ExclamationCircleIcon,
+  CheckCircleIcon,
+  UserGroupIcon,
+  ExclamationTriangleIcon,
+  ClipboardDocumentListIcon,
+  ClipboardIcon,
+  QuestionMarkCircleIcon
+} from '@heroicons/react/24/solid';
+import {db} from '../utils/db';
+import {ConfirmModal} from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
-import { generateReceiptsPdf } from '../utils/pdfGenerator';
+import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
-import { useError } from '../context/ErrorContext';
+import {useError} from '../context/ErrorContext';
 import Tooltip from '../components/ui/Tooltip';
-import { useSettings } from '../context/SettingsContext';
+import {useSettings} from '../context/SettingsContext';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
-import { Receipt, LineItem } from '../types';
+import {Receipt, LineItem} from '../types';
 
 const ReceiptsPage: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [totalCount, setTotalCount] = useState<number>(0);
-  
+
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [pageSize, setPageSize] = useState<number>(10);
@@ -28,13 +39,13 @@ const ReceiptsPage: React.FC = () => {
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<number[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [receiptToDelete, setReceiptToDelete] = useState<number | null>(null);
-  
+
   const [pdfProgress, setPdfProgress] = useState<number>(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [isBulkDebtModalOpen, setIsBulkDebtModalOpen] = useState<boolean>(false);
-  
-  const { showError } = useError();
-  const { settings } = useSettings();
+
+  const {showError} = useError();
+  const {settings} = useSettings();
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const navigate = useNavigate();
@@ -43,7 +54,7 @@ const ReceiptsPage: React.FC = () => {
     setLoading(true);
     try {
       const offset = (currentPage - 1) * pageSize;
-      
+
       let debtSubQueries = '';
       if (debtEnabled) {
         debtSubQueries = `,
@@ -69,30 +80,32 @@ const ReceiptsPage: React.FC = () => {
       }
 
       let query = `
-        SELECT 
-          r.ReceiptID, 
-          r.ReceiptDate, 
-          r.ReceiptNote, 
-          r.Discount,
-          r.IsNonItemised,
-          r.NonItemisedTotal,
-          s.StoreName, 
-          pm.PaymentMethodName,
-          CASE
-            WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
-            ELSE (
-              (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) - 
-              IFNULL((
-                SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
-                FROM LineItems li_discountable
-                WHERE li_discountable.ReceiptID = r.ReceiptID AND (li_discountable.IsExcludedFromDiscount = 0 OR li_discountable.IsExcludedFromDiscount IS NULL)
-              ), 0) * r.Discount / 100
-            )
-          END as Total
-          ${debtSubQueries}
-        FROM Receipts r
-        JOIN Stores s ON r.StoreID = s.StoreID
-        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+          SELECT r.ReceiptID,
+                 r.ReceiptDate,
+                 r.ReceiptNote,
+                 r.Discount,
+                 r.IsNonItemised,
+                 r.IsTentative,
+                 r.NonItemisedTotal,
+                 s.StoreName,
+                 pm.PaymentMethodName,
+                 CASE
+                     WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
+                     ELSE (
+                         (SELECT SUM(li.LineQuantity * li.LineUnitPrice)
+                          FROM LineItems li
+                          WHERE li.ReceiptID = r.ReceiptID) -
+                         IFNULL((SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
+                                 FROM LineItems li_discountable
+                                 WHERE li_discountable.ReceiptID = r.ReceiptID
+                                   AND (li_discountable.IsExcludedFromDiscount = 0 OR
+                                        li_discountable.IsExcludedFromDiscount IS NULL)), 0) * r.Discount / 100
+                         )
+                     END as Total
+              ${debtSubQueries}
+          FROM Receipts r
+                   JOIN Stores s ON r.StoreID = s.StoreID
+                   LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
       `;
       const params: any[] = [];
       const whereClauses: string[] = [];
@@ -109,18 +122,25 @@ const ReceiptsPage: React.FC = () => {
       }
 
       const [startDate, endDate] = dateRange;
-      if (startDate) { whereClauses.push(`r.ReceiptDate >= ?`); params.push(format(startDate, 'yyyy-MM-dd')); }
-      if (endDate) { whereClauses.push(`r.ReceiptDate <= ?`); params.push(format(endDate, 'yyyy-MM-dd')); }
+      if (startDate) {
+        whereClauses.push(`r.ReceiptDate >= ?`);
+        params.push(format(startDate, 'yyyy-MM-dd'));
+      }
+      if (endDate) {
+        whereClauses.push(`r.ReceiptDate <= ?`);
+        params.push(format(endDate, 'yyyy-MM-dd'));
+      }
 
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
-      
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(/SELECT r.ReceiptID,.*?as Total/s, 'SELECT r.ReceiptID')})`;
+
+      const countQuery = `SELECT COUNT(*) as count
+                          FROM (${query.replace(/SELECT r.ReceiptID,.*?as Total/s, 'SELECT r.ReceiptID')})`;
       const countResult = await db.queryOne<{ count: number }>(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
-      
+
       query += ` ORDER BY r.ReceiptDate DESC, r.ReceiptID DESC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
-      
+
       const results = await db.query<Receipt[]>(query, params);
       setReceipts(results);
     } catch (error) {
@@ -140,7 +160,9 @@ const ReceiptsPage: React.FC = () => {
 
     try {
       const placeholders = idsToDelete.map(() => '?').join(',');
-      await db.execute(`DELETE FROM Receipts WHERE ReceiptID IN (${placeholders})`, idsToDelete);
+      await db.execute(`DELETE
+                        FROM Receipts
+                        WHERE ReceiptID IN (${placeholders})`, idsToDelete);
       fetchReceipts();
       setSelectedReceiptIds([]);
       setDeleteModalOpen(false);
@@ -161,20 +183,20 @@ const ReceiptsPage: React.FC = () => {
     try {
       const placeholders = selectedReceiptIds.map(() => '?').join(',');
       const receiptsData: (Receipt & { lineItems: LineItem[], totalAmount: number })[] = await db.query(`
-        SELECT r.*, s.StoreName, pm.PaymentMethodName
-        FROM Receipts r 
-        JOIN Stores s ON r.StoreID = s.StoreID
-        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-        WHERE r.ReceiptID IN (${placeholders})
-        ORDER BY r.ReceiptDate DESC
+          SELECT r.*, s.StoreName, pm.PaymentMethodName
+          FROM Receipts r
+                   JOIN Stores s ON r.StoreID = s.StoreID
+                   LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+          WHERE r.ReceiptID IN (${placeholders})
+          ORDER BY r.ReceiptDate DESC
       `, selectedReceiptIds);
 
       const lineItemsData: LineItem[] = await db.query(`
-        SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
-        FROM LineItems li
-        JOIN Products p ON li.ProductID = p.ProductID
-        LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-        WHERE li.ReceiptID IN (${placeholders})
+          SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
+          FROM LineItems li
+                   JOIN Products p ON li.ProductID = p.ProductID
+                   LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+          WHERE li.ReceiptID IN (${placeholders})
       `, selectedReceiptIds);
 
       const fullReceipts = receiptsData.map(receipt => {
@@ -182,7 +204,7 @@ const ReceiptsPage: React.FC = () => {
         const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
         const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
         const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : Math.max(0, subtotal - discountAmount);
-        return { ...receipt, lineItems: items, totalAmount: total, images: [] };
+        return {...receipt, lineItems: items, totalAmount: total, images: []};
       });
 
       await generateReceiptsPdf(fullReceipts, settings.pdf, (progress: number) => setPdfProgress(progress));
@@ -194,60 +216,69 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const columns: any[] = [
-    { header: 'Date', width: '20%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
-    { header: 'Store', accessor: 'StoreName', width: '30%' },
-    { header: 'Note', accessor: 'ReceiptNote', width: '25%' },
+    {header: 'Date', width: '20%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy')},
+    {header: 'Store', accessor: 'StoreName', width: '30%'},
+    {header: 'Note', accessor: 'ReceiptNote', width: '25%'},
   ];
 
   if (paymentMethodsEnabled) {
-    columns.push({ header: 'Payment Method', accessor: 'PaymentMethodName', width: '15%' });
+    columns.push({header: 'Payment Method', accessor: 'PaymentMethodName', width: '15%'});
   }
 
-  columns.push({ 
-    header: 'Total', 
-    width: '15%', 
-    className: 'text-right', 
+  columns.push({
+    header: 'Total',
+    width: '15%',
+    className: 'text-right',
     render: (row: Receipt) => `€${(row.Total || 0).toFixed(2)}`
   });
 
   columns.push({
     header: '',
-    width: '10%',
+    width: '15%',
     className: 'text-right',
     render: (row: Receipt) => (
-      <div className="flex justify-end items-center gap-2">
-        {row.Status === 'unpaid' && (
-          <Tooltip content="This is an unpaid receipt, meaning it is owed to the person who paid it by you.">
-            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
-          </Tooltip>
-        )}
-        {debtEnabled && (row.UnpaidDebtorCount || 0) > 0 && (
-          <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-            <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
-          </Tooltip>
-        )}
-        {debtEnabled && (row.TotalDebtorCount || 0) > 0 && (row.UnpaidDebtorCount || 0) === 0 && (
-          <Tooltip content="All debts settled">
-            <CheckCircleIcon className="h-5 w-5 text-green-500" />
-          </Tooltip>
-        )}
-        <div className="flex items-center gap-2 border-l border-gray-200 dark:border-gray-700 ml-2 pl-2">
+      <div className="flex justify-end items-center gap-4">
+        <div className="flex items-center justify-end w-24 gap-3">
+          {row.IsTentative ? (
+            <Tooltip content="Tentative Receipt">
+              <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400"/>
+            </Tooltip>
+          ) : <div className="w-5"/>}
+          {row.Status === 'unpaid' ? (
+            <Tooltip content="This is an unpaid receipt, meaning it is owed to the person who paid it by you.">
+              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500"/>
+            </Tooltip>
+          ) : debtEnabled && (row.UnpaidDebtorCount || 0) > 0 ? (
+            <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
+              <ExclamationCircleIcon className="h-5 w-5 text-red-500"/>
+            </Tooltip>
+          ) : debtEnabled && (row.TotalDebtorCount || 0) > 0 ? (
+            <Tooltip content="All debts settled">
+              <CheckCircleIcon className="h-5 w-5 text-green-500"/>
+            </Tooltip>
+          ) : <div className="w-5"/>}
           {row.IsNonItemised ? (
             <Tooltip content="Item-less Receipt">
-              <ClipboardIcon className="h-5 w-5 text-gray-400" />
+              <ClipboardIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           ) : (
             <Tooltip content="Itemised Receipt">
-              <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400" />
+              <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           )}
+        </div>
+        <div className="flex items-center gap-2 ml-2">
+
           <Tooltip content="Delete Receipt">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={(e: React.MouseEvent) => { e.stopPropagation(); openDeleteModal(row.ReceiptID); }}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                openDeleteModal(row.ReceiptID);
+              }}
             >
-              <TrashIcon className="h-4 w-4" />
+              <TrashIcon className="h-4 w-4"/>
             </Button>
           </Tooltip>
         </div>
@@ -263,16 +294,18 @@ const ReceiptsPage: React.FC = () => {
           {selectedReceiptIds.length > 0 && (
             <div className="flex items-center gap-2">
               <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
-                <TrashIcon className="h-4 w-4 mr-2" />
+                <TrashIcon className="h-4 w-4 mr-2"/>
                 Delete ({selectedReceiptIds.length})
               </Button>
-              <Button variant="secondary" size="sm" onClick={handleMassPdfSave}>
-                <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
-                Save as PDF
-              </Button>
+              <Tooltip content="Feature broken, WIP">
+                <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
+                  <DocumentArrowDownIcon className="h-4 w-4 mr-2"/>
+                  Save as PDF
+                </Button>
+              </Tooltip>
               {debtEnabled && (
                 <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
-                  <UserGroupIcon className="h-4 w-4 mr-2" />
+                  <UserGroupIcon className="h-4 w-4 mr-2"/>
                   Bulk Debt
                 </Button>
               )}
@@ -281,7 +314,7 @@ const ReceiptsPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => navigate('/receipts/new')}>
-            <PlusIcon className="h-5 w-5 mr-2" />
+            <PlusIcon className="h-5 w-5 mr-2"/>
             New Receipt
           </Button>
         </div>
@@ -308,7 +341,10 @@ const ReceiptsPage: React.FC = () => {
           selectsRange
           startDate={dateRange[0]}
           endDate={dateRange[1]}
-          onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
+          onChange={(update: any) => {
+            setDateRange(update);
+            setCurrentPage(1);
+          }}
           isClearable={true}
           placeholderText="Filter by date range"
         />
@@ -316,7 +352,10 @@ const ReceiptsPage: React.FC = () => {
 
       <ConfirmModal
         isOpen={deleteModalOpen}
-        onClose={() => { setDeleteModalOpen(false); setReceiptToDelete(null); }}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setReceiptToDelete(null);
+        }}
         onConfirm={handleDelete}
         title={`Delete ${receiptToDelete ? 'Receipt' : `${selectedReceiptIds.length} Receipts`}`}
         message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this receipt' : `${selectedReceiptIds.length} selected receipts`}? This action cannot be undone.`}

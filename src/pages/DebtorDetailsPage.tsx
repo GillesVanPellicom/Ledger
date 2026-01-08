@@ -70,12 +70,12 @@ const DebtorDetailsPage: React.FC = () => {
                 SELECT SUM(li.LineQuantity * li.LineUnitPrice)
                 FROM LineItems li
                 WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID = ?
-              )
+              ) * (1 - IFNULL(r.Discount, 0) / 100.0)
           END as DebtorTotal
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
         LEFT JOIN ReceiptDebtorPayments rdp ON r.ReceiptID = rdp.ReceiptID AND rdp.DebtorID = ?
-        WHERE r.ReceiptID IN (
+        WHERE r.IsTentative = 0 AND r.ReceiptID IN (
           SELECT DISTINCT li.ReceiptID FROM LineItems li WHERE li.DebtorID = ?
           UNION
           SELECT DISTINCT rs.ReceiptID FROM ReceiptSplits rs WHERE rs.DebtorID = ?
@@ -263,10 +263,12 @@ const DebtorDetailsPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{debtor.DebtorName}</h1>
-        <Button onClick={() => setIsPdfModalOpen(true)}>
-          <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
-          Save as PDF
-        </Button>
+        <Tooltip content="Feature broken, WIP">
+          <Button onClick={() => setIsPdfModalOpen(true)} disabled>
+            <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+            Save as PDF
+          </Button>
+        </Tooltip>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
