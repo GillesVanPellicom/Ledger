@@ -1,0 +1,131 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import DataTable from '../components/ui/DataTable';
+import Button from '../components/ui/Button';
+import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
+import { db } from '../utils/db';
+import StoreModal from '../components/stores/StoreModal';
+import Tooltip from '../components/ui/Tooltip';
+import { Store } from '../types';
+
+const StoresPage: React.FC = () => {
+  const [stores, setStores] = useState<Store[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingStore, setEditingStore] = useState<Store | null>(null);
+
+  const fetchStores = useCallback(async () => {
+    setLoading(true);
+    try {
+      const offset = (currentPage - 1) * pageSize;
+      let query = `SELECT * FROM Stores`;
+      const params: any[] = [];
+      
+      if (searchTerm) {
+        query += ` WHERE StoreName LIKE ?`;
+        params.push(`%${searchTerm}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT StoreID')})`;
+      const countResult = await db.queryOne<{ count: number }>(countQuery, params);
+      setTotalCount(countResult ? countResult.count : 0);
+      
+      query += ` ORDER BY StoreName ASC LIMIT ? OFFSET ?`;
+      params.push(pageSize, offset);
+      
+      const results = await db.query<Store[]>(query, params);
+      setStores(results);
+    } catch (error) {
+      console.error("Failed to fetch stores:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize, searchTerm]);
+
+  useEffect(() => {
+    fetchStores();
+  }, [fetchStores]);
+
+  const handleAdd = () => {
+    setEditingStore(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (store: Store) => {
+    setEditingStore(store);
+    setIsModalOpen(true);
+  };
+
+  const columns = [
+    { header: 'Name', accessor: 'StoreName', width: '80%' },
+    { 
+      header: 'Visibility', 
+      width: '10%',
+      className: 'text-center',
+      render: (row: Store) => (
+        <Tooltip content={row.StoreIsActive ? 'Shown in lists' : 'Hidden from lists'}>
+          {row.StoreIsActive ? 
+          <EyeIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+          <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
+        </Tooltip>
+      )
+    },
+    {
+      header: '',
+      width: '10%',
+      className: 'text-right',
+      render: (row: Store) => (
+        <div className="flex justify-end">
+          <Tooltip content="Edit Store" align="end">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleEdit(row); }}
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Stores</h1>
+        <Button onClick={handleAdd}>
+          <PlusIcon className="h-5 w-5 mr-2" />
+          Add Store
+        </Button>
+      </div>
+
+      <DataTable
+        data={stores}
+        columns={columns}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        onSearch={setSearchTerm}
+        searchable={true}
+        loading={loading}
+      />
+
+      <StoreModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        storeToEdit={editingStore}
+        onSave={fetchStores}
+      />
+    </div>
+  );
+};
+
+export default StoresPage;

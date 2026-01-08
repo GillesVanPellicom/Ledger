@@ -1,1 +1,0 @@
-SELECT COUNT(DISTINCT d.DebtorID) FROM Debtors d;

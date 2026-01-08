@@ -1,1 +1,0 @@
-DELETE FROM TopUps WHERE TopUpID = ?;
