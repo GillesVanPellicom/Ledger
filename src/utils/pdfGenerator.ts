@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { Receipt, LineItem, ReceiptImage } from '../types';
-import '../../electron.d';
+import '../electron.d';
 
 interface PdfOptions {
   showUniqueItems?: boolean;

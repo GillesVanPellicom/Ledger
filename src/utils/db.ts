@@ -1,5 +1,5 @@
 // Helper to interface with Electron's IPC for DB operations
-import '../../electron.d';
+import '../electron.d';
 
 export const db = {
   query: async <T>(sql: string, params: any[] = []): Promise<T[]> => {
