@@ -73,22 +73,22 @@ const ReceiptsPage: React.FC = () => {
           r.ReceiptID, 
           r.ReceiptDate, 
           r.ReceiptNote, 
-          r.Discount, 
+          r.Discount,
+          r.IsNonItemised,
+          r.NonItemisedTotal,
           s.StoreName, 
           pm.PaymentMethodName,
-          (
-            SELECT SUM(li.LineQuantity * li.LineUnitPrice) 
-            FROM LineItems li 
-            WHERE li.ReceiptID = r.ReceiptID
-          ) as SubTotal,
-          (
-            (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) - 
-            IFNULL((
-              SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
-              FROM LineItems li_discountable
-              WHERE li_discountable.ReceiptID = r.ReceiptID AND (li_discountable.IsExcludedFromDiscount = 0 OR li_discountable.IsExcludedFromDiscount IS NULL)
-            ), 0) * r.Discount / 100
-          ) as Total
+          CASE
+            WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
+            ELSE (
+              (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) - 
+              IFNULL((
+                SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
+                FROM LineItems li_discountable
+                WHERE li_discountable.ReceiptID = r.ReceiptID AND (li_discountable.IsExcludedFromDiscount = 0 OR li_discountable.IsExcludedFromDiscount IS NULL)
+              ), 0) * r.Discount / 100
+            )
+          END as Total
           ${debtSubQueries}
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
@@ -181,7 +181,7 @@ const ReceiptsPage: React.FC = () => {
         const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
         const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
         const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
-        const total = Math.max(0, subtotal - discountAmount);
+        const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : Math.max(0, subtotal - discountAmount);
         return { ...receipt, lineItems: items, totalAmount: total, images: [] };
       });
 

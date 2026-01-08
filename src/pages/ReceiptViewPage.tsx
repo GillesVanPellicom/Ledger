@@ -90,15 +90,17 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
         setReceipt(receiptData);
         setSplitType(receiptData.SplitType || 'none');
 
-        const lineItemData = await db.query<LineItem[]>(`
-          SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
-          FROM LineItems li
-          JOIN Products p ON li.ProductID = p.ProductID
-          LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-          LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-          WHERE li.ReceiptID = ?
-        `, [id]);
-        setLineItems(lineItemData);
+        if (!receiptData.IsNonItemised) {
+          const lineItemData = await db.query<LineItem[]>(`
+            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
+            FROM LineItems li
+            JOIN Products p ON li.ProductID = p.ProductID
+            LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+            LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
+            WHERE li.ReceiptID = ?
+          `, [id]);
+          setLineItems(lineItemData);
+        }
 
         const imageData = await db.query<{ ImagePath: string }[]>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
         if (window.electronAPI && settings.datastore.folderPath) {
@@ -146,6 +148,9 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
 
   const subtotal = useMemo(() => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0), [lineItems]);
   const totalAmount = useMemo(() => {
+    if (receipt?.IsNonItemised) {
+      return receipt.NonItemisedTotal || 0;
+    }
     const discountPercentage = receipt?.Discount || 0;
     if (discountPercentage === 0) return subtotal;
 
@@ -190,7 +195,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
           totalShares: totalShares,
         };
       }
-    } else if (splitType === 'line_item') {
+    } else if (splitType === 'line_item' && !receipt.IsNonItemised) {
       const debtorItems: Record<string, { count: number, total: number }> = {};
       const discountPercentage = receipt.Discount || 0;
       const discountFactor = 1 - (discountPercentage / 100);
@@ -359,16 +364,20 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
 
       <Card>
         <div className={`p-6 grid ${paymentMethodsEnabled ? 'grid-cols-4' : 'grid-cols-3'} gap-4 text-center`}>
-          <div className="flex flex-col items-center gap-1">
-            <TagIcon className="h-6 w-6 text-gray-400" />
-            <span className="text-sm text-gray-500">Unique Items</span>
-            <span className="text-xl font-bold">{totalItems}</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <ShoppingCartIcon className="h-6 w-6 text-gray-400" />
-            <span className="text-sm text-gray-500">Total Quantity</span>
-            <span className="text-xl font-bold">{totalQuantity}</span>
-          </div>
+          {!receipt.IsNonItemised && (
+            <>
+              <div className="flex flex-col items-center gap-1">
+                <TagIcon className="h-6 w-6 text-gray-400" />
+                <span className="text-sm text-gray-500">Unique Items</span>
+                <span className="text-xl font-bold">{totalItems}</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <ShoppingCartIcon className="h-6 w-6 text-gray-400" />
+                <span className="text-sm text-gray-500">Total Quantity</span>
+                <span className="text-xl font-bold">{totalQuantity}</span>
+              </div>
+            </>
+          )}
           {paymentMethodsEnabled && (
             <div className="flex flex-col items-center gap-1">
               <CreditCardIcon className="h-6 w-6 text-gray-400" />
@@ -432,7 +441,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
                         €{debtor.amount.toFixed(2)}
                       </p>
                       {splitType === 'total_split' && <p className="text-sm text-gray-500 mb-4">{debtor.shares} / {debtor.totalShares} shares</p>}
-                      {splitType === 'line_item' && <p className="text-sm text-gray-500 mb-4">{debtor.itemCount} / {debtor.totalItems} items</p>}
+                      {splitType === 'line_item' && !receipt.IsNonItemised && <p className="text-sm text-gray-500 mb-4">{debtor.itemCount} / {debtor.totalItems} items</p>}
                     </div>
                     
                     {isPaid ? (
@@ -477,76 +486,78 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
         </Card>
       )}
 
-      <Card>
-        <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Items</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm select-none">
-              <thead className="text-left text-gray-500">
-                <tr>
-                  <th className="p-2">Product</th>
-                  <th className="p-2 w-24 text-center">Qty</th>
-                  <th className="p-2 w-32 text-right">Unit Price (€)</th>
-                  <th className="p-2 w-32 text-right">Total (€)</th>
-                  {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y dark:divide-gray-800">
-                {lineItems.map((item) => {
-                  const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
-                  return (
-                    <tr key={item.LineItemID}>
-                      <td className="p-2">
-                        <div className="flex items-center gap-2">
-                          {receipt.Discount > 0 && (
-                            <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-                              <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
-                            </Tooltip>
-                          )}
-                          <div>
-                            <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                            <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+      {!receipt.IsNonItemised && (
+        <Card>
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Items</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm select-none">
+                <thead className="text-left text-gray-500">
+                  <tr>
+                    <th className="p-2">Product</th>
+                    <th className="p-2 w-24 text-center">Qty</th>
+                    <th className="p-2 w-32 text-right">Unit Price (€)</th>
+                    <th className="p-2 w-32 text-right">Total (€)</th>
+                    {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y dark:divide-gray-800">
+                  {lineItems.map((item) => {
+                    const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
+                    return (
+                      <tr key={item.LineItemID}>
+                        <td className="p-2">
+                          <div className="flex items-center gap-2">
+                            {receipt.Discount > 0 && (
+                              <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
+                                <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+                              </Tooltip>
+                            )}
+                            <div>
+                              <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                              <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="p-2 text-center">{item.LineQuantity}</td>
-                      <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
-                      <td className="p-2 text-right font-medium">
-                        {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                      </td>
-                      {debtEnabled && splitType === 'line_item' && (
-                        <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
-                          {item.DebtorName || '-'}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
-          <div className="flex flex-col items-end gap-2">
-            {receipt.Discount > 0 && (
-              <div className="flex items-center gap-4 text-gray-500">
-                <span className="text-sm">Subtotal</span>
-                <span className="font-medium">€{subtotal.toFixed(2)}</span>
-              </div>
-            )}
-            {receipt.Discount > 0 && (
-              <div className="flex items-center gap-4 text-gray-500">
-                <span className="text-sm">Discount ({receipt.Discount}%)</span>
-                <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-4 text-lg font-bold">
-              <span>Total</span>
-              <span>€{totalAmount.toFixed(2)}</span>
+                        <td className="p-2 text-center">{item.LineQuantity}</td>
+                        <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
+                        <td className="p-2 text-right font-medium">
+                          {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                        </td>
+                        {debtEnabled && splitType === 'line_item' && (
+                          <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
+                            {item.DebtorName || '-'}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      </Card>
+          <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
+            <div className="flex flex-col items-end gap-2">
+              {receipt.Discount > 0 && (
+                <div className="flex items-center gap-4 text-gray-500">
+                  <span className="text-sm">Subtotal</span>
+                  <span className="font-medium">€{subtotal.toFixed(2)}</span>
+                </div>
+              )}
+              {receipt.Discount > 0 && (
+                <div className="flex items-center gap-4 text-gray-500">
+                  <span className="text-sm">Discount ({receipt.Discount}%)</span>
+                  <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-4 text-lg font-bold">
+                <span>Total</span>
+                <span>€{totalAmount.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <DebtSettlementModal
         isOpen={isSettlementModalOpen}

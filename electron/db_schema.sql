@@ -97,6 +97,8 @@ CREATE TABLE Receipts
   Status           TEXT    NOT NULL DEFAULT 'paid', -- 'paid', 'unpaid'
   OwedToDebtorID   INTEGER,
   Discount         NUMERIC DEFAULT 0,
+  IsNonItemised    INTEGER NOT NULL DEFAULT 0,
+  NonItemisedTotal NUMERIC,
   FOREIGN KEY (StoreID)
     REFERENCES Stores (StoreID),
   FOREIGN KEY (PaymentMethodID)
@@ -239,3 +241,6 @@ CREATE INDEX idx_receiptsplits_receipt
 
 CREATE INDEX idx_receiptdebtorpayments_receipt_debtor
   ON ReceiptDebtorPayments (ReceiptID, DebtorID);
+
+CREATE INDEX idx_receipts_is_non_itemised
+  ON Receipts (IsNonItemised);

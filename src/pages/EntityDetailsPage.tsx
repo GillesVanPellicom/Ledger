@@ -123,15 +123,18 @@ const EntityDetailsPage: React.FC = () => {
       const allPayments = await db.query<any[]>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds);
 
       const processedReceipts: Receipt[] = allReceiptsForEntity.map(r => {
-        const items = allLineItems.filter(li => li.ReceiptID === r.ReceiptID);
-        const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-        
-        const discountableAmount = items
-          .filter(item => !item.IsExcludedFromDiscount)
-          .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-        
-        const discountAmount = (discountableAmount * (r.Discount || 0)) / 100;
-        const totalAmount = subtotal - discountAmount;
+        let totalAmount = 0;
+        if (r.IsNonItemised) {
+          totalAmount = r.NonItemisedTotal;
+        } else {
+          const items = allLineItems.filter(li => li.ReceiptID === r.ReceiptID);
+          const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+          const discountableAmount = items
+            .filter(item => !item.IsExcludedFromDiscount)
+            .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+          const discountAmount = (discountableAmount * (r.Discount || 0)) / 100;
+          totalAmount = subtotal - discountAmount;
+        }
 
         let amount = 0;
         let isSettled = false;
@@ -150,7 +153,7 @@ const EntityDetailsPage: React.FC = () => {
               }
             }
           } else if (r.SplitType === 'line_item') {
-            const debtorItems = items.filter(li => li.DebtorID === parseInt(id!));
+            const debtorItems = allLineItems.filter(li => li.ReceiptID === r.ReceiptID && li.DebtorID === parseInt(id!));
             amount = debtorItems.reduce((sum, item) => {
               const itemTotal = item.LineQuantity * item.LineUnitPrice;
               const itemDiscount = !item.IsExcludedFromDiscount ? (itemTotal * (r.Discount || 0)) / 100 : 0;
@@ -225,12 +228,16 @@ const EntityDetailsPage: React.FC = () => {
 
         let totalAmount = r.amount;
         if (r.type === 'to_me') {
+          if (r.IsNonItemised) {
+            totalAmount = r.NonItemisedTotal;
+          } else {
             const subtotal = lineItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
             const discountableAmount = lineItems
               .filter(item => !item.IsExcludedFromDiscount)
               .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
             const discountAmount = (discountableAmount * (receiptDetails.Discount || 0)) / 100;
             totalAmount = Math.max(0, subtotal - discountAmount);
+          }
         }
 
         fullReceiptsData.push({

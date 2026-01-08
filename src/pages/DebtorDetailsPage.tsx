@@ -58,21 +58,30 @@ const DebtorDetailsPage: React.FC = () => {
           r.ReceiptID,
           r.ReceiptDate,
           r.PaymentMethodID,
+          r.IsNonItemised,
+          r.NonItemisedTotal,
           s.StoreName,
           (rdp.PaymentID IS NOT NULL) as ReceiptIsSettled,
-          (
-            SELECT SUM(li.LineQuantity * li.LineUnitPrice)
-            FROM LineItems li
-            WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID = ?
-          ) as DebtorTotal
+          CASE
+            WHEN r.IsNonItemised = 1 THEN
+              (r.NonItemisedTotal / r.TotalShares) * (SELECT SplitPart FROM ReceiptSplits WHERE ReceiptID = r.ReceiptID AND DebtorID = ?)
+            ELSE
+              (
+                SELECT SUM(li.LineQuantity * li.LineUnitPrice)
+                FROM LineItems li
+                WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID = ?
+              )
+          END as DebtorTotal
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
         LEFT JOIN ReceiptDebtorPayments rdp ON r.ReceiptID = rdp.ReceiptID AND rdp.DebtorID = ?
         WHERE r.ReceiptID IN (
           SELECT DISTINCT li.ReceiptID FROM LineItems li WHERE li.DebtorID = ?
+          UNION
+          SELECT DISTINCT rs.ReceiptID FROM ReceiptSplits rs WHERE rs.DebtorID = ?
         )
         ORDER BY r.ReceiptDate DESC
-      `, [id, id, id]);
+      `, [id, id, id, id, id]);
 
       setReceipts(receiptData);
 
@@ -132,7 +141,7 @@ const DebtorDetailsPage: React.FC = () => {
 
       const fullReceipts = receiptsData.map(receipt => {
         const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
-        const total = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+        const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
         return { ...receipt, lineItems: items, totalAmount: total, images: [] };
       });
 

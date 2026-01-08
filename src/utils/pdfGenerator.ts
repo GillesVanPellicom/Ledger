@@ -71,8 +71,8 @@ export const generateReceiptsPdf = async (receipts: FullReceipt[], options: PdfO
     }
 
     const details = [];
-    if (options.showUniqueItems) details.push(`Unique Items: ${receipt.lineItems.length}`);
-    if (options.showTotalQuantity) details.push(`Total Quantity: ${receipt.lineItems.reduce((sum, item) => sum + item.LineQuantity, 0)}`);
+    if (options.showUniqueItems && !receipt.IsNonItemised) details.push(`Unique Items: ${receipt.lineItems.length}`);
+    if (options.showTotalQuantity && !receipt.IsNonItemised) details.push(`Total Quantity: ${receipt.lineItems.reduce((sum, item) => sum + item.LineQuantity, 0)}`);
     if (options.showPaymentMethod && receipt.PaymentMethodName) details.push(`Paid with: ${receipt.PaymentMethodName}`);
 
     if (details.length > 0) {
@@ -82,42 +82,46 @@ export const generateReceiptsPdf = async (receipts: FullReceipt[], options: PdfO
       yPos += 10;
     }
 
-    // Line Items Table
-    const tableColumn = ["Item", "Quantity", "Unit Price", "Total"];
-    const tableRows = receipt.lineItems.map(item => [
-      `${item.ProductName}\n${item.ProductBrand || ''}`,
-      item.LineQuantity.toString(),
-      `€ ${item.LineUnitPrice.toFixed(2)}`,
-      `€ ${(item.LineQuantity * item.LineUnitPrice).toFixed(2)}`
-    ]);
-    
-    autoTable(doc, {
-      startY: yPos,
-      head: [tableColumn],
-      body: tableRows,
-      theme: 'striped',
-      headStyles: { fillColor: [22, 160, 133], halign: 'left' },
-      styles: { cellPadding: 2, fontSize: 8 },
-      columnStyles: {
-        0: { cellWidth: 'auto' },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 30, halign: 'right' },
-        3: { cellWidth: 30, halign: 'right' },
-      },
-    });
+    let finalY = yPos;
 
-    let finalY = (doc as any).lastAutoTable.finalY || yPos;
-    
-    if (receipt.Discount > 0) {
-      const subtotal = receipt.lineItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-      const discountAmount = (subtotal * receipt.Discount) / 100;
+    if (!receipt.IsNonItemised) {
+      // Line Items Table
+      const tableColumn = ["Item", "Quantity", "Unit Price", "Total"];
+      const tableRows = receipt.lineItems.map(item => [
+        `${item.ProductName}\n${item.ProductBrand || ''}`,
+        item.LineQuantity.toString(),
+        `€ ${item.LineUnitPrice.toFixed(2)}`,
+        `€ ${(item.LineQuantity * item.LineUnitPrice).toFixed(2)}`
+      ]);
       
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Subtotal: € ${subtotal.toFixed(2)}`, 14, finalY + 10);
-      doc.text(`Discount (${receipt.Discount}%): -€ ${discountAmount.toFixed(2)}`, 14, finalY + 15);
-      finalY += 10;
+      autoTable(doc, {
+        startY: yPos,
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [22, 160, 133], halign: 'left' },
+        styles: { cellPadding: 2, fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 20, halign: 'center' },
+          2: { cellWidth: 30, halign: 'right' },
+          3: { cellWidth: 30, halign: 'right' },
+        },
+      });
+
+      finalY = (doc as any).lastAutoTable.finalY || yPos;
+      
+      if (receipt.Discount > 0) {
+        const subtotal = receipt.lineItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+        const discountAmount = (subtotal * receipt.Discount) / 100;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Subtotal: € ${subtotal.toFixed(2)}`, 14, finalY + 10);
+        doc.text(`Discount (${receipt.Discount}%): -€ ${discountAmount.toFixed(2)}`, 14, finalY + 15);
+        finalY += 10;
+      }
     }
 
     doc.setFontSize(12);

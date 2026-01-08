@@ -64,7 +64,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
       const receiptsData = await db.query<any[]>(`
         SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note, r.Discount,
-               (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) as subtotal, 
+               r.IsNonItemised, r.NonItemisedTotal,
                'receipt' as type
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
@@ -84,6 +84,9 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
       const allTransactions: Receipt[] = [
         ...receiptsData.map(r => {
+            if (r.IsNonItemised) {
+              return {...r, amount: -r.NonItemisedTotal};
+            }
             const items = allLineItems.filter(li => li.ReceiptID === r.id);
             const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
             const discountableAmount = items
