@@ -149,11 +149,10 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   const columns: any[] = [
     { header: 'Product', render: (item: LineItem) => (
       <div>
-        <p className="font-medium">{item.ProductName}</p>
+        <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
         <p className="text-xs text-gray-500">{item.ProductBrand || ''}</p>
       </div>
     )},
-    { header: 'Size', render: (item: LineItem) => item.ProductSize ? `${item.ProductSize}${item.ProductUnitType || ''}` : '-' },
     { header: 'Total Price', render: (item: LineItem) => `€${(item.LineQuantity * item.LineUnitPrice).toFixed(2)}` },
   ];
 

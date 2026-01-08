@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, TrashIcon, DocumentArrowDownIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ExclamationTriangleIcon, ClipboardDocumentListIcon, ClipboardIcon } from '@heroicons/react/24/solid';
 import { db } from '../utils/db';
 import { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -231,15 +231,26 @@ const ReceiptsPage: React.FC = () => {
             <CheckCircleIcon className="h-5 w-5 text-green-500" />
           </Tooltip>
         )}
-        <Tooltip content="Delete Receipt">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); openDeleteModal(row.ReceiptID); }}
-          >
-            <TrashIcon className="h-4 w-4" />
-          </Button>
-        </Tooltip>
+        <div className="flex items-center gap-2 border-l border-gray-200 dark:border-gray-700 ml-2 pl-2">
+          {row.IsNonItemised ? (
+            <Tooltip content="Item-less Receipt">
+              <ClipboardIcon className="h-5 w-5 text-gray-400" />
+            </Tooltip>
+          ) : (
+            <Tooltip content="Itemised Receipt">
+              <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400" />
+            </Tooltip>
+          )}
+          <Tooltip content="Delete Receipt">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); openDeleteModal(row.ReceiptID); }}
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+        </div>
       </div>
     )
   });

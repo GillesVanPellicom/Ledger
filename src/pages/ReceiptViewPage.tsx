@@ -1,21 +1,36 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
-import { db } from '../utils/db';
+import React, {useState, useEffect, useMemo} from 'react';
+import {useParams, useNavigate, Link} from 'react-router-dom';
+import {format, parseISO} from 'date-fns';
+import {db} from '../utils/db';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
-import { PencilIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon, DocumentArrowDownIcon, CreditCardIcon, ExclamationTriangleIcon, UserGroupIcon, CheckCircleIcon, ExclamationCircleIcon, UserIcon, BanknotesIcon, LinkIcon } from '@heroicons/react/24/solid';
-import { generateReceiptsPdf } from '../utils/pdfGenerator';
-import { useSettings } from '../context/SettingsContext';
-import { useError } from '../context/ErrorContext';
-import { cn } from '../utils/cn';
+import {
+  PencilIcon,
+  ShoppingCartIcon,
+  TagIcon,
+  CurrencyEuroIcon,
+  DocumentArrowDownIcon,
+  CreditCardIcon,
+  ExclamationTriangleIcon,
+  UserGroupIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  UserIcon,
+  BanknotesIcon,
+  LinkIcon,
+  InformationCircleIcon
+} from '@heroicons/react/24/solid';
+import {generateReceiptsPdf} from '../utils/pdfGenerator';
+import {useSettings} from '../context/SettingsContext';
+import {useError} from '../context/ErrorContext';
+import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import Tooltip from '../components/ui/Tooltip';
-import Modal, { ConfirmModal } from '../components/ui/Modal';
+import Modal, {ConfirmModal} from '../components/ui/Modal';
 import Select from '../components/ui/Select';
-import { Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment } from '../types';
+import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} from '../types';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -24,7 +39,7 @@ interface MarkAsPaidModalProps {
   paymentMethods: { value: number; label: string }[];
 }
 
-const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onConfirm, paymentMethods }) => {
+const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({isOpen, onClose, onConfirm, paymentMethods}) => {
   const [paymentMethodId, setPaymentMethodId] = useState(paymentMethods[0]?.value.toString() || '');
 
   return (
@@ -53,15 +68,15 @@ interface ReceiptViewPageProps {
   openSettingsModal: (tab: string) => void;
 }
 
-const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) => {
-  const { id } = useParams<{ id: string }>();
+const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) => {
+  const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [images, setImages] = useState<ReceiptImage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const { settings } = useSettings();
-  const { showError } = useError();
+  const {settings} = useSettings();
+  const {showError} = useError();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
@@ -70,7 +85,11 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
   const [payments, setPayments] = useState<ReceiptDebtorPayment[]>([]);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState<boolean>(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState<any>(null);
-  const [unsettleConfirmation, setUnsettleConfirmation] = useState<{ isOpen: boolean, paymentId: number | null, topUpId: number | null }>({ isOpen: false, paymentId: null, topUpId: null });
+  const [unsettleConfirmation, setUnsettleConfirmation] = useState<{
+    isOpen: boolean,
+    paymentId: number | null,
+    topUpId: number | null
+  }>({isOpen: false, paymentId: null, topUpId: null});
   const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState<boolean>(false);
   const [paymentMethods, setPaymentMethods] = useState<{ value: number; label: string }[]>([]);
 
@@ -78,12 +97,12 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
     setLoading(true);
     try {
       const receiptData = await db.queryOne<Receipt>(`
-        SELECT r.*, s.StoreName, pm.PaymentMethodName, d.DebtorName as OwedToDebtorName
-        FROM Receipts r 
-        JOIN Stores s ON r.StoreID = s.StoreID 
-        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-        LEFT JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
-        WHERE r.ReceiptID = ?
+          SELECT r.*, s.StoreName, pm.PaymentMethodName, d.DebtorName as OwedToDebtorName
+          FROM Receipts r
+                   JOIN Stores s ON r.StoreID = s.StoreID
+                   LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+                   LEFT JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
+          WHERE r.ReceiptID = ?
       `, [id]);
 
       if (receiptData) {
@@ -92,19 +111,21 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
 
         if (!receiptData.IsNonItemised) {
           const lineItemData = await db.query<LineItem[]>(`
-            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
-            FROM LineItems li
-            JOIN Products p ON li.ProductID = p.ProductID
-            LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-            LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-            WHERE li.ReceiptID = ?
+              SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
+              FROM LineItems li
+                       JOIN Products p ON li.ProductID = p.ProductID
+                       LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+                       LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
+              WHERE li.ReceiptID = ?
           `, [id]);
           setLineItems(lineItemData);
         }
 
-        const imageData = await db.query<{ ImagePath: string }[]>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        const imageData = await db.query<{
+          ImagePath: string
+        }[]>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
         if (window.electronAPI && settings.datastore.folderPath) {
-          setImages(imageData.map(img => ({ 
+          setImages(imageData.map(img => ({
             key: img.ImagePath,
             ImagePath: img.ImagePath,
             src: `local-file://${settings.datastore.folderPath}/receipt_images/${img.ImagePath}`
@@ -114,10 +135,10 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
         if (debtEnabled) {
           if (receiptData.SplitType === 'total_split') {
             const splitsData = await db.query<ReceiptSplit[]>(`
-              SELECT rs.*, d.DebtorName 
-              FROM ReceiptSplits rs
-              JOIN Debtors d ON rs.DebtorID = d.DebtorID
-              WHERE rs.ReceiptID = ?
+                SELECT rs.*, d.DebtorName
+                FROM ReceiptSplits rs
+                         JOIN Debtors d ON rs.DebtorID = d.DebtorID
+                WHERE rs.ReceiptID = ?
             `, [id]);
             setReceiptSplits(splitsData);
           }
@@ -125,10 +146,13 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
           const paymentsData = await db.query<ReceiptDebtorPayment[]>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
           setPayments(paymentsData);
         }
-        
+
         if (paymentMethodsEnabled) {
-          const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
-          setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
+          const pmData = await db.query<{
+            PaymentMethodID: number,
+            PaymentMethodName: string
+          }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
+          setPaymentMethods(pmData.map(pm => ({value: pm.PaymentMethodID, label: pm.PaymentMethodName})));
         }
       }
     } catch (error) {
@@ -166,14 +190,14 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
   }, [subtotal, receipt, lineItems]);
 
   const debtSummary = useMemo(() => {
-    if (!debtEnabled || !receipt) return { debtors: [], ownShare: null };
+    if (!debtEnabled || !receipt) return {debtors: [], ownShare: null};
 
     const summary: Record<string, any> = {};
     let ownShare: any = null;
 
     if (splitType === 'total_split' && (receiptSplits.length > 0 || (receipt.OwnShares && receipt.OwnShares > 0))) {
-      const totalShares = receipt.TotalShares && receipt.TotalShares > 0 
-        ? receipt.TotalShares 
+      const totalShares = receipt.TotalShares && receipt.TotalShares > 0
+        ? receipt.TotalShares
         : receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0) + (receipt.OwnShares || 0);
 
       receiptSplits.forEach(split => {
@@ -208,7 +232,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
           }
 
           if (!debtorItems[String(item.DebtorID)]) {
-            debtorItems[String(item.DebtorID)] = { count: 0, total: 0 };
+            debtorItems[String(item.DebtorID)] = {count: 0, total: 0};
           }
           debtorItems[String(item.DebtorID)].count += 1;
           debtorItems[String(item.DebtorID)].total += itemAmount;
@@ -223,7 +247,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
         }
       });
     }
-    return { debtors: Object.values(summary), ownShare };
+    return {debtors: Object.values(summary), ownShare};
   }, [lineItems, receipt, receiptSplits, splitType, debtEnabled, totalAmount]);
 
   const totalItems = lineItems.length;
@@ -231,7 +255,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
 
   const handleSavePdf = async () => {
     if (!receipt) return;
-    
+
     const fullReceipt = {
       ...receipt,
       lineItems: lineItems,
@@ -255,11 +279,11 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
   };
 
   const confirmUnsettleDebt = (paymentId: number, topUpId: number | undefined) => {
-    setUnsettleConfirmation({ isOpen: true, paymentId, topUpId: topUpId || null });
+    setUnsettleConfirmation({isOpen: true, paymentId, topUpId: topUpId || null});
   };
 
   const handleUnsettleDebt = async () => {
-    const { paymentId, topUpId } = unsettleConfirmation;
+    const {paymentId, topUpId} = unsettleConfirmation;
     if (!paymentId) return;
     try {
       await db.execute('DELETE FROM ReceiptDebtorPayments WHERE PaymentID = ?', [paymentId]);
@@ -270,7 +294,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
     } catch (error) {
       showError(error as Error);
     } finally {
-      setUnsettleConfirmation({ isOpen: false, paymentId: null, topUpId: null });
+      setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null});
     }
   };
 
@@ -292,7 +316,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
   if (!settings.datastore.folderPath && window.electronAPI) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <ExclamationTriangleIcon className="h-16 w-16 text-yellow-400 mb-4" />
+        <ExclamationTriangleIcon className="h-16 w-16 text-yellow-400 mb-4"/>
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">Datastore Not Configured</h2>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           Please set the datastore folder in the settings to view receipts and their images.
@@ -305,13 +329,21 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
-        <Spinner className="h-8 w-8 text-accent" />
+        <Spinner className="h-8 w-8 text-accent"/>
       </div>
     );
   }
 
   if (!receipt) {
     return <div className="text-center">Receipt not found.</div>;
+  }
+
+  // Determine grid columns for the main info card
+  let mainInfoGridCols = 'grid-cols-1'; // Default for item-less, no payment methods
+  if (!receipt.IsNonItemised) {
+    mainInfoGridCols = paymentMethodsEnabled ? 'grid-cols-4' : 'grid-cols-3';
+  } else {
+    mainInfoGridCols = paymentMethodsEnabled ? 'grid-cols-2' : 'grid-cols-1';
   }
 
   return (
@@ -323,17 +355,17 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleSavePdf}>
-            <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+            <DocumentArrowDownIcon className="h-5 w-5 mr-2"/>
             Save PDF
           </Button>
           {receipt.Status === 'unpaid' && (
             <Button onClick={() => setIsMarkAsPaidModalOpen(true)}>
-              <BanknotesIcon className="h-5 w-5 mr-2" />
+              <BanknotesIcon className="h-5 w-5 mr-2"/>
               Mark as Paid
             </Button>
           )}
           <Button onClick={() => navigate(`/receipts/edit/${id}`)}>
-            <PencilIcon className="h-5 w-5 mr-2" />
+            <PencilIcon className="h-5 w-5 mr-2"/>
             Edit
           </Button>
         </div>
@@ -342,11 +374,25 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
       {receipt.Status === 'unpaid' && (
         <Card>
           <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center gap-4">
-            <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500" />
+            <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500"/>
             <div className="text-center">
               <p className="font-semibold text-yellow-800 dark:text-yellow-200">This receipt is unpaid.</p>
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
                 Total amount is owed to <span className="font-bold">{receipt.OwedToDebtorName}</span>.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {receipt.IsNonItemised && (
+        <Card>
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center gap-4">
+            <InformationCircleIcon className="h-8 w-8 text-blue-500"/>
+            <div className="text-center">
+              <p className="font-semibold text-blue-800 dark:text-blue-200">This is an item-less receipt.</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Only the total amount was recorded.
               </p>
             </div>
           </div>
@@ -363,16 +409,16 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
       )}
 
       <Card>
-        <div className={`p-6 grid ${paymentMethodsEnabled ? 'grid-cols-4' : 'grid-cols-3'} gap-4 text-center`}>
+        <div className={`p-6 grid ${mainInfoGridCols} gap-4 text-center`}>
           {!receipt.IsNonItemised && (
             <>
               <div className="flex flex-col items-center gap-1">
-                <TagIcon className="h-6 w-6 text-gray-400" />
+                <TagIcon className="h-6 w-6 text-gray-400"/>
                 <span className="text-sm text-gray-500">Unique Items</span>
                 <span className="text-xl font-bold">{totalItems}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <ShoppingCartIcon className="h-6 w-6 text-gray-400" />
+                <ShoppingCartIcon className="h-6 w-6 text-gray-400"/>
                 <span className="text-sm text-gray-500">Total Quantity</span>
                 <span className="text-xl font-bold">{totalQuantity}</span>
               </div>
@@ -380,24 +426,24 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
           )}
           {paymentMethodsEnabled && (
             <div className="flex flex-col items-center gap-1">
-              <CreditCardIcon className="h-6 w-6 text-gray-400" />
+              <CreditCardIcon className="h-6 w-6 text-gray-400"/>
               <span className="text-sm text-gray-500">Payment Method</span>
               <span className="text-xl font-bold">{receipt.PaymentMethodName || 'N/A'}</span>
             </div>
           )}
           <div className="flex flex-col items-center gap-1">
-            <CurrencyEuroIcon className="h-6 w-6 text-gray-400" />
+            <CurrencyEuroIcon className="h-6 w-6 text-gray-400"/>
             <span className="text-sm text-gray-500">Total Amount</span>
             <span className="text-xl font-bold">€{totalAmount.toFixed(2)}</span>
           </div>
         </div>
       </Card>
-      
+
       {images.length > 0 && (
         <Card>
           <div className="p-6">
             <h2 className="text-lg font-semibold mb-4">Images</h2>
-            <Gallery images={images} />
+            <Gallery images={images}/>
           </div>
         </Card>
       )}
@@ -406,46 +452,49 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
         <Card>
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
-              <UserGroupIcon className="h-6 w-6 text-accent" />
+              <UserGroupIcon className="h-6 w-6 text-accent"/>
               <h2 className="text-lg font-semibold">Debt Breakdown</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {debtSummary.debtors.map((debtor) => {
                 const payment = payments.find(p => p.DebtorID === debtor.debtorId);
                 const isPaid = !!payment;
-                
+
                 return (
                   <div key={debtor.debtorId} className={cn(
                     "p-4 rounded-lg border flex flex-col justify-between",
-                    isPaid 
-                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" 
+                    isPaid
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
                       : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
                   )}>
                     <div>
                       <div className="flex justify-between items-start mb-2">
-                        <Link to={`/entities/${debtor.debtorId}`} className="font-medium hover:underline flex items-center gap-1.5 group">
+                        <Link to={`/entities/${debtor.debtorId}`}
+                              className="font-medium hover:underline flex items-center gap-1.5 group">
                           <span className={cn(isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>{debtor.name}</span>
-                          <LinkIcon className={cn("h-4 w-4", isPaid ? "text-green-700" : "text-red-700")} />
+                          <LinkIcon className={cn("h-4 w-4", isPaid ? "text-green-700" : "text-red-700")}/>
                         </Link>
                         {isPaid ? (
                           <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                            <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
                           </Tooltip>
                         ) : (
                           <Tooltip content="Unpaid">
-                            <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
                           </Tooltip>
                         )}
                       </div>
                       <p className={cn("text-2xl font-bold", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")}>
                         €{debtor.amount.toFixed(2)}
                       </p>
-                      {splitType === 'total_split' && <p className="text-sm text-gray-500 mb-4">{debtor.shares} / {debtor.totalShares} shares</p>}
-                      {splitType === 'line_item' && !receipt.IsNonItemised && <p className="text-sm text-gray-500 mb-4">{debtor.itemCount} / {debtor.totalItems} items</p>}
+                      {splitType === 'total_split' &&
+                        <p className="text-sm text-gray-500 mb-4">{debtor.shares} / {debtor.totalShares} shares</p>}
+                      {splitType === 'line_item' && !receipt.IsNonItemised &&
+                        <p className="text-sm text-gray-500 mb-4">{debtor.itemCount} / {debtor.totalItems} items</p>}
                     </div>
-                    
+
                     {isPaid ? (
-                      <Button 
+                      <Button
                         size="sm"
                         className="w-full text-green-800 bg-green-200 border-green-300 hover:bg-green-300 border dark:text-green-100 dark:bg-green-800/50 dark:border-green-700 dark:hover:bg-green-800"
                         onClick={() => confirmUnsettleDebt(payment.PaymentID, payment.TopUpID)}
@@ -453,8 +502,8 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
                         Unsettle
                       </Button>
                     ) : (
-      
-                      <Button 
+
+                      <Button
                         size="sm"
                         className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
                         onClick={() => handleSettleDebt(debtor)}
@@ -470,7 +519,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <p className="font-medium text-blue-900 dark:text-blue-100">Own Share</p>
-                      <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
                     </div>
                     <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                       €{debtSummary.ownShare.amount.toFixed(2)}
@@ -493,45 +542,45 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
             <div className="overflow-x-auto">
               <table className="w-full text-sm select-none">
                 <thead className="text-left text-gray-500">
-                  <tr>
-                    <th className="p-2">Product</th>
-                    <th className="p-2 w-24 text-center">Qty</th>
-                    <th className="p-2 w-32 text-right">Unit Price (€)</th>
-                    <th className="p-2 w-32 text-right">Total (€)</th>
-                    {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
-                  </tr>
+                <tr>
+                  <th className="p-2">Product</th>
+                  <th className="p-2 w-24 text-center">Qty</th>
+                  <th className="p-2 w-32 text-right">Unit Price (€)</th>
+                  <th className="p-2 w-32 text-right">Total (€)</th>
+                  {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
+                </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-gray-800">
-                  {lineItems.map((item) => {
-                    const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
-                    return (
-                      <tr key={item.LineItemID}>
-                        <td className="p-2">
-                          <div className="flex items-center gap-2">
-                            {receipt.Discount > 0 && (
-                              <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-                                <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
-                              </Tooltip>
-                            )}
-                            <div>
-                              <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                              <p className="text-xs text-gray-500">{item.ProductBrand}</p>
-                            </div>
+                {lineItems.map((item) => {
+                  const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
+                  return (
+                    <tr key={item.LineItemID}>
+                      <td className="p-2">
+                        <div className="flex items-center gap-2">
+                          {receipt.Discount > 0 && (
+                            <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
+                              <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+                            </Tooltip>
+                          )}
+                          <div>
+                            <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                            <p className="text-xs text-gray-500">{item.ProductBrand}</p>
                           </div>
+                        </div>
+                      </td>
+                      <td className="p-2 text-center">{item.LineQuantity}</td>
+                      <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
+                      <td className="p-2 text-right font-medium">
+                        {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                      </td>
+                      {debtEnabled && splitType === 'line_item' && (
+                        <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
+                          {item.DebtorName || '-'}
                         </td>
-                        <td className="p-2 text-center">{item.LineQuantity}</td>
-                        <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
-                        <td className="p-2 text-right font-medium">
-                          {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                        </td>
-                        {debtEnabled && splitType === 'line_item' && (
-                          <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
-                            {item.DebtorName || '-'}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
+                      )}
+                    </tr>
+                  );
+                })}
                 </tbody>
               </table>
             </div>
@@ -568,7 +617,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
 
       <ConfirmModal
         isOpen={unsettleConfirmation.isOpen}
-        onClose={() => setUnsettleConfirmation({ isOpen: false, paymentId: null, topUpId: null })}
+        onClose={() => setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null})}
         onConfirm={handleUnsettleDebt}
         title="Unsettle Debt"
         message="Are you sure you want to mark this debt as unpaid? This will also delete the associated top-up transaction."
