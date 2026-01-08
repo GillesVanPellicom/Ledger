@@ -147,7 +147,7 @@ The following is a list of all inline SQL queries that need to be refactored, gr
 *   `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitT`
 *   `SELECT p.*, u.ProductUnitType FROM Products p`
 
-### `/Users/gvp/IdeaProjects/homefin/src/pages/DebtPage.jsx`
+### `/Users/gvp/IdeaProjects/homefin/src/pages/DebtPageTsx.jsx`
 
 *   `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT DebtorI`
 *   `SELECT * FROM Debtors`

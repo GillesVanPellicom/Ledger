@@ -20,6 +20,7 @@ import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
 import EntityModal from '../components/debt/EntityModal';
 import { Entity, Receipt } from '../types';
+import { calculateDebts } from '../utils/debtCalculator';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -99,81 +100,11 @@ const EntityDetailsPage: React.FC = () => {
       const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
       setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
 
-      const allReceiptsForEntity = await db.query<any[]>(`
-        SELECT r.*, s.StoreName,
-          CASE WHEN r.OwedToDebtorID = ? THEN 'to_entity' ELSE 'to_me' END as type
-        FROM Receipts r
-        JOIN Stores s ON r.StoreID = s.StoreID
-        WHERE r.OwedToDebtorID = ? OR
-              (r.SplitType = 'line_item' AND r.ReceiptID IN (SELECT li.ReceiptID FROM LineItems li WHERE li.DebtorID = ?)) OR
-              (r.SplitType = 'total_split' AND r.ReceiptID IN (SELECT rs.ReceiptID FROM ReceiptSplits rs WHERE rs.DebtorID = ?))
-      `, [id, id, id, id]);
-
-      const receiptIds = allReceiptsForEntity.map(r => r.ReceiptID);
-      if (receiptIds.length === 0) {
-        setReceipts([]);
-        setStats({ debtToEntity: 0, debtToMe: 0, netBalance: 0 });
-        setLoading(false);
-        return;
+      if (id) {
+        const { receipts, debtToEntity, debtToMe, netBalance } = await calculateDebts(id);
+        setReceipts(receipts);
+        setStats({ debtToEntity, debtToMe, netBalance });
       }
-
-      const placeholders = receiptIds.map(() => '?').join(',');
-      const allLineItems = await db.query<any[]>(`SELECT * FROM LineItems WHERE ReceiptID IN (${placeholders})`, receiptIds);
-      const allSplits = await db.query<any[]>(`SELECT * FROM ReceiptSplits WHERE ReceiptID IN (${placeholders})`, receiptIds);
-      const allPayments = await db.query<any[]>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds);
-
-      const processedReceipts: Receipt[] = allReceiptsForEntity.map(r => {
-        let totalAmount = 0;
-        if (r.IsNonItemised) {
-          totalAmount = r.NonItemisedTotal;
-        } else {
-          const items = allLineItems.filter(li => li.ReceiptID === r.ReceiptID);
-          const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-          const discountableAmount = items
-            .filter(item => !item.IsExcludedFromDiscount)
-            .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-          const discountAmount = (discountableAmount * (r.Discount || 0)) / 100;
-          totalAmount = subtotal - discountAmount;
-        }
-
-        let amount = 0;
-        let isSettled = false;
-
-        if (r.type === 'to_entity') {
-          amount = totalAmount;
-          isSettled = r.Status === 'paid';
-        } else { // to_me
-          if (r.SplitType === 'total_split') {
-            const splits = allSplits.filter(rs => rs.ReceiptID === r.ReceiptID);
-            const debtorSplit = splits.find(rs => rs.DebtorID === parseInt(id!));
-            if (debtorSplit) {
-              const totalShares = r.TotalShares > 0 ? r.TotalShares : (splits.reduce((sum, s) => sum + s.SplitPart, 0) + (r.OwnShares || 0));
-              if (totalShares > 0) {
-                amount = (totalAmount * debtorSplit.SplitPart) / totalShares;
-              }
-            }
-          } else if (r.SplitType === 'line_item') {
-            const debtorItems = allLineItems.filter(li => li.ReceiptID === r.ReceiptID && li.DebtorID === parseInt(id!));
-            amount = debtorItems.reduce((sum, item) => {
-              const itemTotal = item.LineQuantity * item.LineUnitPrice;
-              const itemDiscount = !item.IsExcludedFromDiscount ? (itemTotal * (r.Discount || 0)) / 100 : 0;
-              return sum + (itemTotal - itemDiscount);
-            }, 0);
-          }
-          isSettled = allPayments.some(p => p.ReceiptID === r.ReceiptID && p.DebtorID === parseInt(id!));
-        }
-        return { ...r, amount, isSettled };
-      });
-
-      const debtToEntityTotal = processedReceipts.filter(r => r.type === 'to_entity' && !r.isSettled).reduce((sum, r) => sum + r.amount!, 0);
-      const debtToMeTotal = processedReceipts.filter(r => r.type === 'to_me' && !r.isSettled).reduce((sum, r) => sum + r.amount!, 0);
-
-      setReceipts(processedReceipts.sort((a, b) => new Date(b.ReceiptDate).getTime() - new Date(a.ReceiptDate).getTime()));
-      setStats({
-        debtToEntity: debtToEntityTotal,
-        debtToMe: debtToMeTotal,
-        netBalance: debtToMeTotal - debtToEntityTotal,
-      });
 
     } catch (error) {
       showError(error as Error);

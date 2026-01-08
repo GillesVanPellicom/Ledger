@@ -12,6 +12,8 @@ import Tooltip from '../ui/Tooltip';
 interface ProductSpending {
   ProductName: string;
   ProductBrand: string;
+  ProductSize: string;
+  ProductUnitType: string;
   totalQty: number;
   totalSpent: number;
 }
@@ -90,11 +92,14 @@ const TopProducts: React.FC = () => {
           SELECT 
             p.ProductName, 
             p.ProductBrand,
+            p.ProductSize,
+            pu.ProductUnitType,
             SUM(li.LineQuantity) as totalQty,
             SUM(li.LineQuantity * li.LineUnitPrice) as totalSpent
           FROM LineItems li
           JOIN Receipts r ON li.ReceiptID = r.ReceiptID
           JOIN Products p ON li.ProductID = p.ProductID
+          LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
         `;
         
         const params: any[] = [];
@@ -105,7 +110,7 @@ const TopProducts: React.FC = () => {
         }
 
         query += `
-          GROUP BY p.ProductName, p.ProductBrand
+          GROUP BY p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
           ORDER BY totalSpent DESC
         `;
         
@@ -144,8 +149,16 @@ const TopProducts: React.FC = () => {
   }), [top10]);
 
   const columns = [
-    { header: 'Product', accessor: 'ProductName', width: '40%' },
-    { header: 'Brand', accessor: 'ProductBrand', width: '30%' },
+    { 
+      header: 'Product', 
+      width: '70%',
+      render: (row: ProductSpending) => (
+        <div>
+          <p className="font-medium">{row.ProductName}{row.ProductSize ? ` - ${row.ProductSize}${row.ProductUnitType || ''}` : ''}</p>
+          <p className="text-xs text-gray-500">{row.ProductBrand || ''}</p>
+        </div>
+      )
+    },
     { header: 'Qty', accessor: 'totalQty', width: '10%', className: 'text-center' },
     { header: 'Total Spent', width: '20%', className: 'text-right', render: (row: ProductSpending) => `€${row.totalSpent.toFixed(2)}` },
   ];

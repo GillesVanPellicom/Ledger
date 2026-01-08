@@ -405,7 +405,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
       </div>
 
       <div className="space-y-6">
-        {receipt.IsTentative && (
+        {!!receipt.IsTentative && (
           <InfoCard
             variant="info"
             title="Tentative Receipt"
@@ -423,7 +423,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           />
         )}
 
-        {receipt.IsNonItemised && (
+        {!!receipt.IsNonItemised && (
           <InfoCard
             variant="info"
             title="Item-less Receipt"
@@ -432,7 +432,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         )}
       </div>
 
-      {receipt.ReceiptNote && (
+      {!!receipt.ReceiptNote && (
         <Card>
           <div className="p-6">
             <h2 className="text-lg font-semibold mb-2">Note</h2>
@@ -485,7 +485,6 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         <Card>
           <div className="p-6">
             <div className="flex items-center gap-2 mb-4">
-              <UserGroupIcon className="h-6 w-6 text-accent"/>
               <h2 className="text-lg font-semibold">Debt Breakdown</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -549,7 +548,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                   </div>
                 );
               })}
-              {debtSummary.ownShare && (
+              {!!debtSummary.ownShare && (
                 <div className="p-4 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-2">
@@ -620,26 +619,24 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
               </table>
             </div>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
-            <div className="flex flex-col items-end gap-2">
-              {receipt.Discount > 0 && (
+          {receipt.Discount > 0 && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
+              <div className="flex flex-col items-end gap-2">
                 <div className="flex items-center gap-4 text-gray-500">
                   <span className="text-sm">Subtotal</span>
                   <span className="font-medium">€{subtotal.toFixed(2)}</span>
                 </div>
-              )}
-              {receipt.Discount > 0 && (
                 <div className="flex items-center gap-4 text-gray-500">
                   <span className="text-sm">Discount ({receipt.Discount}%)</span>
                   <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
                 </div>
-              )}
-              <div className="flex items-center gap-4 text-lg font-bold">
-                <span>Total</span>
-                <span>€{totalAmount.toFixed(2)}</span>
+                <div className="flex items-center gap-4 text-lg font-bold">
+                  <span>Total</span>
+                  <span>€{totalAmount.toFixed(2)}</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </Card>
       )}
 

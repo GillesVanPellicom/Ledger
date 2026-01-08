@@ -57,7 +57,7 @@ src/pages/DebtorDetailsPage.tsx(139,33): error TS2345: Argument of type '{ lineI
   Type '{ lineItems: any[][]; totalAmount: number; images: never[]; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'FullReceipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
 src/pages/DebtorDetailsPage.tsx(300,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
-src/pages/DebtPage.tsx(44,18): error TS2345: Argument of type 'Debtor[][]' is not assignable to parameter of type 'SetStateAction<Debtor[]>'.
+src/pages/DebtPageTsx.tsx(44,18): error TS2345: Argument of type 'Debtor[][]' is not assignable to parameter of type 'SetStateAction<Debtor[]>'.
   Type 'Debtor[][]' is not assignable to type 'Debtor[]'.
     Type 'Debtor[]' is missing the following properties from type 'Debtor': DebtorID, DebtorName, DebtorIsActive
 src/pages/EntitiesPage.tsx(44,19): error TS2345: Argument of type 'Entity[][]' is not assignable to parameter of type 'SetStateAction<Entity[]>'.
