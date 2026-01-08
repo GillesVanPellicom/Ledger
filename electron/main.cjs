@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, protocol, net, shell } = require('e
 const path = require('path');
 const sqlite3 = require('sqlite3');
 const fs = require('fs');
+const { runMigrations } = require('./db/migrate.cjs');
 
 let mainWindow;
 let db;
@@ -78,7 +79,7 @@ function connectDatabase(dbPath) {
         return reject({ success: false, error: err.message });
       }
       
-      db.run('PRAGMA journal_mode = WAL;', (walErr) => {
+      db.run('PRAGMA journal_mode = WAL;', async (walErr) => {
         if (walErr) {
            console.error('Failed to set WAL mode:', walErr);
            return reject({ success: false, error: walErr.message });
@@ -97,6 +98,13 @@ function connectDatabase(dbPath) {
             resolve({ success: true });
           });
         } else {
+          try {
+            await runMigrations(db);
+            console.log('Migrations run successfully');
+          } catch (migrationError) {
+            console.error('Failed to run migrations:', migrationError);
+            return reject({ success: false, error: migrationError.message });
+          }
           console.log(`Connected to database: ${dbPath}`);
           resolve({ success: true });
         }
