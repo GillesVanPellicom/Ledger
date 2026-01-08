@@ -35,6 +35,7 @@ interface DataTableProps {
   selectedIds?: any[];
   itemKey?: string;
   minWidth?: string;
+  disabled?: boolean;
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -56,7 +57,8 @@ const DataTable: React.FC<DataTableProps> = ({
   onSelectionChange,
   selectedIds,
   itemKey = "id",
-  minWidth = "600px"
+  minWidth = "600px",
+  disabled = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pageInput, setPageInput] = useState(String(currentPage));
@@ -72,6 +74,7 @@ const DataTable: React.FC<DataTableProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (disabled) return;
       if ((e.target as HTMLElement).tagName.toLowerCase() === 'input' || (e.target as HTMLElement).tagName.toLowerCase() === 'textarea') {
         return;
       }
@@ -83,7 +86,7 @@ const DataTable: React.FC<DataTableProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentPage, totalPages, onPageChange]);
+  }, [currentPage, totalPages, onPageChange, disabled]);
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -97,6 +100,7 @@ const DataTable: React.FC<DataTableProps> = ({
   }, [searchTerm, onSearch]);
 
   const handlePageJump = () => {
+    if (disabled) return;
     let newPage = parseInt(pageInput, 10);
     if (!isNaN(newPage) && onPageChange) {
       newPage = Math.max(1, Math.min(newPage, totalPages || 1));
@@ -123,6 +127,7 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
     const newSelectedRows = new Set(selectedRows);
     const currentIds = data.map(row => row[itemKey]);
     
@@ -137,6 +142,7 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   const handleSelectRow = (e: React.ChangeEvent<HTMLInputElement>, id: any) => {
+    if (disabled) return;
     const newSelectedRows = new Set(selectedRows);
     if (e.target.checked) {
       newSelectedRows.add(id);
@@ -159,13 +165,13 @@ const DataTable: React.FC<DataTableProps> = ({
   const inputWidth = `${1.5 + (totalPagesDigits * 0.6)}rem`;
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn("flex flex-col gap-4", className, disabled && "opacity-50 cursor-not-allowed")}>
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {searchable && (
             <div className="relative w-90">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+              <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" disabled={disabled} />
             </div>
           )}
           {children}
@@ -188,12 +194,13 @@ const DataTable: React.FC<DataTableProps> = ({
               { value: 50, label: '50' }, { value: 75, label: '75' }, { value: 100, label: '100' }
             ]} 
             className="h-9 w-20 text-center" 
+            disabled={disabled}
           />
         </Tooltip>
       </div>
 
       <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm relative">
-        <div className={cn("overflow-x-auto", loading && "blur-sm pointer-events-none")}>
+        <div className={cn("overflow-x-auto", (loading || disabled) && "blur-sm pointer-events-none")}>
           <table className="w-full text-left text-sm" style={{ minWidth }}>
             <colgroup>
               {selectable && <col style={{ width: '40px' }} />}
@@ -204,7 +211,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 {selectable && (
                   <th className="px-4 py-3 align-middle">
                     <div className="checkbox-wrapper-13 flex items-center justify-center">
-                      <input id="select-all-checkbox" type="checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} />
+                      <input id="select-all-checkbox" type="checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} disabled={disabled} />
                       <label htmlFor="select-all-checkbox"></label>
                     </div>
                   </th>
@@ -228,7 +235,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 </tr>
               ) : (
                 data.map((row, rowIdx) => (
-                  <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50")}>
+                  <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50")}>
                     {selectable && (
                       <td className="px-4 py-3 align-middle">
                         <div className="checkbox-wrapper-13 flex items-center justify-center">
@@ -238,6 +245,7 @@ const DataTable: React.FC<DataTableProps> = ({
                             checked={selectedRows.has(row[itemKey])} 
                             onChange={(e) => handleSelectRow(e, row[itemKey])} 
                             onClick={(e) => e.stopPropagation()} 
+                            disabled={disabled}
                           />
                           <label htmlFor={`checkbox-${row[itemKey]}`}></label>
                         </div>
@@ -280,7 +288,7 @@ const DataTable: React.FC<DataTableProps> = ({
             <button
               type="button"
               onClick={() => onPageChange && onPageChange(currentPage - 1)}
-              disabled={currentPage === 1 || loading}
+              disabled={currentPage === 1 || loading || disabled}
               className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-l-lg text-sm px-3 focus:outline-none h-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeftIcon className="h-4 w-4" />
@@ -297,6 +305,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 style={{ width: inputWidth, minWidth: '2rem' }}
                 placeholder="1"
                 required
+                disabled={disabled}
               />
               <div className="flex items-center pr-3 pointer-events-none whitespace-nowrap">
                 <span className="text-gray-500 text-sm">/ {totalPages || 1}</span>
@@ -305,7 +314,7 @@ const DataTable: React.FC<DataTableProps> = ({
             <button
               type="button"
               onClick={() => onPageChange && onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || loading || totalCount === 0}
+              disabled={currentPage === totalPages || loading || totalCount === 0 || disabled}
               className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRightIcon className="h-4 w-4" />

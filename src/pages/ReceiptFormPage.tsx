@@ -582,13 +582,6 @@ const ReceiptFormPage: React.FC = () => {
       </div>
     );
 
-    if (isDebtDisabled) {
-      return (
-        <Tooltip content={hasSettledDebts ? "Cannot change split type when debts are settled." : "Debt management is disabled for unpaid receipts."}>
-          {content}
-        </Tooltip>
-      );
-    }
     return content;
   };
 
@@ -603,6 +596,20 @@ const ReceiptFormPage: React.FC = () => {
           </Button>
         )}
       </div>
+
+      {hasSettledDebts && (
+        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-center gap-2">
+          <LockClosedIcon className="h-5 w-5" />
+          <span>One or more debts on this receipt have been settled. Debt configuration is now locked.</span>
+        </div>
+      )}
+
+      {isUnpaid && (
+        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-center gap-2">
+          <ExclamationTriangleIcon className="h-5 w-5" />
+          <span>Debt management is disabled for unpaid receipts.</span>
+        </div>
+      )}
       
       <Card>
         <div className="p-6 grid grid-cols-2 gap-6">
@@ -616,8 +623,17 @@ const ReceiptFormPage: React.FC = () => {
                 <Tooltip content="A standard expense you've paid.">
                   <button onClick={() => handleStatusChange('paid')} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'paid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Paid</button>
                 </Tooltip>
-                <Tooltip content="An expense you owe to someone else.">
-                  <button onClick={() => handleStatusChange('unpaid')} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", formData.status === 'unpaid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300")}>Unpaid</button>
+                <Tooltip content={hasSettledDebts ? "Cannot switch to unpaid when debts are settled" : "An expense you owe to someone else."}>
+                  <button 
+                    onClick={() => handleStatusChange('unpaid')} 
+                    disabled={hasSettledDebts}
+                    className={cn(
+                      "w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", 
+                      formData.status === 'unpaid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
+                      hasSettledDebts && "opacity-50 cursor-not-allowed"
+                    )}>
+                      Unpaid
+                  </button>
                 </Tooltip>
               </div>
             </div>
@@ -670,7 +686,7 @@ const ReceiptFormPage: React.FC = () => {
         </div>
       </Card>
 
-      {debtEnabled && (
+      {debtEnabled && !isDebtDisabled && (
         <Card>
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -680,20 +696,6 @@ const ReceiptFormPage: React.FC = () => {
               </div>
               <SplitTypeSelector />
             </div>
-
-            {hasSettledDebts && (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-center gap-2">
-                <LockClosedIcon className="h-5 w-5" />
-                <span>One or more debts on this receipt have been settled. Debt configuration is now locked.</span>
-              </div>
-            )}
-
-            {isUnpaid && (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 text-sm rounded-lg flex items-center gap-2">
-                <ExclamationTriangleIcon className="h-5 w-5" />
-                <span>Debt management is disabled for unpaid receipts.</span>
-              </div>
-            )}
 
             {splitType === 'total_split' && (
               <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
@@ -869,6 +871,7 @@ const ReceiptFormPage: React.FC = () => {
                   }}
                   className="h-8 text-right"
                   error={errors.discount}
+                  disabled={hasSettledDebts}
                 />
               </div>
             </div>
@@ -877,7 +880,11 @@ const ReceiptFormPage: React.FC = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <button 
                     onClick={() => setSelectionModal({ isOpen: true, mode: 'discount' })}
-                    className="text-xs text-accent hover:underline flex items-center gap-1"
+                    className={cn(
+                      "text-xs text-accent hover:underline flex items-center gap-1",
+                      hasSettledDebts && "opacity-50 cursor-not-allowed"
+                    )}
+                    disabled={hasSettledDebts}
                   >
                     {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
                   </button>
@@ -942,6 +949,7 @@ const ReceiptFormPage: React.FC = () => {
         selectionMode={selectionModal.mode!}
         debtors={debtors}
         initialSelectedKeys={selectionModal.mode === 'debtor' ? [] : Array.from(excludedLineItemKeys)}
+        disabled={hasSettledDebts}
       />
     </div>
   );

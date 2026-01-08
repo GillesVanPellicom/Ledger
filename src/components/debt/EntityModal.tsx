@@ -4,13 +4,13 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import {db} from '../../utils/db';
 import {EyeIcon, EyeSlashIcon} from '@heroicons/react/24/solid';
-import {Entity} from '../../types';
+import {Debtor} from '../../types';
 
 interface EntityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  entityToEdit: Entity | null;
+  entityToEdit: Debtor | null;
 }
 
 const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entityToEdit}) => {
@@ -23,7 +23,7 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
     if (isOpen) {
       if (entityToEdit) {
         setName(entityToEdit.DebtorName);
-        setIsActive(entityToEdit.EntityIsActive);
+        setIsActive(!!entityToEdit.DebtorIsActive);
       } else {
         setName('');
         setIsActive(true);
@@ -88,7 +88,7 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
         />
         <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isActive ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+            <div className={`p-2 rounded-lg ${isActive ? 'bg-accent/10 text-accent' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
               {isActive ? <EyeIcon className="h-5 w-5"/> : <EyeSlashIcon className="h-5 w-5"/>}
             </div>
             <div>

@@ -13,7 +13,6 @@ import { useError } from '../context/ErrorContext';
 import Tooltip from '../components/ui/Tooltip';
 import { useSettings } from '../context/SettingsContext';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
-import { cn } from '../utils/cn';
 import { Receipt, LineItem } from '../types';
 
 const ReceiptsPage: React.FC = () => {
@@ -289,7 +288,6 @@ const ReceiptsPage: React.FC = () => {
         searchable={true}
         loading={loading}
         onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
-        className={cn(receipts.find(r => r.Status === 'unpaid') && 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30')}
         selectable={true}
         onSelectionChange={setSelectedReceiptIds}
         selectedIds={selectedReceiptIds}

@@ -6,11 +6,11 @@ import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24
 import { db } from '../utils/db';
 import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
-import { Entity } from '../types';
+import { Debtor } from '../types';
 
 const EntitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [entities, setEntities] = useState<Entity[]>([]);
+  const [entities, setEntities] = useState<Debtor[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [totalCount, setTotalCount] = useState<number>(0);
 
@@ -19,7 +19,7 @@ const EntitiesPage: React.FC = () => {
   const [pageSize, setPageSize] = useState<number>(10);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
+  const [editingEntity, setEditingEntity] = useState<Debtor | null>(null);
 
   const fetchEntities = useCallback(async () => {
     setLoading(true);
@@ -40,7 +40,7 @@ const EntitiesPage: React.FC = () => {
       query += ` ORDER BY DebtorName ASC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       
-      const results = await db.query<Entity[]>(query, params);
+      const results = await db.query<Debtor[]>(query, params);
       setEntities(results);
     } catch (error) {
       console.error("Failed to fetch entities:", error);
@@ -58,12 +58,12 @@ const EntitiesPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (entity: Entity) => {
+  const handleEdit = (entity: Debtor) => {
     setEditingEntity(entity);
     setIsModalOpen(true);
   };
 
-  const handleRowClick = (entity: Entity) => {
+  const handleRowClick = (entity: Debtor) => {
     navigate(`/entities/${entity.DebtorID}`);
   };
 
@@ -73,9 +73,9 @@ const EntitiesPage: React.FC = () => {
       header: 'Visibility', 
       width: '10%',
       className: 'text-center',
-      render: (row: Entity) => (
-        <Tooltip content={row.EntityIsActive ? 'Shown in lists' : 'Hidden from lists'}>
-          {row.EntityIsActive ? 
+      render: (row: Debtor) => (
+        <Tooltip content={row.DebtorIsActive ? 'Shown in lists' : 'Hidden from lists'}>
+          {row.DebtorIsActive ? 
           <EyeIcon className="h-5 w-5 text-green-500 inline-block" /> : 
           <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
         </Tooltip>
@@ -85,7 +85,7 @@ const EntitiesPage: React.FC = () => {
       header: 'Actions',
       width: '10%',
       className: 'text-right',
-      render: (row: Entity) => (
+      render: (row: Debtor) => (
         <div className="flex justify-end">
           <Tooltip content="Edit Entity">
             <Button 

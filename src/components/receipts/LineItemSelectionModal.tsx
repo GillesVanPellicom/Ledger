@@ -15,6 +15,7 @@ interface LineItemSelectionModalProps {
   selectionMode: 'debtor' | 'discount';
   debtors: Debtor[];
   initialSelectedKeys: string[];
+  disabled?: boolean;
 }
 
 const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
@@ -24,7 +25,8 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   onSave,
   selectionMode,
   debtors,
-  initialSelectedKeys
+  initialSelectedKeys,
+  disabled = false,
 }) => {
   const [selectedKeys, setSelectedKeys] = useState(new Set(initialSelectedKeys));
   const [assignments, setAssignments] = useState<Record<string, string>>({});
@@ -34,7 +36,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   const itemKey = "key";
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
 
   const filteredItems = useCallback(() => {
     if (!searchTerm) return lineItems;
@@ -79,9 +81,10 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, pageSize]);
 
   const handleRowClick = (item: LineItem, event: React.MouseEvent) => {
+    if (disabled) return;
     // Prevent text selection on shift-click
     if (event.nativeEvent.shiftKey) {
       window.getSelection()?.removeAllRanges();
@@ -118,6 +121,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   };
 
   const handleSave = () => {
+    if (disabled) return;
     if (selectionMode === 'debtor') {
       const assignmentList = Object.entries(assignments).map(([key, debtorId]) => ({ key, debtorId }));
       onSave(assignmentList);
@@ -132,7 +136,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   };
 
   const handleBulkAssign = () => {
-    if (!bulkDebtorId) return;
+    if (!bulkDebtorId || disabled) return;
     const newAssignments = { ...assignments };
     for (const key of selectedKeys) {
       newAssignments[key] = bulkDebtorId;
@@ -163,6 +167,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
             onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
             options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
             className="w-full"
+            disabled={disabled}
           />
         </div>
       )
@@ -188,11 +193,12 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
                 onChange={(e) => setBulkDebtorId(e.target.value)}
                 options={[{ value: '', label: 'Assign to...' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
                 className="w-48"
+                disabled={disabled}
               />
               <Button 
                 variant="secondary" 
                 onClick={handleBulkAssign} 
-                disabled={!bulkDebtorId || selectedKeys.size === 0}
+                disabled={!bulkDebtorId || selectedKeys.size === 0 || disabled}
                 className="whitespace-nowrap"
               >
                 Assign to Selected
@@ -216,11 +222,13 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
             pageSize={pageSize}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            disabled={disabled}
           />
         </div>
         <div className="flex justify-end gap-4">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>{saveButtonText}</Button>
+          <Button onClick={handleSave} disabled={disabled}>{saveButtonText}</Button>
         </div>
       </div>
     </Modal>
