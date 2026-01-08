@@ -104,7 +104,7 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
         <DatePicker
           label="Payment Date"
           selected={paidDate}
-          onChange={(date) => setPaidDate(date as Date)}
+          onChange={(date: any) => setPaidDate(date as Date)}
           popperClassName="react-datepicker-in-modal"
         />
         {paymentMethodsEnabled && (

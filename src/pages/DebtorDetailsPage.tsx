@@ -126,17 +126,17 @@ const DebtorDetailsPage: React.FC = () => {
         SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
         FROM LineItems li
         JOIN Products p ON li.ProductID = p.ProductID
-        JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+        LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
         WHERE li.ReceiptID IN (${placeholders}) AND li.DebtorID = ?
       `, [...receiptIds, id]);
 
       const fullReceipts = receiptsData.map(receipt => {
         const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
         const total = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-        return { ...receipt, lineItems: items, totalAmount: total };
+        return { ...receipt, lineItems: items, totalAmount: total, images: [] };
       });
 
-      await generateReceiptsPdf(fullReceipts, settings.pdf, (progress: number) => setPdfProgress(progress), settings.pdf.appendSuperReceipt);
+      await generateReceiptsPdf(fullReceipts, settings.pdf, (progress: number) => setPdfProgress(progress));
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -300,7 +300,7 @@ const DebtorDetailsPage: React.FC = () => {
             selectsRange
             startDate={dateRange[0]}
             endDate={dateRange[1]}
-            onChange={(update: [Date | null, Date | null]) => { setDateRange(update); setCurrentPage(1); }}
+            onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
             isClearable={true}
             placeholderText="Filter by date range"
           />

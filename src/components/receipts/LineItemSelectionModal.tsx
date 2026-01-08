@@ -142,7 +142,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
 
   const title = selectionMode === 'debtor' ? 'Assign Items to Debtors' : 'Exclude Items from Discount';
 
-  const columns = [
+  const columns: any[] = [
     { header: 'Product', render: (item: LineItem) => (
       <div>
         <p className="font-medium">{item.ProductName}</p>
@@ -174,7 +174,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   const saveButtonText = selectionMode === 'debtor' ? 'Save Assignments' : 'Exclude Selected Items';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="3xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="xl">
       <div className="p-6 space-y-4">
         <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
           <InformationCircleIcon className="h-5 w-5 text-gray-400" />

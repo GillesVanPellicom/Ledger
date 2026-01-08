@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Select from '../ui/Select';
@@ -9,7 +9,7 @@ interface DebtPdfOptionsModalProps {
   onConfirm: (direction: 'all' | 'to_me' | 'to_entity', status: 'all' | 'settled' | 'unsettled') => void;
 }
 
-const DebtPdfOptionsModal: React.FC<DebtPdfOptionsModalProps> = ({ isOpen, onClose, onConfirm }) => {
+const DebtPdfOptionsModal: React.FC<DebtPdfOptionsModalProps> = ({isOpen, onClose, onConfirm}) => {
   const [direction, setDirection] = useState<'all' | 'to_me' | 'to_entity'>('all');
   const [status, setStatus] = useState<'all' | 'settled' | 'unsettled'>('all');
 
@@ -35,9 +35,9 @@ const DebtPdfOptionsModal: React.FC<DebtPdfOptionsModalProps> = ({ isOpen, onClo
           value={direction}
           onChange={(e) => setDirection(e.target.value as 'all' | 'to_me' | 'to_entity')}
           options={[
-            { value: 'all', label: 'All Receipts' },
-            { value: 'to_me', label: 'Receipts where they owe you' },
-            { value: 'to_entity', label: 'Receipts where you owe them' },
+            {value: 'all', label: 'All Receipts'},
+            {value: 'to_me', label: 'Receipts where they owe you'},
+            {value: 'to_entity', label: 'Receipts where you owe them'},
           ]}
         />
         <Select
@@ -45,9 +45,9 @@ const DebtPdfOptionsModal: React.FC<DebtPdfOptionsModalProps> = ({ isOpen, onClo
           value={status}
           onChange={(e) => setStatus(e.target.value as 'all' | 'settled' | 'unsettled')}
           options={[
-            { value: 'all', label: 'Settled and Unsettled' },
-            { value: 'settled', label: 'Settled' },
-            { value: 'unsettled', label: 'Unsettled' },
+            {value: 'all', label: 'Settled and Unsettled'},
+            {value: 'settled', label: 'Settled'},
+            {value: 'unsettled', label: 'Unsettled'},
           ]}
         />
       </div>

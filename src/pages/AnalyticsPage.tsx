@@ -39,7 +39,7 @@ const AnalyticsPage: React.FC = () => {
       storeChartRef.current?.getEchartsInstance(),
       debtBarChartRef.current?.getEchartsInstance(),
     ].filter(Boolean);
-    return () => instances.forEach(instance => instance.dispose());
+    return () => instances.forEach(instance => instance?.dispose());
   }, []);
 
   useEffect(() => {

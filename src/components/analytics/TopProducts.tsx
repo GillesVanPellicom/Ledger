@@ -42,7 +42,7 @@ const TopProducts: React.FC = () => {
   // Fetch available years
   useEffect(() => {
     const fetchYears = async () => {
-      const result = await db.query<{ year: string }[]>("SELECT DISTINCT STRFTIME('%Y', ReceiptDate) as year FROM Receipts ORDER BY year DESC");
+      const result = await db.query<{ year: string }>("SELECT DISTINCT STRFTIME('%Y', ReceiptDate) as year FROM Receipts ORDER BY year DESC");
       const years = result.map(r => parseInt(r.year));
       if (years.length > 0) {
         setAvailableYears(years);
@@ -109,7 +109,7 @@ const TopProducts: React.FC = () => {
           ORDER BY totalSpent DESC
         `;
         
-        const result = await db.query<ProductSpending[]>(query, params);
+        const result = await db.query<ProductSpending>(query, params);
         
         setData(result);
         setCurrentPage(1);

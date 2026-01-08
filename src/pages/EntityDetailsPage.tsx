@@ -122,7 +122,7 @@ const EntityDetailsPage: React.FC = () => {
       const allSplits = await db.query<any[]>(`SELECT * FROM ReceiptSplits WHERE ReceiptID IN (${placeholders})`, receiptIds);
       const allPayments = await db.query<any[]>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds);
 
-      const processedReceipts = allReceiptsForEntity.map(r => {
+      const processedReceipts: Receipt[] = allReceiptsForEntity.map(r => {
         const items = allLineItems.filter(li => li.ReceiptID === r.ReceiptID);
         const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
         
@@ -162,8 +162,8 @@ const EntityDetailsPage: React.FC = () => {
         return { ...r, amount, isSettled };
       });
 
-      const debtToEntityTotal = processedReceipts.filter(r => r.type === 'to_entity' && !r.isSettled).reduce((sum, r) => sum + r.amount, 0);
-      const debtToMeTotal = processedReceipts.filter(r => r.type === 'to_me' && !r.isSettled).reduce((sum, r) => sum + r.amount, 0);
+      const debtToEntityTotal = processedReceipts.filter(r => r.type === 'to_entity' && !r.isSettled).reduce((sum, r) => sum + r.amount!, 0);
+      const debtToMeTotal = processedReceipts.filter(r => r.type === 'to_me' && !r.isSettled).reduce((sum, r) => sum + r.amount!, 0);
 
       setReceipts(processedReceipts.sort((a, b) => new Date(b.ReceiptDate).getTime() - new Date(a.ReceiptDate).getTime()));
       setStats({
@@ -460,7 +460,7 @@ const EntityDetailsPage: React.FC = () => {
             selectsRange
             startDate={dateRange[0]}
             endDate={dateRange[1]}
-            onChange={(update: [Date | null, Date | null]) => { setDateRange(update); setCurrentPage(1); }}
+            onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
             isClearable={true}
             placeholderText="Filter by date range"
           />

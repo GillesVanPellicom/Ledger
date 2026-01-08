@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
-import { db } from '../../utils/db';
-import { cn } from '../../utils/cn';
-import { Debtor } from '../../types';
+import {db} from '../../utils/db';
+import {cn} from '../../utils/cn';
+import {Debtor} from '../../types';
 
 interface DebtModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface DebtModalProps {
   debtorToEdit: Debtor | null;
 }
 
-const DebtModal: React.FC<DebtModalProps> = ({ isOpen, onClose, onSave, debtorToEdit }) => {
+const DebtModal: React.FC<DebtModalProps> = ({isOpen, onClose, onSave, debtorToEdit}) => {
   const [name, setName] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -72,14 +72,18 @@ const DebtModal: React.FC<DebtModalProps> = ({ isOpen, onClose, onSave, debtorTo
       isOpen={isOpen}
       onClose={onClose}
       title={debtorToEdit ? 'Edit Debtor' : 'Add New Debtor'}
-      footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
+      footer={<><Button variant="secondary"
+                        onClick={onClose}
+                        disabled={loading}>Cancel</Button><Button onClick={handleSubmit}
+                                                                  loading={loading}>Save</Button></>}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
-        <Input 
-          label="Name" 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
+        {error &&
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
+        <Input
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="e.g., John Doe"
         />
         <div className="flex items-center justify-between">
@@ -95,7 +99,7 @@ const DebtModal: React.FC<DebtModalProps> = ({ isOpen, onClose, onSave, debtorTo
             <span className={cn(
               "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
               isActive ? "translate-x-5" : "translate-x-0"
-            )} />
+            )}/>
           </button>
         </div>
       </form>

@@ -9,23 +9,12 @@ import Tooltip from '../ui/Tooltip';
 import Input from '../ui/Input';
 import { useBackupContext } from '../../context/BackupContext';
 import Card from '../ui/Card';
+import '../../electron.d';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: string;
-}
-
-declare global {
-  interface Window {
-    electronAPI: {
-        getSettings: () => Promise<any>;
-        selectDirectory: () => Promise<string | null>;
-        resetSettings: () => Promise<void>;
-        quitApp: () => Promise<void>;
-        openBackupFolder: () => void;
-    };
-  }
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'appearance' }) => {
@@ -39,7 +28,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const { backupCount, triggerBackup, isBackingUp } = useBackupContext();
   const [datastorePath, setDatastorePath] = useState('');
   const [tooltipText, setTooltipText] = useState('');
-  const [backupSettings, setBackupSettings] = useState({ maxBackups: 5, interval: 5 });
+  const [backupSettings, setBackupSettings] = useState({ maxBackups: 5, interval: 5, editsSinceLastBackup: 0 });
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
@@ -98,12 +87,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const handleModuleToggle = (key: string) => {
-    const newModules = { ...settings.modules, [key]: { ...settings.modules[key], enabled: !settings.modules[key].enabled } };
+    const newModules = { ...settings.modules, [key]: { ...(settings.modules as any)[key], enabled: !(settings.modules as any)[key].enabled } };
     updateSettings({ ...settings, modules: newModules });
   };
 
   const handlePdfToggle = (key: string) => {
-    const newPdfSettings = { ...settings.pdf, [key]: !settings.pdf[key] };
+    const newPdfSettings = { ...settings.pdf, [key]: !(settings.pdf as any)[key] };
     updateSettings({ ...settings, pdf: newPdfSettings });
   };
 
@@ -114,7 +103,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const resetBackupSettings = () => {
-    const defaultBackupSettings = { maxBackups: 5, interval: 5 };
+    const defaultBackupSettings = { maxBackups: 5, interval: 5, editsSinceLastBackup: 0 };
     setBackupSettings(defaultBackupSettings);
     updateSettings({ ...settings, backup: defaultBackupSettings });
   };
@@ -255,7 +244,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <Toggle 
                       label="Capitalization Protection" 
                       description="Enforce capitalization rules for product names and brands." 
-                      isEnabled={settings.modules.capitalizationProtection?.enabled} 
+                      isEnabled={(settings.modules as any).capitalizationProtection?.enabled} 
                       onToggle={() => handleModuleToggle('capitalizationProtection')}
                     />
                   </div>
@@ -318,11 +307,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip></label>
-                          <Input id="max-backups" type="number" className="w-full mt-2" value={backupSettings.maxBackups} onChange={(e) => handleBackupSettingChange('maxBackups', e.target.value)} />
+                          <Input id="max-backups" type="number" className="w-full mt-2" value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', e.target.value)} />
                         </div>
                         <div>
                           <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip></label>
-                          <Input id="backup-interval" type="number" className="w-full mt-2" value={backupSettings.interval} onChange={(e) => handleBackupSettingChange('interval', e.target.value)} />
+                          <Input id="backup-interval" type="number" className="w-full mt-2" value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', e.target.value)} />
                         </div>
                       </div>
                       <div className="text-right mt-2">
@@ -349,7 +338,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                           <p className="text-sm text-gray-500">Generate a fake error to test the error modal.</p>
                         </div>
                       </div>
-                      <Button variant="warning" onClick={handleGenerateError}>Generate Error</Button>
+                      <Button variant="danger" onClick={handleGenerateError}>Generate Error</Button>
                     </div>
                   </div>
                   <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-4">
@@ -363,7 +352,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                           <p className="text-sm text-gray-500">Remove the datastore folder path from settings.</p>
                         </div>
                       </div>
-                      <Button variant="warning" onClick={handleRemoveDatastore}>Reset</Button>
+                      <Button variant="danger" onClick={handleRemoveDatastore}>Reset</Button>
                     </div>
                   </div>
                   <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-4">
@@ -377,7 +366,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                           <p className="text-sm text-gray-500">Clear all settings and quit the application.</p>
                         </div>
                       </div>
-                      <Button variant="destructive" onClick={handleResetAllSettings}>Reset All</Button>
+                      <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
                     </div>
                   </div>
                 </div>

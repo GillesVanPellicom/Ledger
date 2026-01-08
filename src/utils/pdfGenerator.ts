@@ -2,14 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { Receipt, LineItem, ReceiptImage } from '../types';
-
-declare global {
-  interface Window {
-    electronAPI: {
-      readFileAsBase64: (path: string) => Promise<string>;
-    };
-  }
-}
+import '../../electron.d';
 
 interface PdfOptions {
   showUniqueItems?: boolean;

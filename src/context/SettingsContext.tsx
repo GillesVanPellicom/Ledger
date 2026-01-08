@@ -48,17 +48,6 @@ const initialSettings: Settings = {
   },
 };
 
-declare global {
-  interface Window {
-    electronAPI: {
-      getSettings: () => Promise<Partial<Settings>>;
-      saveSettings: (settings: Settings) => Promise<{ success: boolean }>;
-      onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void;
-      removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void;
-    };
-  }
-}
-
 interface SettingsProviderProps {
   children: ReactNode;
 }

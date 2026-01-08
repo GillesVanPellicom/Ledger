@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils/cn';
 
-interface TooltipProps extends React.HTMLAttributes<HTMLDivElement> {
+interface TooltipProps {
   children: ReactNode;
   content: ReactNode;
+  className?: string;
 }
 
 const Tooltip: React.FC<TooltipProps> = ({ children, content, className, ...props }) => {

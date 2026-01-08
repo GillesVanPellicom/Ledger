@@ -116,16 +116,16 @@ const ReceiptsPage: React.FC = () => {
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace(/SELECT r.ReceiptID,.*?as Total/s, 'SELECT r.ReceiptID')})`;
-      const countResult = await db.queryOne(countQuery, params);
+      const countResult = await db.queryOne<{ count: number }>(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
       query += ` ORDER BY r.ReceiptDate DESC, r.ReceiptID DESC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       
-      const results = await db.query(query, params);
+      const results = await db.query<Receipt[]>(query, params);
       setReceipts(results);
     } catch (error) {
-      showError(error);
+      showError(error as Error);
     } finally {
       setLoading(false);
     }
@@ -147,7 +147,7 @@ const ReceiptsPage: React.FC = () => {
       setDeleteModalOpen(false);
       setReceiptToDelete(null);
     } catch (error) {
-      showError(error);
+      showError(error as Error);
     }
   };
 
@@ -183,18 +183,18 @@ const ReceiptsPage: React.FC = () => {
         const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
         const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
         const total = Math.max(0, subtotal - discountAmount);
-        return { ...receipt, lineItems: items, totalAmount: total };
+        return { ...receipt, lineItems: items, totalAmount: total, images: [] };
       });
 
       await generateReceiptsPdf(fullReceipts, settings.pdf, (progress: number) => setPdfProgress(progress));
     } catch (error) {
-      showError(error);
+      showError(error as Error);
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
-  const columns = [
+  const columns: any[] = [
     { header: 'Date', width: '20%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
     { header: 'Store', accessor: 'StoreName', width: '30%' },
     { header: 'Note', accessor: 'ReceiptNote', width: '25%' },
@@ -222,17 +222,17 @@ const ReceiptsPage: React.FC = () => {
             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
           </Tooltip>
         )}
-        {debtEnabled && row.UnpaidDebtorCount > 0 && (
+        {debtEnabled && (row.UnpaidDebtorCount || 0) > 0 && (
           <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
             <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
           </Tooltip>
         )}
-        {debtEnabled && row.TotalDebtorCount > 0 && row.UnpaidDebtorCount === 0 && (
+        {debtEnabled && (row.TotalDebtorCount || 0) > 0 && (row.UnpaidDebtorCount || 0) === 0 && (
           <Tooltip content="All debts settled">
             <CheckCircleIcon className="h-5 w-5 text-green-500" />
           </Tooltip>
         )}
-        <Tooltip content="Delete Receipt" align="end">
+        <Tooltip content="Delete Receipt">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -289,7 +289,7 @@ const ReceiptsPage: React.FC = () => {
         searchable={true}
         loading={loading}
         onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
-        rowClassName={(row: Receipt) => cn(row.Status === 'unpaid' && 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30')}
+        className={cn(receipts.find(r => r.Status === 'unpaid') && 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30')}
         selectable={true}
         onSelectionChange={setSelectedReceiptIds}
         selectedIds={selectedReceiptIds}
@@ -299,7 +299,7 @@ const ReceiptsPage: React.FC = () => {
           selectsRange
           startDate={dateRange[0]}
           endDate={dateRange[1]}
-          onChange={(update: [Date | null, Date | null]) => { setDateRange(update); setCurrentPage(1); }}
+          onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
           isClearable={true}
           placeholderText="Filter by date range"
         />

@@ -34,13 +34,13 @@ const DebtPage: React.FC = () => {
       }
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT DebtorID')})`;
-      const countResult = await db.queryOne(countQuery, params);
+      const countResult = await db.queryOne<{ count: number }>(countQuery, params);
       setTotalCount(countResult ? countResult.count : 0);
       
       query += ` ORDER BY DebtorName ASC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       
-      const results = await db.query(query, params);
+      const results = await db.query<Debtor[]>(query, params);
       setDebtors(results);
     } catch (error) {
       console.error("Failed to fetch debtors:", error);
@@ -87,7 +87,7 @@ const DebtPage: React.FC = () => {
       className: 'text-right',
       render: (row: Debtor) => (
         <div className="flex justify-end">
-          <Tooltip content="Edit Debtor" align="end">
+          <Tooltip content="Edit Debtor">
             <Button 
               variant="ghost" 
               size="icon" 

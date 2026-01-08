@@ -1,15 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { Settings } from '../types';
-
-declare global {
-  interface Window {
-    electronAPI: {
-      getBackupCount: () => Promise<number>;
-      triggerBackup: () => Promise<void>;
-    };
-  }
-}
+import '../electron.d';
 
 export const useBackup = () => {
   const { settings, updateSettings } = useSettings() as { settings: Settings; updateSettings: (settings: Settings) => void; };

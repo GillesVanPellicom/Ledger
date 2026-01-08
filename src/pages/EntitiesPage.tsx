@@ -87,7 +87,7 @@ const EntitiesPage: React.FC = () => {
       className: 'text-right',
       render: (row: Entity) => (
         <div className="flex justify-end">
-          <Tooltip content="Edit Entity" align="end">
+          <Tooltip content="Edit Entity">
             <Button 
               variant="ghost" 
               size="icon" 

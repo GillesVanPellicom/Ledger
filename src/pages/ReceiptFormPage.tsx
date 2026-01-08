@@ -18,14 +18,7 @@ import { useBackupContext } from '../context/BackupContext';
 import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
 import StoreModal from '../components/stores/StoreModal';
 import { Debtor, LineItem, ReceiptImage, ReceiptSplit, Store } from '../types';
-
-declare global {
-  interface Window {
-    electronAPI: {
-      saveImage: (folderPath: string, imagePath: string) => Promise<string>;
-    };
-  }
-}
+import '../electron.d';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -380,7 +373,7 @@ const ReceiptFormPage: React.FC = () => {
     const files = Array.from(e.target.files || []);
     const newImages: ReceiptImage[] = files.map(file => ({
       key: nanoid(),
-      ImagePath: file.path,
+      ImagePath: (file as any).path,
       file,
     }));
     setImages(prev => [...prev, ...newImages]);

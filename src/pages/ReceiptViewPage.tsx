@@ -202,17 +202,17 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({ openSettingsModal }) 
             itemAmount *= discountFactor;
           }
 
-          if (!debtorItems[item.DebtorID]) {
-            debtorItems[item.DebtorID] = { count: 0, total: 0 };
+          if (!debtorItems[String(item.DebtorID)]) {
+            debtorItems[String(item.DebtorID)] = { count: 0, total: 0 };
           }
-          debtorItems[item.DebtorID].count += 1;
-          debtorItems[item.DebtorID].total += itemAmount;
+          debtorItems[String(item.DebtorID)].count += 1;
+          debtorItems[String(item.DebtorID)].total += itemAmount;
 
-          summary[item.DebtorID] = {
+          summary[String(item.DebtorID)] = {
             name: item.DebtorName,
-            amount: debtorItems[item.DebtorID].total,
+            amount: debtorItems[String(item.DebtorID)].total,
             debtorId: item.DebtorID,
-            itemCount: debtorItems[item.DebtorID].count,
+            itemCount: debtorItems[String(item.DebtorID)].count,
             totalItems: lineItems.length,
           };
         }

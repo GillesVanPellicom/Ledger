@@ -81,7 +81,7 @@ const StoresPage: React.FC = () => {
       className: 'text-right',
       render: (row: Store) => (
         <div className="flex justify-end">
-          <Tooltip content="Edit Store" align="end">
+          <Tooltip content="Edit Store">
             <Button 
               variant="ghost" 
               size="icon" 

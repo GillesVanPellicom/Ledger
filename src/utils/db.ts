@@ -1,12 +1,5 @@
 // Helper to interface with Electron's IPC for DB operations
-
-declare global {
-  interface Window {
-    electronAPI: {
-      queryDb: (sql: string, params: any[]) => Promise<any>;
-    };
-  }
-}
+import '../../electron.d';
 
 export const db = {
   query: async <T>(sql: string, params: any[] = []): Promise<T[]> => {

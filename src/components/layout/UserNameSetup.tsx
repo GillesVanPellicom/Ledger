@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { useSettings } from '../../context/SettingsContext';
+import React, {useState} from 'react';
+import {useSettings} from '../../context/SettingsContext';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
 
 const UserNameSetup: React.FC = () => {
   const [name, setName] = useState('');
-  const { settings, updateSettings } = useSettings();
+  const {settings, updateSettings} = useSettings();
 
   const handleContinue = () => {
     if (name.trim()) {
       const capitalizedName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
-      updateSettings({ ...settings, userName: capitalizedName });
+      updateSettings({...settings, userName: capitalizedName});
     }
   };
 

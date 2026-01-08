@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Modal, { ConfirmModal } from '../ui/Modal';
+import React, {useState, useEffect, useMemo} from 'react';
+import Modal, {ConfirmModal} from '../ui/Modal';
 import Button from '../ui/Button';
 import Select from '../ui/Select';
 import Input from '../ui/Input';
-import { db } from '../../utils/db';
-import { XMarkIcon } from '@heroicons/react/24/solid';
-import { nanoid } from 'nanoid';
+import {db} from '../../utils/db';
+import {XMarkIcon} from '@heroicons/react/24/solid';
+import {nanoid} from 'nanoid';
 import ProgressModal from '../ui/ProgressModal';
-import { Debtor, ReceiptSplit } from '../../types';
+import {Debtor, ReceiptSplit} from '../../types';
 
 interface BulkDebtModalProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ interface BulkDebtModalProps {
   onComplete: () => void;
 }
 
-const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptIds, onComplete }) => {
+const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptIds, onComplete}) => {
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);
   const [ownShares, setOwnShares] = useState(0);
@@ -28,7 +28,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
   useEffect(() => {
     if (isOpen) {
       const fetchDebtors = async () => {
-        const debtorsData = await db.query<Debtor[]>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+        const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
         setDebtors(debtorsData);
       };
       fetchDebtors();
@@ -46,12 +46,17 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
     if (!debtorId) return;
     const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId));
     if (debtor) {
-      setReceiptSplits(prev => [...prev, { key: nanoid(), DebtorID: debtor.DebtorID, DebtorName: debtor.DebtorName, SplitPart: 1 }]);
+      setReceiptSplits(prev => [...prev, {
+        key: nanoid(),
+        DebtorID: debtor.DebtorID,
+        DebtorName: debtor.DebtorName,
+        SplitPart: 1
+      }]);
     }
   };
 
   const handleUpdateSplitPart = (key: string, newPart: string) => {
-    setReceiptSplits(prev => prev.map(s => s.key === key ? { ...s, SplitPart: parseInt(newPart) || 1 } : s));
+    setReceiptSplits(prev => prev.map(s => s.key === key ? {...s, SplitPart: parseInt(newPart) || 1} : s));
   };
 
   const handleRemoveSplit = (key: string) => {
@@ -59,15 +64,19 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
   };
 
   const startBulkUpdate = async () => {
-    const receiptsWithDebt = await db.query<{ ReceiptID: number }[]>(`
-      SELECT DISTINCT ReceiptID FROM (
-        SELECT ReceiptID FROM LineItems WHERE ReceiptID IN (${receiptIds.join(',')}) AND DebtorID IS NOT NULL
-        UNION
-        SELECT ReceiptID FROM ReceiptSplits WHERE ReceiptID IN (${receiptIds.join(',')})
-      )
+    const receiptsWithDebt = await db.query<{ ReceiptID: number }>(`
+        SELECT DISTINCT ReceiptID
+        FROM (SELECT ReceiptID
+              FROM LineItems
+              WHERE ReceiptID IN (${receiptIds.join(',')})
+                AND DebtorID IS NOT NULL
+              UNION
+              SELECT ReceiptID
+              FROM ReceiptSplits
+              WHERE ReceiptID IN (${receiptIds.join(',')}))
     `);
     const conflicting = receiptsWithDebt.map(r => r.ReceiptID);
-    
+
     if (conflicting.length > 0) {
       setConflictingReceipts(conflicting);
       setIsConflictModalOpen(true);
@@ -79,7 +88,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
   const processBulkUpdate = async (ignoreIds: number[]) => {
     setIsProcessing(true);
     setProgress(0);
-    
+
     const targetReceiptIds = receiptIds.filter(id => !ignoreIds.includes(id));
     if (targetReceiptIds.length === 0) {
       setIsProcessing(false);
@@ -97,7 +106,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
 
     for (const receiptId of targetReceiptIds) {
       await db.execute(
-        'UPDATE Receipts SET SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?', 
+        'UPDATE Receipts SET SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?',
         ['total_split', ownShares, totalShares, receiptId]
       );
       updateProgress();
@@ -122,20 +131,34 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
         isOpen={isOpen && !isProcessing}
         onClose={onClose}
         title={`Bulk Assign Debt to ${receiptIds.length} Receipts`}
-        footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={startBulkUpdate} disabled={totalShares === 0}>Apply Debt</Button></>}
+        footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={startBulkUpdate}
+                                                                                       disabled={totalShares === 0}>Apply
+                                                                                                                    Debt</Button></>}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">This will apply a 'Split Total' debt configuration to all selected receipts. Any existing debt assignments on these receipts will be affected.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">This will apply a 'Split Total' debt configuration to
+                                                                  all selected receipts. Any existing debt assignments
+                                                                  on these receipts will be affected.</p>
           <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
             <div className="grid grid-cols-2 gap-4 items-end">
-              <Select 
+              <Select
                 label="Add Debtor"
                 value=""
-                onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
-                options={[{ value: '', label: 'Add Debtor...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleAddSplit(String(e.target.value));
+                  }
+                }}
+                options={[{
+                  value: '',
+                  label: 'Add Debtor...'
+                }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
+                  value: d.DebtorID,
+                  label: d.DebtorName
+                }))]}
                 className="bg-white dark:bg-gray-800"
               />
-              <Input 
+              <Input
                 label="Own Shares"
                 type="number"
                 name="ownShares"
@@ -146,18 +169,25 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
             </div>
             <div className="space-y-2">
               {receiptSplits.map(split => (
-                <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div key={split.key}
+                     className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <span className="font-medium">{split.DebtorName}</span>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500">Shares:</span>
-                      <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-700 text-sm" />
+                      <input type="number"
+                             min="1"
+                             value={split.SplitPart}
+                             onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
+                             className="w-16 rounded-md border-gray-300 dark:border-gray-700 text-sm"/>
                     </div>
-                    <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>
+                    <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700">
+                      <XMarkIcon className="h-4 w-4"/></button>
                   </div>
                 </div>
               ))}
-              {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
+              {totalShares > 0 &&
+                <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
             </div>
           </div>
         </div>
@@ -169,9 +199,15 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({ isOpen, onClose, receiptI
         title="Debt Assignment Conflict"
         message={`${conflictingReceipts.length} of the selected receipts already have debt assignments. How would you like to proceed?`}
         confirmText="Overwrite All"
-        onConfirm={() => { setIsConflictModalOpen(false); processBulkUpdate([]); }}
+        onConfirm={() => {
+          setIsConflictModalOpen(false);
+          processBulkUpdate([]);
+        }}
         secondaryText="Skip Conflicting"
-        onSecondaryAction={() => { setIsConflictModalOpen(false); processBulkUpdate(conflictingReceipts); }}
+        onSecondaryAction={() => {
+          setIsConflictModalOpen(false);
+          processBulkUpdate(conflictingReceipts);
+        }}
       />
 
       <ProgressModal

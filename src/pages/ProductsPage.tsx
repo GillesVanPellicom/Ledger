@@ -49,13 +49,13 @@ const ProductsPage: React.FC = () => {
       }
       
       const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType', 'SELECT p.ProductID')})`;
-      const countResult = await db.queryOne(countQuery, params.slice(0, params.length - (searchTerm ? (searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0).length * 2) : 0)));
+      const countResult = await db.queryOne<{ count: number }>(countQuery, params.slice(0, params.length - (searchTerm ? (searchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0).length * 2) : 0)));
       setTotalCount(countResult ? countResult.count : 0);
       
       query += ` ORDER BY p.ProductName ASC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       
-      const results = await db.query(query, params);
+      const results = await db.query<Product[]>(query, params);
       setProducts(results);
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -88,7 +88,7 @@ const ProductsPage: React.FC = () => {
       className: 'text-right',
       render: (row: Product) => (
         <div className="flex justify-end">
-          <Tooltip content="Edit Product" align="end">
+          <Tooltip content="Edit Product">
             <Button 
               variant="ghost" 
               size="icon" 

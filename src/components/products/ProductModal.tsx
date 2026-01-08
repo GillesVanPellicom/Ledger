@@ -55,7 +55,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let { name, value } = e.target;
     
-    if (settings.modules.capitalizationProtection?.enabled) {
+    if ((settings.modules as any).capitalizationProtection?.enabled) {
       if (name === 'ProductName') {
         value = value.toLowerCase();
       } else if (name === 'ProductBrand') {

@@ -170,7 +170,7 @@ const DataTable: React.FC<DataTableProps> = ({
           )}
           {children}
         </div>
-        <Tooltip content="Items per page" align="end">
+        <Tooltip content="Items per page">
           <Select 
             value={pageSize} 
             onChange={(e) => { 

@@ -82,7 +82,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
         WHERE PaymentMethodID = ?
       `, [id]);
 
-      const allTransactions = [
+      const allTransactions: Receipt[] = [
         ...receiptsData.map(r => {
             const items = allLineItems.filter(li => li.ReceiptID === r.id);
             const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
@@ -100,7 +100,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
       const expenses = allTransactions.filter(t => t.type === 'receipt').reduce((sum, r) => sum - r.amount!, 0);
       const topups = allTransactions.filter(t => t.type === 'topup').reduce((sum, t) => sum + t.amount!, 0);
-      setBalance((methodData.PaymentMethodFunds || 0) + topups - expenses);
+      setBalance((methodData?.PaymentMethodFunds || 0) + topups - expenses);
 
     } catch (error) {
       console.error("Failed to fetch payment method details:", error);
@@ -258,7 +258,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
       header: '',
       render: (row: Receipt) => (
         <div className="flex justify-end">
-          <Tooltip content={`Delete ${row.type}`} align="end">
+          <Tooltip content={`Delete ${row.type}`}>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -312,7 +312,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
         data={paginatedTransactions}
         columns={columns}
         onRowClick={handleRowClick}
-        itemKey={(row) => `${row.type}-${row.id}`}
+        itemKey={(row: any) => `${row.type}-${row.id}`}
         totalCount={filteredTransactions.length}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
@@ -326,7 +326,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
             selectsRange
             startDate={dateRange[0]}
             endDate={dateRange[1]}
-            onChange={(update: [Date | null, Date | null]) => { setDateRange(update); setCurrentPage(1); }}
+            onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
             isClearable={true}
             placeholderText="Filter by date range"
           />

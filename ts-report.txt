@@ -1,74 +1,32 @@
-src/components/analytics/TopProducts.tsx(46,48): error TS2339: Property 'year' does not exist on type '{ year: string; }[]'.
-src/components/analytics/TopProducts.tsx(114,17): error TS2345: Argument of type 'ProductSpending[][]' is not assignable to parameter of type 'SetStateAction<ProductSpending[]>'.
-  Type 'ProductSpending[][]' is not assignable to type 'ProductSpending[]'.
-    Type 'ProductSpending[]' is missing the following properties from type 'ProductSpending': ProductName, ProductBrand, totalQty, totalSpent
-src/components/debt/BulkDebtModal.tsx(32,20): error TS2345: Argument of type 'Debtor[][]' is not assignable to parameter of type 'SetStateAction<Debtor[]>'.
-  Type 'Debtor[][]' is not assignable to type 'Debtor[]'.
-    Type 'Debtor[]' is missing the following properties from type 'Debtor': DebtorID, DebtorName, DebtorIsActive
-src/components/debt/BulkDebtModal.tsx(69,53): error TS2339: Property 'ReceiptID' does not exist on type '{ ReceiptID: number; }[]'.
 src/components/debt/DebtSettlementModal.tsx(39,60): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
 src/components/debt/DebtSettlementModal.tsx(39,87): error TS2339: Property 'PaymentMethodName' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
 src/components/debt/DebtSettlementModal.tsx(44,50): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
 src/components/debt/DebtSettlementModal.tsx(106,11): error TS2322: Type '{ label: string; selected: Date; onChange: (date: any) => void; popperClassName: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selected' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
-src/components/debt/DebtSettlementModal.tsx(107,22): error TS7006: Parameter 'date' implicitly has an 'any' type.
-src/components/layout/WelcomeScreen.tsx(8,5): error TS2717: Subsequent property declarations must have the same type.  Property 'electronAPI' must be of type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }', but here has type '{ selectDirectory: () => Promise<string | null>; }'.
-src/components/layout/WelcomeScreen.tsx(19,45): error TS2339: Property 'selectDirectory' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
 src/components/payment/TopUpModal.tsx(96,36): error TS2322: Type '{ label: string; selected: Date; onChange: (date: Date | null) => void; error: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selected' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
 src/components/products/ProductModal.tsx(37,44): error TS2339: Property 'ProductUnitID' does not exist on type '{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string; }[]'.
 src/components/products/ProductModal.tsx(37,71): error TS2339: Property 'ProductUnitType' does not exist on type '{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string; }[]'.
 src/components/products/ProductModal.tsx(37,93): error TS2339: Property 'ProductUnitDescription' does not exist on type '{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string; }[]'.
-src/components/products/ProductModal.tsx(58,26): error TS2339: Property 'capitalizationProtection' does not exist on type '{ debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; }'.
-src/components/products/ProductSelector.tsx(87,19): error TS2345: Argument of type 'Product[][]' is not assignable to parameter of type 'SetStateAction<Product[]>'.
-  Type 'Product[][]' is not assignable to type 'Product[]'.
-    Type 'Product[]' is missing the following properties from type 'Product': ProductID, ProductName, ProductBrand, ProductSize, and 3 more.
-src/components/receipts/LineItemSelectionModal.tsx(171,40): error TS2353: Object literal may only specify known properties, and 'accessor' does not exist in type '{ header: string; render: (item: LineItem) => Element; } | { header: string; render: (item: LineItem) => string; }'.
-src/components/receipts/LineItemSelectionModal.tsx(177,60): error TS2322: Type '"3xl"' is not assignable to type '"sm" | "md" | "lg" | "xl" | "full" | undefined'.
-src/components/settings/SettingsModal.tsx(21,5): error TS2717: Subsequent property declarations must have the same type.  Property 'electronAPI' must be of type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }', but here has type '{ getSettings: () => Promise<any>; selectDirectory: () => Promise<string | null>; resetSettings: () => Promise<void>; quitApp: () => Promise<void>; openBackupFolder: () => void; }'.
-src/components/settings/SettingsModal.tsx(55,30): error TS2339: Property 'theme' does not exist on type 'Partial<Settings>'.
-src/components/settings/SettingsModal.tsx(55,68): error TS2339: Property 'theme' does not exist on type 'Partial<Settings>'.
-src/components/settings/SettingsModal.tsx(56,30): error TS2339: Property 'uiScale' does not exist on type 'Partial<Settings>'.
-src/components/settings/SettingsModal.tsx(56,67): error TS2339: Property 'uiScale' does not exist on type 'Partial<Settings>'.
-src/components/settings/SettingsModal.tsx(58,56): error TS2345: Argument of type '{ editsSinceLastBackup: number; interval: number; }' is not assignable to parameter of type 'SetStateAction<{ maxBackups: number; interval: number; }>'.
-  Property 'maxBackups' is missing in type '{ editsSinceLastBackup: number; interval: number; }' but required in type '{ maxBackups: number; interval: number; }'.
-src/components/settings/SettingsModal.tsx(66,23): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
-src/components/settings/SettingsModal.tsx(74,28): error TS2339: Property 'theme' does not exist on type 'Settings'.
-src/components/settings/SettingsModal.tsx(76,25): error TS2345: Argument of type '{ editsSinceLastBackup: number; interval: number; }' is not assignable to parameter of type 'SetStateAction<{ maxBackups: number; interval: number; }>'.
-  Property 'maxBackups' is missing in type '{ editsSinceLastBackup: number; interval: number; }' but required in type '{ maxBackups: number; interval: number; }'.
-src/components/settings/SettingsModal.tsx(86,35): error TS2353: Object literal may only specify known properties, and 'theme' does not exist in type 'Partial<Settings>'.
-src/components/settings/SettingsModal.tsx(92,35): error TS2353: Object literal may only specify known properties, and 'uiScale' does not exist in type 'Partial<Settings>'.
-src/components/settings/SettingsModal.tsx(97,35): error TS2353: Object literal may only specify known properties, and 'uiScale' does not exist in type 'Partial<Settings>'.
-src/components/settings/SettingsModal.tsx(101,59): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; }'.
-  No index signature with a parameter of type 'string' was found on type '{ debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; }'.
-src/components/settings/SettingsModal.tsx(101,92): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; }'.
-  No index signature with a parameter of type 'string' was found on type '{ debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; }'.
-src/components/settings/SettingsModal.tsx(113,35): error TS2741: Property 'editsSinceLastBackup' is missing in type '{ maxBackups: number; interval: number; }' but required in type '{ editsSinceLastBackup: number; interval: number; }'.
-src/components/settings/SettingsModal.tsx(119,35): error TS2741: Property 'editsSinceLastBackup' is missing in type '{ maxBackups: number; interval: number; }' but required in type '{ editsSinceLastBackup: number; interval: number; }'.
-src/components/settings/SettingsModal.tsx(144,45): error TS2339: Property 'selectDirectory' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
-src/components/settings/SettingsModal.tsx(159,32): error TS2551: Property 'resetSettings' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'. Did you mean 'getSettings'?
-src/components/settings/SettingsModal.tsx(160,32): error TS2339: Property 'quitApp' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
-src/components/settings/SettingsModal.tsx(258,51): error TS2339: Property 'capitalizationProtection' does not exist on type '{ debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; }'.
-src/components/settings/SettingsModal.tsx(310,63): error TS2339: Property 'openBackupFolder' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
-src/components/settings/SettingsModal.tsx(352,31): error TS2322: Type '"warning"' is not assignable to type '"primary" | "secondary" | "danger" | "ghost" | undefined'.
-src/components/settings/SettingsModal.tsx(366,31): error TS2322: Type '"warning"' is not assignable to type '"primary" | "secondary" | "danger" | "ghost" | undefined'.
-src/components/settings/SettingsModal.tsx(380,31): error TS2322: Type '"destructive"' is not assignable to type '"primary" | "secondary" | "danger" | "ghost" | undefined'.
-src/components/ui/DataTable.tsx(173,43): error TS2322: Type '{ children: Element; content: string; align: string; }' is not assignable to type 'IntrinsicAttributes & TooltipProps'.
-  Property 'align' does not exist on type 'IntrinsicAttributes & TooltipProps'.
-src/components/ui/DatePicker.tsx(2,27): error TS2724: '"react-datepicker"' has no exported member named 'ReactDatePickerProps'. Did you mean 'DatePickerProps'?
+src/components/settings/SettingsModal.tsx(44,30): error TS2339: Property 'theme' does not exist on type 'Partial<Settings>'.
+src/components/settings/SettingsModal.tsx(44,68): error TS2339: Property 'theme' does not exist on type 'Partial<Settings>'.
+src/components/settings/SettingsModal.tsx(45,30): error TS2339: Property 'uiScale' does not exist on type 'Partial<Settings>'.
+src/components/settings/SettingsModal.tsx(45,67): error TS2339: Property 'uiScale' does not exist on type 'Partial<Settings>'.
+src/components/settings/SettingsModal.tsx(47,56): error TS2345: Argument of type '{ editsSinceLastBackup: number; interval: number; }' is not assignable to parameter of type 'SetStateAction<{ maxBackups: number; interval: number; editsSinceLastBackup: number; }>'.
+  Property 'maxBackups' is missing in type '{ editsSinceLastBackup: number; interval: number; }' but required in type '{ maxBackups: number; interval: number; editsSinceLastBackup: number; }'.
+src/components/settings/SettingsModal.tsx(55,23): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/components/settings/SettingsModal.tsx(63,28): error TS2339: Property 'theme' does not exist on type 'Settings'.
+src/components/settings/SettingsModal.tsx(65,25): error TS2345: Argument of type '{ editsSinceLastBackup: number; interval: number; }' is not assignable to parameter of type 'SetStateAction<{ maxBackups: number; interval: number; editsSinceLastBackup: number; }>'.
+  Property 'maxBackups' is missing in type '{ editsSinceLastBackup: number; interval: number; }' but required in type '{ maxBackups: number; interval: number; editsSinceLastBackup: number; }'.
+src/components/settings/SettingsModal.tsx(75,35): error TS2353: Object literal may only specify known properties, and 'theme' does not exist in type 'Partial<Settings>'.
+src/components/settings/SettingsModal.tsx(81,35): error TS2353: Object literal may only specify known properties, and 'uiScale' does not exist in type 'Partial<Settings>'.
+src/components/settings/SettingsModal.tsx(86,35): error TS2353: Object literal may only specify known properties, and 'uiScale' does not exist in type 'Partial<Settings>'.
+src/components/ui/DatePicker.tsx(7,35): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
 src/components/ui/DatePicker.tsx(12,50): error TS2339: Property 'className' does not exist on type 'DatePickerProps'.
-src/components/ui/Tooltip.tsx(5,11): error TS2430: Interface 'TooltipProps' incorrectly extends interface 'HTMLAttributes<HTMLDivElement>'.
-  Types of property 'content' are incompatible.
-    Type 'ReactNode' is not assignable to type 'string | undefined'.
-      Type 'null' is not assignable to type 'string | undefined'.
 src/context/SettingsContext.tsx(29,5): error TS2353: Object literal may only specify known properties, and 'capitalizationProtection' does not exist in type '{ debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; }'.
 src/context/SettingsContext.tsx(41,5): error TS2353: Object literal may only specify known properties, and 'maxBackups' does not exist in type '{ editsSinceLastBackup: number; interval: number; }'.
-src/context/SettingsContext.tsx(85,38): error TS2339: Property 'theme' does not exist on type 'Partial<Settings>'.
-src/context/SettingsContext.tsx(85,63): error TS2339: Property 'theme' does not exist on type 'Settings'.
-src/hooks/useBackup.ts(7,5): error TS2717: Subsequent property declarations must have the same type.  Property 'electronAPI' must be of type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }', but here has type '{ getBackupCount: () => Promise<number>; triggerBackup: () => Promise<void>; }'.
-src/hooks/useBackup.ts(21,46): error TS2339: Property 'getBackupCount' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
-src/hooks/useBackup.ts(35,34): error TS2339: Property 'triggerBackup' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
-src/pages/AnalyticsPage.tsx(42,48): error TS18048: 'instance' is possibly 'undefined'.
+src/context/SettingsContext.tsx(74,38): error TS2339: Property 'theme' does not exist on type 'Partial<Settings>'.
+src/context/SettingsContext.tsx(74,63): error TS2339: Property 'theme' does not exist on type 'Settings'.
 src/pages/AnalyticsPage.tsx(48,39): error TS2339: Property 'year' does not exist on type '{ year: string; }[]'.
 src/pages/AnalyticsPage.tsx(74,53): error TS2339: Property 'month' does not exist on type '{ month: string; total: number; }[]'.
 src/pages/AnalyticsPage.tsx(75,84): error TS2339: Property 'month' does not exist on type '{ month: string; total: number; }[]'.
@@ -95,23 +53,21 @@ src/pages/DebtorDetailsPage.tsx(134,53): error TS2339: Property 'ReceiptID' does
 src/pages/DebtorDetailsPage.tsx(134,75): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
 src/pages/DebtorDetailsPage.tsx(135,63): error TS2339: Property 'LineQuantity' does not exist on type 'any[]'.
 src/pages/DebtorDetailsPage.tsx(135,83): error TS2339: Property 'LineUnitPrice' does not exist on type 'any[]'.
-src/pages/DebtorDetailsPage.tsx(139,109): error TS2554: Expected 1-3 arguments, but got 4.
-src/pages/DebtorDetailsPage.tsx(300,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: [Date | null, Date | null]) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/DebtorDetailsPage.tsx(139,33): error TS2345: Argument of type '{ lineItems: any[][]; totalAmount: number; images: never[]; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'FullReceipt[]'.
+  Type '{ lineItems: any[][]; totalAmount: number; images: never[]; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'FullReceipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
+src/pages/DebtorDetailsPage.tsx(300,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
-src/pages/DebtPage.tsx(38,47): error TS2339: Property 'count' does not exist on type '{}'.
-src/pages/DebtPage.tsx(44,18): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'SetStateAction<Debtor[]>'.
-  Type 'unknown[]' is not assignable to type 'Debtor[]'.
-    Type 'unknown' is not assignable to type 'Debtor'.
-src/pages/DebtPage.tsx(90,42): error TS2322: Type '{ children: Element; content: string; align: string; }' is not assignable to type 'IntrinsicAttributes & TooltipProps'.
-  Property 'align' does not exist on type 'IntrinsicAttributes & TooltipProps'.
+src/pages/DebtPage.tsx(44,18): error TS2345: Argument of type 'Debtor[][]' is not assignable to parameter of type 'SetStateAction<Debtor[]>'.
+  Type 'Debtor[][]' is not assignable to type 'Debtor[]'.
+    Type 'Debtor[]' is missing the following properties from type 'Debtor': DebtorID, DebtorName, DebtorIsActive
 src/pages/EntitiesPage.tsx(44,19): error TS2345: Argument of type 'Entity[][]' is not assignable to parameter of type 'SetStateAction<Entity[]>'.
   Type 'Entity[][]' is not assignable to type 'Entity[]'.
     Type 'Entity[]' is missing the following properties from type 'Entity': EntityID, DebtorID, DebtorName, EntityName, EntityIsActive
-src/pages/EntitiesPage.tsx(90,42): error TS2322: Type '{ children: Element; content: string; align: string; }' is not assignable to type 'IntrinsicAttributes & TooltipProps'.
-  Property 'align' does not exist on type 'IntrinsicAttributes & TooltipProps'.
 src/pages/EntityDetailsPage.tsx(100,55): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
 src/pages/EntityDetailsPage.tsx(100,82): error TS2339: Property 'PaymentMethodName' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
 src/pages/EntityDetailsPage.tsx(112,58): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
+src/pages/EntityDetailsPage.tsx(125,13): error TS2322: Type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'Receipt[]'.
+  Type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'Receipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
 src/pages/EntityDetailsPage.tsx(126,52): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(126,68): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(127,66): error TS2339: Property 'LineQuantity' does not exist on type 'any[]'.
@@ -140,21 +96,17 @@ src/pages/EntityDetailsPage.tsx(156,83): error TS2339: Property 'Discount' does 
 src/pages/EntityDetailsPage.tsx(160,47): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(160,63): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(160,78): error TS2339: Property 'DebtorID' does not exist on type 'any[]'.
-src/pages/EntityDetailsPage.tsx(165,65): error TS2339: Property 'type' does not exist on type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
-src/pages/EntityDetailsPage.tsx(166,61): error TS2339: Property 'type' does not exist on type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
-src/pages/EntityDetailsPage.tsx(168,19): error TS2345: Argument of type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'SetStateAction<Receipt[]>'.
-  Type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'Receipt[]'.
-    Type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'Receipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
-src/pages/EntityDetailsPage.tsx(168,63): error TS2339: Property 'ReceiptDate' does not exist on type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
-src/pages/EntityDetailsPage.tsx(168,99): error TS2339: Property 'ReceiptDate' does not exist on type '{ amount: number; isSettled: boolean; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
 src/pages/EntityDetailsPage.tsx(228,74): error TS2339: Property 'LineQuantity' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(228,94): error TS2339: Property 'LineUnitPrice' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(230,37): error TS2339: Property 'IsExcludedFromDiscount' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(231,50): error TS2339: Property 'LineQuantity' does not exist on type 'any[]'.
 src/pages/EntityDetailsPage.tsx(231,70): error TS2339: Property 'LineUnitPrice' does not exist on type 'any[]'.
-src/pages/EntityDetailsPage.tsx(460,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: [Date | null, Date | null]) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/EntityDetailsPage.tsx(460,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
 src/pages/PaymentMethodDetailsPage.tsx(74,50): error TS2339: Property 'id' does not exist on type 'any[]'.
+src/pages/PaymentMethodDetailsPage.tsx(85,13): error TS2322: Type '(any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; })[]' is not assignable to type 'Receipt[]'.
+  Type 'any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is not assignable to type 'Receipt'.
+    Type 'any[]' is missing the following properties from type 'Receipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
 src/pages/PaymentMethodDetailsPage.tsx(87,56): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
 src/pages/PaymentMethodDetailsPage.tsx(87,72): error TS2339: Property 'id' does not exist on type 'any[]'.
 src/pages/PaymentMethodDetailsPage.tsx(88,70): error TS2339: Property 'LineQuantity' does not exist on type 'any[]'.
@@ -167,24 +119,8 @@ src/pages/PaymentMethodDetailsPage.tsx(97,35): error TS2339: Property 'date' doe
   Property 'date' does not exist on type 'any[]'.
 src/pages/PaymentMethodDetailsPage.tsx(97,64): error TS2339: Property 'date' does not exist on type 'any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
   Property 'date' does not exist on type 'any[]'.
-src/pages/PaymentMethodDetailsPage.tsx(99,23): error TS2345: Argument of type '(any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; })[]' is not assignable to parameter of type 'SetStateAction<Receipt[]>'.
-  Type '(any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; })[]' is not assignable to type 'Receipt[]'.
-    Type 'any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is not assignable to type 'Receipt'.
-      Type 'any[]' is missing the following properties from type 'Receipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
-src/pages/PaymentMethodDetailsPage.tsx(101,54): error TS2339: Property 'type' does not exist on type 'any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
-  Property 'type' does not exist on type 'any[]'.
-src/pages/PaymentMethodDetailsPage.tsx(101,101): error TS2339: Property 'amount' does not exist on type 'any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
-  Property 'amount' does not exist on type 'any[]'.
-src/pages/PaymentMethodDetailsPage.tsx(102,52): error TS2339: Property 'type' does not exist on type 'any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
-  Property 'type' does not exist on type 'any[]'.
-src/pages/PaymentMethodDetailsPage.tsx(102,97): error TS2339: Property 'amount' does not exist on type 'any[] | { amount: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
-  Property 'amount' does not exist on type 'any[]'.
-src/pages/PaymentMethodDetailsPage.tsx(103,19): error TS18047: 'methodData' is possibly 'null'.
-src/pages/PaymentMethodDetailsPage.tsx(261,51): error TS2322: Type '{ children: Element; content: string; align: string; }' is not assignable to type 'IntrinsicAttributes & TooltipProps'.
-  Property 'align' does not exist on type 'IntrinsicAttributes & TooltipProps'.
 src/pages/PaymentMethodDetailsPage.tsx(315,17): error TS2322: Type '(row: any) => string' is not assignable to type 'string'.
-src/pages/PaymentMethodDetailsPage.tsx(315,19): error TS7006: Parameter 'row' implicitly has an 'any' type.
-src/pages/PaymentMethodDetailsPage.tsx(326,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: [Date | null, Date | null]) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/PaymentMethodDetailsPage.tsx(326,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
 src/pages/PaymentMethodsPage.tsx(82,228): error TS2339: Property 'PaymentMethodID' does not exist on type 'PaymentMethod[]'.
 src/pages/PaymentMethodsPage.tsx(83,149): error TS2339: Property 'PaymentMethodID' does not exist on type 'PaymentMethod[]'.
@@ -192,65 +128,44 @@ src/pages/PaymentMethodsPage.tsx(86,32): error TS2339: Property 'PaymentMethodFu
 src/pages/PaymentMethodsPage.tsx(89,18): error TS2345: Argument of type '{ balance: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'SetStateAction<PaymentMethod[]>'.
   Type '{ balance: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'PaymentMethod[]'.
     Type '{ balance: number; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'PaymentMethod': PaymentMethodID, PaymentMethodName, PaymentMethodFunds, PaymentMethodIsActive
-src/pages/ProductsPage.tsx(53,47): error TS2339: Property 'count' does not exist on type '{}'.
-src/pages/ProductsPage.tsx(59,19): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'SetStateAction<Product[]>'.
-  Type 'unknown[]' is not assignable to type 'Product[]'.
-    Type 'unknown' is not assignable to type 'Product'.
-src/pages/ProductsPage.tsx(91,43): error TS2322: Type '{ children: Element; content: string; align: string; }' is not assignable to type 'IntrinsicAttributes & TooltipProps'.
-  Property 'align' does not exist on type 'IntrinsicAttributes & TooltipProps'.
-src/pages/ReceiptFormPage.tsx(24,5): error TS2717: Subsequent property declarations must have the same type.  Property 'electronAPI' must be of type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }', but here has type '{ saveImage: (folderPath: string, imagePath: string) => Promise<string>; }'.
-src/pages/ReceiptFormPage.tsx(97,46): error TS2339: Property 'StoreID' does not exist on type 'Store[]'.
-src/pages/ReceiptFormPage.tsx(97,64): error TS2339: Property 'StoreName' does not exist on type 'Store[]'.
-src/pages/ReceiptFormPage.tsx(115,68): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
-src/pages/ReceiptFormPage.tsx(115,95): error TS2339: Property 'PaymentMethodName' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
-src/pages/ReceiptFormPage.tsx(120,20): error TS2345: Argument of type 'Debtor[][]' is not assignable to parameter of type 'SetStateAction<Debtor[]>'.
+src/pages/ProductsPage.tsx(59,19): error TS2345: Argument of type 'Product[][]' is not assignable to parameter of type 'SetStateAction<Product[]>'.
+  Type 'Product[][]' is not assignable to type 'Product[]'.
+    Type 'Product[]' is missing the following properties from type 'Product': ProductID, ProductName, ProductBrand, ProductSize, and 3 more.
+src/pages/ReceiptFormPage.tsx(90,46): error TS2339: Property 'StoreID' does not exist on type 'Store[]'.
+src/pages/ReceiptFormPage.tsx(90,64): error TS2339: Property 'StoreName' does not exist on type 'Store[]'.
+src/pages/ReceiptFormPage.tsx(108,68): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
+src/pages/ReceiptFormPage.tsx(108,95): error TS2339: Property 'PaymentMethodName' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
+src/pages/ReceiptFormPage.tsx(113,20): error TS2345: Argument of type 'Debtor[][]' is not assignable to parameter of type 'SetStateAction<Debtor[]>'.
   Type 'Debtor[][]' is not assignable to type 'Debtor[]'.
     Type 'Debtor[]' is missing the following properties from type 'Debtor': DebtorID, DebtorName, DebtorIsActive
-src/pages/ReceiptFormPage.tsx(148,17): error TS2322: Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'LineItem[]'.
+src/pages/ReceiptFormPage.tsx(141,17): error TS2322: Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'LineItem[]'.
   Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'LineItem': ProductID, ProductName, ProductBrand, ProductSize, and 3 more.
-src/pages/ReceiptFormPage.tsx(163,21): error TS2345: Argument of type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'SetStateAction<ReceiptImage[]>'.
+src/pages/ReceiptFormPage.tsx(156,21): error TS2345: Argument of type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'SetStateAction<ReceiptImage[]>'.
   Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'ReceiptImage[]'.
     Property 'ImagePath' is missing in type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: Intl.NumberFormatOptions & Intl.DateTimeFormatOptions): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' but required in type 'ReceiptImage'.
-src/pages/ReceiptFormPage.tsx(167,54): error TS2339: Property 'DebtorID' does not exist on type '{ DebtorID: number; }[]'.
-src/pages/ReceiptFormPage.tsx(176,32): error TS2345: Argument of type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'SetStateAction<ReceiptSplit[]>'.
+src/pages/ReceiptFormPage.tsx(160,54): error TS2339: Property 'DebtorID' does not exist on type '{ DebtorID: number; }[]'.
+src/pages/ReceiptFormPage.tsx(169,32): error TS2345: Argument of type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'SetStateAction<ReceiptSplit[]>'.
   Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'ReceiptSplit[]'.
     Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'ReceiptSplit': DebtorID, DebtorName, SplitPart
-src/pages/ReceiptFormPage.tsx(327,19): error TS2345: Argument of type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to parameter of type 'SetStateAction<{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }>'.
+src/pages/ReceiptFormPage.tsx(320,19): error TS2345: Argument of type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to parameter of type 'SetStateAction<{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }>'.
   Type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to type '(prevState: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }'.
     Call signature return types '{ status: "unpaid" | "paid"; paymentMethodId: string | null; storeId: string; receiptDate: Date; note: string; ownShares: number; owedToDebtorId: number | null; discount: number; }' and '{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }' are incompatible.
       The types of 'paymentMethodId' are incompatible between these types.
         Type 'string | null' is not assignable to type 'string'.
           Type 'null' is not assignable to type 'string'.
-src/pages/ReceiptFormPage.tsx(332,17): error TS2345: Argument of type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to parameter of type 'SetStateAction<{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }>'.
+src/pages/ReceiptFormPage.tsx(325,17): error TS2345: Argument of type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to parameter of type 'SetStateAction<{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }>'.
   Type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to type '(prevState: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }'.
     Call signature return types '{ status: "unpaid"; paymentMethodId: null; storeId: string; receiptDate: Date; note: string; ownShares: number; owedToDebtorId: number | null; discount: number; }' and '{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }' are incompatible.
       The types of 'paymentMethodId' are incompatible between these types.
         Type 'null' is not assignable to type 'string'.
-src/pages/ReceiptFormPage.tsx(383,23): error TS2339: Property 'path' does not exist on type 'File'.
-src/pages/ReceiptFormPage.tsx(511,88): error TS2339: Property 'ImagePath' does not exist on type '{ ImagePath: string; }[]'.
-src/pages/ReceiptFormPage.tsx(514,146): error TS2339: Property 'ImagePath' does not exist on type '{ ImagePath: string; }[]'.
-src/pages/ReceiptFormPage.tsx(542,60): error TS2339: Property 'saveImage' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
-src/pages/ReceiptFormPage.tsx(644,72): error TS2322: Type '{ label: string; selected: Date; onChange: (date: Date | null) => void; error: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/ReceiptFormPage.tsx(504,88): error TS2339: Property 'ImagePath' does not exist on type '{ ImagePath: string; }[]'.
+src/pages/ReceiptFormPage.tsx(507,146): error TS2339: Property 'ImagePath' does not exist on type '{ ImagePath: string; }[]'.
+src/pages/ReceiptFormPage.tsx(637,72): error TS2322: Type '{ label: string; selected: Date; onChange: (date: Date | null) => void; error: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selected' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
-src/pages/ReceiptsPage.tsx(120,47): error TS2339: Property 'count' does not exist on type '{}'.
-src/pages/ReceiptsPage.tsx(126,19): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'SetStateAction<Receipt[]>'.
-  Type 'unknown[]' is not assignable to type 'Receipt[]'.
-    Type 'unknown' is not assignable to type 'Receipt'.
-src/pages/ReceiptsPage.tsx(128,17): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error'.
-src/pages/ReceiptsPage.tsx(150,17): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error'.
-src/pages/ReceiptsPage.tsx(189,33): error TS2345: Argument of type '{ lineItems: LineItem[]; totalAmount: number; ReceiptID: number; ReceiptDate: string; ReceiptNote: string; Discount: number; StoreName: string; PaymentMethodName: string; SubTotal: number; ... 19 more ...; subtotal?: number | undefined; }[]' is not assignable to parameter of type 'FullReceipt[]'.
-  Property 'images' is missing in type '{ lineItems: LineItem[]; totalAmount: number; ReceiptID: number; ReceiptDate: string; ReceiptNote: string; Discount: number; StoreName: string; PaymentMethodName: string; SubTotal: number; ... 19 more ...; subtotal?: number; }' but required in type 'FullReceipt'.
-src/pages/ReceiptsPage.tsx(191,17): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error'.
-src/pages/ReceiptsPage.tsx(210,5): error TS2353: Object literal may only specify known properties, and 'className' does not exist in type '{ header: string; width: string; render: (row: Receipt) => string; accessor?: undefined; }'.
-src/pages/ReceiptsPage.tsx(218,5): error TS2322: Type '(row: Receipt) => JSX.Element' is not assignable to type '(row: Receipt) => string'.
-  Type 'Element' is not assignable to type 'string'.
-src/pages/ReceiptsPage.tsx(225,25): error TS18048: 'row.UnpaidDebtorCount' is possibly 'undefined'.
-src/pages/ReceiptsPage.tsx(230,25): error TS18048: 'row.TotalDebtorCount' is possibly 'undefined'.
-src/pages/ReceiptsPage.tsx(235,43): error TS2322: Type '{ children: Element; content: string; align: string; }' is not assignable to type 'IntrinsicAttributes & TooltipProps'.
-  Property 'align' does not exist on type 'IntrinsicAttributes & TooltipProps'.
-src/pages/ReceiptsPage.tsx(292,9): error TS2322: Type '{ children: Element; data: Receipt[]; columns: ({ header: string; width: string; render: (row: Receipt) => string; accessor?: undefined; } | { header: string; accessor: string; width: string; render?: undefined; })[]; ... 13 more ...; itemKey: string; }' is not assignable to type 'IntrinsicAttributes & DataTableProps'.
-  Property 'rowClassName' does not exist on type 'IntrinsicAttributes & DataTableProps'. Did you mean 'className'?
-src/pages/ReceiptsPage.tsx(299,11): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: [Date | null, Date | null]) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/ReceiptsPage.tsx(126,19): error TS2345: Argument of type 'Receipt[][]' is not assignable to parameter of type 'SetStateAction<Receipt[]>'.
+  Type 'Receipt[][]' is not assignable to type 'Receipt[]'.
+    Type 'Receipt[]' is missing the following properties from type 'Receipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
+src/pages/ReceiptsPage.tsx(299,11): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
   Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
 src/pages/ReceiptViewPage.tsx(101,22): error TS2345: Argument of type 'LineItem[][]' is not assignable to parameter of type 'SetStateAction<LineItem[]>'.
   Type 'LineItem[][]' is not assignable to type 'LineItem[]'.
@@ -275,9 +190,3 @@ src/pages/ReceiptViewPage.tsx(391,22): error TS2322: Type 'ReceiptImage[]' is no
 src/pages/StoresPage.tsx(42,17): error TS2345: Argument of type 'Store[][]' is not assignable to parameter of type 'SetStateAction<Store[]>'.
   Type 'Store[][]' is not assignable to type 'Store[]'.
     Type 'Store[]' is missing the following properties from type 'Store': StoreID, StoreName, StoreIsActive
-src/pages/StoresPage.tsx(84,41): error TS2322: Type '{ children: Element; content: string; align: string; }' is not assignable to type 'IntrinsicAttributes & TooltipProps'.
-  Property 'align' does not exist on type 'IntrinsicAttributes & TooltipProps'.
-src/utils/db.ts(5,5): error TS2717: Subsequent property declarations must have the same type.  Property 'electronAPI' must be of type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }', but here has type '{ queryDb: (sql: string, params: any[]) => Promise<any>; }'.
-src/utils/db.ts(14,39): error TS2339: Property 'queryDb' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.
-src/utils/pdfGenerator.ts(8,5): error TS2717: Subsequent property declarations must have the same type.  Property 'electronAPI' must be of type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }', but here has type '{ readFileAsBase64: (path: string) => Promise<string>; }'.
-src/utils/pdfGenerator.ts(33,37): error TS2339: Property 'readFileAsBase64' does not exist on type '{ getSettings: () => Promise<Partial<Settings>>; saveSettings: (settings: Settings) => Promise<{ success: boolean; }>; onSettingsReverted: (callback: (event: any, revertedSettings: Settings) => void) => void; removeSettingsRevertedListener: (callback: (event: any, revertedSettings: Settings) => void) => void; }'.

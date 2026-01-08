@@ -83,7 +83,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ isOpen, onClose, onSe
       query += ` ORDER BY p.ProductName ASC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       
-      const results = await db.query<Product[]>(query, params);
+      const results = await db.query<Product>(query, params);
       setProducts(results);
     } catch (error) {
       console.error("Failed to fetch products:", error);
