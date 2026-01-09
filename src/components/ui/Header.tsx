@@ -48,24 +48,22 @@ export const Header: React.FC<HeaderProps> = ({
         className="relative backdrop-blur-md flex items-center"
         style={{ minHeight: `${minHeight}px` }}
       >
-        <div className="w-full px-[100px] flex items-center">
-          {backButton && (
-            <div className="-ml-[84px] mr-4">{backButton}</div>
-          )}
-          <div className={cn('flex-grow', contentClassName)}>
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center">
-                <div>
-                  <h1 className="text-2xl font-bold">{title}</h1>
-                  {subtitle && (
-                    <p className="text-sm text-gray-500">{subtitle}</p>
-                  )}
-                </div>
+        <div className="w-full px-[100px]">
+          <div className="relative flex items-center justify-between w-full">
+            <div className="flex items-center">
+              {backButton && (
+                <div className="absolute right-full mr-4">{backButton}</div>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold">{title}</h1>
+                {subtitle && (
+                  <p className="text-sm text-gray-500">{subtitle}</p>
+                )}
               </div>
-              {actions && <div className="flex items-center gap-2">{actions}</div>}
             </div>
-            {children && <div className="mt-4">{children}</div>}
+            {actions && <div className="flex items-center gap-2">{actions}</div>}
           </div>
+          {children && <div className="mt-4">{children}</div>}
         </div>
       </div>
     </div>
