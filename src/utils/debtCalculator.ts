@@ -50,6 +50,8 @@ async function calculateDebts(entityId: string | number) {
 
     let amount = 0;
     let isSettled = false;
+    let splitPart: number | undefined;
+    let totalShares: number | undefined;
 
     if (r.type === 'to_entity') {
       amount = totalAmount;
@@ -59,7 +61,8 @@ async function calculateDebts(entityId: string | number) {
         const splits = allSplits.filter(rs => rs.ReceiptID === r.ReceiptID);
         const debtorSplit = splits.find(rs => rs.DebtorID === Number(entityId));
         if (debtorSplit) {
-          const totalShares = r.TotalShares > 0 ? r.TotalShares : (splits.reduce((sum, s) => sum + s.SplitPart, 0) + (r.OwnShares || 0));
+          totalShares = r.TotalShares > 0 ? r.TotalShares : (splits.reduce((sum, s) => sum + s.SplitPart, 0) + (r.OwnShares || 0));
+          splitPart = debtorSplit.SplitPart;
           if (totalShares > 0) {
             amount = (totalAmount * debtorSplit.SplitPart) / totalShares;
           }
@@ -74,7 +77,7 @@ async function calculateDebts(entityId: string | number) {
       }
       isSettled = allPayments.some(p => p.ReceiptID === r.ReceiptID && p.DebtorID === Number(entityId));
     }
-    return { ...r, amount, isSettled };
+    return { ...r, amount, isSettled, splitPart, totalShares };
   });
 
   const debtToEntity = processedReceipts

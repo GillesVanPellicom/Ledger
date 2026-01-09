@@ -206,7 +206,12 @@ const EntityDetailsPage: React.FC = () => {
     }
   };
 
-  const handleRowClick = (row: Receipt) => {
+  const handleRowClick = (row: Receipt, event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    // Check if the click was on a button or link within the row
+    if (target.closest('button, a')) {
+      return;
+    }
     navigate(`/receipts/view/${row.ReceiptID}`);
   };
 
@@ -334,17 +339,26 @@ const EntityDetailsPage: React.FC = () => {
     {
       header: 'Status',
       render: (row: Receipt) => (
-        <span 
-          className={cn(
-            'px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-transform transform hover:scale-110',
-            row.isSettled 
-              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
-              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
-          )}
+        <div 
+          className="flex flex-col items-end cursor-pointer"
           onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleSettleClick(row); }}
         >
-          {row.isSettled ? 'Settled' : 'Unsettled'}
-        </span>
+          <span 
+            className={cn(
+              'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
+              row.isSettled 
+                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
+                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+            )}
+          >
+            {row.isSettled ? 'Settled' : 'Unsettled'}
+          </span>
+          {row.splitPart && row.TotalShares ? (
+            <span className="text-xs text-gray-500 mt-1">
+              {row.splitPart}/{row.TotalShares} shares
+            </span>
+          ) : null}
+        </div>
       )
     },
   ];

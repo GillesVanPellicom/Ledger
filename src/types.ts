@@ -79,6 +79,7 @@ export interface Receipt {
   subtotal?: number;
   IsNonItemised?: number;
   NonItemisedTotal?: number;
+  splitPart?: number;
 }
 
 export interface LineItem {

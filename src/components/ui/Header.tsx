@@ -7,6 +7,7 @@ interface HeaderProps {
   backButton?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
+  contentClassName?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   backButton,
   actions,
   className,
+  contentClassName,
 }) => {
   return (
     <div
@@ -43,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
       />
 
       <div
-        className="relative flex items-center justify-between w-full px-4 backdrop-blur-md"
+        className={cn("relative flex items-center justify-between w-full px-4 backdrop-blur-md", contentClassName)}
         style={{ minHeight: '140px' }}
       >
         <div className="flex items-center">

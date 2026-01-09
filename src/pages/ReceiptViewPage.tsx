@@ -272,6 +272,15 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
     await generateReceiptsPdf([fullReceipt], settings.pdf);
   };
 
+  const handleSettleClick = (debtor: any) => {
+    const payment = payments.find(p => p.DebtorID === debtor.debtorId);
+    if (payment) {
+      confirmUnsettleDebt(payment.PaymentID, payment.TopUpID);
+    } else {
+      handleSettleDebt(debtor);
+    }
+  };
+
   const handleSettleDebt = (debtor: any) => {
     setSelectedDebtForSettlement({
       receiptId: receipt!.ReceiptID,
@@ -369,19 +378,12 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
     return <div className="text-center">Receipt not found.</div>;
   }
 
-  // Determine grid columns for the main info card
-  let mainInfoGridCols = 'grid-cols-1'; // Default for item-less, no payment methods
-  if (!receipt.IsNonItemised) {
-    mainInfoGridCols = paymentMethodsEnabled ? 'grid-cols-4' : 'grid-cols-3';
-  } else {
-    mainInfoGridCols = paymentMethodsEnabled ? 'grid-cols-2' : 'grid-cols-1';
-  }
-
   return (
     <div>
       <Header
         title={receipt.StoreName}
         subtitle={format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}
+        contentClassName="max-w-7xl mx-auto px-4"
         backButton={
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeftIcon className="h-5 w-5" />
@@ -413,229 +415,101 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         }
       />
 
-      <div className="max-w-4xl mx-auto px-4 pt-6 pb-12 space-y-6">
-        {!!receipt.IsTentative && (
-          <InfoCard
-            variant="info"
-            title="Tentative Receipt"
-            message="This is a draft receipt. It won't affect analytics or debts until made permanent."
-          >
-            <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
-          </InfoCard>
-        )}
+      <div className="grid grid-cols-3 gap-6 max-w-7xl mx-auto px-4 pt-6 pb-12">
+        <div className="col-span-2 space-y-6">
+          {!!receipt.IsTentative && (
+            <InfoCard
+              variant="info"
+              title="Tentative Receipt"
+              message="This is a draft receipt. It won't affect analytics or debts until made permanent."
+            >
+              <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
+            </InfoCard>
+          )}
 
-        {receipt.Status === 'unpaid' && (
-          <InfoCard
-            variant="warning"
-            title="Unpaid Receipt"
-            message={`Total amount is owed to ${receipt.OwedToDebtorName}.`}
-          />
-        )}
+          {!!receipt.IsNonItemised && (
+            <InfoCard
+              variant="info"
+              title="Item-less Receipt"
+              message="Only the total amount was recorded for this receipt."
+            />
+          )}
 
-        {!!receipt.IsNonItemised && (
-          <InfoCard
-            variant="info"
-            title="Item-less Receipt"
-            message="Only the total amount was recorded for this receipt."
-          />
-        )}
-
-        {!!receipt.ReceiptNote && (
-          <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-2">Note</h2>
-              <p className="text-gray-600 dark:text-gray-300">{receipt.ReceiptNote}</p>
-            </div>
-          </Card>
-        )}
-
-        <Card>
-          <div className={`p-6 grid ${mainInfoGridCols} gap-4 text-center`}>
-            {!receipt.IsNonItemised && (
-              <>
-                <div className="flex flex-col items-center gap-1">
-                  <TagIcon className="h-6 w-6 text-gray-400"/>
-                  <span className="text-sm text-gray-500">Unique Items</span>
-                  <span className="text-xl font-bold">{totalItems}</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <ShoppingCartIcon className="h-6 w-6 text-gray-400"/>
-                  <span className="text-sm text-gray-500">Total Quantity</span>
-                  <span className="text-xl font-bold">{totalQuantity}</span>
-                </div>
-              </>
-            )}
-            {paymentMethodsEnabled && (
-              <div className="flex flex-col items-center gap-1">
-                <CreditCardIcon className="h-6 w-6 text-gray-400"/>
-                <span className="text-sm text-gray-500">Payment Method</span>
-                <span className="text-xl font-bold">{receipt.PaymentMethodName || 'N/A'}</span>
+          {!!receipt.ReceiptNote && (
+            <Card>
+              <div className="p-6">
+                <h2 className="text-lg font-semibold mb-2">Note</h2>
+                <p className="text-gray-600 dark:text-gray-300">{receipt.ReceiptNote}</p>
               </div>
-            )}
-            <div className="flex flex-col items-center gap-1">
-              <CurrencyEuroIcon className="h-6 w-6 text-gray-400"/>
-              <span className="text-sm text-gray-500">Total Amount</span>
-              <span className="text-xl font-bold">€{totalAmount.toFixed(2)}</span>
-            </div>
-          </div>
-        </Card>
+            </Card>
+          )}
 
-        {images.length > 0 && (
-          <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Images</h2>
-              <Gallery images={images}/>
-            </div>
-          </Card>
-        )}
-
-        {debtEnabled && splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
-          <Card>
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-lg font-semibold">Debt Breakdown</h2>
+          {images.length > 0 && (
+            <Card>
+              <div className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Images</h2>
+                <Gallery images={images}/>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {debtSummary.debtors.map((debtor) => {
-                  const payment = payments.find(p => p.DebtorID === debtor.debtorId);
-                  const isPaid = !!payment;
+            </Card>
+          )}
 
-                  return (
-                    <div key={debtor.debtorId} className={cn(
-                      "p-4 rounded-lg border flex flex-col justify-between",
-                      isPaid
-                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                    )}>
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <Link to={`/entities/${debtor.debtorId}`}
-                                className="font-medium hover:underline flex items-center gap-1.5 group">
-                            <span className={cn(isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>{debtor.name}</span>
-                            <LinkIcon className={cn("h-4 w-4", isPaid ? "text-green-700" : "text-red-700")}/>
-                          </Link>
-                          <div className="flex items-center">
-                            {isPaid ? (
-                              <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                                <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip content="Unpaid">
-                                <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </div>
-                        <p className={cn("text-2xl font-bold", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")}>
-                          €{debtor.amount.toFixed(2)}
-                        </p>
-                        {splitType === 'total_split' &&
-                          <p className="text-sm text-gray-500 mb-4">{debtor.shares} / {debtor.totalShares} shares</p>}
-                        {splitType === 'line_item' && !receipt.IsNonItemised &&
-                          <p className="text-sm text-gray-500 mb-4">{debtor.itemCount} / {debtor.totalItems} items</p>}
-                      </div>
-
-                      {isPaid ? (
-                        <Button
-                          size="sm"
-                          className="w-full text-green-800 bg-green-200 border-green-300 hover:bg-green-300 border dark:text-green-100 dark:bg-green-800/50 dark:border-green-700 dark:hover:bg-green-800"
-                          onClick={() => confirmUnsettleDebt(payment.PaymentID, payment.TopUpID)}
-                        >
-                          Unsettle
-                        </Button>
-                      ) : (
-
-                        <Button
-                          size="sm"
-                          className="w-full text-red-800 bg-red-200 border-red-300 hover:bg-red-300 border dark:text-red-100 dark:bg-red-800/50 dark:border-red-700 dark:hover:bg-red-800"
-                          onClick={() => handleSettleDebt(debtor)}
-                        >
-                          Settle
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-                {!!debtSummary.ownShare && (
-                  <div className="p-4 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <p className="font-medium text-blue-900 dark:text-blue-100">Own Share</p>
-                        <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
-                      </div>
-                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                        €{debtSummary.ownShare.amount.toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {!receipt.IsNonItemised && (
-          <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Items</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm select-none">
-                  <thead className="text-left text-gray-500">
-                  <tr>
-                    <th className="p-2">Product</th>
-                    <th className="p-2 w-24 text-center">Qty</th>
-                    <th className="p-2 w-32 text-right">Unit Price (€)</th>
-                    <th className="p-2 w-32 text-right">Total (€)</th>
-                    {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
-                  </tr>
-                  </thead>
-                  <tbody className="divide-y dark:divide-gray-800">
-                  {lineItems.map((item) => {
-                    const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
-                    return (
-                      <tr key={item.LineItemID}>
-                        <td className="p-2">
-                          <div className="flex items-center gap-2">
-                            {receipt.Discount > 0 && (
-                              <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-                                <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
-                              </Tooltip>
-                            )}
-                            <div>
-                              <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                              <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+          {!receipt.IsNonItemised && (
+            <Card>
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm select-none">
+                    <thead className="text-left text-gray-500">
+                    <tr>
+                      <th className="p-2">Product</th>
+                      <th className="p-2 w-24 text-center">Qty</th>
+                      <th className="p-2 w-32 text-right">Unit Price (€)</th>
+                      <th className="p-2 w-32 text-right">Total (€)</th>
+                      {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-gray-800">
+                    {lineItems.map((item) => {
+                      const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
+                      return (
+                        <tr key={item.LineItemID}>
+                          <td className="p-2">
+                            <div className="flex items-center gap-2">
+                              {receipt.Discount > 0 && (
+                                <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
+                                  <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+                                </Tooltip>
+                              )}
+                              <div>
+                                <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                                <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-2 text-center">{item.LineQuantity}</td>
-                        <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
-                        <td className="p-2 text-right font-medium">
-                          {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                        </td>
-                        {debtEnabled && splitType === 'line_item' && (
-                          <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
-                            {item.DebtorName || '-'}
                           </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                  </tbody>
-                </table>
+                          <td className="p-2 text-center">{item.LineQuantity}</td>
+                          <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
+                          <td className="p-2 text-right font-medium">
+                            {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                          </td>
+                          {debtEnabled && splitType === 'line_item' && (
+                            <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
+                              {item.DebtorName || '-'}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-            {receipt.Discount > 0 && (
-              <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
+              <div className="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 rounded-b-xl">
                 <div className="flex flex-col items-end gap-2">
                   <div className="flex items-center gap-4 text-gray-500">
                     <span className="text-sm">Subtotal</span>
                     <span className="font-medium">€{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex items-center gap-4 text-gray-500">
-                    <span className="text-sm">Discount ({receipt.Discount}%)</span>
+                    <span className="text-sm">Discount ({receipt.Discount || 0}%)</span>
                     <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
                   </div>
                   <div className="flex items-center gap-4 text-lg font-bold">
@@ -644,9 +518,133 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                   </div>
                 </div>
               </div>
-            )}
+            </Card>
+          )}
+        </div>
+
+        <div className="col-span-1 space-y-6">
+          <Card>
+            <div className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-gray-500">Total Amount</p>
+                  <p className="text-2xl font-bold">€{totalAmount.toFixed(2)}</p>
+                </div>
+                <Tooltip content={receipt.Status === 'paid' ? 'This receipt has been paid for.' : `Total amount is owed to ${receipt.OwedToDebtorName}.`}>
+                  <span
+                    className={cn(
+                      'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
+                      receipt.Status === 'paid'
+                        ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700'
+                        : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
+                    )}
+                  >
+                    {receipt.Status === 'paid' ? 'Paid' : 'Unpaid'}
+                  </span>
+                </Tooltip>
+              </div>
+              <div className="mt-6 space-y-4">
+                {paymentMethodsEnabled && (
+                  <div className="flex items-center gap-3">
+                    <CreditCardIcon className="h-5 w-5 text-gray-400"/>
+                    <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
+                  </div>
+                )}
+                {!receipt.IsNonItemised && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <TagIcon className="h-5 w-5 text-gray-400"/>
+                      <span className="text-sm">{totalItems} Unique Items</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <ShoppingCartIcon className="h-5 w-5 text-gray-400"/>
+                      <span className="text-sm">{totalQuantity} Total Quantity</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </Card>
-        )}
+
+          {debtEnabled && splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
+            <div>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-700" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className=" px-2 text-sm text-gray-500">Debt Breakdown</span>
+                </div>
+              </div>
+              <div className="space-y-2 mt-4">
+                {debtSummary.debtors.map((debtor) => {
+                  const payment = payments.find(p => p.DebtorID === debtor.debtorId);
+                  const isPaid = !!payment;
+
+                  return (
+                    <Card 
+                      key={debtor.debtorId} 
+                      className={cn(
+                        "p-4 cursor-pointer transition-all duration-200",
+                        isPaid ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                      )} 
+                      onClick={() => handleSettleClick(debtor)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <Link to={`/entities/${debtor.debtorId}`}
+                              className="font-medium hover:underline flex items-center gap-1.5 group"
+                              onClick={(e) => e.stopPropagation()}>
+                          <span className={cn(isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>{debtor.name}</span>
+                          <LinkIcon className={cn("h-4 w-4", isPaid ? "text-green-700" : "text-red-700")}/>
+                        </Link>
+                        <div className="flex items-center">
+                          {isPaid ? (
+                            <Tooltip content={`Paid on ${payment.PaidDate}`}>
+                              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip content="Unpaid">
+                              <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-baseline mt-1">
+                        <p className={cn("font-bold truncate", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")} style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                          €{debtor.amount.toFixed(2)}
+                        </p>
+                        <div className="text-right flex-shrink-0 pl-2">
+                          {splitType === 'total_split' &&
+                            <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
+                          {splitType === 'line_item' && !receipt.IsNonItemised &&
+                            <p className="text-sm text-gray-500">{debtor.itemCount} / {debtor.totalItems} items</p>}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+                {!!debtSummary.ownShare && (
+                  <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                    <div className="flex justify-between items-start">
+                      <p className="font-medium text-blue-900 dark:text-blue-100">Own Share</p>
+                      <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
+                    </div>
+                    <div className="flex justify-between items-baseline mt-1">
+                      <p className="font-bold text-blue-700 dark:text-blue-300 truncate" style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                        €{debtSummary.ownShare.amount.toFixed(2)}
+                      </p>
+                      <div className="text-right flex-shrink-0 pl-2">
+                        <p className="text-sm text-gray-500">
+                          {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <DebtSettlementModal
