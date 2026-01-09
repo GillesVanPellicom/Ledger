@@ -27,16 +27,23 @@ interface MarkAsPaidModalProps {
   onClose: () => void;
   onConfirm: (paymentMethodId: string) => void;
   paymentMethods: { value: number; label: string }[];
+  entityName: string;
+  receipt: Receipt | null;
+  paymentMethodsEnabled: boolean;
 }
 
-const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onConfirm, paymentMethods }) => {
-  const [paymentMethodId, setPaymentMethodId] = useState(paymentMethods[0]?.value.toString() || '');
+const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onConfirm, paymentMethods, entityName, receipt, paymentMethodsEnabled }) => {
+  const [paymentMethodId, setPaymentMethodId] = useState(paymentMethods[0]?.value.toString() || '1');
 
   useEffect(() => {
-    if (isOpen && paymentMethods.length > 0) {
-      setPaymentMethodId(paymentMethods[0].value.toString());
+    if (isOpen) {
+      if (paymentMethodsEnabled && paymentMethods.length > 0) {
+        setPaymentMethodId(paymentMethods[0].value.toString());
+      } else {
+        setPaymentMethodId('1'); // Default to 'Cash'
+      }
     }
-  }, [isOpen, paymentMethods]);
+  }, [isOpen, paymentMethods, paymentMethodsEnabled]);
 
   return (
     <Modal
@@ -46,16 +53,21 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onCo
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => onConfirm(paymentMethodId)} disabled={!paymentMethodId}>Confirm Payment</Button>
+          <Button onClick={() => onConfirm(paymentMethodId)} disabled={paymentMethodsEnabled && !paymentMethodId}>Confirm Payment</Button>
         </>
       }
     >
-      <Select
-        label="Payment Method"
-        value={paymentMethodId}
-        onChange={(e) => setPaymentMethodId(e.target.value)}
-        options={paymentMethods}
-      />
+      <div className="space-y-4">
+        <p>You are about to mark your debt of <span className="font-bold">€{receipt?.amount?.toFixed(2)}</span> to <span className="font-bold">{entityName}</span> as paid.</p>
+        {paymentMethodsEnabled && (
+          <Select
+            label="Payment Method"
+            value={paymentMethodId}
+            onChange={(e) => setPaymentMethodId(e.target.value)}
+            options={paymentMethods}
+          />
+        )}
+      </div>
     </Modal>
   );
 };
@@ -87,6 +99,7 @@ const EntityDetailsPage: React.FC = () => {
 
   const { showError } = useError();
   const { settings } = useSettings();
+  const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
@@ -97,8 +110,10 @@ const EntityDetailsPage: React.FC = () => {
       const entityData = await db.queryOne<Entity>('SELECT * FROM Debtors WHERE DebtorID = ?', [id]);
       setEntity(entityData);
 
-      const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
-      setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
+      if (paymentMethodsEnabled) {
+        const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
+        setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
+      }
 
       if (id) {
         const { receipts, debtToEntity, debtToMe, netBalance } = await calculateDebts(id);
@@ -111,7 +126,7 @@ const EntityDetailsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, showError]);
+  }, [id, showError, paymentMethodsEnabled]);
 
   useEffect(() => {
     fetchDetails();
@@ -436,6 +451,9 @@ const EntityDetailsPage: React.FC = () => {
         onClose={() => setIsMarkAsPaidModalOpen(false)}
         onConfirm={handleMarkAsPaid}
         paymentMethods={paymentMethods}
+        entityName={entity.DebtorName}
+        receipt={receiptToMarkAsPaid}
+        paymentMethodsEnabled={paymentMethodsEnabled}
       />
 
       <DebtPdfOptionsModal

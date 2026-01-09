@@ -244,6 +244,17 @@ const ReceiptsPage: React.FC = () => {
               <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           ) : <div className="w-5"/>}
+
+          {row.IsNonItemised ? (
+            <Tooltip content="Item-less Receipt">
+              <ClipboardIcon className="h-5 w-5 text-gray-400"/>
+            </Tooltip>
+          ) : (
+            <Tooltip content="Itemised Receipt">
+              <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400"/>
+            </Tooltip>
+          )}
+
           {row.Status === 'unpaid' ? (
             <Tooltip content="This is an unpaid receipt, meaning it is owed to the person who paid it by you.">
               <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500"/>
@@ -257,15 +268,6 @@ const ReceiptsPage: React.FC = () => {
               <CheckCircleIcon className="h-5 w-5 text-green-500"/>
             </Tooltip>
           ) : <div className="w-5"/>}
-          {row.IsNonItemised ? (
-            <Tooltip content="Item-less Receipt">
-              <ClipboardIcon className="h-5 w-5 text-gray-400"/>
-            </Tooltip>
-          ) : (
-            <Tooltip content="Itemised Receipt">
-              <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400"/>
-            </Tooltip>
-          )}
         </div>
         <div className="flex items-center gap-2 ml-2">
 

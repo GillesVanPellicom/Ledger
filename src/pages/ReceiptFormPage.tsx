@@ -695,10 +695,6 @@ const ReceiptFormPage: React.FC = () => {
       
       <Card>
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Receipt Format</label>
-            <Tooltip content="Choose 'Itemised' for detailed receipts with product lists, or 'Item-less' for quick entry with just a total amount."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-          </div>
           <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <Tooltip content={hasSettledDebts ? "Cannot switch to itemised when debts are settled" : "Enter each product individually."}>
               <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Itemised</button>
