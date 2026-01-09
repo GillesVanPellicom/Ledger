@@ -20,7 +20,8 @@ import {
   BanknotesIcon,
   LinkIcon,
   TrashIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/solid';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import {useSettings} from '../context/SettingsContext';
@@ -32,8 +33,8 @@ import Modal, {ConfirmModal} from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} from '../types';
 import InfoCard from '../components/ui/InfoCard';
-import { useDebtCalculation } from '../hooks/useDebtCalculation';
-import { Header } from '../components/ui/Header';
+import {useDebtCalculation} from '../hooks/useDebtCalculation';
+import {Header} from '../components/ui/Header';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
   const {showError} = useError();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
-  const { calculate: calculateDebt } = useDebtCalculation();
+  const {calculate: calculateDebt} = useDebtCalculation();
 
   const [splitType, setSplitType] = useState<'none' | 'total_split' | 'line_item'>('none');
   const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);
@@ -386,31 +387,37 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         contentClassName="max-w-7xl mx-auto px-4"
         backButton={
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeftIcon className="h-5 w-5" />
+            <ArrowLeftIcon className="h-5 w-5"/>
           </Button>
         }
         actions={
           <div className="flex gap-2">
-            <Tooltip content="Feature broken, WIP">
-              <Button variant="secondary" onClick={handleSavePdf} disabled>
+            {receipt.Status === 'unpaid' && (
+              <Tooltip content="Mark as Paid">
+                <Button variant="minimal" onClick={() => setIsMarkAsPaidModalOpen(true)}>
+                  <BanknotesIcon className="h-5 w-5 mr-2"/>
+                </Button>
+              </Tooltip>
+            )}
+
+            <Tooltip content="Save as PDF">
+              <Button variant="minimal" onClick={handleSavePdf}>
                 <DocumentArrowDownIcon className="h-5 w-5 mr-2"/>
-                Save PDF
               </Button>
             </Tooltip>
-            {receipt.Status === 'unpaid' && (
-              <Button onClick={() => setIsMarkAsPaidModalOpen(true)}>
-                <BanknotesIcon className="h-5 w-5 mr-2"/>
-                Mark as Paid
+
+            <Tooltip content="Edit">
+              <Button variant="minimal" onClick={() => navigate(`/receipts/edit/${id}`)}>
+                <PencilIcon className="h-5 w-5 mr-2"/>
+
               </Button>
-            )}
-            <Button onClick={() => navigate(`/receipts/edit/${id}`)}>
-              <PencilIcon className="h-5 w-5 mr-2"/>
-              Edit
-            </Button>
-            <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
-              <TrashIcon className="h-5 w-5 mr-2"/>
-              Delete
-            </Button>
+            </Tooltip>
+
+            <Tooltip content="Delete">
+              <Button variant="minimal" onClick={() => setDeleteModalOpen(true)}>
+                <TrashIcon className="h-5 w-5 mr-2"/>
+              </Button>
+            </Tooltip>
           </div>
         }
       />
@@ -425,14 +432,6 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
             >
               <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
             </InfoCard>
-          )}
-
-          {!!receipt.IsNonItemised && (
-            <InfoCard
-              variant="info"
-              title="Item-less Receipt"
-              message="Only the total amount was recorded for this receipt."
-            />
           )}
 
           {!!receipt.ReceiptNote && (
@@ -453,7 +452,39 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
             </Card>
           )}
 
-          {!receipt.IsNonItemised && (
+          {receipt.IsNonItemised ? (
+            <Card>
+              <div className="relative p-6">
+                <div className="blur-sm">
+                  <table className="w-full text-sm select-none">
+                    <thead className="text-left text-gray-500">
+                    <tr>
+                      <th className="p-2">Product</th>
+                      <th className="p-2 w-24 text-center">Qty</th>
+                      <th className="p-2 w-32 text-right">Unit Price (€)</th>
+                      <th className="p-2 w-32 text-right">Total (€)</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-gray-800">
+                    {Array.from({length: 6}).map((_, i) => (
+                      <tr key={i}>
+                        <td className="p-2" colSpan={4}>&nbsp;</td>
+                      </tr>
+                    ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                  <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                  <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Item-less
+                                                                                              Receipt</h3>
+                  <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this
+                                                            receipt.</p>
+                </div>
+              </div>
+            </Card>
+          ) : (
             <Card>
               <div className="p-6">
                 <div className="overflow-x-auto">
@@ -570,7 +601,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
             <div>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-gray-300 dark:border-gray-700" />
+                  <div className="w-full border-t border-gray-300 dark:border-gray-700"/>
                 </div>
                 <div className="relative flex justify-center">
                   <span className=" px-2 text-sm text-gray-500">Debt Breakdown</span>
@@ -582,35 +613,33 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                   const isPaid = !!payment;
 
                   return (
-                    <Card 
-                      key={debtor.debtorId} 
-                      className={cn(
-                        "p-4 cursor-pointer transition-all duration-200",
-                        isPaid ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                      )} 
+                    <Card
+                      key={debtor.debtorId}
+                      className="p-4 cursor-pointer transition-all duration-200"
                       onClick={() => handleSettleClick(debtor)}
                     >
                       <div className="flex justify-between items-start">
                         <Link to={`/entities/${debtor.debtorId}`}
                               className="font-medium hover:underline flex items-center gap-1.5 group"
                               onClick={(e) => e.stopPropagation()}>
-                          <span className={cn(isPaid ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100")}>{debtor.name}</span>
-                          <LinkIcon className={cn("h-4 w-4", isPaid ? "text-green-700" : "text-red-700")}/>
+                          <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
+                          <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
                         </Link>
                         <div className="flex items-center">
                           {isPaid ? (
                             <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
+                              <CheckCircleIcon className="h-5 w-5 text-green-400 dark:text-green-400"/>
                             </Tooltip>
                           ) : (
                             <Tooltip content="Unpaid">
-                              <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
+                              <ExclamationCircleIcon className="h-5 w-5 text-red-500 dark:text-red-400"/>
                             </Tooltip>
                           )}
                         </div>
                       </div>
                       <div className="flex justify-between items-baseline mt-1">
-                        <p className={cn("font-bold truncate", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")} style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                        <p className={cn("font-bold truncate", isPaid ? "text-green-500 dark:text-green-300" : "text-red-500 dark:text-red-400")}
+                           style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                           €{debtor.amount.toFixed(2)}
                         </p>
                         <div className="text-right flex-shrink-0 pl-2">
@@ -624,13 +653,14 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                   );
                 })}
                 {!!debtSummary.ownShare && (
-                  <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <Card className="p-4">
                     <div className="flex justify-between items-start">
-                      <p className="font-medium text-blue-900 dark:text-blue-100">Own Share</p>
-                      <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">Own Share</p>
+                      <UserIcon className="h-5 w-5 text-blue-500 dark:text-blue-400"/>
                     </div>
                     <div className="flex justify-between items-baseline mt-1">
-                      <p className="font-bold text-blue-700 dark:text-blue-300 truncate" style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                      <p className="font-bold text-blue-500 dark:text-blue-400 truncate"
+                         style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                         €{debtSummary.ownShare.amount.toFixed(2)}
                       </p>
                       <div className="text-right flex-shrink-0 pl-2">

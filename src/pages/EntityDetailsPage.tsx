@@ -383,15 +383,15 @@ const EntityDetailsPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 text-center bg-green-50 dark:bg-green-900/20">
+        <Card className="p-4 text-center">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
           <p className="text-2xl font-bold text-green-600 dark:text-green-400">€{stats.debtToMe.toFixed(2)}</p>
         </Card>
-        <Card className="p-4 text-center bg-red-50 dark:bg-red-900/20">
+        <Card className="p-4 text-center">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
           <p className="text-2xl font-bold text-red-600 dark:text-red-400">€{stats.debtToEntity.toFixed(2)}</p>
         </Card>
-        <Card className={cn("p-4 text-center", stats.netBalance >= 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-purple-50 dark:bg-purple-900/20")}>
+        <Card className="p-4 text-center">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Balance</p>
           <p className={cn("text-2xl font-bold", stats.netBalance >= 0 ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400")}>
             {stats.netBalance >= 0 ? `${entity.DebtorName} owes you €${stats.netBalance.toFixed(2)}` : `You owe ${entity.DebtorName} €${Math.abs(stats.netBalance).toFixed(2)}`}
