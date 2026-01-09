@@ -19,7 +19,8 @@ import {
   UserIcon,
   BanknotesIcon,
   LinkIcon,
-  TrashIcon
+  TrashIcon,
+  ArrowLeftIcon
 } from '@heroicons/react/24/solid';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import {useSettings} from '../context/SettingsContext';
@@ -32,6 +33,7 @@ import Select from '../components/ui/Select';
 import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} from '../types';
 import InfoCard from '../components/ui/InfoCard';
 import { useDebtCalculation } from '../hooks/useDebtCalculation';
+import { Header } from '../components/ui/Header';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -377,34 +379,39 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{receipt.StoreName}</h1>
-          <p className="text-gray-500">{format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}</p>
-        </div>
-        <div className="flex gap-2">
-          <Tooltip content="Feature broken, WIP">
-            <Button variant="secondary" onClick={handleSavePdf} disabled>
-              <DocumentArrowDownIcon className="h-5 w-5 mr-2"/>
-              Save PDF
-            </Button>
-          </Tooltip>
-          {receipt.Status === 'unpaid' && (
-            <Button onClick={() => setIsMarkAsPaidModalOpen(true)}>
-              <BanknotesIcon className="h-5 w-5 mr-2"/>
-              Mark as Paid
-            </Button>
-          )}
-          <Button onClick={() => navigate(`/receipts/edit/${id}`)}>
-            <PencilIcon className="h-5 w-5 mr-2"/>
-            Edit
+      <Header
+        title={receipt.StoreName}
+        subtitle={format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}
+        backButton={
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeftIcon className="h-5 w-5" />
           </Button>
-          <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
-            <TrashIcon className="h-5 w-5 mr-2"/>
-            Delete
-          </Button>
-        </div>
-      </div>
+        }
+        actions={
+          <div className="flex gap-2">
+            <Tooltip content="Feature broken, WIP">
+              <Button variant="secondary" onClick={handleSavePdf} disabled>
+                <DocumentArrowDownIcon className="h-5 w-5 mr-2"/>
+                Save PDF
+              </Button>
+            </Tooltip>
+            {receipt.Status === 'unpaid' && (
+              <Button onClick={() => setIsMarkAsPaidModalOpen(true)}>
+                <BanknotesIcon className="h-5 w-5 mr-2"/>
+                Mark as Paid
+              </Button>
+            )}
+            <Button onClick={() => navigate(`/receipts/edit/${id}`)}>
+              <PencilIcon className="h-5 w-5 mr-2"/>
+              Edit
+            </Button>
+            <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
+              <TrashIcon className="h-5 w-5 mr-2"/>
+              Delete
+            </Button>
+          </div>
+        }
+      />
 
       <div className="space-y-6">
         {!!receipt.IsTentative && (
