@@ -15,7 +15,7 @@ import DatePicker from '../components/ui/DatePicker';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import Tooltip from '../components/ui/Tooltip';
 import Input from '../components/ui/Input';
-import { PaymentMethod, Receipt, TopUp } from '../types';
+import { PaymentMethod, TopUp } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 
@@ -27,19 +27,40 @@ const tryParseJson = (str: string) => {
   }
 };
 
+// A more specific type for transactions on this page
+interface PageTransaction {
+  id: number;
+  date: string;
+  name: string;
+  note: string;
+  amount: number;
+  type: 'receipt' | 'topup';
+  // Receipt-specific fields
+  Discount?: number | null;
+  IsNonItemised?: 0 | 1;
+  NonItemisedTotal?: number | null;
+}
+
+interface LineItem {
+  ReceiptID: number;
+  LineQuantity: number;
+  LineUnitPrice: number;
+  IsExcludedFromDiscount: 0 | 1;
+}
+
 const PaymentMethodDetailsPage: React.FC = () => {
   const chartRef = useRef<ReactECharts>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [method, setMethod] = useState<PaymentMethod | null>(null);
-  const [transactions, setTransactions] = useState<Receipt[]>([]);
+  const [transactions, setTransactions] = useState<PageTransaction[]>([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [methodName, setMethodName] = useState('');
   const [topUpToEdit, setTopUpToEdit] = useState<TopUp | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<Receipt | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<PageTransaction | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,7 +85,18 @@ const PaymentMethodDetailsPage: React.FC = () => {
       setMethod(methodData);
       setMethodName(methodData?.PaymentMethodName || '');
 
-      const receiptsData = await db.query<any[]>(`
+      interface ReceiptQueryResult {
+        id: number;
+        date: string;
+        name: string;
+        note: string;
+        Discount: number | null;
+        IsNonItemised: 0 | 1;
+        NonItemisedTotal: number | null;
+        type: 'receipt';
+      }
+
+      const receiptsData = await db.query<ReceiptQueryResult>(`
         SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note, r.Discount,
                r.IsNonItemised, r.NonItemisedTotal,
                'receipt' as type
@@ -74,20 +106,29 @@ const PaymentMethodDetailsPage: React.FC = () => {
       `, [id]);
 
       const receiptIds = receiptsData.map(r => r.id);
-      const allLineItems = receiptIds.length > 0 
-        ? await db.query<any[]>(`SELECT * FROM LineItems WHERE ReceiptID IN (${receiptIds.map(() => '?').join(',')})`, receiptIds)
+      const allLineItems = receiptIds.length > 0
+        ? await db.query<LineItem>(`SELECT * FROM LineItems WHERE ReceiptID IN (${receiptIds.map(() => '?').join(',')})`, receiptIds)
         : [];
 
-      const topupsData = await db.query<any[]>(`
+      interface TopUpQueryResult {
+        id: number;
+        date: string;
+        name: string;
+        note: string;
+        amount: number;
+        type: 'topup';
+      }
+
+      const topupsData = await db.query<TopUpQueryResult>(`
         SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount, 'topup' as type
-        FROM TopUps 
+        FROM TopUps
         WHERE PaymentMethodID = ?
       `, [id]);
 
-      const allTransactions: Receipt[] = [
-        ...receiptsData.map(r => {
+      const allTransactions: PageTransaction[] = [
+        ...receiptsData.map((r): PageTransaction => {
             if (r.IsNonItemised) {
-              return {...r, amount: -r.NonItemisedTotal};
+              return {...r, amount: -(r.NonItemisedTotal || 0)};
             }
             const items = allLineItems.filter(li => li.ReceiptID === r.id);
             const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
@@ -97,14 +138,14 @@ const PaymentMethodDetailsPage: React.FC = () => {
             const discountAmount = (discountableAmount * (r.Discount || 0)) / 100;
             const total = subtotal - discountAmount;
             return {...r, amount: -total};
-        }), 
+        }),
         ...topupsData
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
+
       setTransactions(allTransactions);
 
-      const expenses = allTransactions.filter(t => t.type === 'receipt').reduce((sum, r) => sum - r.amount!, 0);
-      const topups = allTransactions.filter(t => t.type === 'topup').reduce((sum, t) => sum + t.amount!, 0);
+      const expenses = allTransactions.filter(t => t.type === 'receipt').reduce((sum, r) => sum - r.amount, 0);
+      const topups = allTransactions.filter(t => t.type === 'topup').reduce((sum, t) => sum + t.amount, 0);
       setBalance((methodData?.PaymentMethodFunds || 0) + topups - expenses);
 
     } catch (error) {
@@ -128,7 +169,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
     setIsTopUpModalOpen(true);
   };
 
-  const openDeleteModal = (item: Receipt) => {
+  const openDeleteModal = (item: PageTransaction) => {
     setItemToDelete(item);
     setIsDeleteModalOpen(true);
   };
@@ -160,31 +201,31 @@ const PaymentMethodDetailsPage: React.FC = () => {
     }
   };
 
-  const handleRowClick = (row: Receipt) => {
+  const handleRowClick = (row: PageTransaction) => {
     if (row.type === 'receipt') {
       navigate(`/receipts/view/${row.id}`);
     } else if (row.type === 'topup') {
       const fullTopUp = transactions.find(t => t.id === row.id && t.type === 'topup');
       if (fullTopUp) {
         openTopUpModal({
-          TopUpID: fullTopUp.id!,
-          TopUpAmount: fullTopUp.amount!,
-          TopUpDate: fullTopUp.date!,
-          TopUpNote: fullTopUp.note!,
+          TopUpID: fullTopUp.id,
+          TopUpAmount: fullTopUp.amount,
+          TopUpDate: fullTopUp.date,
+          TopUpNote: fullTopUp.note,
         });
       }
     }
   };
-  
+
   const filteredTransactions = useMemo(() => {
     const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
     const [startDate, endDate] = dateRange;
 
     return transactions.filter(t => {
-      const typeMatch = filter === 'all' || (filter === 'receipt' && t.amount! < 0) || (filter === 'topup' && t.amount! > 0);
+      const typeMatch = filter === 'all' || (filter === 'receipt' && t.amount < 0) || (filter === 'topup' && t.amount > 0);
       if (!typeMatch) return false;
 
-      const date = new Date(t.date!);
+      const date = new Date(t.date);
       if (startDate && date < startDate) return false;
       if (endDate && date > endDate) return false;
 
@@ -202,20 +243,20 @@ const PaymentMethodDetailsPage: React.FC = () => {
   }, [filteredTransactions, currentPage, pageSize]);
 
   const balanceChartOption = useMemo(() => {
-    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     let runningBalance = method?.PaymentMethodFunds || 0;
     const data: [string, string][] = [];
-    
+
     if (sortedTransactions.length > 0) {
-        const firstDate = new Date(sortedTransactions[0].date!);
+        const firstDate = new Date(sortedTransactions[0].date);
         const startDate = startOfMonth(firstDate);
         const endDate = endOfMonth(new Date());
         const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
 
         let trxIndex = 0;
         dateRange.forEach(day => {
-            while(trxIndex < sortedTransactions.length && new Date(sortedTransactions[trxIndex].date!) <= day) {
-                runningBalance += sortedTransactions[trxIndex].amount!;
+            while(trxIndex < sortedTransactions.length && new Date(sortedTransactions[trxIndex].date) <= day) {
+                runningBalance += sortedTransactions[trxIndex].amount;
                 trxIndex++;
             }
             data.push([format(day, 'yyyy-MM-dd'), runningBalance.toFixed(2)]);
@@ -248,25 +289,25 @@ const PaymentMethodDetailsPage: React.FC = () => {
   };
 
   const columns = [
-    { header: 'Date', render: (row: Receipt) => format(new Date(row.date!), 'dd/MM/yyyy') },
+    { header: 'Date', render: (row: PageTransaction) => format(new Date(row.date), 'dd/MM/yyyy') },
     { header: 'Name', accessor: 'name' },
-    { header: 'Note', render: (row: Receipt) => renderNote(row.note!) },
-    { 
+    { header: 'Note', render: (row: PageTransaction) => renderNote(row.note) },
+    {
       header: 'Amount',
-      render: (row: Receipt) => (
-        <span className={cn(row.amount! > 0 ? 'text-green-600' : 'text-red-600')}>
-          {row.amount! > 0 ? '+' : ''} €{Math.abs(row.amount!).toFixed(2)}
+      render: (row: PageTransaction) => (
+        <span className={cn(row.amount > 0 ? 'text-green-600' : 'text-red-600')}>
+          {row.amount > 0 ? '+' : ''} €{Math.abs(row.amount).toFixed(2)}
         </span>
       )
     },
     {
       header: '',
-      render: (row: Receipt) => (
+      render: (row: PageTransaction) => (
         <div className="flex justify-end">
           <Tooltip content={`Delete ${row.type}`}>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={(e: React.MouseEvent) => { e.stopPropagation(); openDeleteModal(row); }}
             >
               <TrashIcon className="h-4 w-4" />
@@ -314,7 +355,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
               €{balance.toFixed(2)}
             </p>
           </Card>
-          
+
           <Card>
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-4">Balance Over Time</h2>
@@ -326,7 +367,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
             data={paginatedTransactions}
             columns={columns}
             onRowClick={handleRowClick}
-            itemKey={(row: any) => `${row.type}-${row.id}`}
+            itemKey={(row: PageTransaction) => `${row.type}-${row.id}`}
             totalCount={filteredTransactions.length}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
@@ -337,12 +378,12 @@ const PaymentMethodDetailsPage: React.FC = () => {
             middleRowLeft={
               <div className="w-1/2">
                 <DatePicker
-                  selectsRange
                   startDate={dateRange[0]}
                   endDate={dateRange[1]}
-                  onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
+                  onChange={(update: [Date | null, Date | null]) => { setDateRange(update); setCurrentPage(1); }}
                   isClearable={true}
                   placeholderText="Filter by date range"
+                  selectsRange={true}
                 />
               </div>
             }
