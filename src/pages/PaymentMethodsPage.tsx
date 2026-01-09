@@ -11,6 +11,7 @@ import * as SolidIcons from '@heroicons/react/24/solid';
 import Tooltip from '../components/ui/Tooltip';
 import { PaymentMethod, PaymentMethodStyle } from '../types';
 import { Header } from '../components/ui/Header';
+import PageWrapper from '../components/layout/PageWrapper';
 
 interface PaymentMethodCardProps {
   method: PaymentMethod;
@@ -150,29 +151,31 @@ const PaymentMethodsPage: React.FC = () => {
           </>
         }
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMethods.map(method => (
-            <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
-          ))}
-        </div>
+      <PageWrapper>
+        <div className="py-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMethods.map(method => (
+              <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
+            ))}
+          </div>
 
-        <PaymentMethodModal
-          isOpen={isAddModalOpen || isEditModalOpen}
-          onClose={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); setSelectedMethod(null); }}
-          onSave={handleSave}
-          methodToEdit={selectedMethod}
-        />
-        {selectedMethod && (
-          <PaymentMethodStyleModal
-            isOpen={isStyleModalOpen}
-            onClose={() => setIsStyleModalOpen(false)}
-            onSave={handleStyleSave}
-            method={selectedMethod}
-            currentStyle={settings.paymentMethodStyles?.[selectedMethod.PaymentMethodID]}
+          <PaymentMethodModal
+            isOpen={isAddModalOpen || isEditModalOpen}
+            onClose={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); setSelectedMethod(null); }}
+            onSave={handleSave}
+            methodToEdit={selectedMethod}
           />
-        )}
-      </div>
+          {selectedMethod && (
+            <PaymentMethodStyleModal
+              isOpen={isStyleModalOpen}
+              onClose={() => setIsStyleModalOpen(false)}
+              onSave={handleStyleSave}
+              method={selectedMethod}
+              currentStyle={settings.paymentMethodStyles?.[selectedMethod.PaymentMethodID]}
+            />
+          )}
+        </div>
+      </PageWrapper>
     </div>
   );
 };

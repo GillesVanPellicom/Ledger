@@ -8,6 +8,7 @@ import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Debtor } from '../types';
 import { Header } from '../components/ui/Header';
+import PageWrapper from '../components/layout/PageWrapper';
 
 const EntitiesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -114,29 +115,31 @@ const EntitiesPage: React.FC = () => {
           </Tooltip>
         }
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <DataTable
-          data={entities}
-          columns={columns}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageSizeChange={setPageSize}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onSearch={setSearchTerm}
-          searchable={true}
-          loading={loading}
-          onRowClick={handleRowClick}
-          itemKey="DebtorID"
-        />
+      <PageWrapper>
+        <div className="py-6">
+          <DataTable
+            data={entities}
+            columns={columns}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onSearch={setSearchTerm}
+            searchable={true}
+            loading={loading}
+            onRowClick={handleRowClick}
+            itemKey="DebtorID"
+          />
 
-        <EntityModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          entityToEdit={editingEntity}
-          onSave={fetchEntities}
-        />
-      </div>
+          <EntityModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            entityToEdit={editingEntity}
+            onSave={fetchEntities}
+          />
+        </div>
+      </PageWrapper>
     </div>
   );
 };

@@ -22,6 +22,7 @@ import InfoCard from '../components/ui/InfoCard';
 import '../electron.d';
 import Spinner from '../components/ui/Spinner';
 import { Header } from '../components/ui/Header';
+import PageWrapper from '../components/layout/PageWrapper';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -688,440 +689,442 @@ const ReceiptFormPage: React.FC = () => {
           )
         }
       />
-      <div className="max-w-4xl mx-auto py-6 space-y-6">
-        {hasSettledDebts && (
-          <InfoCard
-            variant="warning"
-            title="Debts Settled"
-            message="One or more debts on this receipt have been settled. Debt configuration is now locked."
-          />
-        )}
+      <PageWrapper>
+        <div className="py-6 space-y-6">
+          {hasSettledDebts && (
+            <InfoCard
+              variant="warning"
+              title="Debts Settled"
+              message="One or more debts on this receipt have been settled. Debt configuration is now locked."
+            />
+          )}
 
-        {isUnpaid && (
-          <InfoCard
-            variant="warning"
-            title="Unpaid Receipt"
-            message="Debt management is disabled for unpaid receipts."
-          />
-        )}
-        
-        <Card>
-          <div className="p-6">
-            <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              <Tooltip content={hasSettledDebts ? "Cannot switch to itemised when debts are settled" : "Enter each product individually."}>
-                <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Itemised</button>
-              </Tooltip>
-              <Tooltip content={hasSettledDebts ? "Cannot switch to item-less when debts are settled" : "Enter only the final total of the receipt."}>
-                <button onClick={() => handleFormatChange('item-less')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Item-less</button>
-              </Tooltip>
+          {isUnpaid && (
+            <InfoCard
+              variant="warning"
+              title="Unpaid Receipt"
+              message="Debt management is disabled for unpaid receipts."
+            />
+          )}
+          
+          <Card>
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <Tooltip content={hasSettledDebts ? "Cannot switch to itemised when debts are settled" : "Enter each product individually."}>
+                  <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Itemised</button>
+                </Tooltip>
+                <Tooltip content={hasSettledDebts ? "Cannot switch to item-less when debts are settled" : "Enter only the final total of the receipt."}>
+                  <button onClick={() => handleFormatChange('item-less')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Item-less</button>
+                </Tooltip>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        {receiptFormat && (
-          <>
-            <Card>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  {debtEnabled && (
-                    <div className="col-span-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Receipt Type</label>
-                        <Tooltip content="Define if this is a receipt you paid for, or one that you owe."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                        <Tooltip content={hasSettledDebts ? "Cannot switch to paid when debts are settled" : "A standard expense you've paid."}>
-                          <button 
-                            onClick={() => handleStatusChange('paid')} 
-                            disabled={hasSettledDebts}
-                            className={cn(
-                              "w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", 
-                              formData.status === 'paid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
-                              hasSettledDebts && "opacity-50 cursor-not-allowed"
-                            )}>
-                              Paid
-                          </button>
-                        </Tooltip>
-                        <Tooltip content={hasSettledDebts ? "Cannot switch to unpaid when debts are settled" : "An expense you owe to someone else."}>
-                          <button 
-                            onClick={() => handleStatusChange('unpaid')} 
-                            disabled={hasSettledDebts}
-                            className={cn(
-                              "w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", 
-                              formData.status === 'unpaid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
-                              hasSettledDebts && "opacity-50 cursor-not-allowed"
-                            )}>
-                              Unpaid
-                          </button>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  )}
-                  <div className="col-span-1">
-                    <div className="flex items-end gap-2">
-                      <div className="flex-grow">
-                        <Select label="Store" name="storeId" value={String(formData.storeId)} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} />
-                      </div>
-                      <Tooltip content="Add Store">
-                        <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsStoreModalOpen(true)}>
-                          <PlusIcon className="h-5 w-5" />
-                        </Button>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
-                  <div className="col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
-                  
-                  {formData.status === 'paid' && paymentMethodsEnabled && (
-                    <div className="col-span-2"><Select label="Payment Method" name="paymentMethodId" value={String(formData.paymentMethodId)} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
-                  )}
-                  {formData.status === 'unpaid' && debtEnabled && (
-                    <div className="col-span-2"><Select label="Owed To" name="owedToDebtorId" value={String(formData.owedToDebtorId)} onChange={handleFormChange} options={debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))} placeholder="Select a person" error={errors.owedToDebtorId} /></div>
-                  )}
-                </div>
-              </div>
-            </Card>
-
-            <Card>
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-lg font-semibold">Images</h2>
-                  <Tooltip content="Attach images of the physical receipt for your records."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                  {images.map(image => (
-                    <div key={image.key} className="relative group">
-                      <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
-                      <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <XMarkIcon className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                  <label className="w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-gray-600 hover:border-gray-400 cursor-pointer">
-                    <PhotoIcon className="h-8 w-8" />
-                    <span className="text-xs mt-1">Add Images</span>
-                    <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
-                  </label>
-                </div>
-              </div>
-            </Card>
-
-            {debtEnabled && !isDebtDisabled && (
+          {receiptFormat && (
+            <>
               <Card>
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold">Debt Management</h2>
-                      <Tooltip content="Split the cost of this receipt with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                <div className="p-6 space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    {debtEnabled && (
+                      <div className="col-span-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Receipt Type</label>
+                          <Tooltip content="Define if this is a receipt you paid for, or one that you owe."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                          <Tooltip content={hasSettledDebts ? "Cannot switch to paid when debts are settled" : "A standard expense you've paid."}>
+                            <button 
+                              onClick={() => handleStatusChange('paid')} 
+                              disabled={hasSettledDebts}
+                              className={cn(
+                                "w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", 
+                                formData.status === 'paid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
+                                hasSettledDebts && "opacity-50 cursor-not-allowed"
+                              )}>
+                                Paid
+                            </button>
+                          </Tooltip>
+                          <Tooltip content={hasSettledDebts ? "Cannot switch to unpaid when debts are settled" : "An expense you owe to someone else."}>
+                            <button 
+                              onClick={() => handleStatusChange('unpaid')} 
+                              disabled={hasSettledDebts}
+                              className={cn(
+                                "w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", 
+                                formData.status === 'unpaid' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
+                                hasSettledDebts && "opacity-50 cursor-not-allowed"
+                              )}>
+                                Unpaid
+                            </button>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    )}
+                    <div className="col-span-1">
+                      <div className="flex items-end gap-2">
+                        <div className="flex-grow">
+                          <Select label="Store" name="storeId" value={String(formData.storeId)} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} />
+                        </div>
+                        <Tooltip content="Add Store">
+                          <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsStoreModalOpen(true)}>
+                            <PlusIcon className="h-5 w-5" />
+                          </Button>
+                        </Tooltip>
+                      </div>
                     </div>
-                    <SplitTypeSelector />
+                    <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
+                    <div className="col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
+                    
+                    {formData.status === 'paid' && paymentMethodsEnabled && (
+                      <div className="col-span-2"><Select label="Payment Method" name="paymentMethodId" value={String(formData.paymentMethodId)} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
+                    )}
+                    {formData.status === 'unpaid' && debtEnabled && (
+                      <div className="col-span-2"><Select label="Owed To" name="owedToDebtorId" value={String(formData.owedToDebtorId)} onChange={handleFormChange} options={debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))} placeholder="Select a person" error={errors.owedToDebtorId} /></div>
+                    )}
                   </div>
+                </div>
+              </Card>
 
-                  {splitType === 'total_split' && (
-                    <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
-                      <div className="grid grid-cols-2 gap-4 items-end">
-                        <Select 
-                          label="Add Debtor"
-                          value=""
-                          onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
-                          options={[{ value: '', label: 'Choose...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                          className="bg-white dark:bg-gray-800"
-                          disabled={isDebtDisabled}
-                        />
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Own Shares</label>
-                            <Tooltip content="How many shares of the total cost you are responsible for."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-                          </div>
-                          <Input 
-                            type="number"
-                            name="ownShares"
-                            value={String(formData.ownShares)}
-                            onChange={handleFormChange}
-                            min="0"
+              <Card>
+                <div className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-lg font-semibold">Images</h2>
+                    <Tooltip content="Attach images of the physical receipt for your records."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                    {images.map(image => (
+                      <div key={image.key} className="relative group">
+                        <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
+                        <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <XMarkIcon className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-gray-600 hover:border-gray-400 cursor-pointer">
+                      <PhotoIcon className="h-8 w-8" />
+                      <span className="text-xs mt-1">Add Images</span>
+                      <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+              </Card>
+
+              {debtEnabled && !isDebtDisabled && (
+                <Card>
+                  <div className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-semibold">Debt Management</h2>
+                        <Tooltip content="Split the cost of this receipt with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                      </div>
+                      <SplitTypeSelector />
+                    </div>
+
+                    {splitType === 'total_split' && (
+                      <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+                        <div className="grid grid-cols-2 gap-4 items-end">
+                          <Select 
+                            label="Add Debtor"
+                            value=""
+                            onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
+                            options={[{ value: '', label: 'Choose...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                            className="bg-white dark:bg-gray-800"
                             disabled={isDebtDisabled}
+                          />
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Own Shares</label>
+                              <Tooltip content="How many shares of the total cost you are responsible for."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                            </div>
+                            <Input 
+                              type="number"
+                              name="ownShares"
+                              value={String(formData.ownShares)}
+                              onChange={handleFormChange}
+                              min="0"
+                              disabled={isDebtDisabled}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {receiptSplits.map(split => (
+                            <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                              <span className="font-medium">{split.DebtorName}</span>
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-500">Shares:</span>
+                                  <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" disabled={isDebtDisabled} />
+                                </div>
+                                {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
+                              </div>
+                            </div>
+                          ))}
+                          {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
+                        </div>
+                      </div>
+                    )}
+
+                    {splitType === 'line_item' && receiptFormat === 'itemised' && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">Assign items to debtors.</p>
+                        <Button onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
+                          Assign Debtors
+                        </Button>
+                      </div>
+                    )}
+
+                    {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Debt</h3>
+                          <Tooltip content="Projected debt amounts based on current split configuration."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {debtSummary.debtors.map((debtor) => (
+                            <div key={debtor.name} className="w-full">
+                              <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                                {splitType === 'line_item' && !isDebtDisabled && (
+                                  <button 
+                                    onClick={() => handleRemoveDebtorFromItems(debtor.debtorId)}
+                                    className="absolute top-1 right-1 bg-gray-200 dark:bg-gray-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <XMarkIcon className="h-3 w-3" />
+                                  </button>
+                                )}
+                                <span className="text-gray-500 block">{debtor.name}</span>
+                                <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          ))}
+                          {debtSummary.self && (
+                            <div className="w-full">
+                              <div className="p-2 rounded border text-sm w-full bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+                                <span className="text-blue-500 block">Self</span>
+                                <span className="font-bold text-blue-800 dark:text-blue-200">€{debtSummary.self.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+
+              {receiptFormat === 'item-less' ? (
+                <Card>
+                  <div className="p-6 space-y-4">
+                    <h2 className="text-lg font-semibold">Total</h2>
+                    <Input 
+                      type="number"
+                      label="Total Amount (€)"
+                      value={String(nonItemisedTotal)}
+                      onChange={(e) => setNonItemisedTotal(parseFloat(e.target.value) || 0)}
+                      error={errors.nonItemisedTotal}
+                      disabled={hasSettledDebts}
+                    />
+                  </div>
+                </Card>
+              ) : (
+                <Card>
+                  <div className="p-6 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <h2 className="text-lg font-semibold">Items</h2>
+                      {errors.lineItems && <p className="text-sm text-danger">{errors.lineItems}</p>}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-gray-500">
+                          <tr>
+                            <th className="p-2">Product</th>
+                            <th className="p-2 w-24">Qty</th>
+                            <th className="p-2 w-32">Unit Price (€)</th>
+                            <th className="p-2 w-32 text-right">Total (€)</th>
+                            {debtEnabled && splitType === 'line_item' && <th className="p-2 w-32 text-right">Debtor</th>}
+                            <th className="p-2 w-12"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y dark:divide-gray-800">
+                          {lineItems.map((item, index) => (
+                            <tr key={item.key}>
+                              <td className="p-2">
+                                <div className="flex items-center gap-2">
+                                  {parseFloat(String(formData.discount)) > 0 && (
+                                    <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
+                                      <div className={cn("w-2 h-2 rounded-full", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                                    </Tooltip>
+                                  )}
+                                  <div>
+                                    <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                                    <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-2">
+                                <Input 
+                                  type="text" 
+                                  value={String(item.LineQuantity)} 
+                                  onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} 
+                                  onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
+                                  className="h-9" 
+                                  error={errors[`qty_${item.key}`]} 
+                                  disabled={isDebtDisabled} 
+                                />
+                              </td>
+                              <td className="p-2">
+                                <Input 
+                                  type="text" 
+                                  value={String(item.LineUnitPrice)} 
+                                  onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} 
+                                  onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
+                                  className="h-9" 
+                                  error={errors[`price_${item.key}`]} 
+                                  disabled={isDebtDisabled} 
+                                />
+                              </td>
+                              <td className="p-2 text-right font-medium">
+                                {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                              </td>
+                              {debtEnabled && splitType === 'line_item' && (
+                                <td className="p-2 text-right text-gray-600 dark:text-gray-400">
+                                  {item.DebtorName || '-'}
+                                </td>
+                              )}
+                              <td className="p-2 text-center">
+                                {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <Button variant="secondary" onClick={() => setIsProductSelectorOpen(true)} disabled={isDebtDisabled}><PlusIcon className="h-4 w-4 mr-2" />Add Item</Button>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
+                        <div className="w-24">
+                          <Input 
+                            type="text" 
+                            name="discount" 
+                            value={String(formData.discount)} 
+                            onChange={handleFormChange}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (isNaN(val) || val < 0) setFormData(prev => ({ ...prev, discount: 0 }));
+                              else if (val > 100) setFormData(prev => ({ ...prev, discount: 100 }));
+                            }}
+                            className="h-8 text-right"
+                            error={errors.discount}
+                            disabled={hasSettledDebts}
                           />
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        {receiptSplits.map(split => (
-                          <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                            <span className="font-medium">{split.DebtorName}</span>
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-500">Shares:</span>
-                                <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" disabled={isDebtDisabled} />
-                              </div>
-                              {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
-                            </div>
-                          </div>
-                        ))}
-                        {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
-                      </div>
-                    </div>
-                  )}
-
-                  {splitType === 'line_item' && receiptFormat === 'itemised' && (
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
-                      <p className="text-sm text-blue-700 dark:text-blue-300">Assign items to debtors.</p>
-                      <Button onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
-                        Assign Debtors
-                      </Button>
-                    </div>
-                  )}
-
-                  {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Debt</h3>
-                        <Tooltip content="Projected debt amounts based on current split configuration."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {debtSummary.debtors.map((debtor) => (
-                          <div key={debtor.name} className="w-full">
-                            <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                              {splitType === 'line_item' && !isDebtDisabled && (
-                                <button 
-                                  onClick={() => handleRemoveDebtorFromItems(debtor.debtorId)}
-                                  className="absolute top-1 right-1 bg-gray-200 dark:bg-gray-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <XMarkIcon className="h-3 w-3" />
-                                </button>
+                      {parseFloat(String(formData.discount)) > 0 && (
+                        <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <button 
+                              onClick={() => setSelectionModal({ isOpen: true, mode: 'discount' })}
+                              className={cn(
+                                "text-xs text-accent hover:underline flex items-center gap-1",
+                                hasSettledDebts && "opacity-50 cursor-not-allowed"
                               )}
-                              <span className="text-gray-500 block">{debtor.name}</span>
-                              <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
-                            </div>
+                              disabled={hasSettledDebts}
+                            >
+                              {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
+                            </button>
                           </div>
-                        ))}
-                        {debtSummary.self && (
-                          <div className="w-full">
-                            <div className="p-2 rounded border text-sm w-full bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-                              <span className="text-blue-500 block">Self</span>
-                              <span className="font-bold text-blue-800 dark:text-blue-200">€{debtSummary.self.toFixed(2)}</span>
-                            </div>
+                          <div className="flex items-center gap-4 text-gray-500">
+                            <span className="text-sm">Subtotal</span>
+                            <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
                           </div>
-                        )}
+                        </>
+                      )}
+                      <div className="flex items-center gap-4 text-lg font-bold">
+                        <span>Total</span>
+                        <span>€{calculateTotal().toFixed(2)}</span>
                       </div>
                     </div>
-                  )}
-                </div>
-              </Card>
-            )}
-
-            {receiptFormat === 'item-less' ? (
-              <Card>
-                <div className="p-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Total</h2>
-                  <Input 
-                    type="number"
-                    label="Total Amount (€)"
-                    value={String(nonItemisedTotal)}
-                    onChange={(e) => setNonItemisedTotal(parseFloat(e.target.value) || 0)}
-                    error={errors.nonItemisedTotal}
-                    disabled={hasSettledDebts}
-                  />
-                </div>
-              </Card>
-            ) : (
-              <Card>
-                <div className="p-6 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <h2 className="text-lg font-semibold">Items</h2>
-                    {errors.lineItems && <p className="text-sm text-danger">{errors.lineItems}</p>}
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="text-left text-gray-500">
-                        <tr>
-                          <th className="p-2">Product</th>
-                          <th className="p-2 w-24">Qty</th>
-                          <th className="p-2 w-32">Unit Price (€)</th>
-                          <th className="p-2 w-32 text-right">Total (€)</th>
-                          {debtEnabled && splitType === 'line_item' && <th className="p-2 w-32 text-right">Debtor</th>}
-                          <th className="p-2 w-12"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y dark:divide-gray-800">
-                        {lineItems.map((item, index) => (
-                          <tr key={item.key}>
-                            <td className="p-2">
-                              <div className="flex items-center gap-2">
-                                {parseFloat(String(formData.discount)) > 0 && (
-                                  <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
-                                    <div className={cn("w-2 h-2 rounded-full", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
-                                  </Tooltip>
-                                )}
-                                <div>
-                                  <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                                  <p className="text-xs text-gray-500">{item.ProductBrand}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-2">
-                              <Input 
-                                type="text" 
-                                value={String(item.LineQuantity)} 
-                                onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)} 
-                                onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
-                                className="h-9" 
-                                error={errors[`qty_${item.key}`]} 
-                                disabled={isDebtDisabled} 
-                              />
-                            </td>
-                            <td className="p-2">
-                              <Input 
-                                type="text" 
-                                value={String(item.LineUnitPrice)} 
-                                onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)} 
-                                onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
-                                className="h-9" 
-                                error={errors[`price_${item.key}`]} 
-                                disabled={isDebtDisabled} 
-                              />
-                            </td>
-                            <td className="p-2 text-right font-medium">
-                              {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                            </td>
-                            {debtEnabled && splitType === 'line_item' && (
-                              <td className="p-2 text-right text-gray-600 dark:text-gray-400">
-                                {item.DebtorName || '-'}
-                              </td>
-                            )}
-                            <td className="p-2 text-center">
-                              {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <Button variant="secondary" onClick={() => setIsProductSelectorOpen(true)} disabled={isDebtDisabled}><PlusIcon className="h-4 w-4 mr-2" />Add Item</Button>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 rounded-b-xl">
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
-                      <div className="w-24">
-                        <Input 
-                          type="text" 
-                          name="discount" 
-                          value={String(formData.discount)} 
-                          onChange={handleFormChange}
-                          onBlur={(e) => {
-                            const val = parseFloat(e.target.value);
-                            if (isNaN(val) || val < 0) setFormData(prev => ({ ...prev, discount: 0 }));
-                            else if (val > 100) setFormData(prev => ({ ...prev, discount: 100 }));
-                          }}
-                          className="h-8 text-right"
-                          error={errors.discount}
-                          disabled={hasSettledDebts}
-                        />
-                      </div>
-                    </div>
-                    {parseFloat(String(formData.discount)) > 0 && (
-                      <>
-                        <div className="flex items-center gap-2 mb-1">
-                          <button 
-                            onClick={() => setSelectionModal({ isOpen: true, mode: 'discount' })}
-                            className={cn(
-                              "text-xs text-accent hover:underline flex items-center gap-1",
-                              hasSettledDebts && "opacity-50 cursor-not-allowed"
-                            )}
-                            disabled={hasSettledDebts}
-                          >
-                            {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-4 text-gray-500">
-                          <span className="text-sm">Subtotal</span>
-                          <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="flex items-center gap-4 text-lg font-bold">
-                      <span>Total</span>
-                      <span>€{calculateTotal().toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            <div className="flex justify-end gap-4">
-              <Button variant="secondary" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
-              {isEditing && initialIsTentative && (
-                <Tooltip content="This receipt is currently tentative. Saving it will make it permanent.">
-                  <Button onClick={() => handleSubmit(false)} loading={saving}>
-                    Save as Permanent
-                  </Button>
-                </Tooltip>
+                </Card>
               )}
-              {!isEditing && (
-                <Tooltip content="Tentative receipts are drafts and won't affect analytics or debts until made permanent.">
-                  <Button onClick={() => handleSubmit(true)} loading={saving}>
-                    Save Tentatively
-                  </Button>
-                </Tooltip>
-              )}
-              <Button onClick={() => handleSubmit(isEditing ? initialIsTentative : false)} loading={saving}>
-                {isEditing ? (initialIsTentative ? 'Update Tentative Receipt' : 'Save') : 'Save'}
-              </Button>
-            </div>
-          </>
-        )}
 
-        <ProductSelector isOpen={isProductSelectorOpen} onClose={() => setIsProductSelectorOpen(false)} onSelect={handleProductSelect} />
-        
-        <StoreModal
-          isOpen={isStoreModalOpen}
-          onClose={() => setIsStoreModalOpen(false)}
-          onSave={handleStoreSave}
-          storeToEdit={null}
-        />
+              <div className="flex justify-end gap-4">
+                <Button variant="secondary" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
+                {isEditing && initialIsTentative && (
+                  <Tooltip content="This receipt is currently tentative. Saving it will make it permanent.">
+                    <Button onClick={() => handleSubmit(false)} loading={saving}>
+                      Save as Permanent
+                    </Button>
+                  </Tooltip>
+                )}
+                {!isEditing && (
+                  <Tooltip content="Tentative receipts are drafts and won't affect analytics or debts until made permanent.">
+                    <Button onClick={() => handleSubmit(true)} loading={saving}>
+                      Save Tentatively
+                    </Button>
+                  </Tooltip>
+                )}
+                <Button onClick={() => handleSubmit(isEditing ? initialIsTentative : false)} loading={saving}>
+                  {isEditing ? (initialIsTentative ? 'Update Tentative Receipt' : 'Save') : 'Save'}
+                </Button>
+              </div>
+            </>
+          )}
 
-        <ConfirmModal
-          isOpen={splitTypeChangeModal.isOpen}
-          onClose={() => setSplitTypeChangeModal({ isOpen: false, newType: null })}
-          onConfirm={confirmSplitTypeChange}
-          title="Discard Unsaved Debt?"
-          message="You have unsaved debt assignments. Are you sure you want to discard them by changing the split type?"
-        />
+          <ProductSelector isOpen={isProductSelectorOpen} onClose={() => setIsProductSelectorOpen(false)} onSelect={handleProductSelect} />
+          
+          <StoreModal
+            isOpen={isStoreModalOpen}
+            onClose={() => setIsStoreModalOpen(false)}
+            onSave={handleStoreSave}
+            storeToEdit={null}
+          />
 
-        <ConfirmModal
-          isOpen={unpaidConfirmModalOpen}
-          onClose={() => setUnpaidConfirmModalOpen(false)}
-          onConfirm={confirmStatusChange}
-          title="Discard Debt Information?"
-          message="Changing status to 'Unpaid' will clear all existing debt splits and assignments for this receipt. Are you sure?"
-        />
+          <ConfirmModal
+            isOpen={splitTypeChangeModal.isOpen}
+            onClose={() => setSplitTypeChangeModal({ isOpen: false, newType: null })}
+            onConfirm={confirmSplitTypeChange}
+            title="Discard Unsaved Debt?"
+            message="You have unsaved debt assignments. Are you sure you want to discard them by changing the split type?"
+          />
 
-        <ConfirmModal
-          isOpen={exclusionConfirmModalOpen}
-          onClose={() => setExclusionConfirmModalOpen(false)}
-          onConfirm={confirmDisableExclusion}
-          title="Discard Exclusions?"
-          message="Turning off exclusion mode will discard your current item exclusions. Are you sure?"
-        />
+          <ConfirmModal
+            isOpen={unpaidConfirmModalOpen}
+            onClose={() => setUnpaidConfirmModalOpen(false)}
+            onConfirm={confirmStatusChange}
+            title="Discard Debt Information?"
+            message="Changing status to 'Unpaid' will clear all existing debt splits and assignments for this receipt. Are you sure?"
+          />
 
-        <ConfirmModal
-          isOpen={formatChangeModal.isOpen}
-          onClose={() => setFormatChangeModal({ isOpen: false, newFormat: null })}
-          onConfirm={confirmFormatChange}
-          title="Change Receipt Format?"
-          message="Are you sure you want to change the receipt format? Some data will be cleared."
-        />
+          <ConfirmModal
+            isOpen={exclusionConfirmModalOpen}
+            onClose={() => setExclusionConfirmModalOpen(false)}
+            onConfirm={confirmDisableExclusion}
+            title="Discard Exclusions?"
+            message="Turning off exclusion mode will discard your current item exclusions. Are you sure?"
+          />
 
-        <LineItemSelectionModal
-          isOpen={selectionModal.isOpen}
-          onClose={() => setSelectionModal({ isOpen: false, mode: null })}
-          lineItems={lineItems}
-          onSave={selectionModal.mode === 'debtor' ? handleAssignDebtorSave : handleDiscountExclusionSave}
-          selectionMode={selectionModal.mode!}
-          debtors={debtors}
-          initialSelectedKeys={selectionModal.mode === 'debtor' ? [] : Array.from(excludedLineItemKeys)}
-          disabled={hasSettledDebts}
-        />
-      </div>
+          <ConfirmModal
+            isOpen={formatChangeModal.isOpen}
+            onClose={() => setFormatChangeModal({ isOpen: false, newFormat: null })}
+            onConfirm={confirmFormatChange}
+            title="Change Receipt Format?"
+            message="Are you sure you want to change the receipt format? Some data will be cleared."
+          />
+
+          <LineItemSelectionModal
+            isOpen={selectionModal.isOpen}
+            onClose={() => setSelectionModal({ isOpen: false, mode: null })}
+            lineItems={lineItems}
+            onSave={selectionModal.mode === 'debtor' ? handleAssignDebtorSave : handleDiscountExclusionSave}
+            selectionMode={selectionModal.mode!}
+            debtors={debtors}
+            initialSelectedKeys={selectionModal.mode === 'debtor' ? [] : Array.from(excludedLineItemKeys)}
+            disabled={hasSettledDebts}
+          />
+        </div>
+      </PageWrapper>
     </div>
   );
 };

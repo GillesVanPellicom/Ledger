@@ -7,6 +7,7 @@ import StoreModal from '../components/stores/StoreModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Store } from '../types';
 import { Header } from '../components/ui/Header';
+import PageWrapper from '../components/layout/PageWrapper';
 
 const StoresPage: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -108,27 +109,29 @@ const StoresPage: React.FC = () => {
           </Tooltip>
         }
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <DataTable
-          data={stores}
-          columns={columns}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageSizeChange={setPageSize}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onSearch={setSearchTerm}
-          searchable={true}
-          loading={loading}
-        />
+      <PageWrapper>
+        <div className="py-6">
+          <DataTable
+            data={stores}
+            columns={columns}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onSearch={setSearchTerm}
+            searchable={true}
+            loading={loading}
+          />
 
-        <StoreModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          storeToEdit={editingStore}
-          onSave={fetchStores}
-        />
-      </div>
+          <StoreModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            storeToEdit={editingStore}
+            onSave={fetchStores}
+          />
+        </div>
+      </PageWrapper>
     </div>
   );
 };

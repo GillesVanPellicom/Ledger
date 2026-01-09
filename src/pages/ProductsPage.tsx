@@ -7,6 +7,7 @@ import ProductModal from '../components/products/ProductModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Product } from '../types';
 import { Header } from '../components/ui/Header';
+import PageWrapper from '../components/layout/PageWrapper';
 
 const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -115,27 +116,29 @@ const ProductsPage: React.FC = () => {
           </Tooltip>
         }
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <DataTable
-          data={products}
-          columns={columns}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageSizeChange={setPageSize}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onSearch={setSearchTerm}
-          searchable={true}
-          loading={loading}
-        />
+      <PageWrapper>
+        <div className="py-6">
+          <DataTable
+            data={products}
+            columns={columns}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onSearch={setSearchTerm}
+            searchable={true}
+            loading={loading}
+          />
 
-        <ProductModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          productToEdit={editingProduct}
-          onSave={fetchProducts}
-        />
-      </div>
+          <ProductModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            productToEdit={editingProduct}
+            onSave={fetchProducts}
+          />
+        </div>
+      </PageWrapper>
     </div>
   );
 };

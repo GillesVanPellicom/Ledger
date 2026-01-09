@@ -33,6 +33,7 @@ import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} fro
 import InfoCard from '../components/ui/InfoCard';
 import { Header } from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
+import PageWrapper from '../components/layout/PageWrapper';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -401,252 +402,253 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           </>
         }
       />
+      <PageWrapper>
+        <div className="py-6 grid grid-cols-3 gap-6">
+          <div className="col-span-2 space-y-6">
+            {!!receipt.IsTentative && (
+              <InfoCard
+                variant="info"
+                title="Tentative Receipt"
+                message="This is a draft receipt. It won't affect analytics or debts until made permanent."
+              >
+                <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
+              </InfoCard>
+            )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
-          {!!receipt.IsTentative && (
-            <InfoCard
-              variant="info"
-              title="Tentative Receipt"
-              message="This is a draft receipt. It won't affect analytics or debts until made permanent."
-            >
-              <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
-            </InfoCard>
-          )}
+            {!!receipt.ReceiptNote && (
+              <Card>
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold mb-2">Note</h2>
+                  <p className="text-gray-600 dark:text-gray-300">{receipt.ReceiptNote}</p>
+                </div>
+              </Card>
+            )}
 
-          {!!receipt.ReceiptNote && (
-            <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-2">Note</h2>
-                <p className="text-gray-600 dark:text-gray-300">{receipt.ReceiptNote}</p>
-              </div>
-            </Card>
-          )}
+            {images.length > 0 && (
+              <Card>
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold mb-4">Images</h2>
+                  <Gallery images={images}/>
+                </div>
+              </Card>
+            )}
 
-          {images.length > 0 && (
-            <Card>
-              <div className="p-6">
-                <h2 className="text-lg font-semibold mb-4">Images</h2>
-                <Gallery images={images}/>
-              </div>
-            </Card>
-          )}
-
-          {receipt.IsNonItemised ? (
-            <Card>
-              <div className="relative p-6">
-                <div className="blur-sm">
-                  <table className="w-full text-sm select-none">
-                    <thead className="text-left text-gray-500">
-                    <tr>
-                      <th className="p-2">Product</th>
-                      <th className="p-2 w-24 text-center">Qty</th>
-                      <th className="p-2 w-32 text-right">Unit Price (€)</th>
-                      <th className="p-2 w-32 text-right">Total (€)</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y dark:divide-gray-800">
-                    {Array.from({length: 6}).map((_, i) => (
-                      <tr key={i}>
-                        <td className="p-2" colSpan={4}>&nbsp;</td>
+            {receipt.IsNonItemised ? (
+              <Card>
+                <div className="relative p-6">
+                  <div className="blur-sm">
+                    <table className="w-full text-sm select-none">
+                      <thead className="text-left text-gray-500">
+                      <tr>
+                        <th className="p-2">Product</th>
+                        <th className="p-2 w-24 text-center">Qty</th>
+                        <th className="p-2 w-32 text-right">Unit Price (€)</th>
+                        <th className="p-2 w-32 text-right">Total (€)</th>
                       </tr>
-                    ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y dark:divide-gray-800">
+                      {Array.from({length: 6}).map((_, i) => (
+                        <tr key={i}>
+                          <td className="p-2" colSpan={4}>&nbsp;</td>
+                        </tr>
+                      ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                    <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Item-less
+                      Receipt</h3>
+                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this
+                      receipt.</p>
+                  </div>
                 </div>
-                <div
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                  <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                  <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Item-less
-                    Receipt</h3>
-                  <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this
-                    receipt.</p>
+              </Card>
+            ) : (
+              <Card>
+                <div className="p-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm select-none">
+                      <thead className="text-left text-gray-500">
+                      <tr>
+                        <th className="p-2">Product</th>
+                        <th className="p-2 w-24 text-center">Qty</th>
+                        <th className="p-2 w-32 text-right">Unit Price (€)</th>
+                        <th className="p-2 w-32 text-right">Total (€)</th>
+                        {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
+                      </tr>
+                      </thead>
+                      <tbody className="divide-y dark:divide-gray-800">
+                      {lineItems.map((item) => {
+                        const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
+                        return (
+                          <tr key={item.LineItemID}>
+                            <td className="p-2">
+                              <div className="flex items-center gap-2">
+                                {receipt.Discount > 0 && (
+                                  <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
+                                    <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+                                  </Tooltip>
+                                )}
+                                <div>
+                                  <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                                  <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-2 text-center">{item.LineQuantity}</td>
+                            <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
+                            <td className="p-2 text-right font-medium">
+                              {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                            </td>
+                            {debtEnabled && splitType === 'line_item' && (
+                              <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
+                                {item.DebtorName || '-'}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ) : (
+                <div className="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 rounded-b-xl">
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-4 text-gray-500">
+                      <span className="text-sm">Subtotal</span>
+                      <span className="font-medium">€{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-gray-500">
+                      <span className="text-sm">Discount ({receipt.Discount || 0}%)</span>
+                      <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-lg font-bold">
+                      <span>Total</span>
+                      <span>€{totalAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          <div className="col-span-1 space-y-6">
             <Card>
               <div className="p-6">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm select-none">
-                    <thead className="text-left text-gray-500">
-                    <tr>
-                      <th className="p-2">Product</th>
-                      <th className="p-2 w-24 text-center">Qty</th>
-                      <th className="p-2 w-32 text-right">Unit Price (€)</th>
-                      <th className="p-2 w-32 text-right">Total (€)</th>
-                      {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y dark:divide-gray-800">
-                    {lineItems.map((item) => {
-                      const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
-                      return (
-                        <tr key={item.LineItemID}>
-                          <td className="p-2">
-                            <div className="flex items-center gap-2">
-                              {receipt.Discount > 0 && (
-                                <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-                                  <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
-                                </Tooltip>
-                              )}
-                              <div>
-                                <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                                <p className="text-xs text-gray-500">{item.ProductBrand}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-2 text-center">{item.LineQuantity}</td>
-                          <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
-                          <td className="p-2 text-right font-medium">
-                            {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                          </td>
-                          {debtEnabled && splitType === 'line_item' && (
-                            <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
-                              {item.DebtorName || '-'}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                    </tbody>
-                  </table>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Amount</p>
+                    <p className="text-2xl font-bold">€{totalAmount.toFixed(2)}</p>
+                  </div>
+                  <Tooltip content={receipt.Status === 'paid' ? 'This receipt has been paid for.' : `Total amount is owed to ${receipt.OwedToDebtorName}.`}>
+                    <span
+                      className={cn(
+                        'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
+                        receipt.Status === 'paid'
+                          ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700'
+                          : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
+                      )}
+                    >
+                      {receipt.Status === 'paid' ? 'Paid' : 'Unpaid'}
+                    </span>
+                  </Tooltip>
                 </div>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 rounded-b-xl">
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-4 text-gray-500">
-                    <span className="text-sm">Subtotal</span>
-                    <span className="font-medium">€{subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-gray-500">
-                    <span className="text-sm">Discount ({receipt.Discount || 0}%)</span>
-                    <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-lg font-bold">
-                    <span>Total</span>
-                    <span>€{totalAmount.toFixed(2)}</span>
-                  </div>
+                <div className="mt-6 space-y-4">
+                  {paymentMethodsEnabled && (
+                    <div className="flex items-center gap-3">
+                      <CreditCardIcon className="h-5 w-5 text-gray-400"/>
+                      <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
+                    </div>
+                  )}
+                  {!receipt.IsNonItemised && (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <TagIcon className="h-5 w-5 text-gray-400"/>
+                        <span className="text-sm">{totalItems} Unique Items</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <ShoppingCartIcon className="h-5 w-5 text-gray-400"/>
+                        <span className="text-sm">{totalQuantity} Total Quantity</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </Card>
-          )}
-        </div>
 
-        <div className="col-span-1 space-y-6">
-          <Card>
-            <div className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-gray-500">Total Amount</p>
-                  <p className="text-2xl font-bold">€{totalAmount.toFixed(2)}</p>
-                </div>
-                <Tooltip content={receipt.Status === 'paid' ? 'This receipt has been paid for.' : `Total amount is owed to ${receipt.OwedToDebtorName}.`}>
-                  <span
-                    className={cn(
-                      'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
-                      receipt.Status === 'paid'
-                        ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700'
-                        : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
-                    )}
-                  >
-                    {receipt.Status === 'paid' ? 'Paid' : 'Unpaid'}
-                  </span>
-                </Tooltip>
-              </div>
-              <div className="mt-6 space-y-4">
-                {paymentMethodsEnabled && (
-                  <div className="flex items-center gap-3">
-                    <CreditCardIcon className="h-5 w-5 text-gray-400"/>
-                    <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
-                  </div>
-                )}
-                {!receipt.IsNonItemised && (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <TagIcon className="h-5 w-5 text-gray-400"/>
-                      <span className="text-sm">{totalItems} Unique Items</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <ShoppingCartIcon className="h-5 w-5 text-gray-400"/>
-                      <span className="text-sm">{totalQuantity} Total Quantity</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </Card>
+            {debtEnabled && splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
+              <div>
+                <Divider text="Debt Breakdown" />
+                <div className="space-y-2 mt-4">
+                  {debtSummary.debtors.map((debtor) => {
+                    const payment = payments.find(p => p.DebtorID === debtor.debtorId);
+                    const isPaid = !!payment;
 
-          {debtEnabled && splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
-            <div>
-              <Divider text="Debt Breakdown" />
-              <div className="space-y-2 mt-4">
-                {debtSummary.debtors.map((debtor) => {
-                  const payment = payments.find(p => p.DebtorID === debtor.debtorId);
-                  const isPaid = !!payment;
-
-                  return (
-                    <Card
-                      key={debtor.debtorId}
-                      className="p-4 cursor-pointer transition-all duration-200"
-                      onClick={() => handleSettleClick(debtor)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <Link to={`/entities/${debtor.debtorId}`}
-                              className="font-medium hover:underline flex items-center gap-1.5 group"
-                              onClick={(e) => e.stopPropagation()}>
-                          <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
-                          <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
-                        </Link>
-                        <div className="flex items-center">
-                          {isPaid ? (
-                            <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
-                            </Tooltip>
-                          ) : (
-                            <Tooltip content="Unpaid">
-                              <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
-                            </Tooltip>
-                          )}
+                    return (
+                      <Card
+                        key={debtor.debtorId}
+                        className="p-4 cursor-pointer transition-all duration-200"
+                        onClick={() => handleSettleClick(debtor)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <Link to={`/entities/${debtor.debtorId}`}
+                                className="font-medium hover:underline flex items-center gap-1.5 group"
+                                onClick={(e) => e.stopPropagation()}>
+                            <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
+                            <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
+                          </Link>
+                          <div className="flex items-center">
+                            {isPaid ? (
+                              <Tooltip content={`Paid on ${payment.PaidDate}`}>
+                                <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip content="Unpaid">
+                                <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
+                              </Tooltip>
+                            )}
+                          </div>
                         </div>
+                        <div className="flex justify-between items-baseline mt-1">
+                          <p className={cn("font-bold truncate", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")} style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                            €{debtor.amount.toFixed(2)}
+                          </p>
+                          <div className="text-right flex-shrink-0 pl-2">
+                            {splitType === 'total_split' &&
+                              <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
+                            {splitType === 'line_item' && !receipt.IsNonItemised &&
+                              <p className="text-sm text-gray-500">{debtor.itemCount} / {debtor.totalItems} items</p>}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                  {!!debtSummary.ownShare && (
+                    <Card className="p-4">
+                      <div className="flex justify-between items-start">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">Own Share</p>
+                        <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
                       </div>
                       <div className="flex justify-between items-baseline mt-1">
-                        <p className={cn("font-bold truncate", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")} style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
-                          €{debtor.amount.toFixed(2)}
+                        <p className="font-bold text-blue-700 dark:text-blue-300 truncate" style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                          €{debtSummary.ownShare.amount.toFixed(2)}
                         </p>
                         <div className="text-right flex-shrink-0 pl-2">
-                          {splitType === 'total_split' &&
-                            <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
-                          {splitType === 'line_item' && !receipt.IsNonItemised &&
-                            <p className="text-sm text-gray-500">{debtor.itemCount} / {debtor.totalItems} items</p>}
+                          <p className="text-sm text-gray-500">
+                            {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
+                          </p>
                         </div>
                       </div>
                     </Card>
-                  );
-                })}
-                {!!debtSummary.ownShare && (
-                  <Card className="p-4">
-                    <div className="flex justify-between items-start">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">Own Share</p>
-                      <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
-                    </div>
-                    <div className="flex justify-between items-baseline mt-1">
-                      <p className="font-bold text-blue-700 dark:text-blue-300 truncate" style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
-                        €{debtSummary.ownShare.amount.toFixed(2)}
-                      </p>
-                      <div className="text-right flex-shrink-0 pl-2">
-                        <p className="text-sm text-gray-500">
-                          {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </PageWrapper>
 
       <DebtSettlementModal
         isOpen={isSettlementModalOpen}

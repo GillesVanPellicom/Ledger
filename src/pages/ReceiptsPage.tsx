@@ -26,6 +26,7 @@ import {useSettings} from '../context/SettingsContext';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
 import {Receipt, LineItem} from '../types';
 import { Header } from '../components/ui/Header';
+import PageWrapper from '../components/layout/PageWrapper';
 
 const ReceiptsPage: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -322,66 +323,68 @@ const ReceiptsPage: React.FC = () => {
           </div>
         )}
       </Header>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <DataTable
-          data={receipts}
-          columns={columns}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageSizeChange={setPageSize}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onSearch={setSearchTerm}
-          searchable={true}
-          loading={loading}
-          onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
-          selectable={true}
-          onSelectionChange={setSelectedReceiptIds}
-          selectedIds={selectedReceiptIds}
-          itemKey="ReceiptID"
-        >
-          <DatePicker
-            selectsRange
-            startDate={dateRange[0]}
-            endDate={dateRange[1]}
-            onChange={(update: any) => {
-              setDateRange(update);
-              setCurrentPage(1);
+      <PageWrapper>
+        <div className="py-6">
+          <DataTable
+            data={receipts}
+            columns={columns}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onSearch={setSearchTerm}
+            searchable={true}
+            loading={loading}
+            onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
+            selectable={true}
+            onSelectionChange={setSelectedReceiptIds}
+            selectedIds={selectedReceiptIds}
+            itemKey="ReceiptID"
+          >
+            <DatePicker
+              selectsRange
+              startDate={dateRange[0]}
+              endDate={dateRange[1]}
+              onChange={(update: any) => {
+                setDateRange(update);
+                setCurrentPage(1);
+              }}
+              isClearable={true}
+              placeholderText="Filter by date range"
+            />
+          </DataTable>
+
+          <ConfirmModal
+            isOpen={deleteModalOpen}
+            onClose={() => {
+              setDeleteModalOpen(false);
+              setReceiptToDelete(null);
             }}
-            isClearable={true}
-            placeholderText="Filter by date range"
+            onConfirm={handleDelete}
+            title={`Delete ${receiptToDelete ? 'Receipt' : `${selectedReceiptIds.length} Receipts`}`}
+            message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this receipt' : `${selectedReceiptIds.length} selected receipts`}? This action cannot be undone.`}
           />
-        </DataTable>
 
-        <ConfirmModal
-          isOpen={deleteModalOpen}
-          onClose={() => {
-            setDeleteModalOpen(false);
-            setReceiptToDelete(null);
-          }}
-          onConfirm={handleDelete}
-          title={`Delete ${receiptToDelete ? 'Receipt' : `${selectedReceiptIds.length} Receipts`}`}
-          message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this receipt' : `${selectedReceiptIds.length} selected receipts`}? This action cannot be undone.`}
-        />
-
-        <ProgressModal
-          isOpen={isGeneratingPdf}
-          progress={pdfProgress}
-          title="Generating PDF Report..."
-        />
-
-        {debtEnabled && (
-          <BulkDebtModal
-            isOpen={isBulkDebtModalOpen}
-            onClose={() => setIsBulkDebtModalOpen(false)}
-            receiptIds={selectedReceiptIds}
-            onComplete={() => {
-              fetchReceipts();
-              setSelectedReceiptIds([]);
-            }}
+          <ProgressModal
+            isOpen={isGeneratingPdf}
+            progress={pdfProgress}
+            title="Generating PDF Report..."
           />
-        )}
-      </div>
+
+          {debtEnabled && (
+            <BulkDebtModal
+              isOpen={isBulkDebtModalOpen}
+              onClose={() => setIsBulkDebtModalOpen(false)}
+              receiptIds={selectedReceiptIds}
+              onComplete={() => {
+                fetchReceipts();
+                setSelectedReceiptIds([]);
+              }}
+            />
+          )}
+        </div>
+      </PageWrapper>
     </div>
   );
 };

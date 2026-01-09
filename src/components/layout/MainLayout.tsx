@@ -33,7 +33,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({openSettingsModal}) => {
       <Sidenav isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} openSettingsModal={openSettingsModal}/>
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300">
-        <div className="flex-1 overflow-auto p-0">
+        <div className="flex-1 overflow-auto">
           <Outlet/>
         </div>
 

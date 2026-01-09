@@ -23,6 +23,7 @@ import { Entity, Receipt } from '../types';
 import { useDebtCalculation } from '../hooks/useDebtCalculation';
 import { Header } from '../components/ui/Header';
 import Tooltip from '../components/ui/Tooltip';
+import PageWrapper from '../components/layout/PageWrapper';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -393,116 +394,118 @@ const EntityDetailsPage: React.FC = () => {
           </>
         }
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-4 text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">€{stats.debtToMe.toFixed(2)}</p>
-          </Card>
-          <Card className="p-4 text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400">€{stats.debtToEntity.toFixed(2)}</p>
-          </Card>
-          <Card className="p-4 text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Balance</p>
-            <p className={cn("text-2xl font-bold", stats.netBalance >= 0 ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400")}>
-              {stats.netBalance >= 0 ? `${entity.DebtorName} owes you €${stats.netBalance.toFixed(2)}` : `You owe ${entity.DebtorName} €${Math.abs(stats.netBalance).toFixed(2)}`}
-            </p>
-          </Card>
-        </div>
-
-        <Card>
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Debt Balance</h2>
-            <ReactECharts option={chartOption} theme={theme} style={{ height: '300px' }} />
+      <PageWrapper>
+        <div className="py-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4 text-center">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">€{stats.debtToMe.toFixed(2)}</p>
+            </Card>
+            <Card className="p-4 text-center">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">€{stats.debtToEntity.toFixed(2)}</p>
+            </Card>
+            <Card className="p-4 text-center">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Balance</p>
+              <p className={cn("text-2xl font-bold", stats.netBalance >= 0 ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400")}>
+                {stats.netBalance >= 0 ? `${entity.DebtorName} owes you €${stats.netBalance.toFixed(2)}` : `You owe ${entity.DebtorName} €${Math.abs(stats.netBalance).toFixed(2)}`}
+              </p>
+            </Card>
           </div>
-        </Card>
 
-        <DataTable
-          data={paginatedReceipts}
-          columns={columns}
-          onRowClick={handleRowClick}
-          itemKey="ReceiptID"
-          totalCount={filteredReceipts.length}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          pageSize={pageSize}
-          onPageSizeChange={setPageSize}
-          onSearch={setSearchTerm}
-          searchable={true}
-        >
-          <div className="w-64">
-            <DatePicker
-              selectsRange
-              startDate={dateRange[0]}
-              endDate={dateRange[1]}
-              onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
-              isClearable={true}
-              placeholderText="Filter by date range"
-            />
-          </div>
-          <div className="w-48">
-            <Select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              options={[
-                { value: 'all', label: 'All Transactions' },
-                { value: 'to_me', label: 'Owes You' },
-                { value: 'to_entity', label: 'You Owe' },
-              ]}
-            />
-          </div>
-        </DataTable>
+          <Card>
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Debt Balance</h2>
+              <ReactECharts option={chartOption} theme={theme} style={{ height: '300px' }} />
+            </div>
+          </Card>
 
-        <DebtSettlementModal
-          isOpen={isSettlementModalOpen}
-          onClose={() => setIsSettlementModalOpen(false)}
-          onSave={fetchDetails}
-          debtInfo={selectedDebtForSettlement}
-        />
+          <DataTable
+            data={paginatedReceipts}
+            columns={columns}
+            onRowClick={handleRowClick}
+            itemKey="ReceiptID"
+            totalCount={filteredReceipts.length}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            onSearch={setSearchTerm}
+            searchable={true}
+          >
+            <div className="w-64">
+              <DatePicker
+                selectsRange
+                startDate={dateRange[0]}
+                endDate={dateRange[1]}
+                onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
+                isClearable={true}
+                placeholderText="Filter by date range"
+              />
+            </div>
+            <div className="w-48">
+              <Select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                options={[
+                  { value: 'all', label: 'All Transactions' },
+                  { value: 'to_me', label: 'Owes You' },
+                  { value: 'to_entity', label: 'You Owe' },
+                ]}
+              />
+            </div>
+          </DataTable>
 
-        <ConfirmModal
-          isOpen={unsettleConfirmation.isOpen}
-          onClose={() => setUnsettleConfirmation({ isOpen: false, receiptId: null, type: null })}
-          onConfirm={handleUnsettle}
-          title="Unsettle Debt"
-          message={`Are you sure you want to mark this debt as unpaid?`}
-        />
-
-        <MarkAsPaidModal
-          isOpen={isMarkAsPaidModalOpen}
-          onClose={() => setIsMarkAsPaidModalOpen(false)}
-          onConfirm={handleMarkAsPaid}
-          paymentMethods={paymentMethods}
-          entityName={entity.DebtorName}
-          receipt={receiptToMarkAsPaid}
-          paymentMethodsEnabled={paymentMethodsEnabled}
-        />
-
-        <DebtPdfOptionsModal
-          isOpen={isPdfOptionsModalOpen}
-          onClose={() => setIsPdfOptionsModalOpen(false)}
-          onConfirm={handleGeneratePdf}
-        />
-
-        <ProgressModal
-          isOpen={isGeneratingPdf}
-          progress={pdfProgress}
-          title="Generating PDF Report..."
-        />
-
-        {entity && (
-          <EntityModal
-            isOpen={isEditEntityModalOpen}
-            onClose={() => setIsEditEntityModalOpen(false)}
-            entityToEdit={entity}
-            onSave={() => {
-              setIsEditEntityModalOpen(false);
-              fetchDetails();
-            }}
+          <DebtSettlementModal
+            isOpen={isSettlementModalOpen}
+            onClose={() => setIsSettlementModalOpen(false)}
+            onSave={fetchDetails}
+            debtInfo={selectedDebtForSettlement}
           />
-        )}
-      </div>
+
+          <ConfirmModal
+            isOpen={unsettleConfirmation.isOpen}
+            onClose={() => setUnsettleConfirmation({ isOpen: false, receiptId: null, type: null })}
+            onConfirm={handleUnsettle}
+            title="Unsettle Debt"
+            message={`Are you sure you want to mark this debt as unpaid?`}
+          />
+
+          <MarkAsPaidModal
+            isOpen={isMarkAsPaidModalOpen}
+            onClose={() => setIsMarkAsPaidModalOpen(false)}
+            onConfirm={handleMarkAsPaid}
+            paymentMethods={paymentMethods}
+            entityName={entity.DebtorName}
+            receipt={receiptToMarkAsPaid}
+            paymentMethodsEnabled={paymentMethodsEnabled}
+          />
+
+          <DebtPdfOptionsModal
+            isOpen={isPdfOptionsModalOpen}
+            onClose={() => setIsPdfOptionsModalOpen(false)}
+            onConfirm={handleGeneratePdf}
+          />
+
+          <ProgressModal
+            isOpen={isGeneratingPdf}
+            progress={pdfProgress}
+            title="Generating PDF Report..."
+          />
+
+          {entity && (
+            <EntityModal
+              isOpen={isEditEntityModalOpen}
+              onClose={() => setIsEditEntityModalOpen(false)}
+              entityToEdit={entity}
+              onSave={() => {
+                setIsEditEntityModalOpen(false);
+                fetchDetails();
+              }}
+            />
+          )}
+        </div>
+      </PageWrapper>
     </div>
   );
 };
