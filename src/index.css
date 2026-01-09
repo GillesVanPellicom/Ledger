@@ -3,6 +3,22 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --primary-gradient: linear-gradient(
+      to bottom,
+      #b59cf8,
+      #f5f2ff 48%,
+      #b59cf8 68%,
+      #8273a9 100%
+    );
+    --frost-gradient: repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(0, 0, 0, 0.39) 59%,
+      rgba(255, 255, 255, 0.27) 100%
+    );
+  }
+
   body {
     @apply bg-background-light text-gray-900 dark:bg-background-dark dark:text-gray-100 transition-colors duration-200;
   }

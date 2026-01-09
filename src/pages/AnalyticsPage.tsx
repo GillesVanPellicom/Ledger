@@ -42,7 +42,7 @@ const AnalyticsPage: React.FC = () => {
   const {settings} = useSettings();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
-  const { calculate: calculateDebt } = useDebtCalculation();
+  const {calculate: calculateDebt} = useDebtCalculation();
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
@@ -208,12 +208,12 @@ const AnalyticsPage: React.FC = () => {
         // but I've imported the hook to show awareness. 
         // Actually, the prompt said "Make sure debt calculator is used by...". 
         // The utility IS the calculator logic.
-        
+
         // Let's use the utility function directly as before, but ensure it's the one from utils/debtCalculator
         // which is what the hook uses.
-        
+
         // Re-importing calculateDebts to be sure
-        const { calculateDebts } = await import('../utils/debtCalculator');
+        const {calculateDebts} = await import('../utils/debtCalculator');
 
         for (const debtor of debtors) {
           const {debtToMe, debtToEntity} = await calculateDebts(debtor.DebtorID);
@@ -312,12 +312,23 @@ const AnalyticsPage: React.FC = () => {
       {paymentMethodsEnabled && (
         <div className="pt-2">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-1 p-6 flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50">
-              <div className="p-4 bg-white/50 dark:bg-white/10 rounded-full mb-4">
-                <BanknotesIcon className="h-10 w-10 text-indigo-600 dark:text-indigo-300"/></div>
-              <p className="text-lg text-gray-600 dark:text-gray-300">Net Worth</p>
-              <p className="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-1">€{paymentMethodStats.totalCapacity.toFixed(2)}</p>
-            </Card>
+            <div className="relative lg:col-span-1 overflow-hidden rounded-xl">
+              <div
+                style={{'--glassRotation': '-16deg', '--gradientRotation': '14deg'} as React.CSSProperties}
+                className="absolute inset-0"
+              >
+                <div className="relative grid h-full w-full place-items-center">
+                  <div className="h-1/2 w-1/2 rotate-[var(--gradientRotation)] rounded-[3vw] bg-[image:var(--primary-gradient)] mix-blend-hard-light"></div>
+                  <div className="absolute inset-0 scale-[2] rotate-[var(--glassRotation)] bg-[image:var(--frost-gradient)] bg-[size:30px] mix-blend-color-dodge backdrop-blur-[15px]"></div>
+                </div>
+              </div>
+              <Card className="relative p-6 flex flex-col justify-center items-center bg-transparent dark:bg-transparent shadow-none h-full">
+                <div className="mix-blend-inclusion text-center">
+                  <p className="text-lg text-violet">Net Worth</p>
+                  <p className="text-4xl font-bold text-violet mt-1">€{paymentMethodStats.totalCapacity.toFixed(2)}</p>
+                </div>
+              </Card>
+            </div>
             <Card className="lg:col-span-2 p-6">
               <CardHeader title="Payment Method Balances" tooltipText="Current balance of each payment method."/>
               <div className="space-y-4">
@@ -360,11 +371,12 @@ const AnalyticsPage: React.FC = () => {
             <div className="p-6">
               <CardHeader title="Net Balance per Entity"
                           tooltipText="Shows the net financial position with each entity. Positive values (green) mean they owe you, negative (red) mean you owe them."/>
-              {loading ? <div className="flex justify-center items-center h-[400px] w-full"><Spinner/></div> : <ReactECharts ref={debtBarChartRef}
-                                                    option={debtBarChartOption}
-                                                    theme={theme}
-                                                    style={{height: '400px'}}
-                                                    notMerge={true}/>}
+              {loading ? <div className="flex justify-center items-center h-[400px] w-full"><Spinner/></div> :
+                <ReactECharts ref={debtBarChartRef}
+                              option={debtBarChartOption}
+                              theme={theme}
+                              style={{height: '400px'}}
+                              notMerge={true}/>}
             </div>
           </Card>
           <hr className="my-8 border-gray-200 dark:border-gray-800"/>
@@ -380,11 +392,12 @@ const AnalyticsPage: React.FC = () => {
       <Card>
         <div className="p-6">
           <CardHeader title="Monthly Spending" tooltipText={`Total spending for each month in ${selectedYear}.`}/>
-          {loading ? <div className="flex justify-center items-center h-[300px] w-full"><Spinner/></div> : <ReactECharts ref={monthlyChartRef}
-                                                option={monthlyChartOption}
-                                                theme={theme}
-                                                style={{height: '300px'}}
-                                                notMerge={true}/>}
+          {loading ? <div className="flex justify-center items-center h-[300px] w-full"><Spinner/></div> :
+            <ReactECharts ref={monthlyChartRef}
+                          option={monthlyChartOption}
+                          theme={theme}
+                          style={{height: '300px'}}
+                          notMerge={true}/>}
         </div>
       </Card>
       <Card>
@@ -428,11 +441,12 @@ const AnalyticsPage: React.FC = () => {
           <div className="p-6">
             <CardHeader title="Spending by Store"
                         tooltipText={`Breakdown of total spending per store for ${selectedYear}.`}/>
-            {loading ? <div className="flex justify-center items-center h-[300px] w-full"><Spinner/></div> : <ReactECharts ref={storeChartRef}
-                                                  option={storeChartOption}
-                                                  theme={theme}
-                                                  style={{height: '300px'}}
-                                                  notMerge={true}/>}
+            {loading ? <div className="flex justify-center items-center h-[300px] w-full"><Spinner/></div> :
+              <ReactECharts ref={storeChartRef}
+                            option={storeChartOption}
+                            theme={theme}
+                            style={{height: '300px'}}
+                            notMerge={true}/>}
           </div>
         </Card>
         <Card>
