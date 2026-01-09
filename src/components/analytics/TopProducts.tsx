@@ -231,7 +231,7 @@ const TopProducts: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="h-64 flex items-center justify-center"><Spinner /></div>
+          <div className="h-64 flex items-center justify-center w-full"><Spinner /></div>
         ) : data.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-gray-500 gap-2">
             <DocumentMagnifyingGlassIcon className="h-12 w-12 opacity-50" />

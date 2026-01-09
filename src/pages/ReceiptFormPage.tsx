@@ -20,6 +20,7 @@ import StoreModal from '../components/stores/StoreModal';
 import { Debtor, LineItem, ReceiptImage, ReceiptSplit, Store } from '../types';
 import InfoCard from '../components/ui/InfoCard';
 import '../electron.d';
+import Spinner from '../components/ui/Spinner';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -631,7 +632,7 @@ const ReceiptFormPage: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="flex justify-center items-center h-full"><p>Loading form...</p></div>;
+  if (loading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
 
   const SplitTypeSelector = () => {
     const buttons = [

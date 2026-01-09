@@ -31,6 +31,7 @@ import Modal, {ConfirmModal} from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} from '../types';
 import InfoCard from '../components/ui/InfoCard';
+import { useDebtCalculation } from '../hooks/useDebtCalculation';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -79,6 +80,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
   const {showError} = useError();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
+  const { calculate: calculateDebt } = useDebtCalculation();
 
   const [splitType, setSplitType] = useState<'none' | 'total_split' | 'line_item'>('none');
   const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);

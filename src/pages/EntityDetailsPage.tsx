@@ -20,7 +20,7 @@ import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
 import EntityModal from '../components/debt/EntityModal';
 import { Entity, Receipt } from '../types';
-import { calculateDebts } from '../utils/debtCalculator';
+import { useDebtCalculation } from '../hooks/useDebtCalculation';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -76,8 +76,6 @@ const EntityDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [entity, setEntity] = useState<Entity | null>(null);
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [stats, setStats] = useState({ debtToEntity: 0, debtToMe: 0, netBalance: 0 });
   const [loading, setLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -100,6 +98,7 @@ const EntityDetailsPage: React.FC = () => {
   const { showError } = useError();
   const { settings } = useSettings();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
+  const { receipts, stats, loading: debtLoading, calculate: calculateDebt } = useDebtCalculation();
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
@@ -116,9 +115,7 @@ const EntityDetailsPage: React.FC = () => {
       }
 
       if (id) {
-        const { receipts, debtToEntity, debtToMe, netBalance } = await calculateDebts(id);
-        setReceipts(receipts);
-        setStats({ debtToEntity, debtToMe, netBalance });
+        await calculateDebt(id);
       }
 
     } catch (error) {
@@ -126,7 +123,7 @@ const EntityDetailsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, showError, paymentMethodsEnabled]);
+  }, [id, showError, paymentMethodsEnabled, calculateDebt]);
 
   useEffect(() => {
     fetchDetails();
@@ -352,7 +349,7 @@ const EntityDetailsPage: React.FC = () => {
     },
   ];
 
-  if (loading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
+  if (loading || debtLoading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
   if (!entity) return <div>Entity not found.</div>;
 
   return (

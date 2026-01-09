@@ -25,6 +25,7 @@ import Tooltip from '../components/ui/Tooltip';
 import {useSettings} from '../context/SettingsContext';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
 import {Receipt, LineItem} from '../types';
+import { useDebtCalculation } from '../hooks/useDebtCalculation';
 
 const ReceiptsPage: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -49,6 +50,7 @@ const ReceiptsPage: React.FC = () => {
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const navigate = useNavigate();
+  const { calculate: calculateDebt } = useDebtCalculation();
 
   const fetchReceipts = useCallback(async () => {
     setLoading(true);

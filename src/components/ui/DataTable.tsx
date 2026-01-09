@@ -270,8 +270,8 @@ const DataTable: React.FC<DataTableProps> = ({
           </table>
         </div>
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/30 dark:bg-gray-900/30">
-            <Spinner className="h-6 w-6 text-accent" />
+          <div className="absolute inset-0 flex items-center justify-center bg-white/30 dark:bg-gray-900/30 z-10">
+            <Spinner className="h-8 w-8 text-accent" />
           </div>
         )}
       </div>
