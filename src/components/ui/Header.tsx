@@ -45,12 +45,12 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Content */}
       <div
-        className="relative backdrop-blur-md flex items-center"
+        className="relative backdrop-blur-md flex flex-col justify-center"
         style={{ minHeight: `${minHeight}px` }}
       >
         <div className="w-full px-[100px]">
-          <div className="relative flex items-center justify-between w-full">
-            <div className="flex items-center">
+          <div className="relative flex items-baseline justify-between w-full">
+            <div className="flex items-baseline gap-8">
               {backButton && (
                 <div className="absolute right-full mr-4">{backButton}</div>
               )}
@@ -60,10 +60,10 @@ export const Header: React.FC<HeaderProps> = ({
                   <p className="text-sm text-gray-500">{subtitle}</p>
                 )}
               </div>
+              {children}
             </div>
             {actions && <div className="flex items-center gap-2">{actions}</div>}
           </div>
-          {children && <div className="mt-4">{children}</div>}
         </div>
       </div>
     </div>

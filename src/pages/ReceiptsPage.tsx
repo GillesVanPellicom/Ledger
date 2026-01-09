@@ -301,30 +301,29 @@ const ReceiptsPage: React.FC = () => {
             </Button>
           </Tooltip>
         }
-      >
-        {selectedReceiptIds.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
-              <TrashIcon className="h-4 w-4 mr-2"/>
-              Delete ({selectedReceiptIds.length})
-            </Button>
-            <Tooltip content="Feature broken, WIP">
-              <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
-                <DocumentArrowDownIcon className="h-4 w-4 mr-2"/>
-                Save as PDF
-              </Button>
-            </Tooltip>
-            {debtEnabled && (
-              <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
-                <UserGroupIcon className="h-4 w-4 mr-2"/>
-                Bulk Debt
-              </Button>
-            )}
-          </div>
-        )}
-      </Header>
+      />
       <PageWrapper>
         <div className="py-6">
+          {selectedReceiptIds.length > 0 && (
+            <div className="flex items-center gap-2 mb-4">
+              <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
+                <TrashIcon className="h-4 w-4 mr-2"/>
+                Delete ({selectedReceiptIds.length})
+              </Button>
+              <Tooltip content="Feature broken, WIP">
+                <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
+                  <DocumentArrowDownIcon className="h-4 w-4 mr-2"/>
+                  Save as PDF
+                </Button>
+              </Tooltip>
+              {debtEnabled && (
+                <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
+                  <UserGroupIcon className="h-4 w-4 mr-2"/>
+                  Bulk Debt
+                </Button>
+              )}
+            </div>
+          )}
           <DataTable
             data={receipts}
             columns={columns}
