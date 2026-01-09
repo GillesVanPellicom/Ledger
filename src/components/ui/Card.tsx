@@ -7,7 +7,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const Card: React.FC<CardProps> = ({ className, children, variant = 'default', ...props }) => {
-  const baseClasses = "rounded-xl text-gray-950 dark:text-gray-50";
+  const baseClasses = "rounded-lg text-gray-950 dark:text-gray-50";
   
   const variantClasses = {
     default: "border border-gray-200 dark:border-gray-800 bg-neutral-50 dark:bg-zinc-950 shadow-md",
