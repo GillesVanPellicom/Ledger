@@ -6,6 +6,7 @@ import { db } from '../utils/db';
 import ProductModal from '../components/products/ProductModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Product } from '../types';
+import { Header } from '../components/ui/Header';
 
 const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -103,34 +104,38 @@ const ProductsPage: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
-        <Button onClick={handleAdd}>
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Product
-        </Button>
+    <div>
+      <Header
+        title="Products"
+        actions={
+          <Tooltip content="Add Product">
+            <Button variant="ghost" size="icon" onClick={handleAdd}>
+              <PlusIcon className="h-5 w-5" />
+            </Button>
+          </Tooltip>
+        }
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <DataTable
+          data={products}
+          columns={columns}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onSearch={setSearchTerm}
+          searchable={true}
+          loading={loading}
+        />
+
+        <ProductModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          productToEdit={editingProduct}
+          onSave={fetchProducts}
+        />
       </div>
-
-      <DataTable
-        data={products}
-        columns={columns}
-        totalCount={totalCount}
-        pageSize={pageSize}
-        onPageSizeChange={setPageSize}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        onSearch={setSearchTerm}
-        searchable={true}
-        loading={loading}
-      />
-
-      <ProductModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        productToEdit={editingProduct}
-        onSave={fetchProducts}
-      />
     </div>
   );
 };

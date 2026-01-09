@@ -25,7 +25,7 @@ import Tooltip from '../components/ui/Tooltip';
 import {useSettings} from '../context/SettingsContext';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
 import {Receipt, LineItem} from '../types';
-import { useDebtCalculation } from '../hooks/useDebtCalculation';
+import { Header } from '../components/ui/Header';
 
 const ReceiptsPage: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -50,7 +50,6 @@ const ReceiptsPage: React.FC = () => {
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const navigate = useNavigate();
-  const { calculate: calculateDebt } = useDebtCalculation();
 
   const fetchReceipts = useCallback(async () => {
     setLoading(true);
@@ -291,97 +290,98 @@ const ReceiptsPage: React.FC = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Receipts</h1>
-          {selectedReceiptIds.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
-                <TrashIcon className="h-4 w-4 mr-2"/>
-                Delete ({selectedReceiptIds.length})
-              </Button>
-              <Tooltip content="Feature broken, WIP">
-                <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
-                  <DocumentArrowDownIcon className="h-4 w-4 mr-2"/>
-                  Save as PDF
-                </Button>
-              </Tooltip>
-              {debtEnabled && (
-                <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
-                  <UserGroupIcon className="h-4 w-4 mr-2"/>
-                  Bulk Debt
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => navigate('/receipts/new')}>
-            <PlusIcon className="h-5 w-5 mr-2"/>
-            New Receipt
-          </Button>
-        </div>
-      </div>
-
-      <DataTable
-        data={receipts}
-        columns={columns}
-        totalCount={totalCount}
-        pageSize={pageSize}
-        onPageSizeChange={setPageSize}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        onSearch={setSearchTerm}
-        searchable={true}
-        loading={loading}
-        onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
-        selectable={true}
-        onSelectionChange={setSelectedReceiptIds}
-        selectedIds={selectedReceiptIds}
-        itemKey="ReceiptID"
+    <div>
+      <Header
+        title="Receipts"
+        actions={
+          <Tooltip content="New Receipt">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/receipts/new')}>
+              <PlusIcon className="h-5 w-5"/>
+            </Button>
+          </Tooltip>
+        }
       >
-        <DatePicker
-          selectsRange
-          startDate={dateRange[0]}
-          endDate={dateRange[1]}
-          onChange={(update: any) => {
-            setDateRange(update);
-            setCurrentPage(1);
+        {selectedReceiptIds.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
+              <TrashIcon className="h-4 w-4 mr-2"/>
+              Delete ({selectedReceiptIds.length})
+            </Button>
+            <Tooltip content="Feature broken, WIP">
+              <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
+                <DocumentArrowDownIcon className="h-4 w-4 mr-2"/>
+                Save as PDF
+              </Button>
+            </Tooltip>
+            {debtEnabled && (
+              <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
+                <UserGroupIcon className="h-4 w-4 mr-2"/>
+                Bulk Debt
+              </Button>
+            )}
+          </div>
+        )}
+      </Header>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <DataTable
+          data={receipts}
+          columns={columns}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onSearch={setSearchTerm}
+          searchable={true}
+          loading={loading}
+          onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
+          selectable={true}
+          onSelectionChange={setSelectedReceiptIds}
+          selectedIds={selectedReceiptIds}
+          itemKey="ReceiptID"
+        >
+          <DatePicker
+            selectsRange
+            startDate={dateRange[0]}
+            endDate={dateRange[1]}
+            onChange={(update: any) => {
+              setDateRange(update);
+              setCurrentPage(1);
+            }}
+            isClearable={true}
+            placeholderText="Filter by date range"
+          />
+        </DataTable>
+
+        <ConfirmModal
+          isOpen={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setReceiptToDelete(null);
           }}
-          isClearable={true}
-          placeholderText="Filter by date range"
+          onConfirm={handleDelete}
+          title={`Delete ${receiptToDelete ? 'Receipt' : `${selectedReceiptIds.length} Receipts`}`}
+          message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this receipt' : `${selectedReceiptIds.length} selected receipts`}? This action cannot be undone.`}
         />
-      </DataTable>
 
-      <ConfirmModal
-        isOpen={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setReceiptToDelete(null);
-        }}
-        onConfirm={handleDelete}
-        title={`Delete ${receiptToDelete ? 'Receipt' : `${selectedReceiptIds.length} Receipts`}`}
-        message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this receipt' : `${selectedReceiptIds.length} selected receipts`}? This action cannot be undone.`}
-      />
-
-      <ProgressModal
-        isOpen={isGeneratingPdf}
-        progress={pdfProgress}
-        title="Generating PDF Report..."
-      />
-
-      {debtEnabled && (
-        <BulkDebtModal
-          isOpen={isBulkDebtModalOpen}
-          onClose={() => setIsBulkDebtModalOpen(false)}
-          receiptIds={selectedReceiptIds}
-          onComplete={() => {
-            fetchReceipts();
-            setSelectedReceiptIds([]);
-          }}
+        <ProgressModal
+          isOpen={isGeneratingPdf}
+          progress={pdfProgress}
+          title="Generating PDF Report..."
         />
-      )}
+
+        {debtEnabled && (
+          <BulkDebtModal
+            isOpen={isBulkDebtModalOpen}
+            onClose={() => setIsBulkDebtModalOpen(false)}
+            receiptIds={selectedReceiptIds}
+            onComplete={() => {
+              fetchReceipts();
+              setSelectedReceiptIds([]);
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };

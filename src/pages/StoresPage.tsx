@@ -6,6 +6,7 @@ import { db } from '../utils/db';
 import StoreModal from '../components/stores/StoreModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Store } from '../types';
+import { Header } from '../components/ui/Header';
 
 const StoresPage: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -96,34 +97,38 @@ const StoresPage: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Stores</h1>
-        <Button onClick={handleAdd}>
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Store
-        </Button>
+    <div>
+      <Header
+        title="Stores"
+        actions={
+          <Tooltip content="Add Store">
+            <Button variant="ghost" size="icon" onClick={handleAdd}>
+              <PlusIcon className="h-5 w-5" />
+            </Button>
+          </Tooltip>
+        }
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <DataTable
+          data={stores}
+          columns={columns}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onSearch={setSearchTerm}
+          searchable={true}
+          loading={loading}
+        />
+
+        <StoreModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          storeToEdit={editingStore}
+          onSave={fetchStores}
+        />
       </div>
-
-      <DataTable
-        data={stores}
-        columns={columns}
-        totalCount={totalCount}
-        pageSize={pageSize}
-        onPageSizeChange={setPageSize}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        onSearch={setSearchTerm}
-        searchable={true}
-        loading={loading}
-      />
-
-      <StoreModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        storeToEdit={editingStore}
-        onSave={fetchStores}
-      />
     </div>
   );
 };

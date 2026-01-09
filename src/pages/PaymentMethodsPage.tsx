@@ -10,6 +10,7 @@ import { cn } from '../utils/cn';
 import * as SolidIcons from '@heroicons/react/24/solid';
 import Tooltip from '../components/ui/Tooltip';
 import { PaymentMethod, PaymentMethodStyle } from '../types';
+import { Header } from '../components/ui/Header';
 
 interface PaymentMethodCardProps {
   method: PaymentMethod;
@@ -131,42 +132,47 @@ const PaymentMethodsPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payment Methods</h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setShowHidden(!showHidden)}>
-            {showHidden ? <EyeSlashIcon className="h-5 w-5 mr-2" /> : <EyeIcon className="h-5 w-5 mr-2" />}
-            {showHidden ? 'Hide Inactive' : 'Show Hidden'}
-          </Button>
-          <Button onClick={() => { setSelectedMethod(null); setIsAddModalOpen(true); }}>
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Add Method
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredMethods.map(method => (
-          <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
-        ))}
-      </div>
-
-      <PaymentMethodModal
-        isOpen={isAddModalOpen || isEditModalOpen}
-        onClose={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); setSelectedMethod(null); }}
-        onSave={handleSave}
-        methodToEdit={selectedMethod}
+    <div>
+      <Header
+        title="Payment Methods"
+        actions={
+          <>
+            <Tooltip content={showHidden ? 'Hide Inactive' : 'Show Hidden'}>
+              <Button variant="ghost" size="icon" onClick={() => setShowHidden(!showHidden)}>
+                {showHidden ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </Button>
+            </Tooltip>
+            <Tooltip content="Add Method">
+              <Button variant="ghost" size="icon" onClick={() => { setSelectedMethod(null); setIsAddModalOpen(true); }}>
+                <PlusIcon className="h-5 w-5" />
+              </Button>
+            </Tooltip>
+          </>
+        }
       />
-      {selectedMethod && (
-        <PaymentMethodStyleModal
-          isOpen={isStyleModalOpen}
-          onClose={() => setIsStyleModalOpen(false)}
-          onSave={handleStyleSave}
-          method={selectedMethod}
-          currentStyle={settings.paymentMethodStyles?.[selectedMethod.PaymentMethodID]}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredMethods.map(method => (
+            <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
+          ))}
+        </div>
+
+        <PaymentMethodModal
+          isOpen={isAddModalOpen || isEditModalOpen}
+          onClose={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); setSelectedMethod(null); }}
+          onSave={handleSave}
+          methodToEdit={selectedMethod}
         />
-      )}
+        {selectedMethod && (
+          <PaymentMethodStyleModal
+            isOpen={isStyleModalOpen}
+            onClose={() => setIsStyleModalOpen(false)}
+            onSave={handleStyleSave}
+            method={selectedMethod}
+            currentStyle={settings.paymentMethodStyles?.[selectedMethod.PaymentMethodID]}
+          />
+        )}
+      </div>
     </div>
   );
 };

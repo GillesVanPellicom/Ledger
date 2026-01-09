@@ -47,7 +47,7 @@ const Sidenav: React.FC<SidenavProps> = ({isCollapsed, toggleSidebar, openSettin
   return (
     <aside
       className={cn(
-        "h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out z-20",
+        "h-full bg-gray-50 dark:bg-zinc-950 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out z-20",
         isCollapsed ? "w-16" : "w-64"
       )}
     >

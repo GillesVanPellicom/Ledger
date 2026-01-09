@@ -51,7 +51,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({openSettingsModal}) => {
         )}
 
         <div className={cn(
-          "flex-1 overflow-auto p-6",
+          "flex-1 overflow-auto p-0",
           showBackButton && "pt-16"
         )}>
           <Outlet/>

@@ -7,6 +7,7 @@ import { db } from '../utils/db';
 import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Debtor } from '../types';
+import { Header } from '../components/ui/Header';
 
 const EntitiesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -102,36 +103,40 @@ const EntitiesPage: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Entities</h1>
-        <Button onClick={handleAdd}>
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Entity
-        </Button>
+    <div>
+      <Header 
+        title="Entities"
+        actions={
+          <Tooltip content="Add Entity">
+            <Button variant="ghost" size="icon" onClick={handleAdd}>
+              <PlusIcon className="h-5 w-5" />
+            </Button>
+          </Tooltip>
+        }
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <DataTable
+          data={entities}
+          columns={columns}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onSearch={setSearchTerm}
+          searchable={true}
+          loading={loading}
+          onRowClick={handleRowClick}
+          itemKey="DebtorID"
+        />
+
+        <EntityModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          entityToEdit={editingEntity}
+          onSave={fetchEntities}
+        />
       </div>
-
-      <DataTable
-        data={entities}
-        columns={columns}
-        totalCount={totalCount}
-        pageSize={pageSize}
-        onPageSizeChange={setPageSize}
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        onSearch={setSearchTerm}
-        searchable={true}
-        loading={loading}
-        onRowClick={handleRowClick}
-        itemKey="DebtorID"
-      />
-
-      <EntityModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        entityToEdit={editingEntity}
-        onSave={fetchEntities}
-      />
     </div>
   );
 };
