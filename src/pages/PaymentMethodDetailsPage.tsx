@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
-import TopUpModal from '../components/payment/TopUpModal';
+import TransferModal from '../components/payment/TransferModal';
 import { BanknotesIcon, PencilIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
@@ -34,7 +34,7 @@ interface PageTransaction {
   name: string;
   note: string;
   amount: number;
-  type: 'receipt' | 'topup';
+  type: 'receipt' | 'deposit' | 'transfer';
   // Receipt-specific fields
   Discount?: number | null;
   IsNonItemised?: 0 | 1;
@@ -56,10 +56,10 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<PageTransaction[]>([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [methodName, setMethodName] = useState('');
-  const [topUpToEdit, setTopUpToEdit] = useState<TopUp | null>(null);
+  const [transferToEdit, setTransferToEdit] = useState<TopUp | null>(null);
   const [itemToDelete, setItemToDelete] = useState<PageTransaction | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [filter, setFilter] = useState('all');
@@ -116,11 +116,10 @@ const PaymentMethodDetailsPage: React.FC = () => {
         name: string;
         note: string;
         amount: number;
-        type: 'topup';
       }
 
       const topupsData = await db.query<TopUpQueryResult>(`
-        SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount, 'topup' as type
+        SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount
         FROM TopUps
         WHERE PaymentMethodID = ?
       `, [id]);
@@ -139,14 +138,17 @@ const PaymentMethodDetailsPage: React.FC = () => {
             const total = subtotal - discountAmount;
             return {...r, amount: -total};
         }),
-        ...topupsData
+        ...topupsData.map((t): PageTransaction => ({
+          ...t,
+          type: t.amount > 0 ? 'deposit' : 'transfer'
+        }))
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setTransactions(allTransactions);
 
       const expenses = allTransactions.filter(t => t.type === 'receipt').reduce((sum, r) => sum - r.amount, 0);
-      const topups = allTransactions.filter(t => t.type === 'topup').reduce((sum, t) => sum + t.amount, 0);
-      setBalance((methodData?.PaymentMethodFunds || 0) + topups - expenses);
+      const depositsAndTransfers = allTransactions.filter(t => t.type === 'deposit' || t.type === 'transfer').reduce((sum, t) => sum + t.amount, 0);
+      setBalance((methodData?.PaymentMethodFunds || 0) + depositsAndTransfers - expenses);
 
     } catch (error) {
       console.error("Failed to fetch payment method details:", error);
@@ -159,14 +161,14 @@ const PaymentMethodDetailsPage: React.FC = () => {
     fetchDetails();
   }, [fetchDetails]);
 
-  const handleTopUpSave = () => {
+  const handleTransferSave = () => {
     fetchDetails();
-    setTopUpToEdit(null);
+    setTransferToEdit(null);
   };
 
-  const openTopUpModal = (topup: TopUp | null = null) => {
-    setTopUpToEdit(topup);
-    setIsTopUpModalOpen(true);
+  const openTransferModal = (topup: TopUp | null = null) => {
+    setTransferToEdit(topup);
+    setIsTransferModalOpen(true);
   };
 
   const openDeleteModal = (item: PageTransaction) => {
@@ -179,7 +181,21 @@ const PaymentMethodDetailsPage: React.FC = () => {
     try {
       if (itemToDelete.type === 'receipt') {
         await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [itemToDelete.id]);
-      } else if (itemToDelete.type === 'topup') {
+      } else if (itemToDelete.type === 'deposit' || itemToDelete.type === 'transfer') {
+        if (itemToDelete.type === 'transfer') {
+            const note = itemToDelete.note;
+            const transferRegex = /Transfer (to|from) (.+)/;
+            const match = note.match(transferRegex);
+            if(match) {
+                const otherMethodName = match[2].split(' - ')[0];
+                const otherMethod = await db.queryOne<PaymentMethod>('SELECT PaymentMethodID FROM PaymentMethods WHERE PaymentMethodName = ?', [otherMethodName]);
+                if(otherMethod) {
+                    const oppositeAmount = -itemToDelete.amount;
+                    const date = format(new Date(itemToDelete.date), 'yyyy-MM-dd');
+                    await db.execute(`DELETE FROM TopUps WHERE PaymentMethodID = ? AND TopUpAmount = ? AND TopUpDate = ? AND TopUpNote LIKE 'Transfer %'`, [otherMethod.PaymentMethodID, oppositeAmount, date]);
+                }
+            }
+        }
         await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [itemToDelete.id]);
       }
       fetchDetails();
@@ -204,15 +220,17 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const handleRowClick = (row: PageTransaction) => {
     if (row.type === 'receipt') {
       navigate(`/receipts/view/${row.id}`);
-    } else if (row.type === 'topup') {
-      const fullTopUp = transactions.find(t => t.id === row.id && t.type === 'topup');
-      if (fullTopUp) {
-        openTopUpModal({
-          TopUpID: fullTopUp.id,
-          TopUpAmount: fullTopUp.amount,
-          TopUpDate: fullTopUp.date,
-          TopUpNote: fullTopUp.note,
-        });
+    } else if (row.type === 'deposit' || row.type === 'transfer') {
+      if (row.type === 'deposit') {
+        const fullTopUp = transactions.find(t => t.id === row.id && t.type === 'deposit');
+        if (fullTopUp) {
+          openTransferModal({
+            TopUpID: fullTopUp.id,
+            TopUpAmount: fullTopUp.amount,
+            TopUpDate: fullTopUp.date,
+            TopUpNote: fullTopUp.note,
+          });
+        }
       }
     }
   };
@@ -222,7 +240,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
     const [startDate, endDate] = dateRange;
 
     return transactions.filter(t => {
-      const typeMatch = filter === 'all' || (filter === 'receipt' && t.amount < 0) || (filter === 'topup' && t.amount > 0);
+      const typeMatch = filter === 'all' || (filter === 'receipt' && t.type === 'receipt') || (filter === 'deposit' && t.type === 'deposit') || (filter === 'transfer' && t.type === 'transfer');
       if (!typeMatch) return false;
 
       const date = new Date(t.date);
@@ -339,8 +357,8 @@ const PaymentMethodDetailsPage: React.FC = () => {
                 <PencilIcon className="h-5 w-5" />
               </Button>
             </Tooltip>
-            <Tooltip content="Top-Up">
-              <Button variant="ghost" size="icon" onClick={() => openTopUpModal()}>
+            <Tooltip content="New Transaction">
+              <Button variant="ghost" size="icon" onClick={() => openTransferModal()}>
                 <BanknotesIcon className="h-5 w-5" />
               </Button>
             </Tooltip>
@@ -395,19 +413,21 @@ const PaymentMethodDetailsPage: React.FC = () => {
                   options={[
                     { value: 'all', label: 'All Transactions' },
                     { value: 'receipt', label: 'Receipts' },
-                    { value: 'topup', label: 'Top-Ups' },
+                    { value: 'deposit', label: 'Deposits' },
+                    { value: 'transfer', label: 'Transfers' },
                   ]}
                 />
               </div>
             }
           />
 
-          <TopUpModal
-            isOpen={isTopUpModalOpen}
-            onClose={() => setIsTopUpModalOpen(false)}
-            onSave={handleTopUpSave}
-            topUpToEdit={topUpToEdit}
+          <TransferModal
+            isOpen={isTransferModalOpen}
+            onClose={() => setIsTransferModalOpen(false)}
+            onSave={handleTransferSave}
+            topUpToEdit={transferToEdit}
             paymentMethodId={id!}
+            currentBalance={balance}
           />
 
           <ConfirmModal
