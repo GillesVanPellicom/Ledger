@@ -39,9 +39,9 @@ export const Header: React.FC<HeaderProps> = ({
           width: circleSize,
           height: circleSize,
           top: -510,
-          left: '-30%',
+          left: '-20%',
           background:
-            'radial-gradient(circle, rgba(135,94,242,1) 0%, rgba(199,87,87,0) 25%)',
+            'radial-gradient(circle, rgba(135,94,242,1) 0%, rgba(199,87,87,0) 20%)',
         }}
       />
       <div

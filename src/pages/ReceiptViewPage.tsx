@@ -18,7 +18,6 @@ import {
   BanknotesIcon,
   LinkIcon,
   TrashIcon,
-  ArrowLeftIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/solid';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
@@ -367,13 +366,6 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
       <Header
         title={receipt.StoreName}
         subtitle={format(parseISO(receipt.ReceiptDate), 'EEEE, MMMM d, yyyy')}
-        backButton={
-          <Tooltip content="Go Back">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeftIcon className="h-5 w-5" />
-            </Button>
-          </Tooltip>
-        }
         actions={
           <>
             <Tooltip content="Delete">
@@ -433,7 +425,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           )}
 
           {receipt.IsNonItemised ? (
-            <Card>
+            <Card className="overflow-hidden">
               <div className="relative p-6">
                 <div className="blur-sm">
                   <table className="w-full text-sm select-none">
