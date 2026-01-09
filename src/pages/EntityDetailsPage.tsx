@@ -7,7 +7,7 @@ import Spinner from '../components/ui/Spinner';
 import DatePicker from '../components/ui/DatePicker';
 import Select from '../components/ui/Select';
 import ReactECharts from 'echarts-for-react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
 import { DocumentArrowDownIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, PencilIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
@@ -304,7 +304,44 @@ const EntityDetailsPage: React.FC = () => {
     return filteredReceipts.slice(start, end);
   }, [filteredReceipts, currentPage, pageSize]);
 
-  const chartOption = {
+  const balanceChartOption = useMemo(() => {
+    const sortedReceipts = [...receipts].sort((a, b) => new Date(a.ReceiptDate).getTime() - new Date(b.ReceiptDate).getTime());
+    let runningBalance = 0;
+    const data: [string, string][] = [];
+
+    if (sortedReceipts.length > 0) {
+        const firstDate = new Date(sortedReceipts[0].ReceiptDate);
+        const startDate = startOfMonth(firstDate);
+        const endDate = endOfMonth(new Date());
+        const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+
+        let trxIndex = 0;
+        dateRange.forEach(day => {
+            while(trxIndex < sortedReceipts.length && new Date(sortedReceipts[trxIndex].ReceiptDate) <= day) {
+                const receipt = sortedReceipts[trxIndex];
+                const amount = receipt.amount || 0;
+                if (receipt.type === 'to_me') {
+                    runningBalance += amount;
+                } else {
+                    runningBalance -= amount;
+                }
+                trxIndex++;
+            }
+            data.push([format(day, 'yyyy-MM-dd'), runningBalance.toFixed(2)]);
+        });
+    }
+
+    return {
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', valueFormatter: (value: number) => `€${value}` },
+      xAxis: { type: 'time' },
+      yAxis: { type: 'value', axisLabel: { formatter: '€{value}' } },
+      series: [{ data, type: 'line', showSymbol: false, smooth: true }],
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    };
+  }, [receipts]);
+
+  const pieChartOption = {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item' },
     legend: { top: '5%', left: 'center', textStyle: { color: isDarkMode ? '#fff' : '#333' } },
@@ -426,12 +463,20 @@ const EntityDetailsPage: React.FC = () => {
       />
       <PageWrapper>
         <div className="py-6 space-y-6">
-          <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Debt Balance</h2>
-              <ReactECharts option={chartOption} theme={theme} style={{ height: '300px' }} />
-            </div>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <div className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Debt Balance</h2>
+                <ReactECharts option={pieChartOption} theme={theme} style={{ height: '300px' }} />
+              </div>
+            </Card>
+            <Card>
+              <div className="p-6">
+                <h2 className="text-lg font-semibold mb-4">Net Balance Over Time</h2>
+                <ReactECharts option={balanceChartOption} theme={theme} style={{ height: '300px' }} />
+              </div>
+            </Card>
+          </div>
 
           <DataTable
             data={paginatedReceipts}
