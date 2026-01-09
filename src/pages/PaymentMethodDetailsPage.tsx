@@ -334,29 +334,32 @@ const PaymentMethodDetailsPage: React.FC = () => {
             onPageSizeChange={setPageSize}
             onSearch={setSearchTerm}
             searchable={true}
-          >
-            <div className="w-64">
-              <DatePicker
-                selectsRange
-                startDate={dateRange[0]}
-                endDate={dateRange[1]}
-                onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
-                isClearable={true}
-                placeholderText="Filter by date range"
-              />
-            </div>
-            <div className="w-48">
-              <Select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                options={[
-                  { value: 'all', label: 'All Transactions' },
-                  { value: 'receipt', label: 'Receipts' },
-                  { value: 'topup', label: 'Top-Ups' },
-                ]}
-              />
-            </div>
-          </DataTable>
+            middleRowLeft={
+              <div className="w-1/2">
+                <DatePicker
+                  selectsRange
+                  startDate={dateRange[0]}
+                  endDate={dateRange[1]}
+                  onChange={(update: any) => { setDateRange(update); setCurrentPage(1); }}
+                  isClearable={true}
+                  placeholderText="Filter by date range"
+                />
+              </div>
+            }
+            middleRowRight={
+              <div className="w-48">
+                <Select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  options={[
+                    { value: 'all', label: 'All Transactions' },
+                    { value: 'receipt', label: 'Receipts' },
+                    { value: 'topup', label: 'Top-Ups' },
+                  ]}
+                />
+              </div>
+            }
+          />
 
           <TopUpModal
             isOpen={isTopUpModalOpen}

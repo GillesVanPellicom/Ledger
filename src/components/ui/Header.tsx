@@ -33,11 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
       <BackgroundGradientAnimation
         gradientBackgroundStart="#000000"
         gradientBackgroundEnd="#000000"
-        firstColor="135, 94, 242"
-        secondColor="135, 94, 242"
-        thirdColor="135, 94, 242"
-        fourthColor="135, 94, 242"
-        fifthColor="135, 94, 242"
+        color="135, 94, 242"
         pointerColor="135, 94, 242"
         interactive={false}
         style={{ height: `${minHeight}px` }}

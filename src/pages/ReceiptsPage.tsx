@@ -340,19 +340,22 @@ const ReceiptsPage: React.FC = () => {
             onSelectionChange={setSelectedReceiptIds}
             selectedIds={selectedReceiptIds}
             itemKey="ReceiptID"
-          >
-            <DatePicker
-              selectsRange
-              startDate={dateRange[0]}
-              endDate={dateRange[1]}
-              onChange={(update: any) => {
-                setDateRange(update);
-                setCurrentPage(1);
-              }}
-              isClearable={true}
-              placeholderText="Filter by date range"
-            />
-          </DataTable>
+            middleRowLeft={
+              <div className="w-1/2">
+                <DatePicker
+                  selectsRange
+                  startDate={dateRange[0]}
+                  endDate={dateRange[1]}
+                  onChange={(update: any) => {
+                    setDateRange(update);
+                    setCurrentPage(1);
+                  }}
+                  isClearable={true}
+                  placeholderText="Filter by date range"
+                />
+              </div>
+            }
+          />
 
           <ConfirmModal
             isOpen={deleteModalOpen}

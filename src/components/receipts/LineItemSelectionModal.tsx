@@ -3,7 +3,6 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import DataTable from '../ui/DataTable';
 import Select from '../ui/Select';
-import Card from '../ui/Card';
 import { InformationCircleIcon } from '@heroicons/react/24/solid';
 import { LineItem, Debtor } from '../../types';
 
@@ -85,7 +84,6 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
 
   const handleRowClick = (item: LineItem, event: React.MouseEvent) => {
     if (disabled) return;
-    // Prevent text selection on shift-click
     if (event.nativeEvent.shiftKey) {
       window.getSelection()?.removeAllRanges();
     }
@@ -184,27 +182,6 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
           <InformationCircleIcon className="h-5 w-5 text-gray-400" />
           <span>Use Click, Ctrl+Click, and Shift+Click to select items.</span>
         </div>
-        {selectionMode === 'debtor' && (
-          <Card className="p-4">
-            <div className="flex items-center gap-2">
-              <Select
-                value={bulkDebtorId}
-                onChange={(e) => setBulkDebtorId(e.target.value)}
-                options={[{ value: '', label: 'Assign to...' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                className="w-48"
-                disabled={disabled}
-              />
-              <Button 
-                variant="secondary" 
-                onClick={handleBulkAssign} 
-                disabled={!bulkDebtorId || selectedKeys.size === 0 || disabled}
-                className="whitespace-nowrap"
-              >
-                Assign to Selected
-              </Button>
-            </div>
-          </Card>
-        )}
         <div style={{ userSelect: 'none' }}>
           <DataTable
             data={paginatedItems}
@@ -223,6 +200,27 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
             disabled={disabled}
+            middleRowLeft={
+              selectionMode === 'debtor' ? (
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={bulkDebtorId}
+                    onChange={(e) => setBulkDebtorId(e.target.value)}
+                    options={[{ value: '', label: 'Assign to...' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                    className="w-48"
+                    disabled={disabled}
+                  />
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleBulkAssign} 
+                    disabled={!bulkDebtorId || selectedKeys.size === 0 || disabled}
+                    className="whitespace-nowrap"
+                  >
+                    Assign to Selected
+                  </Button>
+                </div>
+              ) : null
+            }
           />
         </div>
         <div className="flex justify-end gap-4">
