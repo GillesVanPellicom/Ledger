@@ -58,6 +58,12 @@
   }
 }
 
+@layer utilities {
+  .text-inverted {
+    @apply text-white mix-blend-difference;
+  }
+}
+
 /* React Datepicker Overrides */
 .react-datepicker-wrapper,
 .react-datepicker__input-container {
