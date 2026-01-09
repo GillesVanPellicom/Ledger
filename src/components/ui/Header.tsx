@@ -9,8 +9,11 @@ interface HeaderProps {
   actions?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
-  contentClassName?: string;
   minHeight?: number;
+  variant?: 'default' | 'centered-box' | 'three-boxes' | 'two-boxes';
+  centeredContent?: React.ReactNode;
+  leftBoxContent?: React.ReactNode;
+  rightBoxContent?: React.ReactNode;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,8 +23,11 @@ export const Header: React.FC<HeaderProps> = ({
   actions,
   children,
   className,
-  contentClassName,
   minHeight = 170,
+  variant = 'default',
+  centeredContent,
+  leftBoxContent,
+  rightBoxContent,
 }) => {
   return (
     <div
@@ -29,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
         'relative w-full overflow-hidden border-b border-gray-200 dark:border-gray-800',
         className
       )}
+      style={{ minHeight: `${minHeight}px` }}
     >
       <BackgroundGradientAnimation
         gradientBackgroundStart="#000000"
@@ -36,30 +43,58 @@ export const Header: React.FC<HeaderProps> = ({
         color="135, 94, 242"
         pointerColor="135, 94, 242"
         interactive={false}
-        style={{ height: `${minHeight}px` }}
+        style={{ height: `${minHeight}px`, position: 'absolute', inset: 0 }}
       />
 
-      {/* Content */}
-      <div
-        className="relative backdrop-blur-md flex flex-col justify-center"
-        style={{ minHeight: `${minHeight}px` }}
-      >
-        <div className="w-full px-[100px]">
-          <div className="relative flex items-baseline justify-between w-full">
-            <div className="flex items-baseline gap-8">
-              {backButton && (
-                <div className="absolute right-full mr-4">{backButton}</div>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold">{title}</h1>
-                {subtitle && (
-                  <p className="text-sm text-gray-500">{subtitle}</p>
-                )}
-              </div>
-              {children}
-            </div>
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
+      <div className="absolute inset-0 backdrop-blur-md">
+        {variant === 'centered-box' && (
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-1/6 h-full flex items-center justify-center">
+            {centeredContent}
           </div>
+        )}
+
+        {variant === 'three-boxes' && (
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-1/2 h-full flex">
+            <div className="w-1/3 h-full flex items-center justify-center">
+              {leftBoxContent}
+            </div>
+            <div className="w-1/3 h-full flex items-center justify-center">
+              {centeredContent}
+            </div>
+            <div className="w-1/3 h-full flex items-center justify-center">
+              {rightBoxContent}
+            </div>
+          </div>
+        )}
+
+        {variant === 'two-boxes' && (
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-1/3 h-full flex">
+            <div className="w-1/2 h-full flex items-center justify-center">
+              {leftBoxContent}
+            </div>
+            <div className="w-1/2 h-full flex items-center justify-center">
+              {rightBoxContent}
+            </div>
+          </div>
+        )}
+
+        <div className="relative w-full h-full flex items-center justify-between px-[100px]">
+          <div className="relative flex items-baseline gap-8">
+            {backButton && (
+              <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2">
+                {backButton}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold">{title}</h1>
+              {subtitle && (
+                <p className="text-sm text-gray-500">{subtitle}</p>
+              )}
+            </div>
+            {children}
+          </div>
+
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
       </div>
     </div>

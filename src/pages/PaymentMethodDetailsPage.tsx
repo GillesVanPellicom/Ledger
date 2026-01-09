@@ -364,16 +364,18 @@ const PaymentMethodDetailsPage: React.FC = () => {
             </Tooltip>
           </>
         }
-      />
-      <PageWrapper>
-        <div className="py-6 space-y-6">
-          <Card className={cn("p-4 text-center", balance < 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20')}>
+        variant="centered-box"
+        centeredContent={
+          <div className="text-center">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
             <p className={cn("text-3xl font-bold", balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
               €{balance.toFixed(2)}
             </p>
-          </Card>
-
+          </div>
+        }
+      />
+      <PageWrapper>
+        <div className="py-6 space-y-6">
           <Card>
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-4">Balance Over Time</h2>
