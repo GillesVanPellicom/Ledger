@@ -6,6 +6,7 @@ interface HeaderProps {
   subtitle?: string;
   backButton?: React.ReactNode;
   actions?: React.ReactNode;
+  nav?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
   contentClassName?: string;
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   subtitle,
   backButton,
   actions,
+  nav,
   children,
   className,
   contentClassName,
@@ -73,9 +75,8 @@ export const Header: React.FC<HeaderProps> = ({
         style={{ minHeight: `${minHeight}px` }}
       >
         <div className={cn('max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full', contentClassName)}>
-          {/* Flex row for header content, vertically centered */}
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center">
+          <div className="flex items-baseline justify-between w-full">
+            <div className="flex items-baseline">
               {backButton && (
                 <div className="mr-4 flex items-center">{backButton}</div>
               )}
@@ -85,8 +86,9 @@ export const Header: React.FC<HeaderProps> = ({
                   <p className="text-sm text-gray-500">{subtitle}</p>
                 )}
               </div>
+              {nav && <div className="ml-8">{nav}</div>}
             </div>
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
+            {actions && <div className="flex items-baseline gap-2">{actions}</div>}
           </div>
 
           {children && <div className="mt-4">{children}</div>}
