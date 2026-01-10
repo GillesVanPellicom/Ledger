@@ -11,6 +11,8 @@ const emojis = [
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
 ];
 
+const iconOrder = ['CreditCardIcon'];
+
 interface PaymentMethodStyleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,7 +29,7 @@ const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpe
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSymbol(currentStyle?.symbol || (currentStyle?.type === 'emoji' ? emojis[0] : 'CreditCardIcon'));
+      setSelectedSymbol(currentStyle?.symbol || 'CreditCardIcon');
       setSymbolType(currentStyle?.type || 'icon');
       setIconSearchTerm('');
       setEmojiSearchTerm('');
@@ -35,10 +37,14 @@ const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpe
   }, [isOpen, currentStyle]);
 
   const filteredIcons = useMemo(() => {
-    if (!iconSearchTerm) return Object.keys(SolidIcons);
-    return Object.keys(SolidIcons).filter(iconName =>
-      iconName.toLowerCase().includes(iconSearchTerm.toLowerCase())
-    );
+    const otherIcons = Object.keys(SolidIcons).filter(iconName => !iconOrder.includes(iconName));
+    let sortedIcons = [...iconOrder, ...otherIcons];
+    if (iconSearchTerm) {
+      sortedIcons = sortedIcons.filter(iconName =>
+        iconName.toLowerCase().includes(iconSearchTerm.toLowerCase())
+      );
+    }
+    return sortedIcons;
   }, [iconSearchTerm]);
 
   const filteredEmojis = useMemo(() => {

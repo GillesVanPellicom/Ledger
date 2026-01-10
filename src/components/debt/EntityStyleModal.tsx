@@ -10,6 +10,8 @@ const emojis = [
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
 ];
 
+const iconOrder = ['UserIcon'];
+
 interface EntityStyleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,7 +28,7 @@ const EntityStyleModal: React.FC<EntityStyleModalProps> = ({ isOpen, onClose, on
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSymbol(currentStyle?.symbol || (currentStyle?.type === 'emoji' ? emojis[0] : 'UserIcon'));
+      setSelectedSymbol(currentStyle?.symbol || 'UserIcon');
       setSymbolType(currentStyle?.type || 'icon');
       setIconSearchTerm('');
       setEmojiSearchTerm('');
@@ -34,10 +36,14 @@ const EntityStyleModal: React.FC<EntityStyleModalProps> = ({ isOpen, onClose, on
   }, [isOpen, currentStyle]);
 
   const filteredIcons = useMemo(() => {
-    if (!iconSearchTerm) return Object.keys(SolidIcons);
-    return Object.keys(SolidIcons).filter(iconName =>
-      iconName.toLowerCase().includes(iconSearchTerm.toLowerCase())
-    );
+    const otherIcons = Object.keys(SolidIcons).filter(iconName => !iconOrder.includes(iconName));
+    let sortedIcons = [...iconOrder, ...otherIcons];
+    if (iconSearchTerm) {
+      sortedIcons = sortedIcons.filter(iconName =>
+        iconName.toLowerCase().includes(iconSearchTerm.toLowerCase())
+      );
+    }
+    return sortedIcons;
   }, [iconSearchTerm]);
 
   const filteredEmojis = useMemo(() => {

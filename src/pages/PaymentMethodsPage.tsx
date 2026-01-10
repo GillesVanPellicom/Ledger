@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, PaintBrushIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
+import { PlusIcon, PaintBrushIcon, PencilIcon, EyeIcon, EyeSlashIcon, CreditCardIcon } from '@heroicons/react/24/solid';
 import Button from '../components/ui/Button';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import PaymentMethodStyleModal from '../components/payment/PaymentMethodStyleModal';
@@ -61,8 +61,9 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h3>
                 <div className="w-8 h-8 flex items-center justify-center">
-                  {IconComponent && <IconComponent className="h-8 w-8 text-gray-400" />}
-                  {style?.type === 'emoji' && <span className="text-3xl">{style.symbol}</span>}
+                  {IconComponent ? <IconComponent className="h-8 w-8 text-gray-400" /> :
+                   style?.type === 'emoji' ? <span className="text-3xl">{style.symbol}</span> :
+                   <CreditCardIcon className="h-8 w-8 text-gray-300 dark:text-gray-700" />}
                 </div>
             </div>
             <div className="mt-4 text-right">
