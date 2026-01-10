@@ -29,11 +29,9 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({ method, onStyleCl
     return (
         <div 
             className={cn(
-                "rounded-lg shadow-md p-6 flex flex-col justify-between cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200 relative group",
-                !style && "bg-white dark:bg-gray-800",
+                "rounded-lg shadow-md p-6 flex flex-col justify-between cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200 relative group bg-white dark:bg-gray-800",
                 method.PaymentMethodIsActive === 0 && "opacity-60"
             )}
-            style={style ? { backgroundColor: style.color } : {}}
             onClick={() => navigate(`/payment-methods/${method.PaymentMethodID}`)}
         >
             <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -45,20 +43,20 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({ method, onStyleCl
               </Tooltip>
             </div>
             <div className="flex items-center justify-between">
-                <h3 className={cn("text-lg font-bold", style ? 'text-white' : 'text-gray-900 dark:text-gray-100')}>{method.PaymentMethodName}</h3>
-                {IconComponent && <IconComponent className={cn("h-8 w-8", style ? 'text-white/70' : 'text-gray-400')} />}
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h3>
+                {IconComponent && <IconComponent className="h-8 w-8 text-gray-400" />}
                 {style?.type === 'emoji' && <span className="text-3xl">{style.symbol}</span>}
             </div>
             <div className="mt-4 text-right">
-                <p className={cn("text-xs", style ? 'text-white/80' : 'text-gray-500 dark:text-gray-400')}>Current Balance</p>
-                <p className={cn("text-2xl font-semibold", style ? 'text-white' : (method.balance < 0 ? 'text-red-500' : 'text-gray-900 dark:text-gray-100'))}>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Current Balance</p>
+                <p className={cn("text-2xl font-semibold", method.balance < 0 ? 'text-red-500' : 'text-gray-900 dark:text-gray-100')}>
                     € {method.balance.toFixed(2)}
                 </p>
             </div>
             {method.PaymentMethodIsActive === 0 && (
               <div className="absolute bottom-2 left-2">
                 <Tooltip content="Hidden">
-                  <EyeSlashIcon className={cn("h-5 w-5", style ? 'text-white/60' : 'text-gray-400')} />
+                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
                 </Tooltip>
               </div>
             )}
