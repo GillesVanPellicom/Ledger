@@ -12,6 +12,7 @@ import Tooltip from '../components/ui/Tooltip';
 import { PaymentMethod, PaymentMethodStyle } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
+import PageSpinner from '../components/ui/PageSpinner';
 
 interface PaymentMethodCardProps {
   method: PaymentMethod;
@@ -129,7 +130,7 @@ const PaymentMethodsPage: React.FC = () => {
   const filteredMethods = methods.filter(m => showHidden || m.PaymentMethodIsActive === 1);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <PageSpinner />;
   }
 
   return (

@@ -10,10 +10,11 @@ interface HeaderProps {
   children?: React.ReactNode;
   className?: string;
   minHeight?: number;
-  variant?: 'default' | 'centered-box' | 'three-boxes' | 'two-boxes';
+  variant?: 'default' | 'centered-box' | 'three-boxes' | 'two-boxes' | 'tabs';
   centeredContent?: React.ReactNode;
   leftBoxContent?: React.ReactNode;
   rightBoxContent?: React.ReactNode;
+  tabs?: React.ReactNode;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   centeredContent,
   leftBoxContent,
   rightBoxContent,
+  tabs,
 }) => {
   return (
     <div
@@ -85,13 +87,15 @@ export const Header: React.FC<HeaderProps> = ({
                 {backButton}
               </div>
             )}
-            <div>
-              <h1 className="text-2xl font-bold">{title}</h1>
-              {subtitle && (
-                <p className="text-sm text-gray-500">{subtitle}</p>
-              )}
+            <div className="flex items-baseline gap-8">
+              <div className="relative">
+                <h1 className="text-2xl font-bold">{title}</h1>
+                {subtitle && (
+                  <p className="absolute top-full left-0 text-sm text-gray-500 whitespace-nowrap">{subtitle}</p>
+                )}
+              </div>
+              {variant === 'tabs' ? tabs : children}
             </div>
-            {children}
           </div>
 
           {actions && <div className="flex items-center gap-2">{actions}</div>}
