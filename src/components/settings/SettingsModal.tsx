@@ -9,6 +9,7 @@ import Tooltip from '../ui/Tooltip';
 import Input from '../ui/Input';
 import { useBackupContext } from '../../context/BackupContext';
 import Card from '../ui/Card';
+import Switch from '../ui/Switch';
 import '../../electron.d';
 
 interface SettingsModalProps {
@@ -168,20 +169,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   if (isDev) tabs.push({ id: 'development', label: 'Development' });
   tabs.sort((a, b) => a.label.localeCompare(b.label));
 
-  const Toggle = ({ label, description, isEnabled, onToggle, icon: Icon }: { label: string, description: string, isEnabled: boolean, onToggle: () => void, icon?: React.ElementType }) => (
-    <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {Icon && <div className={cn("p-2 rounded-lg", isEnabled ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500")}><Icon className="h-6 w-6" /></div>}
-          <div><p className="font-medium text-gray-900 dark:text-gray-100">{label}</p><p className="text-sm text-gray-500">{description}</p></div>
-        </div>
-        <button onClick={onToggle} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", isEnabled ? "bg-accent" : "bg-gray-200 dark:bg-gray-700")}>
-          <span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", isEnabled ? "translate-x-5" : "translate-x-0")} />
-        </button>
-      </div>
-    </div>
-  );
-
   const SectionTitle = ({ title, tooltip }: { title: string, tooltip?: string }) => (
     <div className="flex items-center gap-2 mb-4">
       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
@@ -218,14 +205,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 <div>
                   <SectionTitle title="Modules" tooltip="Enable or disable optional features to customize your experience." />
                   <div className="space-y-4">
-                    <Toggle 
+                    <Switch 
                       label="Payment Methods" 
                       description="Track spending across different payment methods." 
                       isEnabled={settings.modules.paymentMethods.enabled} 
                       onToggle={() => handleModuleToggle('paymentMethods')}
                       icon={CreditCardIcon}
                     />
-                    <Toggle 
+                    <Switch 
                       label="Debt Tracking" 
                       description="Track debts and shared expenses." 
                       isEnabled={settings.modules.debt?.enabled} 
@@ -241,7 +228,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 <div>
                   <SectionTitle title="Formatting" tooltip="Manage automatic text formatting and capitalization rules." />
                   <div className="space-y-4">
-                    <Toggle 
+                    <Switch 
                       label="Capitalization Protection" 
                       description="Enforce capitalization rules for product names and brands." 
                       isEnabled={(settings.modules as any).capitalizationProtection?.enabled} 
@@ -251,7 +238,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 </div>
               </div>
             )}
-            {activeTab === 'pdf' && (<div className="space-y-4"><div><SectionTitle title="Receipt Export" tooltip="Customize the content included when exporting individual receipts to PDF." /><Toggle label="Show Unique Item Count" description="Include the number of unique items on the receipt." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Toggle label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Toggle label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Toggle label="Add Receipt Images" description="Include receipt images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple receipts at once." /><Toggle label="Add Summary Page" description="Append a 'super-receipt' summarizing all receipts in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
+            {activeTab === 'pdf' && (<div className="space-y-4"><div><SectionTitle title="Receipt Export" tooltip="Customize the content included when exporting individual receipts to PDF." /><Switch label="Show Unique Item Count" description="Include the number of unique items on the receipt." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Switch label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Switch label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Switch label="Add Receipt Images" description="Include receipt images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple receipts at once." /><Switch label="Add Summary Page" description="Append a 'super-receipt' summarizing all receipts in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
             {activeTab === 'data' && (
               <div className="space-y-6">
                 <Card>
