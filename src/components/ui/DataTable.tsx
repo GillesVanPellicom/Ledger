@@ -82,17 +82,25 @@ const DataTable: React.FC<DataTableProps> = ({
       const table = tableContainerRef.current.querySelector('table');
       if (!table) return;
 
+      // Step 1: Find natural width with table-layout: auto
       table.style.tableLayout = 'auto';
       table.style.width = 'auto';
 
       const headerCells = table.querySelectorAll('thead th');
       if (headerCells.length === 0) return;
 
-      const containerWidth = tableContainerRef.current.offsetWidth;
       const widths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
       const totalTableWidth = widths.reduce((sum, w) => sum + w, 0);
+      const containerWidth = tableContainerRef.current.offsetWidth;
 
-      if (totalTableWidth > containerWidth) {
+      // Step 2: Decide whether to scale or not
+      if (totalTableWidth < containerWidth) {
+        // If content is smaller, make table 100% and re-measure the browser-scaled columns
+        table.style.width = '100%';
+        const scaledWidths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
+        setColWidths(scaledWidths);
+      } else {
+        // If content is larger, use the natural widths and allow scrolling
         setColWidths(widths);
       }
       
@@ -360,7 +368,7 @@ const DataTable: React.FC<DataTableProps> = ({
                           <input 
                             id={`checkbox-${row[itemKey]}`} 
                             type="checkbox" 
-                            checked={selectedRows.has(row[itemKey])} 
+                            checked={selectedRows.has(row[itemKey])}
                             onChange={(e) => handleSelectRow(e, row[itemKey])} 
                             onClick={(e) => e.stopPropagation()} 
                             disabled={disabled}
