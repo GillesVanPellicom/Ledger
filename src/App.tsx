@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
-import ProductsPage from './pages/ProductsPage';
+import ReferenceDataPage from './pages/ReferenceDataPage';
 import ReceiptsPage from './pages/ReceiptsPage';
 import ReceiptFormPage from './pages/ReceiptFormPage';
 import ReceiptViewPage from './pages/ReceiptViewPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
-import StoresPage from './pages/StoresPage';
 import EntitiesPage from './pages/EntitiesPage';
 import EntityDetailsPage from './pages/EntityDetailsPage';
 import { useError } from './context/ErrorContext';
@@ -67,8 +66,7 @@ function App() {
           <Routes>
             <Route path="/" element={<MainLayout openSettingsModal={openSettingsModal} />}>
               <Route index element={<ReceiptsPage />} />
-              <Route path="products" element={<ProductsPage />} />
-              <Route path="stores" element={<StoresPage />} />
+              <Route path="reference-data" element={<ReferenceDataPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="payment-methods" element={<PaymentMethodsPage />} />
               <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />

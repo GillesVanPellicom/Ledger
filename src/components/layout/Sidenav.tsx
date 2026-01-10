@@ -8,8 +8,8 @@ import {
   ChevronRightIcon,
   Cog6ToothIcon,
   CreditCardIcon,
-  BuildingStorefrontIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  CircleStackIcon
 } from '@heroicons/react/24/solid';
 import {cn} from '../../utils/cn';
 import {useSettings} from '../../context/SettingsContext';
@@ -26,8 +26,7 @@ const Sidenav: React.FC<SidenavProps> = ({isCollapsed, toggleSidebar, openSettin
 
   const navItems = [
     {path: '/', label: 'Receipts', icon: ReceiptPercentIcon, activePaths: ['/', '/receipts']},
-    {path: '/products', label: 'Products', icon: CubeIcon, activePaths: ['/products']},
-    {path: '/stores', label: 'Stores', icon: BuildingStorefrontIcon, activePaths: ['/stores']},
+    {path: '/reference-data', label: 'Reference Data', icon: CircleStackIcon, activePaths: ['/reference-data']},
     {path: '/analytics', label: 'Analytics', icon: ChartBarIcon, activePaths: ['/analytics']},
   ];
 
