@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useMemo, useRef, ReactNode, useLayoutEffect } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, DocumentMagnifyingGlassIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Input from './Input';
@@ -72,6 +72,38 @@ const DataTable: React.FC<DataTableProps> = ({
   const [selectedRows, setSelectedRows] = useState(new Set());
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const hasMeasuredRef = useRef(false);
+  const [colWidths, setColWidths] = useState<number[]>([]);
+
+  useLayoutEffect(() => {
+    if (data.length > 0 && !loading && !hasMeasuredRef.current && tableContainerRef.current) {
+      const table = tableContainerRef.current.querySelector('table');
+      if (!table) return;
+
+      table.style.tableLayout = 'auto';
+      table.style.width = 'auto';
+
+      const headerCells = table.querySelectorAll('thead th');
+      if (headerCells.length === 0) return;
+
+      const containerWidth = tableContainerRef.current.offsetWidth;
+      const widths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
+      const totalTableWidth = widths.reduce((sum, w) => sum + w, 0);
+
+      if (totalTableWidth > containerWidth) {
+        setColWidths(widths);
+      }
+      
+      hasMeasuredRef.current = true;
+    }
+  }, [data, loading]);
+
+  useEffect(() => {
+    hasMeasuredRef.current = false;
+    setColWidths([]);
+  }, [searchTerm, pageSize, columns]);
 
   useEffect(() => {
     if (selectable) {
@@ -273,12 +305,24 @@ const DataTable: React.FC<DataTableProps> = ({
         </div>
       </div>
 
-      <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950 shadow-sm relative">
+      <div ref={tableContainerRef} className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950 shadow-sm relative">
         <div className={cn("overflow-x-auto", (loading || disabled) && "blur-sm pointer-events-none")}>
-          <table className="w-full text-left text-sm table-fixed" style={{ minWidth }}>
+          <table
+            className="text-left text-sm w-full"
+            style={{
+              tableLayout: colWidths.length > 0 ? 'fixed' : 'auto',
+              minWidth: colWidths.length > 0 ? undefined : minWidth,
+            }}
+          >
             <colgroup>
-              {selectable && <col style={{ width: '40px' }} />}
-              {columns.map((col, idx) => <col key={idx} style={{ width: col.width }} />)}
+              {colWidths.length > 0 ? (
+                colWidths.map((width, idx) => <col key={idx} style={{ width: `${width}px` }} />)
+              ) : (
+                <>
+                  {selectable && <col style={{ width: '40px' }} />}
+                  {columns.map((col, idx) => <col key={idx} style={{ width: col.width }} />)}
+                </>
+              )}
             </colgroup>
             <thead className="bg-gray-900 border-b border-zinc-800">
               <tr>
