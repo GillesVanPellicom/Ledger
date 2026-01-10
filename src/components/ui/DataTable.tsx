@@ -220,7 +220,7 @@ const DataTable: React.FC<DataTableProps> = ({
       <div className="flex justify-between items-center">
         <div className="flex-1">
           {searchable && (
-            <div className="relative w-90">
+            <div className="relative w-90 mr-4">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-gray-900 border-zinc-700" disabled={disabled} />
             </div>
