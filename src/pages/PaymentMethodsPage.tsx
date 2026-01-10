@@ -13,33 +13,27 @@ import { PaymentMethod, PaymentMethodStyle } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import PageSpinner from '../components/ui/PageSpinner';
+import DataGrid from '../components/ui/DataGrid';
 
-interface PaymentMethodCardProps {
+interface PaymentMethodItemProps {
   method: PaymentMethod;
   onStyleClick: (method: PaymentMethod) => void;
   onEditClick: (method: PaymentMethod) => void;
 }
 
-const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({ method, onStyleClick, onEditClick }) => {
-    const navigate = useNavigate();
+const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleClick, onEditClick }) => {
     const { settings } = useSettings();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
     const IconComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
 
     return (
-        <div 
-            className={cn(
-                "rounded-lg shadow-md p-6 flex flex-col justify-between cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200 relative group bg-white dark:bg-gray-800",
-                method.PaymentMethodIsActive === 0 && "opacity-60"
-            )}
-            onClick={() => navigate(`/payment-methods/${method.PaymentMethodID}`)}
-        >
-            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className={cn("flex flex-col justify-between h-full relative group", method.PaymentMethodIsActive === 0 && "opacity-60")}>
+            <div className="absolute top-0 right-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <Tooltip content="Edit Style">
-                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><PaintBrushIcon className="h-4 w-4 text-white/80" /></button>
+                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PaintBrushIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
               </Tooltip>
               <Tooltip content="Edit">
-                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"><PencilIcon className="h-4 w-4 text-white/80" /></button>
+                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PencilIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
               </Tooltip>
             </div>
             <div className="flex items-center justify-between">
@@ -49,12 +43,12 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({ method, onStyleCl
             </div>
             <div className="mt-4 text-right">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Current Balance</p>
-                <p className={cn("text-2xl font-semibold", method.balance < 0 ? 'text-red-500' : 'text-gray-900 dark:text-gray-100')}>
+                <p className={cn("text-2xl font-semibold", method.balance < 0 ? 'text-red' : 'text-gray-900 dark:text-gray-100')}>
                     € {method.balance.toFixed(2)}
                 </p>
             </div>
             {method.PaymentMethodIsActive === 0 && (
-              <div className="absolute bottom-2 left-2">
+              <div className="absolute bottom-0 left-0">
                 <Tooltip content="Hidden">
                   <EyeSlashIcon className="h-5 w-5 text-gray-400" />
                 </Tooltip>
@@ -152,11 +146,20 @@ const PaymentMethodsPage: React.FC = () => {
       />
       <PageWrapper>
         <div className="py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredMethods.map(method => (
-              <PaymentMethodCard key={method.PaymentMethodID} method={method} onStyleClick={openStyleModal} onEditClick={openEditModal} />
-            ))}
-          </div>
+          <DataGrid
+            data={filteredMethods}
+            itemKey="PaymentMethodID"
+            onItemClick={(method) => navigate(`/payment-methods/${method.PaymentMethodID}`)}
+            renderItem={(method) => (
+              <PaymentMethodItem
+                method={method}
+                onStyleClick={openStyleModal}
+                onEditClick={openEditModal}
+              />
+            )}
+            minItemWidth={320}
+            itemHeight={120}
+          />
 
           <PaymentMethodModal
             isOpen={isAddModalOpen || isEditModalOpen}

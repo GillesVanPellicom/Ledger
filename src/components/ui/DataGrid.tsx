@@ -1,0 +1,71 @@
+import React, { useRef, useState, useLayoutEffect, useCallback, ReactNode } from 'react';
+import { cn } from '../../utils/cn';
+import { MinusIcon } from '@heroicons/react/24/solid';
+
+interface DataGridProps<T> {
+  data: T[];
+  renderItem: (item: T) => ReactNode;
+  onItemClick?: (item: T) => void;
+  itemKey: keyof T;
+  minItemWidth?: number;
+  itemHeight?: number;
+  className?: string;
+}
+
+const DataGrid = <T extends { [key: string]: any }>({
+  data,
+  renderItem,
+  onItemClick,
+  itemKey,
+  minItemWidth = 220,
+  itemHeight = 88,
+  className,
+}: DataGridProps<T>) => {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(3);
+
+  const calculateGridParams = useCallback(() => {
+    if (gridRef.current) {
+      const containerWidth = gridRef.current.offsetWidth;
+      const newCols = Math.max(1, Math.floor(containerWidth / minItemWidth));
+      setCols(newCols);
+    }
+  }, [minItemWidth]);
+
+  useLayoutEffect(() => {
+    calculateGridParams();
+    window.addEventListener('resize', calculateGridParams);
+    return () => window.removeEventListener('resize', calculateGridParams);
+  }, [calculateGridParams]);
+
+  const numToRender = data.length > 0 ? Math.ceil(data.length / cols) * cols : cols;
+  const items = Array.from({ length: numToRender }, (_, i) => data[i] || null);
+
+  return (
+    <div ref={gridRef} className={cn("rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden", className)}>
+      <div className="grid -m-px" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+        {items.map((item, index) => (
+          <div
+            key={item ? item[itemKey] : `placeholder-${index}`}
+            style={{ height: `${itemHeight}px` }}
+            className={cn(
+              "p-4 border border-gray-200 dark:border-gray-800",
+              { "cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50": !!item && !!onItemClick },
+            )}
+            onClick={() => item && onItemClick && onItemClick(item)}
+          >
+            {item ? (
+              renderItem(item)
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <MinusIcon className="h-8 w-8 text-gray-300 dark:text-gray-700" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default DataGrid;
