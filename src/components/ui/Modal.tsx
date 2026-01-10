@@ -99,7 +99,7 @@ const Modal: React.FC<ModalProps> = ({
       <div 
         onTransitionEnd={handleTransitionEnd}
         className={cn(
-          "relative w-full transform rounded-xl bg-white dark:bg-gray-900 text-left shadow-xl transition-all duration-300 flex flex-col max-h-[90vh]",
+          "relative w-full transform rounded-xl bg-white dark:bg-zinc-950 text-left shadow-xl transition-all duration-300 flex flex-col max-h-[90vh] border border-gray-200 dark:border-zinc-800",
           sizes[size],
           isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
           className
@@ -107,7 +107,7 @@ const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-gray-50 dark:bg-zinc-950 rounded-t-xl">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500">
             <XMarkIcon className="h-5 w-5" />
@@ -115,7 +115,7 @@ const Modal: React.FC<ModalProps> = ({
         </div>
         <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3 shrink-0 bg-gray-50 dark:bg-gray-900/50 rounded-b-xl">
+          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-gray-50 dark:bg-zinc-950 rounded-b-xl">
             {footer}
           </div>
         )}

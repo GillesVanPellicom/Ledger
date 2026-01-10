@@ -6,6 +6,7 @@ import Button from '../ui/Button';
 import { db } from '../../utils/db';
 import { useSettings } from '../../context/SettingsContext';
 import { Product } from '../../types';
+import Separator from '../ui/Separator';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -130,11 +131,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
         <Input label="Product Name" name="ProductName" value={formData.ProductName} onChange={handleChange} placeholder="e.g. gouda cheese" error={errors.ProductName} />
         
         <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
-          </div>
-          <div className="relative flex justify-center">
-            <span className="px-2 bg-white dark:bg-gray-800 text-sm text-gray-500">Optional Details</span>
+          <Separator />
+          <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            <span className="px-2 bg-white dark:bg-black text-sm text-gray-500">Optional Details</span>
           </div>
         </div>
 
