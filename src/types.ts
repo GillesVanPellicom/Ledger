@@ -2,12 +2,16 @@ export interface Settings {
   backup: {
     editsSinceLastBackup: number;
     interval: number;
+    maxBackups: number;
   };
   modules: {
     debt: {
       enabled: boolean;
     };
     paymentMethods: {
+      enabled: boolean;
+    };
+    capitalizationProtection?: {
       enabled: boolean;
     };
   };
@@ -17,12 +21,20 @@ export interface Settings {
   };
   userName?: string;
   paymentMethodStyles?: Record<string, PaymentMethodStyle>;
+  debtorStyles?: Record<string, DebtorStyle>;
+  theme?: string;
+  uiScale?: number;
 }
 
 export interface Debtor {
   DebtorID: number;
   DebtorName: string;
   DebtorIsActive: boolean;
+}
+
+export interface DebtorStyle {
+  symbol: string;
+  type: 'icon' | 'emoji';
 }
 
 export interface Store {

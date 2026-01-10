@@ -34,6 +34,8 @@ import InfoCard from '../components/ui/InfoCard';
 import { Header } from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
 import PageWrapper from '../components/layout/PageWrapper';
+import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
+import { Image } from 'jspdf';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -115,7 +117,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         setSplitType(receiptData.SplitType || 'none');
 
         if (!receiptData.IsNonItemised) {
-          const lineItemData = await db.query<LineItem[]>(`
+          const lineItemData = await db.query<LineItem>(`
               SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
               FROM LineItems li
                        JOIN Products p ON li.ProductID = p.ProductID
@@ -126,9 +128,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           setLineItems(lineItemData);
         }
 
-        const imageData = await db.query<{
-          ImagePath: string
-        }[]>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        const imageData = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
         if (window.electronAPI && settings.datastore.folderPath) {
           setImages(imageData.map(img => ({
             key: img.ImagePath,
@@ -139,7 +139,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
 
         if (debtEnabled) {
           if (receiptData.SplitType === 'total_split') {
-            const splitsData = await db.query<ReceiptSplit[]>(`
+            const splitsData = await db.query<ReceiptSplit>(`
                 SELECT rs.*, d.DebtorName
                 FROM ReceiptSplits rs
                          JOIN Debtors d ON rs.DebtorID = d.DebtorID
@@ -148,7 +148,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
             setReceiptSplits(splitsData);
           }
 
-          const paymentsData = await db.query<ReceiptDebtorPayment[]>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
+          const paymentsData = await db.query<ReceiptDebtorPayment>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
           setPayments(paymentsData);
         }
 
@@ -156,7 +156,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           const pmData = await db.query<{
             PaymentMethodID: number,
             PaymentMethodName: string
-          }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
+          }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
           setPaymentMethods(pmData.map(pm => ({value: pm.PaymentMethodID, label: pm.PaymentMethodName})));
         }
       }
@@ -180,19 +180,8 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
     if (receipt?.IsNonItemised) {
       return receipt.NonItemisedTotal || 0;
     }
-    const discountPercentage = receipt?.Discount || 0;
-    if (discountPercentage === 0) return subtotal;
-
-    const discountableAmount = lineItems.reduce((sum, item) => {
-      if (!item.IsExcludedFromDiscount) {
-        return sum + (item.LineQuantity * item.LineUnitPrice);
-      }
-      return sum;
-    }, 0);
-
-    const discountAmount = (discountableAmount * discountPercentage) / 100;
-    return Math.max(0, subtotal - discountAmount);
-  }, [subtotal, receipt, lineItems]);
+    return calculateTotalWithDiscount(lineItems, receipt?.Discount || 0);
+  }, [receipt, lineItems]);
 
   const debtSummary = useMemo(() => {
     if (!debtEnabled || !receipt) return {debtors: [], ownShare: null};
@@ -226,15 +215,10 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
       }
     } else if (splitType === 'line_item' && !receipt.IsNonItemised) {
       const debtorItems: Record<string, { count: number, total: number }> = {};
-      const discountPercentage = receipt.Discount || 0;
-      const discountFactor = 1 - (discountPercentage / 100);
 
       lineItems.forEach(item => {
         if (item.DebtorID) {
-          let itemAmount = item.LineQuantity * item.LineUnitPrice;
-          if (discountPercentage > 0 && !item.IsExcludedFromDiscount) {
-            itemAmount *= discountFactor;
-          }
+          const itemAmount = calculateLineItemTotalWithDiscount(item, receipt.Discount || 0);
 
           if (!debtorItems[String(item.DebtorID)]) {
             debtorItems[String(item.DebtorID)] = {count: 0, total: 0};
@@ -428,7 +412,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
               <Card>
                 <div className="p-6">
                   <h2 className="text-lg font-semibold mb-4">Images</h2>
-                  <Gallery images={images}/>
+                  <Gallery images={images.map(i => i.src) as (string | Image)[]} />
                 </div>
               </Card>
             )}

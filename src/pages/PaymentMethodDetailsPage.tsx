@@ -18,6 +18,7 @@ import Input from '../components/ui/Input';
 import { PaymentMethod, TopUp } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
+import { calculateTotalWithDiscount } from '../utils/discountCalculator';
 
 const tryParseJson = (str: string) => {
   try {
@@ -130,12 +131,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
               return {...r, amount: -(r.NonItemisedTotal || 0)};
             }
             const items = allLineItems.filter(li => li.ReceiptID === r.id);
-            const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-            const discountableAmount = items
-              .filter(item => !item.IsExcludedFromDiscount)
-              .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-            const discountAmount = (discountableAmount * (r.Discount || 0)) / 100;
-            const total = subtotal - discountAmount;
+            const total = calculateTotalWithDiscount(items, r.Discount || 0);
             return {...r, amount: -total};
         }),
         ...topupsData.map((t): PageTransaction => ({
@@ -291,8 +287,8 @@ const PaymentMethodDetailsPage: React.FC = () => {
     };
   }, [transactions, method]);
 
-  const renderNote = (note: string) => {
-    const parsedNote = tryParseJson(note);
+  const renderNote = (row: PageTransaction) => {
+    const parsedNote = tryParseJson(row.note);
     if (parsedNote && parsedNote.type === 'debt_settlement') {
       return (
         <>
@@ -303,13 +299,13 @@ const PaymentMethodDetailsPage: React.FC = () => {
         </>
       );
     }
-    return note || '-';
+    return row.note || '-';
   };
 
   const columns = [
     { header: 'Date', render: (row: PageTransaction) => format(new Date(row.date), 'dd/MM/yyyy') },
     { header: 'Name', accessor: 'name' },
-    { header: 'Note', render: (row: PageTransaction) => renderNote(row.note) },
+    { header: 'Note', render: (row: PageTransaction) => renderNote(row) },
     {
       header: 'Amount',
       render: (row: PageTransaction) => (

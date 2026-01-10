@@ -23,6 +23,7 @@ import '../electron.d';
 import Spinner from '../components/ui/Spinner';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
+import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -106,7 +107,7 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const fetchStores = async () => {
-    const storeData = await db.query<Store[]>('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
+    const storeData = await db.query<Store>('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
     setStores(storeData.map(s => ({ value: s.StoreID, label: s.StoreName })));
   };
 
@@ -124,12 +125,12 @@ const ReceiptFormPage: React.FC = () => {
       await fetchStores();
 
       if (paymentMethodsEnabled) {
-        const paymentMethodData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
+        const paymentMethodData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
         setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
       }
 
       if (debtEnabled) {
-        const debtorsData = await db.query<Debtor[]>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+        const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
         setDebtors(debtorsData);
       }
 
@@ -179,11 +180,11 @@ const ReceiptFormPage: React.FC = () => {
             }
           }
 
-          const imageData = await db.query<ReceiptImage[]>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+          const imageData = await db.query<ReceiptImage>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [id]);
           setImages(imageData.map(img => ({ ...img, key: nanoid() })));
 
           if (debtEnabled) {
-            const paymentsData = await db.query<{ DebtorID: number }[]>('SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
+            const paymentsData = await db.query<{ DebtorID: number }>('SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
             setPaidDebtorIds(paymentsData.map(p => p.DebtorID));
 
             if (receiptData.SplitType === 'total_split') {
@@ -282,25 +283,8 @@ const ReceiptFormPage: React.FC = () => {
     if (receiptFormat === 'item-less') {
       return nonItemisedTotal;
     }
-    const subtotal = calculateSubtotal();
-    const discountPercentage = parseFloat(String(formData.discount)) || 0;
-    
-    if (discountPercentage === 0) return subtotal;
-
-    let discountAmount = 0;
-    if (isExclusionMode) {
-      const discountableAmount = lineItems.reduce((sum, item) => {
-        if (!excludedLineItemKeys.has(item.key)) {
-          return sum + (item.LineQuantity * item.LineUnitPrice);
-        }
-        return sum;
-      }, 0);
-      discountAmount = (discountableAmount * discountPercentage) / 100;
-    } else {
-      discountAmount = (subtotal * discountPercentage) / 100;
-    }
-    
-    return Math.max(0, subtotal - discountAmount);
+    const itemsToDiscount = isExclusionMode ? lineItems.filter(item => !excludedLineItemKeys.has(item.key)) : lineItems;
+    return calculateTotalWithDiscount(itemsToDiscount, formData.discount);
   };
 
   const debtSummary = useMemo(() => {
@@ -322,19 +306,11 @@ const ReceiptFormPage: React.FC = () => {
         selfAmount = (totalAmount * Number(formData.ownShares)) / totalShares;
       }
     } else if (splitType === 'line_item' && receiptFormat === 'itemised') {
-      const discountPercentage = parseFloat(String(formData.discount)) || 0;
-      const discountFactor = 1 - (discountPercentage / 100);
-      
       lineItems.forEach(item => {
         if (item.DebtorID) {
           const debtorName = item.DebtorName || debtors.find(d => d.DebtorID === Number(item.DebtorID))?.DebtorName;
           if (debtorName) {
-            let itemAmount = item.LineQuantity * item.LineUnitPrice;
-            if (discountPercentage > 0) {
-               if (!isExclusionMode || (isExclusionMode && !excludedLineItemKeys.has(item.key))) {
-                 itemAmount *= discountFactor;
-               }
-            }
+            const itemAmount = calculateLineItemTotalWithDiscount(item, formData.discount);
             summary[debtorName] = {
               name: debtorName,
               amount: (summary[debtorName]?.amount || 0) + itemAmount,
@@ -579,7 +555,7 @@ const ReceiptFormPage: React.FC = () => {
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
         await db.execute('DELETE FROM ReceiptSplits WHERE ReceiptID = ?', [id]);
         
-        const existingImages = await db.query<{ ImagePath: string }[]>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        const existingImages = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
         const imagesToKeep = images.filter(img => !img.file).map(img => img.ImagePath);
         const imagesToDelete = existingImages.filter(img => !imagesToKeep.includes(img.ImagePath));
         if (imagesToDelete.length > 0) {

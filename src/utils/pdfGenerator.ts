@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { Receipt, LineItem, ReceiptImage } from '../types';
 import '../electron.d';
+import { calculateDiscount } from './discountCalculator';
 
 interface PdfOptions {
   showUniqueItems?: boolean;
@@ -113,7 +114,7 @@ export const generateReceiptsPdf = async (receipts: FullReceipt[], options: PdfO
       
       if (receipt.Discount > 0) {
         const subtotal = receipt.lineItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-        const discountAmount = (subtotal * receipt.Discount) / 100;
+        const discountAmount = calculateDiscount(receipt.lineItems, receipt.Discount);
         
         doc.setFontSize(10);
         doc.setTextColor(100);

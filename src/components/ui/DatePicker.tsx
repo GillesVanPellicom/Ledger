@@ -1,10 +1,10 @@
 import React from 'react';
-import ReactDatePicker from 'react-datepicker';
+import ReactDatePicker, { ReactDatePickerProps } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { cn } from '../../utils/cn';
 import { CalendarIcon } from '@heroicons/react/24/outline';
 
-interface DatePickerProps extends React.ComponentProps<typeof ReactDatePicker> {
+interface DatePickerProps extends ReactDatePickerProps {
   label?: string;
   error?: string;
 }

@@ -28,6 +28,11 @@ import {Receipt, LineItem} from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 
+interface FullReceipt extends Receipt {
+  lineItems: LineItem[];
+  totalAmount: number;
+}
+
 const ReceiptsPage: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -143,7 +148,7 @@ const ReceiptsPage: React.FC = () => {
       query += ` ORDER BY r.ReceiptDate DESC, r.ReceiptID DESC LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
 
-      const results = await db.query<Receipt[]>(query, params);
+      const results = await db.query<Receipt>(query, params);
       setReceipts(results);
     } catch (error) {
       showError(error as Error);
@@ -201,12 +206,12 @@ const ReceiptsPage: React.FC = () => {
           WHERE li.ReceiptID IN (${placeholders})
       `, selectedReceiptIds);
 
-      const fullReceipts = receiptsData.map(receipt => {
+      const fullReceipts: FullReceipt[] = receiptsData.map(receipt => {
         const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
         const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
         const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
         const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : Math.max(0, subtotal - discountAmount);
-        return {...receipt, lineItems: items, totalAmount: total, images: []};
+        return {...receipt, lineItems: items, totalAmount: total || 0, images: []};
       });
 
       await generateReceiptsPdf(fullReceipts, settings.pdf, (progress: number) => setPdfProgress(progress));

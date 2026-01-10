@@ -18,6 +18,7 @@ import { useError } from '../context/ErrorContext';
 import { useSettings } from '../context/SettingsContext';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import { Debtor, Receipt } from '../types';
+import Tooltip from '../components/ui/Tooltip';
 
 const DebtorDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

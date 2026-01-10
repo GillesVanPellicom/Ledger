@@ -28,9 +28,11 @@ Implement:
 
 The current state management relies heavily on `useState`, `useEffect`, and `useCallback` within individual components. This can lead to prop drilling and complex state synchronization.
 Implement:
-
--   **Data Fetching and Caching:** We should introduce a data fetching and caching library like **React Query (TanStack Query)**. This will simplify data fetching, handle caching, and reduce the need for manual loading and error states.
--   **Global State:** For cross-component state that doesn't fit into the server-state model of React Query (e.g., user settings, theme), we can use a lightweight global state management library like **Zustand**.
+### 2.1. Data Fetching and Caching
+We should introduce a data fetching and caching library like **React Query (TanStack Query)**. This will simplify data fetching, handle caching, and reduce the need for manual loading and error states. 
+Specifically this has to be implemented to cache costly query results. This has to be a global change.
+### 2.1. Global State
+For cross-component state that doesn't fit into the server-state model of React Query (e.g., user settings, theme), we can use a lightweight global state management library like **Zustand**.
 
 ## 3. Addressing Technical Debt
 

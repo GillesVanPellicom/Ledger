@@ -13,6 +13,8 @@ const emojis = [
 
 const iconOrder = ['CreditCardIcon'];
 
+const colors = ['#f87171', '#fb923c', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf', '#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6', '#fb7185'];
+
 interface PaymentMethodStyleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,6 +26,7 @@ interface PaymentMethodStyleModalProps {
 const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpen, onClose, onSave, method, currentStyle }) => {
   const [selectedSymbol, setSelectedSymbol] = useState('CreditCardIcon');
   const [symbolType, setSymbolType] = useState<'icon' | 'emoji'>('icon');
+  const [selectedColor, setSelectedColor] = useState(colors[0]);
   const [iconSearchTerm, setIconSearchTerm] = useState('');
   const [emojiSearchTerm, setEmojiSearchTerm] = useState('');
 
@@ -31,6 +34,7 @@ const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpe
     if (isOpen) {
       setSelectedSymbol(currentStyle?.symbol || 'CreditCardIcon');
       setSymbolType(currentStyle?.type || 'icon');
+      setSelectedColor(currentStyle?.color || colors[0]);
       setIconSearchTerm('');
       setEmojiSearchTerm('');
     }
@@ -55,7 +59,7 @@ const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpe
   }, [emojiSearchTerm]);
 
   const handleSave = () => {
-    onSave(method.PaymentMethodID, { symbol: selectedSymbol, type: symbolType });
+    onSave(method.PaymentMethodID, { symbol: selectedSymbol, type: symbolType, color: selectedColor });
     onClose();
   };
 
@@ -93,6 +97,19 @@ const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpe
             </div>
           </>
         )}
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium">Color</span>
+          <div className="flex flex-wrap gap-2">
+            {colors.map(color => (
+              <button
+                key={color}
+                onClick={() => setSelectedColor(color)}
+                className={cn("w-8 h-8 rounded-full transition-transform transform", selectedColor === color ? 'ring-2 ring-offset-2 ring-blue-500' : '')}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </Modal>
   );

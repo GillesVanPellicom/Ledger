@@ -48,7 +48,7 @@ export function useDataTable<T>({
       const offset = (currentPage - 1) * pageSize;
       let query = baseQuery || `SELECT * FROM ${tableName}`;
       const params: any[] = [...additionalParams];
-      
+
       if (searchTerm && searchColumns.length > 0) {
         const searchConditions = searchColumns.map(col => `${col} LIKE ?`).join(' OR ');
         if (query.toLowerCase().includes('where')) {
@@ -58,7 +58,7 @@ export function useDataTable<T>({
         }
         searchColumns.forEach(() => params.push(`%${searchTerm}%`));
       }
-      
+
       let finalCountQuery = countQuery;
       if (!finalCountQuery) {
           // Simple heuristic to generate count query if not provided
@@ -79,10 +79,10 @@ export function useDataTable<T>({
       // If baseQuery is used, additionalParams are already in params array.
       // If searchTerm is used, those params are also pushed.
       // So we can reuse `params` for count query if it wraps the main query or duplicates the where clause.
-      
+
       // However, for complex baseQueries, it's safer if the user provides a countQuery that matches the baseQuery structure
       // or we wrap the query as a subquery for counting.
-      
+
       // Strategy: If countQuery is NOT provided, wrap the constructed query (without limit/offset) in a count select.
       if (!countQuery) {
           finalCountQuery = `SELECT COUNT(*) as count FROM (${query})`;
@@ -94,7 +94,7 @@ export function useDataTable<T>({
       if (defaultSort && !query.toLowerCase().includes('order by')) {
         query += ` ORDER BY ${defaultSort}`;
       }
-      
+
       query += ` LIMIT ? OFFSET ?`;
       params.push(pageSize, offset);
       

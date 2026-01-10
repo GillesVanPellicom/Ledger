@@ -1,11 +1,29 @@
-
 import { db } from './db';
-import { Receipt, LineItem, ReceiptSplit } from '../types';
+import { Receipt, LineItem, ReceiptSplit, ReceiptDebtorPayment } from '../types';
+import { calculateTotalWithDiscount, calculateLineItemTotalWithDiscount } from './discountCalculator';
 
+interface DebtReceipt extends Receipt {
+  StoreName: string;
+  type: 'to_entity' | 'to_me';
+}
+
+export interface ProcessedReceipt extends DebtReceipt {
+  amount: number;
+  isSettled: boolean;
+  splitPart?: number;
+  totalShares?: number;
+}
+
+/**
+ * Calculates the debts for a given entity.
+ * This function fetches all receipts related to the entity, calculates the amount owed by or to the entity for each receipt,
+ * and then aggregates these amounts to determine the total debt to the entity, the total debt to the current user, and the net balance.
+ *
+ * @param entityId - The ID of the entity for whom to calculate debts.
+ * @returns An object containing the list of processed receipts, the total debt to the entity, the total debt to the current user, and the net balance.
+ */
 async function calculateDebts(entityId: string | number) {
-  const entityData = await db.queryOne<any>('SELECT * FROM Debtors WHERE DebtorID = ?', [entityId]);
-
-  const allReceiptsForEntity = await db.query<any[]>(`
+  const allReceiptsForEntity = await db.query<DebtReceipt[]>(`
     SELECT r.*, s.StoreName,
       CASE WHEN r.OwedToDebtorID = ? THEN 'to_entity' ELSE 'to_me' END as type
     FROM Receipts r
@@ -31,21 +49,16 @@ async function calculateDebts(entityId: string | number) {
   const [allLineItems, allSplits, allPayments] = await Promise.all([
     db.query<LineItem[]>(`SELECT * FROM LineItems WHERE ReceiptID IN (${placeholders})`, receiptIds),
     db.query<ReceiptSplit[]>(`SELECT * FROM ReceiptSplits WHERE ReceiptID IN (${placeholders})`, receiptIds),
-    db.query<any[]>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds),
+    db.query<ReceiptDebtorPayment[]>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds),
   ]);
 
-  const processedReceipts = allReceiptsForEntity.map(r => {
+  const processedReceipts: ProcessedReceipt[] = allReceiptsForEntity.map(r => {
     let totalAmount = 0;
     if (r.IsNonItemised) {
       totalAmount = r.NonItemisedTotal;
     } else {
       const items = allLineItems.filter(li => li.ReceiptID === r.ReceiptID);
-      const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-      const discountableAmount = items
-        .filter(item => !item.IsExcludedFromDiscount)
-        .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-      const discountAmount = (discountableAmount * (r.Discount || 0)) / 100;
-      totalAmount = subtotal - discountAmount;
+      totalAmount = calculateTotalWithDiscount(items, r.Discount || 0);
     }
 
     let amount = 0;
@@ -70,9 +83,7 @@ async function calculateDebts(entityId: string | number) {
       } else if (r.SplitType === 'line_item') {
         const debtorItems = allLineItems.filter(li => li.ReceiptID === r.ReceiptID && li.DebtorID === Number(entityId));
         amount = debtorItems.reduce((sum, item) => {
-          const itemTotal = item.LineQuantity * item.LineUnitPrice;
-          const itemDiscount = !item.IsExcludedFromDiscount ? (itemTotal * (r.Discount || 0)) / 100 : 0;
-          return sum + (itemTotal - itemDiscount);
+          return sum + calculateLineItemTotalWithDiscount(item, r.Discount || 0);
         }, 0);
       }
       isSettled = allPayments.some(p => p.ReceiptID === r.ReceiptID && p.DebtorID === Number(entityId));

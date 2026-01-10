@@ -41,7 +41,7 @@ const ReferenceDataPage: React.FC = () => {
       let query = `
         SELECT p.*, u.ProductUnitType 
         FROM Products p
-        JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
+        LEFT JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
         WHERE p.ProductIsActive = 1
       `;
       const params: any[] = [];
@@ -70,7 +70,7 @@ const ReferenceDataPage: React.FC = () => {
       query += ` ORDER BY p.ProductName ASC LIMIT ? OFFSET ?`;
       params.push(productsPageSize, offset);
       
-      const results = await db.query<Product[]>(query, params);
+      const results = await db.query<Product>(query, params);
       setProducts(results);
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -98,7 +98,7 @@ const ReferenceDataPage: React.FC = () => {
       query += ` ORDER BY StoreName ASC LIMIT ? OFFSET ?`;
       params.push(storesPageSize, offset);
       
-      const results = await db.query<Store[]>(query, params);
+      const results = await db.query<Store>(query, params);
       setStores(results);
     } catch (error) {
       console.error("Failed to fetch stores:", error);

@@ -103,7 +103,7 @@ const PaymentMethodsPage: React.FC = () => {
   const fetchPaymentMethods = useCallback(async () => {
     setLoading(true);
     try {
-      const methodsData = await db.query<PaymentMethod[]>('SELECT * FROM PaymentMethods');
+      const methodsData = await db.query<PaymentMethod>('SELECT * FROM PaymentMethods');
       setMethods(methodsData);
     } catch (error) {
       console.error("Failed to fetch payment methods:", error);

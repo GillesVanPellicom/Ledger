@@ -19,11 +19,12 @@ import { useSettings } from '../context/SettingsContext';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
 import EntityModal from '../components/debt/EntityModal';
-import { Entity, Receipt } from '../types';
+import { Debtor, Entity, Receipt } from '../types';
 import { useDebtCalculation } from '../hooks/useDebtCalculation';
 import { Header } from '../components/ui/Header';
 import Tooltip from '../components/ui/Tooltip';
 import PageWrapper from '../components/layout/PageWrapper';
+import { calculateTotalWithDiscount } from '../utils/discountCalculator';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onCo
 const EntityDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [entity, setEntity] = useState<Entity | null>(null);
+  const [entity, setEntity] = useState<Debtor | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,7 +110,7 @@ const EntityDetailsPage: React.FC = () => {
   const fetchDetails = useCallback(async () => {
     setLoading(true);
     try {
-      const entityData = await db.queryOne<Entity>('SELECT * FROM Debtors WHERE DebtorID = ?', [id]);
+      const entityData = await db.queryOne<Debtor>('SELECT * FROM Debtors WHERE DebtorID = ?', [id]);
       setEntity(entityData);
 
       if (paymentMethodsEnabled) {
@@ -177,12 +178,7 @@ const EntityDetailsPage: React.FC = () => {
           if (r.IsNonItemised) {
             totalAmount = r.NonItemisedTotal;
           } else {
-            const subtotal = lineItems.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-            const discountableAmount = lineItems
-              .filter(item => !item.IsExcludedFromDiscount)
-              .reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-            const discountAmount = (discountableAmount * (receiptDetails.Discount || 0)) / 100;
-            totalAmount = Math.max(0, subtotal - discountAmount);
+            totalAmount = calculateTotalWithDiscount(lineItems, receiptDetails.Discount || 0);
           }
         }
 

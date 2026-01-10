@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
-import { calculateDebts } from '../utils/debtCalculator';
+import { calculateDebts, ProcessedReceipt } from '../utils/debtCalculator';
 import { useError } from '../context/ErrorContext';
-import { Receipt } from '../types';
 
 interface DebtStats {
   debtToEntity: number;
@@ -10,14 +9,14 @@ interface DebtStats {
 }
 
 interface UseDebtCalculationResult {
-  receipts: Receipt[];
+  receipts: ProcessedReceipt[];
   stats: DebtStats;
   loading: boolean;
   calculate: (entityId: string | number) => Promise<void>;
 }
 
 export const useDebtCalculation = (): UseDebtCalculationResult => {
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [receipts, setReceipts] = useState<ProcessedReceipt[]>([]);
   const [stats, setStats] = useState<DebtStats>({ debtToEntity: 0, debtToMe: 0, netBalance: 0 });
   const [loading, setLoading] = useState<boolean>(false);
   const { showError } = useError();

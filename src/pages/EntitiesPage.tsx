@@ -87,7 +87,7 @@ const EntitiesPage: React.FC = () => {
   const fetchEntities = useCallback(async () => {
     setLoading(true);
     try {
-      const results = await db.query<Debtor[]>('SELECT * FROM Debtors ORDER BY DebtorName ASC');
+      const results = await db.query<Debtor>('SELECT * FROM Debtors ORDER BY DebtorName ASC');
       setEntities(results);
     } catch (error) {
       console.error("Failed to fetch entities:", error);

@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
         color="135, 94, 242"
         pointerColor="135, 94, 242"
         interactive={false}
-        style={{ height: `${minHeight}px`, position: 'absolute', inset: 0 }}
+        containerClassName="absolute inset-0"
       />
 
       <div className="absolute inset-0 backdrop-blur-md">

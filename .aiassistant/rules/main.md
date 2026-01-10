@@ -31,3 +31,5 @@ Always code in a modular fashion: use components, factor out features in a gener
 If a plan section reveals missing requirements or contradictions, stop and request clarification
 
 From prompt to prompt, always re-read files to make sure you're working with the latest version.
+
+When using typescript, pay special attention to working typesafe.
