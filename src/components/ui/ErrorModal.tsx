@@ -29,7 +29,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
     >
       <div className="flex flex-col items-center text-center space-y-4">
         <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-          <ExclamationTriangleIcon className="h-8 w-8 text-red-600 dark:text-red-400" />
+          <ExclamationTriangleIcon className="h-8 w-8 text-red" />
         </div>
         
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -57,7 +57,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
             {isExpanded && (
               <div className="mt-4 w-full text-left">
                 <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-x-auto">
-                  <pre className="text-xs text-red-600 dark:text-red-400 font-mono whitespace-pre-wrap break-words">
+                  <pre className="text-xs text-red font-mono whitespace-pre-wrap break-words">
                     {error.stack || error.message || String(error)}
                   </pre>
                 </div>

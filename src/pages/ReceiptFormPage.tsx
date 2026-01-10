@@ -854,7 +854,7 @@ const ReceiptFormPage: React.FC = () => {
                                   <span className="text-sm text-gray-500">Shares:</span>
                                   <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" disabled={isDebtDisabled} />
                                 </div>
-                                {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
+                                {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
                               </div>
                             </div>
                           ))}
@@ -950,7 +950,7 @@ const ReceiptFormPage: React.FC = () => {
                                 <div className="flex items-center gap-2">
                                   {parseFloat(String(formData.discount)) > 0 && (
                                     <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
-                                      <div className={cn("w-2 h-2 rounded-full", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                                      <div className={cn("w-2 h-2 rounded-full", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "text-green")}></div>
                                     </Tooltip>
                                   )}
                                   <div>

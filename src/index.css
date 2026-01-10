@@ -62,6 +62,12 @@
   .text-inverted {
     @apply text-white mix-blend-difference;
   }
+  .text-red {
+    @apply text-red-500;
+  }
+  .text-green {
+    @apply text-green-500;
+  }
 }
 
 /* React Datepicker Overrides */

@@ -72,7 +72,7 @@ const StoresPage: React.FC = () => {
       render: (row: Store) => (
         <Tooltip content={row.StoreIsActive ? 'Shown in lists' : 'Hidden from lists'}>
           {row.StoreIsActive ? 
-          <EyeIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+          <EyeIcon className="h-5 w-5 text-green inline-block" /> :
           <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
         </Tooltip>
       )

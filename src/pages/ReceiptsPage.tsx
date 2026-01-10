@@ -263,11 +263,11 @@ const ReceiptsPage: React.FC = () => {
             </Tooltip>
           ) : debtEnabled && (row.UnpaidDebtorCount || 0) > 0 ? (
             <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-              <ExclamationCircleIcon className="h-5 w-5 text-red-500"/>
+              <ExclamationCircleIcon className="h-5 w-5 text-red"/>
             </Tooltip>
           ) : debtEnabled && (row.TotalDebtorCount || 0) > 0 ? (
             <Tooltip content="All debts settled">
-              <CheckCircleIcon className="h-5 w-5 text-green-500"/>
+              <CheckCircleIcon className="h-5 w-5 text-green"/>
             </Tooltip>
           ) : <div className="w-5"/>}
         </div>

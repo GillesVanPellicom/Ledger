@@ -78,7 +78,7 @@ const EntitiesPage: React.FC = () => {
       render: (row: Debtor) => (
         <Tooltip content={row.DebtorIsActive ? 'Shown in lists' : 'Hidden from lists'}>
           {row.DebtorIsActive ? 
-          <EyeIcon className="h-5 w-5 text-green-500 inline-block" /> : 
+          <EyeIcon className="h-5 w-5 text-green inline-block" /> :
           <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
         </Tooltip>
       )

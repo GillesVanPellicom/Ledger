@@ -132,7 +132,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {errors.form && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{errors.form}</div>}
+        {errors.form && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red text-sm rounded-lg">{errors.form}</div>}
         
         {!topUpToEdit && (
           <Select

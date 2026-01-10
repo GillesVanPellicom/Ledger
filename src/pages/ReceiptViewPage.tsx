@@ -488,7 +488,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                               <div className="flex items-center gap-2">
                                 {receipt.Discount > 0 && (
                                   <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-                                    <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+                                    <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "text-green")}></div>
                                   </Tooltip>
                                 )}
                                 <div>
@@ -503,7 +503,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                               {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
                             </td>
                             {debtEnabled && splitType === 'line_item' && (
-                              <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red-600 font-medium" : "text-gray-600 dark:text-gray-400")}>
+                              <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red font-medium" : "text-gray-600 dark:text-gray-400")}>
                                 {item.DebtorName || '-'}
                               </td>
                             )}
@@ -602,17 +602,17 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                           <div className="flex items-center">
                             {isPaid ? (
                               <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                                <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400"/>
+                                <CheckCircleIcon className="h-5 w-5 text-green"/>
                               </Tooltip>
                             ) : (
                               <Tooltip content="Unpaid">
-                                <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400"/>
+                                <ExclamationCircleIcon className="h-5 w-5 text-red"/>
                               </Tooltip>
                             )}
                           </div>
                         </div>
                         <div className="flex justify-between items-baseline mt-1">
-                          <p className={cn("font-bold truncate", isPaid ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")} style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                          <p className={cn("font-bold truncate", isPaid ? "text-green" : "text-red")} style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                             €{debtor.amount.toFixed(2)}
                           </p>
                           <div className="text-right flex-shrink-0 pl-2">

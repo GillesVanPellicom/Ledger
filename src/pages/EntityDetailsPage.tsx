@@ -369,8 +369,8 @@ const EntityDetailsPage: React.FC = () => {
       render: (row: Receipt) => (
         <div className="flex items-center">
           {row.type === 'to_me' ? 
-            <ArrowUpCircleIcon className="h-5 w-5 text-green-500 mr-2" /> : 
-            <ArrowDownCircleIcon className="h-5 w-5 text-red-500 mr-2" />}
+            <ArrowUpCircleIcon className="h-5 w-5 text-green mr-2" /> : 
+            <ArrowDownCircleIcon className="h-5 w-5 text-red mr-2" />}
           {row.type === 'to_me' ? 'Owes You' : 'You Owe'}
         </div>
       )
@@ -434,7 +434,7 @@ const EntityDetailsPage: React.FC = () => {
         leftBoxContent={
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">€{stats.debtToMe.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green">€{stats.debtToMe.toFixed(2)}</p>
           </div>
         }
         centeredContent={
@@ -443,12 +443,12 @@ const EntityDetailsPage: React.FC = () => {
             <div className="flex items-center justify-center gap-2">
               <Tooltip content={stats.netBalance >= 0 ? `${entity.DebtorName} owes you` : `You owe ${entity.DebtorName}`}>
                 {stats.netBalance >= 0 ? (
-                  <ArrowUpCircleIcon className="h-6 w-6 text-green-500" />
+                  <ArrowUpCircleIcon className="h-6 w-6 text-green" />
                 ) : (
-                  <ArrowDownCircleIcon className="h-6 w-6 text-red-500" />
+                  <ArrowDownCircleIcon className="h-6 w-6 text-red" />
                 )}
               </Tooltip>
-              <p className={cn("text-2xl font-bold", stats.netBalance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
+              <p className={cn("text-2xl font-bold", stats.netBalance >= 0 ? "text-green" : "text-red")}>
                 €{Math.abs(stats.netBalance).toFixed(2)}
               </p>
             </div>
@@ -457,7 +457,7 @@ const EntityDetailsPage: React.FC = () => {
         rightBoxContent={
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400">€{stats.debtToEntity.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-red">€{stats.debtToEntity.toFixed(2)}</p>
           </div>
         }
       />
