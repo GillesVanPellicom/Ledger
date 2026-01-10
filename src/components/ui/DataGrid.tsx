@@ -43,13 +43,17 @@ const DataGrid = <T extends { [key: string]: any }>({
 
   return (
     <div ref={gridRef} className={cn("rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden", className)}>
-      <div className="grid -m-px" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {items.map((item, index) => (
           <div
             key={item ? item[itemKey] : `placeholder-${index}`}
             style={{ height: `${itemHeight}px` }}
             className={cn(
-              "p-4 border border-gray-200 dark:border-gray-800",
+              "p-4",
+              // Add top border to items not in the first row
+              index >= cols && "border-t border-gray-200 dark:border-gray-800",
+              // Add left border to items not in the first column
+              index % cols !== 0 && "border-l border-gray-200 dark:border-gray-800",
               { "cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50": !!item && !!onItemClick },
             )}
             onClick={() => item && onItemClick && onItemClick(item)}
