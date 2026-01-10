@@ -14,6 +14,7 @@ import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import PageSpinner from '../components/ui/PageSpinner';
 import DataGrid from '../components/ui/DataGrid';
+import Spinner from '../components/ui/Spinner';
 
 interface PaymentMethodItemProps {
   method: PaymentMethod;
@@ -25,6 +26,27 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
     const { settings } = useSettings();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
     const IconComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
+    const [balance, setBalance] = useState<number | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+      const fetchBalance = async () => {
+        setLoading(true);
+        try {
+          const expensesResult = await db.queryOne<{ total: number }>('SELECT SUM(li.LineQuantity * li.LineUnitPrice) as total FROM LineItems li JOIN Receipts r ON li.ReceiptID = r.ReceiptID WHERE r.PaymentMethodID = ? AND r.IsTentative = 0', [method.PaymentMethodID]);
+          const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?', [method.PaymentMethodID]);
+          const expenses = expensesResult?.total || 0;
+          const topups = topupsResult?.total || 0;
+          setBalance(method.PaymentMethodFunds + topups - expenses);
+        } catch (error) {
+          console.error("Failed to fetch balance for method:", method.PaymentMethodID, error);
+          setBalance(0);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchBalance();
+    }, [method]);
 
     return (
         <div className={cn("flex flex-col justify-between h-full relative group", method.PaymentMethodIsActive === 0 && "opacity-60")}>
@@ -38,14 +60,22 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
             </div>
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h3>
-                {IconComponent && <IconComponent className="h-8 w-8 text-gray-400" />}
-                {style?.type === 'emoji' && <span className="text-3xl">{style.symbol}</span>}
+                <div className="w-8 h-8 flex items-center justify-center">
+                  {IconComponent && <IconComponent className="h-8 w-8 text-gray-400" />}
+                  {style?.type === 'emoji' && <span className="text-3xl">{style.symbol}</span>}
+                </div>
             </div>
             <div className="mt-4 text-right">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Current Balance</p>
-                <p className={cn("text-2xl font-semibold", method.balance < 0 ? 'text-red' : 'text-gray-900 dark:text-gray-100')}>
-                    € {method.balance.toFixed(2)}
-                </p>
+                {loading || balance === null ? (
+                  <div className="flex justify-end items-center h-7">
+                    <Spinner className="h-5 w-5 text-gray-400" />
+                  </div>
+                ) : (
+                  <p className={cn("text-2xl font-semibold", balance < 0 ? 'text-red' : 'text-gray-900 dark:text-gray-100')}>
+                      € {balance.toFixed(2)}
+                  </p>
+                )}
             </div>
             {method.PaymentMethodIsActive === 0 && (
               <div className="absolute bottom-0 left-0">
@@ -73,15 +103,7 @@ const PaymentMethodsPage: React.FC = () => {
     setLoading(true);
     try {
       const methodsData = await db.query<PaymentMethod[]>('SELECT * FROM PaymentMethods');
-      const methodsWithBalance = await Promise.all(methodsData.map(async (method) => {
-        const expensesResult = await db.queryOne<{ total: number }>('SELECT SUM(li.LineQuantity * li.LineUnitPrice) as total FROM LineItems li JOIN Receipts r ON li.ReceiptID = r.ReceiptID WHERE r.PaymentMethodID = ? AND r.IsTentative = 0', [method.PaymentMethodID]);
-        const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?', [method.PaymentMethodID]);
-        const expenses = expensesResult?.total || 0;
-        const topups = topupsResult?.total || 0;
-        const balance = method.PaymentMethodFunds + topups - expenses;
-        return { ...method, balance };
-      }));
-      setMethods(methodsWithBalance);
+      setMethods(methodsData);
     } catch (error) {
       console.error("Failed to fetch payment methods:", error);
     } finally {
@@ -106,7 +128,7 @@ const PaymentMethodsPage: React.FC = () => {
   const handleStyleSave = async (methodId: number, newStyle: PaymentMethodStyle) => {
     const newStyles = { ...settings.paymentMethodStyles, [methodId]: newStyle };
     await updateSettings({ ...settings, paymentMethodStyles: newStyles });
-    fetchPaymentMethods();
+    setIsStyleModalOpen(false);
   };
 
   const openStyleModal = (method: PaymentMethod) => {
