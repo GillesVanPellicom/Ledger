@@ -218,35 +218,11 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const columns: any[] = [
-    {header: 'Date', width: '20%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy')},
-    {header: 'Store', accessor: 'StoreName', width: '30%'},
-    {header: 'Note', accessor: 'ReceiptNote', width: '25%'},
-  ];
-
-  if (paymentMethodsEnabled) {
-    columns.push({header: 'Payment Method', accessor: 'PaymentMethodName', width: '15%'});
-  }
-
-  columns.push({
-    header: 'Total',
-    width: '15%',
-    className: 'text-right',
-    render: (row: Receipt) => `€${(row.Total || 0).toFixed(2)}`
-  });
-
-  columns.push({
-    header: '',
-    width: '15%',
-    className: 'text-right',
-    render: (row: Receipt) => (
-      <div className="flex justify-end items-center gap-4">
-        <div className="flex items-center justify-end w-24 gap-3">
-          {row.IsTentative ? (
-            <Tooltip content="Tentative Receipt">
-              <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400"/>
-            </Tooltip>
-          ) : <div className="w-5"/>}
-
+    {
+      header: 'Indicators',
+      width: '10%',
+      render: (row: Receipt) => (
+        <div className="flex items-center justify-center gap-3">
           {row.IsNonItemised ? (
             <Tooltip content="Item-less Receipt">
               <ClipboardIcon className="h-5 w-5 text-gray-400"/>
@@ -270,9 +246,37 @@ const ReceiptsPage: React.FC = () => {
               <CheckCircleIcon className="h-5 w-5 text-green"/>
             </Tooltip>
           ) : <div className="w-5"/>}
-        </div>
-        <div className="flex items-center gap-2 ml-2">
 
+          {row.IsTentative ? (
+            <Tooltip content="Tentative Receipt">
+              <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400"/>
+            </Tooltip>
+          ) : <div className="w-5"/>}
+        </div>
+      )
+    },
+    {header: 'Date', width: '20%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy')},
+    {header: 'Store', accessor: 'StoreName', width: '30%'},
+    {header: 'Note', accessor: 'ReceiptNote', width: '25%'},
+  ];
+
+  if (paymentMethodsEnabled) {
+    columns.push({header: 'Payment Method', accessor: 'PaymentMethodName', width: '15%'});
+  }
+
+  columns.push({
+    header: 'Total',
+    width: '15%',
+    className: 'text-right',
+    render: (row: Receipt) => `€${(row.Total || 0).toFixed(2)}`
+  });
+
+  columns.push({
+    header: '',
+    width: '5%',
+    className: 'text-right',
+    render: (row: Receipt) => (
+      <div className="flex justify-end items-center">
           <Tooltip content="Delete Receipt">
             <Button
               variant="ghost"
@@ -285,7 +289,6 @@ const ReceiptsPage: React.FC = () => {
               <TrashIcon className="h-4 w-4"/>
             </Button>
           </Tooltip>
-        </div>
       </div>
     )
   });
