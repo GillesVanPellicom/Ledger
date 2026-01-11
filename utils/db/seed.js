@@ -149,21 +149,21 @@ async function seed() {
 
         if (productIds.length === 0) throw new Error('No products found. Cannot create receipts.');
 
-        const insertReceipt = 'INSERT INTO Receipts (ReceiptDate, StoreID, ReceiptNote, PaymentMethodID, SplitType) VALUES (?, ?, ?, ?, ?)';
-        const insertLineItem = 'INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID) VALUES (?, ?, ?, ?, ?)';
+        const insertReceipt = 'INSERT INTO Receipts (ReceiptDate, StoreID, ReceiptNote, PaymentMethodID, SplitType, Status, OwedToDebtorID, IsNonItemised, NonItemisedTotal, IsTentative, OwnShares, TotalShares, Discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const insertLineItem = 'INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)';
         const insertReceiptSplit = 'INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)';
+        const insertPayment = 'INSERT INTO ReceiptDebtorPayments (ReceiptID, DebtorID, PaidDate) VALUES (?, ?, ?)';
 
-        // Fetch payment methods to map names to IDs
         const paymentMethods = await getQuery(db, 'SELECT * FROM PaymentMethods');
         const pmMap = {};
         paymentMethods.forEach(pm => pmMap[pm.PaymentMethodID] = pm.PaymentMethodName);
-        
+
         const pmRoles = { 'KBC': 'affluent', 'Knab': 'going_up', 'Paypal': 'keeping_above_water', 'Argenta': 'debter' };
         const roles = {
-            affluent: { debtProb: 0.8 },
-            going_up: { debtProb: 0.5 },
-            keeping_above_water: { debtProb: 0.2 },
-            debter: { debtProb: 0.05 },
+            affluent: { debtProb: 0.8, unpaidProb: 0.05 },
+            going_up: { debtProb: 0.5, unpaidProb: 0.1 },
+            keeping_above_water: { debtProb: 0.2, unpaidProb: 0.2 },
+            debter: { debtProb: 0.05, unpaidProb: 0.4 },
         };
 
         await new Promise((resolve, reject) => {
@@ -174,46 +174,97 @@ async function seed() {
                     const storeId = getRandomElement(storeIds);
                     const note = Math.random() > 0.8 ? `Grote boodschappen week ${i % 52 + 1}` : null;
                     const paymentMethodId = getRandomElement(paymentMethodIds);
-                    
+
                     const pmName = pmMap[paymentMethodId];
                     const roleName = pmRoles[pmName];
-                    const role = roles[roleName] || { debtProb: 0.1 };
+                    const role = roles[roleName] || { debtProb: 0.1, unpaidProb: 0.1 };
 
-                    // Determine if this receipt has debt and what type
-                    const hasDebt = Math.random() < role.debtProb;
+                    const isUnpaid = Math.random() < role.unpaidProb;
+                    const status = isUnpaid ? 'unpaid' : 'paid';
+                    const owedToDebtorID = isUnpaid ? getRandomElement(debtorIds) : null;
+                    const receiptPaymentMethodId = isUnpaid ? null : paymentMethodId;
+
+                    const isTentative = Math.random() < 0.05;
+                    const isNonItemised = Math.random() < 0.1;
+                    
+                    const hasDiscount = Math.random() < 0.2;
+                    const discount = hasDiscount ? getRandomInt(5, 20) : 0;
+
+                    const hasDebt = !isUnpaid && Math.random() < role.debtProb;
                     let splitType = 'none';
                     if (hasDebt) {
                         splitType = Math.random() > 0.5 ? 'line_item' : 'total_split';
                     }
+                    
+                    let ownShares = null;
+                    let totalShares = null;
 
-                    db.run(insertReceipt, [date, storeId, note, paymentMethodId, splitType], function (err) {
+                    db.run(insertReceipt, [date, storeId, note, receiptPaymentMethodId, splitType, status, owedToDebtorID, isNonItemised ? 1 : 0, null, isTentative ? 1 : 0, ownShares, totalShares, discount], function (err) {
                         if (err) return reject(err);
                         const receiptId = this.lastID;
-                        const numItems = getRandomInt(1, 25);
                         
-                        // Handle total_split
-                        if (splitType === 'total_split') {
-                            const numDebtors = getRandomInt(1, 3);
-                            const selectedDebtors = [];
-                            while (selectedDebtors.length < numDebtors) {
-                                const d = getRandomElement(debtorIds);
-                                if (!selectedDebtors.includes(d)) selectedDebtors.push(d);
-                            }
-                            
-                            // Assign random parts (e.g., 1, 2, 1)
-                            selectedDebtors.forEach(debtorId => {
-                                db.run(insertReceiptSplit, [receiptId, debtorId, getRandomInt(1, 3)]);
-                            });
-                        }
+                        if (isNonItemised) {
+                            const total = (Math.random() * 100 + 5).toFixed(2);
+                            db.run('UPDATE Receipts SET NonItemisedTotal = ? WHERE ReceiptID = ?', [total, receiptId]);
+                        } else {
+                            const numItems = getRandomInt(1, 25);
+                            const lineItemsToInsert = [];
+                            let receiptDebtors = new Set();
 
-                        for (let j = 0; j < numItems; j++) {
-                            let debtorId = null;
-                            // Handle line_item split
-                            if (splitType === 'line_item' && Math.random() > 0.3) { 
-                                debtorId = getRandomElement(debtorIds);
+                            for (let j = 0; j < numItems; j++) {
+                                let debtorId = null;
+                                if (splitType === 'line_item' && Math.random() > 0.3) {
+                                    debtorId = getRandomElement(debtorIds);
+                                    if(debtorId) receiptDebtors.add(debtorId);
+                                }
+                                lineItemsToInsert.push({
+                                    productId: getRandomElement(productIds),
+                                    qty: getRandomInt(1, 5),
+                                    price: (Math.random() * 20 + 0.5).toFixed(2),
+                                    debtorId: debtorId
+                                });
                             }
-                            
-                            db.run(insertLineItem, [receiptId, getRandomElement(productIds), getRandomInt(1, 5), (Math.random() * 20 + 0.5).toFixed(2), debtorId]);
+
+                            if (splitType === 'total_split') {
+                                const numDebtors = getRandomInt(1, 3);
+                                const selectedDebtors = [];
+                                while (selectedDebtors.length < numDebtors) {
+                                    const d = getRandomElement(debtorIds);
+                                    if (!selectedDebtors.includes(d)) selectedDebtors.push(d);
+                                }
+                                
+                                let currentTotalShares = 0;
+                                const ownSharePart = Math.random() > 0.3 ? getRandomInt(1, 3) : 0;
+                                if(ownSharePart > 0) currentTotalShares += ownSharePart;
+
+                                selectedDebtors.forEach(debtorId => {
+                                    const part = getRandomInt(1, 3);
+                                    currentTotalShares += part;
+                                    db.run(insertReceiptSplit, [receiptId, debtorId, part]);
+                                    receiptDebtors.add(debtorId);
+                                });
+                                db.run('UPDATE Receipts SET OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?', [ownSharePart, currentTotalShares, receiptId]);
+                            }
+
+                            const hasExclusions = hasDiscount && Math.random() < 0.3;
+                            const exclusionCount = hasExclusions ? getRandomInt(1, Math.floor(numItems / 2)) : 0;
+                            const excludedIndexes = new Set();
+                            while(excludedIndexes.size < exclusionCount) {
+                                excludedIndexes.add(getRandomInt(0, numItems - 1));
+                            }
+
+                            lineItemsToInsert.forEach((item, index) => {
+                                const isExcluded = excludedIndexes.has(index) ? 1 : 0;
+                                db.run(insertLineItem, [receiptId, item.productId, item.qty, item.price, item.debtorId, isExcluded]);
+                            });
+
+                            // Chance to mark all debts as paid
+                            if (receiptDebtors.size > 0 && Math.random() < 0.15) {
+                                const paymentDate = format(generateRandomDate(new Date(date), new Date()), 'yyyy-MM-dd');
+                                receiptDebtors.forEach(debtorId => {
+                                    db.run(insertPayment, [receiptId, debtorId, paymentDate]);
+                                });
+                            }
                         }
                     });
                 }

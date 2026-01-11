@@ -36,11 +36,19 @@ interface PageTransaction {
   name: string;
   note: string;
   amount: number;
-  type: 'receipt' | 'deposit' | 'transfer';
+  type: 'receipt' | 'deposit' | 'transfer_in' | 'transfer_out';
+  creationTimestamp: string;
   // Receipt-specific fields
   Discount?: number | null;
   IsNonItemised?: 0 | 1;
   NonItemisedTotal?: number | null;
+  // Transfer-specific fields
+  transferInfo?: {
+    fromMethodId: number;
+    toMethodId: number;
+    fromMethodName: string;
+    toMethodName: string;
+  };
 }
 
 interface LineItem {
@@ -48,6 +56,28 @@ interface LineItem {
   LineQuantity: number;
   LineUnitPrice: number;
   IsExcludedFromDiscount: 0 | 1;
+}
+
+interface IncomingTransferQueryResult {
+  id: number;
+  date: string;
+  note: string;
+  amount: number;
+  creationTimestamp: string;
+  fromMethodId: number;
+  toMethodId: number;
+  fromMethodName: string;
+}
+
+interface OutgoingTransferQueryResult {
+  id: number;
+  date: string;
+  note: string;
+  amount: number;
+  creationTimestamp: string;
+  fromMethodId: number;
+  toMethodId: number;
+  toMethodName: string;
 }
 
 const PaymentMethodDetailsPage: React.FC = () => {
@@ -74,19 +104,21 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
 
-  useEffect(() => {
-    const chartInstance = chartRef.current?.getEchartsInstance();
-    return () => {
-      chartInstance?.dispose();
-    };
-  }, []);
-
   const fetchDetails = useCallback(async () => {
     setLoading(true);
     try {
+      const methodId = parseInt(id!, 10);
       const methodData = await db.queryOne<PaymentMethod>('SELECT * FROM PaymentMethods WHERE PaymentMethodID = ?', [id]);
+      
+      if (!methodData) {
+        setMethod(null);
+        setTransactions([]);
+        setLoading(false);
+        return;
+      }
+
       setMethod(methodData);
-      setMethodName(methodData?.PaymentMethodName || '');
+      setMethodName(methodData.PaymentMethodName || '');
 
       interface ReceiptQueryResult {
         id: number;
@@ -97,12 +129,12 @@ const PaymentMethodDetailsPage: React.FC = () => {
         IsNonItemised: 0 | 1;
         NonItemisedTotal: number | null;
         type: 'receipt';
+        creationTimestamp: string;
       }
 
       const receiptsData = await db.query<ReceiptQueryResult>(`
         SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note, r.Discount,
-               r.IsNonItemised, r.NonItemisedTotal,
-               'receipt' as type
+               r.IsNonItemised, r.NonItemisedTotal, 'receipt' as type, r.CreationTimestamp as creationTimestamp
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
         WHERE r.PaymentMethodID = ?
@@ -116,16 +148,50 @@ const PaymentMethodDetailsPage: React.FC = () => {
       interface TopUpQueryResult {
         id: number;
         date: string;
-        name: string;
         note: string;
         amount: number;
-        TransferID: number | null;
+        creationTimestamp: string;
       }
 
       const topupsData = await db.query<TopUpQueryResult>(`
-        SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount, TransferID
-        FROM TopUps
-        WHERE PaymentMethodID = ?
+        SELECT
+          tu.TopUpID as id,
+          tu.TopUpDate as date,
+          tu.TopUpNote as note,
+          tu.TopUpAmount as amount,
+          tu.CreationTimestamp as creationTimestamp
+        FROM TopUps tu
+        WHERE tu.PaymentMethodID = ? AND tu.TransferID IS NULL
+      `, [id]);
+
+      const incomingTransfersData = await db.query<IncomingTransferQueryResult>(`
+        SELECT
+          t.TransferID as id,
+          t.TransferDate as date,
+          t.Note as note,
+          t.Amount as amount,
+          t.CreationTimestamp as creationTimestamp,
+          t.FromPaymentMethodID as fromMethodId,
+          t.ToPaymentMethodID as toMethodId,
+          pm_from.PaymentMethodName as fromMethodName
+        FROM Transfers t
+        JOIN PaymentMethods pm_from ON t.FromPaymentMethodID = pm_from.PaymentMethodID
+        WHERE t.ToPaymentMethodID = ?
+      `, [id]);
+      
+      const outgoingTransfersData = await db.query<OutgoingTransferQueryResult>(`
+        SELECT
+          t.TransferID as id,
+          t.TransferDate as date,
+          t.Note as note,
+          t.Amount as amount,
+          t.CreationTimestamp as creationTimestamp,
+          t.FromPaymentMethodID as fromMethodId,
+          t.ToPaymentMethodID as toMethodId,
+          pm_to.PaymentMethodName as toMethodName
+        FROM Transfers t
+        JOIN PaymentMethods pm_to ON t.ToPaymentMethodID = pm_to.PaymentMethodID
+        WHERE t.FromPaymentMethodID = ?
       `, [id]);
 
       const allTransactions: PageTransaction[] = [
@@ -135,19 +201,57 @@ const PaymentMethodDetailsPage: React.FC = () => {
             }
             const items = allLineItems.filter(li => li.ReceiptID === r.id);
             const total = calculateTotalWithDiscount(items, r.Discount || 0);
-            return {...r, amount: -total};
+            return {...r, name: r.name, amount: -total};
         }),
         ...topupsData.map((t): PageTransaction => ({
-          ...t,
-          type: t.TransferID ? 'transfer' : 'deposit'
+          id: t.id,
+          date: t.date,
+          name: 'Deposit',
+          note: t.note,
+          amount: t.amount,
+          type: 'deposit',
+          creationTimestamp: t.creationTimestamp,
+        })),
+        ...incomingTransfersData.map((t): PageTransaction => ({
+            id: t.id,
+            date: t.date,
+            name: 'Transfer',
+            note: t.note,
+            amount: t.amount,
+            type: 'transfer_in',
+            creationTimestamp: t.creationTimestamp,
+            transferInfo: {
+                fromMethodId: t.fromMethodId,
+                toMethodId: t.toMethodId,
+                fromMethodName: t.fromMethodName,
+                toMethodName: methodData.PaymentMethodName
+            }
+        })),
+        ...outgoingTransfersData.map((t): PageTransaction => ({
+            id: t.id,
+            date: t.date,
+            name: 'Transfer',
+            note: t.note,
+            amount: -t.amount,
+            type: 'transfer_out',
+            creationTimestamp: t.creationTimestamp,
+            transferInfo: {
+                fromMethodId: t.fromMethodId,
+                toMethodId: t.toMethodId,
+                fromMethodName: methodData.PaymentMethodName,
+                toMethodName: t.toMethodName
+            }
         }))
-      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      ].sort((a, b) => {
+        const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateComparison !== 0) return dateComparison;
+        return new Date(b.creationTimestamp).getTime() - new Date(a.creationTimestamp).getTime();
+      });
 
       setTransactions(allTransactions);
 
-      const expenses = allTransactions.filter(t => t.type === 'receipt').reduce((sum, r) => sum - r.amount, 0);
-      const depositsAndTransfers = allTransactions.filter(t => t.type === 'deposit' || t.type === 'transfer').reduce((sum, t) => sum + t.amount, 0);
-      setBalance((methodData?.PaymentMethodFunds || 0) + depositsAndTransfers - expenses);
+      const newBalance = (methodData.PaymentMethodFunds || 0) + allTransactions.reduce((acc, tx) => acc + tx.amount, 0);
+      setBalance(newBalance);
 
     } catch (error) {
       console.error("Failed to fetch payment method details:", error);
@@ -180,8 +284,10 @@ const PaymentMethodDetailsPage: React.FC = () => {
     try {
       if (itemToDelete.type === 'receipt') {
         await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [itemToDelete.id]);
-      } else {
-        await window.electronAPI.deleteTransaction({ topUpId: itemToDelete.id });
+      } else if (itemToDelete.type === 'deposit') {
+        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [itemToDelete.id]);
+      } else if (itemToDelete.type === 'transfer_in' || itemToDelete.type === 'transfer_out') {
+        await db.execute('DELETE FROM Transfers WHERE TransferID = ?', [itemToDelete.id]);
       }
       
       queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
@@ -210,7 +316,6 @@ const PaymentMethodDetailsPage: React.FC = () => {
     if (row.type === 'receipt') {
       navigate(`/receipts/view/${row.id}`);
     }
-    // Editing transfers/deposits is disabled for now
   };
 
   const filteredTransactions = useMemo(() => {
@@ -218,7 +323,10 @@ const PaymentMethodDetailsPage: React.FC = () => {
     const [startDate, endDate] = dateRange;
 
     return transactions.filter(t => {
-      const typeMatch = filter === 'all' || (filter === 'receipt' && t.type === 'receipt') || (filter === 'deposit' && t.type === 'deposit') || (filter === 'transfer' && t.type === 'transfer');
+      const typeMatch = filter === 'all' 
+        || (filter === 'receipt' && t.type === 'receipt') 
+        || (filter === 'deposit' && t.type === 'deposit') 
+        || (filter === 'transfer' && (t.type === 'transfer_in' || t.type === 'transfer_out'));
       if (!typeMatch) return false;
 
       const date = new Date(t.date);
@@ -269,6 +377,31 @@ const PaymentMethodDetailsPage: React.FC = () => {
     };
   }, [transactions, method]);
 
+  const getTransactionTypeDisplayName = (type: PageTransaction['type']) => {
+    if (type === 'transfer_in' || type === 'transfer_out') return 'transfer';
+    return type;
+  }
+
+  const renderDetails = (row: PageTransaction) => {
+    const handleLinkClick = (e: React.MouseEvent) => e.stopPropagation();
+
+    if (row.type === 'transfer_in' && row.transferInfo) {
+      return (
+        <Link to={`/payment-methods/${row.transferInfo.fromMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline">
+          From: {row.transferInfo.fromMethodName}
+        </Link>
+      );
+    }
+    if (row.type === 'transfer_out' && row.transferInfo) {
+      return (
+        <Link to={`/payment-methods/${row.transferInfo.toMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline">
+          To: {row.transferInfo.toMethodName}
+        </Link>
+      );
+    }
+    return '-';
+  };
+
   const renderNote = (row: PageTransaction) => {
     const parsedNote = tryParseJson(row.note);
     if (parsedNote && parsedNote.type === 'debt_settlement') {
@@ -287,6 +420,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const columns = [
     { header: 'Date', render: (row: PageTransaction) => format(new Date(row.date), 'dd/MM/yyyy') },
     { header: 'Name', accessor: 'name' },
+    { header: 'Details', render: (row: PageTransaction) => renderDetails(row) },
     { header: 'Note', render: (row: PageTransaction) => renderNote(row) },
     {
       header: 'Amount',
@@ -300,7 +434,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
       header: '',
       render: (row: PageTransaction) => (
         <div className="flex justify-end">
-          <Tooltip content={`Delete ${row.type}`}>
+          <Tooltip content={`Delete ${getTransactionTypeDisplayName(row.type)}`}>
             <Button
               variant="ghost"
               size="icon"
@@ -414,8 +548,8 @@ const PaymentMethodDetailsPage: React.FC = () => {
             isOpen={isDeleteModalOpen}
             onClose={() => setIsDeleteModalOpen(false)}
             onConfirm={handleDelete}
-            title={`Delete ${itemToDelete?.type}`}
-            message={`Are you sure you want to permanently delete this ${itemToDelete?.type}? This action cannot be undone.`}
+            title={`Delete ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}`}
+            message={`Are you sure you want to permanently delete this ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}? This action cannot be undone.`}
           />
 
           <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Payment Method">
