@@ -2,9 +2,9 @@ import React, {ButtonHTMLAttributes} from 'react';
 import {cn} from '../../utils/cn';
 
 const variants = {
-  primary: 'bg-accent hover:bg-accent-hover text-white shadow-sm',
-  secondary: 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700',
-  danger: 'bg-danger hover:bg-danger-hover text-white shadow-sm',
+  primary: 'bg-accent hover:bg-accent-hover text-white shadow-lg border border-accent-hover',
+  secondary: 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 shadow-lg border border-gray-200 dark:border-gray-700',
+  danger: 'bg-danger hover:bg-danger-hover text-white shadow-sm border border-danger-hover',
   ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300',
   minimal: 'inline-flex items-center justify-center p-0 m-0 bg-transparent border-0 appearance-none focus:outline-none',
 };

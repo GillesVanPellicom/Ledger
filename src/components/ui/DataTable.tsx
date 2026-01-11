@@ -230,7 +230,7 @@ const DataTable: React.FC<DataTableProps> = ({
           {searchable && (
             <div className="relative w-90 mr-4">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-gray-900 border-zinc-700" disabled={disabled} />
+              <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-zinc-700" disabled={disabled} />
             </div>
           )}
         </div>
@@ -241,7 +241,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 type="button"
                 onClick={() => onPageChange && onPageChange(1)}
                 disabled={currentPage === 1 || loading || disabled}
-                className="bg-gray-900 text-gray-400 border border-zinc-700 hover:bg-zinc-800 hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 rounded-l-lg text-sm px-3 focus:outline-none h-10 disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors"
+                className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 rounded-l-lg text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronDoubleLeftIcon className="h-3 w-3" />
               </button>
@@ -249,11 +249,11 @@ const DataTable: React.FC<DataTableProps> = ({
                 type="button"
                 onClick={() => onPageChange && onPageChange(currentPage - 1)}
                 disabled={currentPage === 1 || loading || disabled}
-                className="bg-gray-900 text-gray-400 border border-zinc-700 hover:bg-zinc-800 hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 text-sm px-3 focus:outline-none h-10 disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors border-l-0"
+                className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors border-l-0"
               >
                 <ChevronLeftIcon className="h-3 w-3" />
               </button>
-              <div className="relative h-10 flex items-center bg-gray-900 border-y border-zinc-700">
+              <div className="relative h-10 flex items-center bg-white dark:bg-gray-900 border-y border-gray-300 dark:border-zinc-700">
                 <input
                   ref={inputRef}
                   type="text"
@@ -261,7 +261,7 @@ const DataTable: React.FC<DataTableProps> = ({
                   onChange={handleInputChange}
                   onBlur={handlePageJump}
                   onKeyDown={handleKeyDown}
-                  className="border-0 h-full text-center bg-transparent py-2 text-gray-100 placeholder:text-gray-400 focus:ring-0 px-1"
+                  className="border-0 h-full text-center bg-transparent py-2 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 px-1"
                   style={{ width: inputWidth, minWidth: '2rem' }}
                   placeholder="1"
                   required
@@ -275,7 +275,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 type="button"
                 onClick={() => onPageChange && onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages || loading || totalCount === 0 || disabled}
-                className="bg-gray-900 text-gray-400 border border-zinc-700 hover:bg-zinc-800 hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 text-sm px-3 focus:outline-none h-10 disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors"
+                className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRightIcon className="h-3 w-3" />
               </button>
@@ -283,7 +283,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 type="button"
                 onClick={() => onPageChange && onPageChange(totalPages)}
                 disabled={currentPage === totalPages || loading || totalCount === 0 || disabled}
-                className="bg-gray-900 text-gray-400 border border-zinc-700 hover:bg-zinc-800 hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors border-l-0"
+                className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors border-l-0"
               >
                 <ChevronDoubleRightIcon className="h-3 w-3" />
               </button>
@@ -306,14 +306,14 @@ const DataTable: React.FC<DataTableProps> = ({
                 { value: 35, label: '35' }, { value: 40, label: '40' }, { value: 45, label: '45' }, 
                 { value: 50, label: '50' }, { value: 75, label: '75' }, { value: 100, label: '100' }
               ]} 
-              className="h-10 w-20 text-center bg-gray-900 border-zinc-700"
+              className="h-10 w-20 text-center bg-white dark:bg-gray-900 border-gray-300 dark:border-zinc-700"
               disabled={disabled}
             />
           </Tooltip>
         </div>
       </div>
 
-      <div ref={tableContainerRef} className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950 shadow-sm relative">
+      <div ref={tableContainerRef} className="rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-950 shadow-sm relative">
         <div className={cn("overflow-x-auto", (loading || disabled) && "blur-sm pointer-events-none")}>
           <table
             className="text-left text-sm w-full"
@@ -332,7 +332,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 </>
               )}
             </colgroup>
-            <thead className="bg-gray-900 border-b border-zinc-800">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-zinc-800">
               <tr>
                 {selectable && (
                   <th className="px-4 py-3 align-middle">
@@ -343,13 +343,13 @@ const DataTable: React.FC<DataTableProps> = ({
                   </th>
                 )}
                 {columns.map((col, idx) => (
-                  <th key={idx} className={cn("px-4 py-3 font-medium text-gray-400 truncate", col.className)}>
+                  <th key={idx} className={cn("px-4 py-3 font-medium text-gray-500 dark:text-gray-400 truncate", col.className)}>
                     {col.header}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800">
+            <tbody className="divide-y divide-gray-200 dark:divide-zinc-800">
               {data.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
@@ -361,7 +361,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 </tr>
               ) : (
                 data.map((row, rowIdx) => (
-                  <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-gray-900")}>
+                  <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900")}>
                     {selectable && (
                       <td className="px-4 py-3 align-middle">
                         <div className="checkbox-wrapper-13 flex items-center justify-center">
@@ -381,10 +381,10 @@ const DataTable: React.FC<DataTableProps> = ({
                       const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
                       let displayContent = content;
                       if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
-                        displayContent = <span className="text-gray-600">-</span>;
+                        displayContent = <span className="text-gray-500 dark:text-gray-600">-</span>;
                       }
                       return (
-                        <td key={colIdx} className={cn("px-4 py-3 text-gray-100 break-words", col.className)}>
+                        <td key={colIdx} className={cn("px-4 py-3 text-gray-900 dark:text-gray-100 break-words", col.className)}>
                           {displayContent}
                         </td>
                       );
@@ -396,14 +396,14 @@ const DataTable: React.FC<DataTableProps> = ({
           </table>
         </div>
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/30 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/30 dark:bg-zinc-950/30 z-10">
             <Spinner className="h-8 w-8 text-accent" />
           </div>
         )}
       </div>
 
       <div className="flex items-center justify-between px-2 py-2">
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
           {selectable && selectedRows.size > 0 
             ? `${selectedRows.size} selected. `
             : ''}
