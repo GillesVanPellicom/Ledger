@@ -314,10 +314,17 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
               </Button>
             </Tooltip>
             {receipt.Status === 'unpaid' && (
-              <Tooltip content="Mark as Paid">
-                <Button variant="ghost" size="icon" onClick={() => setIsMarkAsPaidModalOpen(true)}>
-                  <BanknotesIcon className="h-5 w-5" />
-                </Button>
+              <Tooltip content={receipt.IsTentative ? "Cannot mark a tentative receipt as paid" : "Mark as Paid"}>
+                <div className={cn(!receipt.IsTentative && "cursor-pointer")}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => !receipt.IsTentative && setIsMarkAsPaidModalOpen(true)}
+                    disabled={!!receipt.IsTentative}
+                  >
+                    <BanknotesIcon className="h-5 w-5" />
+                  </Button>
+                </div>
               </Tooltip>
             )}
           </>
