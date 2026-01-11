@@ -36,6 +36,8 @@ import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '
 import { Image } from 'jspdf';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
+import { useReceipt, useDeleteReceipt } from '../hooks/useReceipts';
+import { useActivePaymentMethods } from '../hooks/usePaymentMethods';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -76,18 +78,18 @@ interface ReceiptViewPageProps {
 const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) => {
   const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [images, setImages] = useState<ReceiptImage[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const {settings} = useSettingsStore();
   const {showError} = useErrorStore();
+  const deleteReceiptMutation = useDeleteReceipt();
+
+  const { data, isLoading, refetch } = useReceipt(id);
+  const { receipt, lineItems, images: rawImages, splits: receiptSplits, payments } = data || {};
+
+  const { data: activePaymentMethods } = useActivePaymentMethods();
+  
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
-  const [splitType, setSplitType] = useState<'none' | 'total_split' | 'line_item'>('none');
-  const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);
-  const [payments, setPayments] = useState<ReceiptDebtorPayment[]>([]);
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState<boolean>(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState<any>(null);
   const [unsettleConfirmation, setUnsettleConfirmation] = useState<{
@@ -96,100 +98,35 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
     topUpId: number | null
   }>({isOpen: false, paymentId: null, topUpId: null});
   const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState<boolean>(false);
-  const [paymentMethods, setPaymentMethods] = useState<{ value: number; label: string }[]>([]);
   const [makePermanentModalOpen, setMakePermanentModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
 
-  const fetchReceiptData = async () => {
-    setLoading(true);
-    try {
-      const receiptData = await db.queryOne<Receipt>(`
-          SELECT r.*, s.StoreName, pm.PaymentMethodName, d.DebtorName as OwedToDebtorName
-          FROM Receipts r
-                   JOIN Stores s ON r.StoreID = s.StoreID
-                   LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-                   LEFT JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
-          WHERE r.ReceiptID = ?
-      `, [id]);
-
-      if (receiptData) {
-        setReceipt(receiptData);
-        setSplitType(receiptData.SplitType || 'none');
-
-        if (!receiptData.IsNonItemised) {
-          const lineItemData = await db.query<LineItem>(`
-              SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
-              FROM LineItems li
-                       JOIN Products p ON li.ProductID = p.ProductID
-                       LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-                       LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-              WHERE li.ReceiptID = ?
-          `, [id]);
-          setLineItems(lineItemData);
-        }
-
-        const imageData = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
-        if (window.electronAPI && settings.datastore.folderPath) {
-          setImages(imageData.map(img => ({
-            key: img.ImagePath,
-            ImagePath: img.ImagePath,
-            src: `local-file://${settings.datastore.folderPath}/receipt_images/${img.ImagePath}`
-          })));
-        }
-
-        if (debtEnabled) {
-          if (receiptData.SplitType === 'total_split') {
-            const splitsData = await db.query<ReceiptSplit>(`
-                SELECT rs.*, d.DebtorName
-                FROM ReceiptSplits rs
-                         JOIN Debtors d ON rs.DebtorID = d.DebtorID
-                WHERE rs.ReceiptID = ?
-            `, [id]);
-            setReceiptSplits(splitsData);
-          }
-
-          const paymentsData = await db.query<ReceiptDebtorPayment>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
-          setPayments(paymentsData);
-        }
-
-        if (paymentMethodsEnabled) {
-          const pmData = await db.query<{
-            PaymentMethodID: number,
-            PaymentMethodName: string
-          }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
-          setPaymentMethods(pmData.map(pm => ({value: pm.PaymentMethodID, label: pm.PaymentMethodName})));
-        }
-      }
-    } catch (error) {
-      showError(error as Error);
-    } finally {
-      setLoading(false);
+  const images = useMemo(() => {
+    if (window.electronAPI && settings.datastore.folderPath && rawImages) {
+      return rawImages.map(img => ({
+        key: img.ImagePath,
+        ImagePath: img.ImagePath,
+        src: `local-file://${settings.datastore.folderPath}/receipt_images/${img.ImagePath}`
+      }));
     }
-  };
+    return [];
+  }, [rawImages, settings.datastore.folderPath]);
 
-  useEffect(() => {
-    if (settings.datastore.folderPath || !window.electronAPI) {
-      fetchReceiptData();
-    } else {
-      setLoading(false);
-    }
-  }, [id, showError, settings.datastore.folderPath, debtEnabled]);
-
-  const subtotal = useMemo(() => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0), [lineItems]);
+  const subtotal = useMemo(() => (lineItems || []).reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0), [lineItems]);
   const totalAmount = useMemo(() => {
     if (receipt?.IsNonItemised) {
       return receipt.NonItemisedTotal || 0;
     }
-    return calculateTotalWithDiscount(lineItems, receipt?.Discount || 0);
+    return calculateTotalWithDiscount(lineItems || [], receipt?.Discount || 0);
   }, [receipt, lineItems]);
 
   const debtSummary = useMemo(() => {
-    if (!debtEnabled || !receipt) return {debtors: [], ownShare: null};
+    if (!debtEnabled || !receipt || !receiptSplits || !lineItems) return {debtors: [], ownShare: null};
 
     const summary: Record<string, any> = {};
     let ownShare: any = null;
 
-    if (splitType === 'total_split' && (receiptSplits.length > 0 || (receipt.OwnShares && receipt.OwnShares > 0))) {
+    if (receipt.SplitType === 'total_split' && (receiptSplits.length > 0 || (receipt.OwnShares && receipt.OwnShares > 0))) {
       const totalShares = receipt.TotalShares && receipt.TotalShares > 0
         ? receipt.TotalShares
         : receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0) + (receipt.OwnShares || 0);
@@ -213,7 +150,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           totalShares: totalShares,
         };
       }
-    } else if (splitType === 'line_item' && !receipt.IsNonItemised) {
+    } else if (receipt.SplitType === 'line_item' && !receipt.IsNonItemised) {
       const debtorItems: Record<string, { count: number, total: number }> = {};
 
       lineItems.forEach(item => {
@@ -237,17 +174,17 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
       });
     }
     return {debtors: Object.values(summary), ownShare};
-  }, [lineItems, receipt, receiptSplits, splitType, debtEnabled, totalAmount]);
+  }, [lineItems, receipt, receiptSplits, debtEnabled, totalAmount]);
 
-  const totalItems = lineItems.length;
-  const totalQuantity = lineItems.reduce((total, item) => total + item.LineQuantity, 0);
+  const totalItems = lineItems?.length || 0;
+  const totalQuantity = (lineItems || []).reduce((total, item) => total + item.LineQuantity, 0);
 
   const handleSavePdf = async () => {
     if (!receipt) return;
 
     const fullReceipt = {
       ...receipt,
-      lineItems: lineItems,
+      lineItems: lineItems || [],
       images: images,
       totalAmount: totalAmount
     };
@@ -256,7 +193,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
   };
 
   const handleSettleClick = (debtor: any) => {
-    const payment = payments.find(p => p.DebtorID === debtor.debtorId);
+    const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
     if (payment) {
       confirmUnsettleDebt(payment.PaymentID, payment.TopUpID);
     } else {
@@ -288,7 +225,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
       if (topUpId) {
         await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
       }
-      fetchReceiptData();
+      refetch();
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -303,7 +240,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         'UPDATE Receipts SET Status = ?, PaymentMethodID = ? WHERE ReceiptID = ?',
         ['paid', paymentMethodId, id]
       );
-      fetchReceiptData();
+      refetch();
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -315,7 +252,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
     if (!receipt) return;
     try {
       await db.execute('UPDATE Receipts SET IsTentative = 0 WHERE ReceiptID = ?', [id]);
-      fetchReceiptData();
+      refetch();
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -326,7 +263,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
   const handleDelete = async () => {
     if (!receipt) return;
     try {
-      await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [id]);
+      await deleteReceiptMutation.mutateAsync([receipt.ReceiptID]);
       navigate('/receipts');
     } catch (error) {
       showError(error as Error);
@@ -335,7 +272,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <Spinner className="h-8 w-8 text-accent"/>
@@ -460,12 +397,12 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                         <th className="p-2 w-24 text-center">Qty</th>
                         <th className="p-2 w-32 text-right">Unit Price (€)</th>
                         <th className="p-2 w-32 text-right">Total (€)</th>
-                        {debtEnabled && splitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
+                        {debtEnabled && receipt.SplitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
                       </tr>
                       </thead>
                       <tbody className="divide-y dark:divide-gray-800">
-                      {lineItems.map((item) => {
-                        const isDebtorUnpaid = item.DebtorID && !payments.some(p => p.DebtorID === item.DebtorID);
+                      {(lineItems || []).map((item) => {
+                        const isDebtorUnpaid = item.DebtorID && !(payments || []).some(p => p.DebtorID === item.DebtorID);
                         return (
                           <tr key={item.LineItemID}>
                             <td className="p-2">
@@ -486,7 +423,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                             <td className="p-2 text-right font-medium">
                               {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
                             </td>
-                            {debtEnabled && splitType === 'line_item' && (
+                            {debtEnabled && receipt.SplitType === 'line_item' && (
                               <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red font-medium" : "text-gray-600 dark:text-gray-400")}>
                                 {item.DebtorName || '-'}
                               </td>
@@ -562,12 +499,12 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
               </div>
             </Card>
 
-            {debtEnabled && splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
+            {debtEnabled && receipt.SplitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
               <div>
                 <Divider text="Debt Breakdown" />
                 <div className="space-y-2 mt-4">
                   {debtSummary.debtors.map((debtor) => {
-                    const payment = payments.find(p => p.DebtorID === debtor.debtorId);
+                    const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
                     const isPaid = !!payment;
 
                     return (
@@ -600,10 +537,10 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                             €{debtor.amount.toFixed(2)}
                           </p>
                           <div className="text-right flex-shrink-0 pl-2">
-                            {splitType === 'total_split' &&
+                            {receipt.SplitType === 'total_split' &&
                               <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
-                            {splitType === 'line_item' && !receipt.IsNonItemised &&
-                              <p className="text-sm text-gray-500">{debtor.itemCount} / {debtor.totalItems} items</p>}
+                            {receipt.SplitType === 'line_item' && !receipt.IsNonItemised &&
+                              <p className="text-sm text-gray-500">{debtor.itemCount} / {totalItems} items</p>}
                           </div>
                         </div>
                       </Card>
@@ -637,7 +574,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
       <DebtSettlementModal
         isOpen={isSettlementModalOpen}
         onClose={() => setIsSettlementModalOpen(false)}
-        onSave={fetchReceiptData}
+        onSave={refetch}
         debtInfo={selectedDebtForSettlement}
       />
 
@@ -653,7 +590,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         isOpen={isMarkAsPaidModalOpen}
         onClose={() => setIsMarkAsPaidModalOpen(false)}
         onConfirm={handleMarkAsPaid}
-        paymentMethods={paymentMethods}
+        paymentMethods={(activePaymentMethods || []).map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName }))}
       />
 
       <ConfirmModal

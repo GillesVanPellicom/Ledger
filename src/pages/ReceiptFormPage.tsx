@@ -24,10 +24,12 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useBackupStore } from '../store/useBackupStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isEditing = !!id;
   const { settings } = useSettingsStore();
   const { incrementEdits } = useBackupStore();
@@ -597,6 +599,13 @@ const ReceiptFormPage: React.FC = () => {
       }
       
       await incrementEdits();
+
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      queryClient.invalidateQueries({ queryKey: ['receipt', receiptId] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['debt'] });
       
       if (!isEditing) {
         localStorage.removeItem('receipt_concept');

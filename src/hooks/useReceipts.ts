@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../utils/db';
-import { Receipt, LineItem } from '../types';
+import { Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment } from '../types';
 import { format } from 'date-fns';
+
+// --- Queries ---
 
 interface FetchReceiptsParams {
   page: number;
@@ -113,6 +115,56 @@ export const useReceipts = (params: FetchReceiptsParams) => {
   });
 };
 
+export const useReceipt = (id: string | undefined) => {
+  return useQuery({
+    queryKey: ['receipt', id],
+    queryFn: async () => {
+      if (!id) return null;
+
+      const receiptData = await db.queryOne<Receipt>(`
+        SELECT r.*, s.StoreName, pm.PaymentMethodName, d.DebtorName as OwedToDebtorName
+        FROM Receipts r
+                 JOIN Stores s ON r.StoreID = s.StoreID
+                 LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+                 LEFT JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
+        WHERE r.ReceiptID = ?
+      `, [id]);
+
+      if (!receiptData) return null;
+
+      const lineItems = !receiptData.IsNonItemised
+        ? await db.query<LineItem>(`
+            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
+            FROM LineItems li
+                     JOIN Products p ON li.ProductID = p.ProductID
+                     LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+                     LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
+            WHERE li.ReceiptID = ?
+        `, [id])
+        : [];
+      
+      const images = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+      
+      const splits = receiptData.SplitType === 'total_split'
+        ? await db.query<ReceiptSplit>(`
+            SELECT rs.*, d.DebtorName
+            FROM ReceiptSplits rs
+                     JOIN Debtors d ON rs.DebtorID = d.DebtorID
+            WHERE rs.ReceiptID = ?
+        `, [id])
+        : [];
+
+      const payments = await db.query<ReceiptDebtorPayment>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
+
+      return { receipt: receiptData, lineItems, images, splits, payments };
+    },
+    enabled: !!id,
+  });
+};
+
+
+// --- Mutations ---
+
 export const useDeleteReceipt = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -122,6 +174,9 @@ export const useDeleteReceipt = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receipts'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['debt'] });
     },
   });
 };
