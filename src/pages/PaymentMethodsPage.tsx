@@ -31,14 +31,6 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
 
     return (
         <div className={cn("flex flex-col justify-between h-full relative group", method.PaymentMethodIsActive === 0 && "opacity-60")}>
-            <div className="absolute top-0 right-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Tooltip content="Edit Style">
-                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PaintBrushIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
-              </Tooltip>
-              <Tooltip content="Edit">
-                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PencilIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
-              </Tooltip>
-            </div>
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h3>
                 <div className="w-8 h-8 flex items-center justify-center">
@@ -59,13 +51,19 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
                   </p>
                 )}
             </div>
-            {method.PaymentMethodIsActive === 0 && (
-              <div className="absolute bottom-0 left-0">
+            <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Tooltip content="Edit Style">
+                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PaintBrushIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
+              </Tooltip>
+              <Tooltip content="Edit">
+                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PencilIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
+              </Tooltip>
+              {method.PaymentMethodIsActive === 0 && (
                 <Tooltip content="Hidden">
                   <EyeSlashIcon className="h-5 w-5 text-gray-400" />
                 </Tooltip>
-              </div>
-            )}
+              )}
+            </div>
         </div>
     );
 };

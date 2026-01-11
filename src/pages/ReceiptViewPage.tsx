@@ -29,15 +29,15 @@ import Modal, {ConfirmModal} from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} from '../types';
 import InfoCard from '../components/ui/InfoCard';
-import { Header } from '../components/ui/Header';
+import {Header} from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
 import PageWrapper from '../components/layout/PageWrapper';
-import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
-import { Image } from 'jspdf';
-import { useSettingsStore } from '../store/useSettingsStore';
-import { useErrorStore } from '../store/useErrorStore';
-import { useReceipt, useDeleteReceipt } from '../hooks/useReceipts';
-import { useActivePaymentMethods } from '../hooks/usePaymentMethods';
+import {calculateLineItemTotalWithDiscount, calculateTotalWithDiscount} from '../utils/discountCalculator';
+import {Image} from 'jspdf';
+import {useSettingsStore} from '../store/useSettingsStore';
+import {useErrorStore} from '../store/useErrorStore';
+import {useReceipt, useDeleteReceipt} from '../hooks/useReceipts';
+import {useActivePaymentMethods} from '../hooks/usePaymentMethods';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -82,11 +82,11 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
   const {showError} = useErrorStore();
   const deleteReceiptMutation = useDeleteReceipt();
 
-  const { data, isLoading, refetch } = useReceipt(id);
-  const { receipt, lineItems, images: rawImages, splits: receiptSplits, payments } = data || {};
+  const {data, isLoading, refetch} = useReceipt(id);
+  const {receipt, lineItems, images: rawImages, splits: receiptSplits, payments} = data || {};
 
-  const { data: activePaymentMethods } = useActivePaymentMethods();
-  
+  const {data: activePaymentMethods} = useActivePaymentMethods();
+
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
@@ -292,7 +292,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeftIcon className="h-5 w-5" />
+              <ArrowLeftIcon className="h-5 w-5"/>
             </Button>
           </Tooltip>
         }
@@ -300,29 +300,29 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
           <>
             <Tooltip content="Delete">
               <Button variant="ghost" size="icon" onClick={() => setDeleteModalOpen(true)}>
-                <TrashIcon className="h-5 w-5" />
+                <TrashIcon className="h-5 w-5"/>
               </Button>
             </Tooltip>
             <Tooltip content="Edit">
               <Button variant="ghost" size="icon" onClick={() => navigate(`/receipts/edit/${id}`)}>
-                <PencilIcon className="h-5 w-5" />
+                <PencilIcon className="h-5 w-5"/>
               </Button>
             </Tooltip>
             <Tooltip content="Save as PDF (WIP)">
               <Button variant="ghost" size="icon" onClick={handleSavePdf} disabled>
-                <DocumentArrowDownIcon className="h-5 w-5" />
+                <DocumentArrowDownIcon className="h-5 w-5"/>
               </Button>
             </Tooltip>
             {receipt.Status === 'unpaid' && (
               <Tooltip content={receipt.IsTentative ? "Cannot mark a tentative receipt as paid" : "Mark as Paid"}>
                 <div className={cn(!receipt.IsTentative && "cursor-pointer")}>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => !receipt.IsTentative && setIsMarkAsPaidModalOpen(true)}
                     disabled={!!receipt.IsTentative}
                   >
-                    <BanknotesIcon className="h-5 w-5" />
+                    <BanknotesIcon className="h-5 w-5"/>
                   </Button>
                 </div>
               </Tooltip>
@@ -356,7 +356,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
               <Card>
                 <div className="p-6">
                   <h2 className="text-lg font-semibold mb-4">Images</h2>
-                  <Gallery images={images.map(i => i.src) as (string | Image)[]} />
+                  <Gallery images={images.map(i => i.src) as (string | Image)[]}/>
                 </div>
               </Card>
             )}
@@ -386,10 +386,8 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
                     <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Item-less
-                      Receipt</h3>
-                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this
-                      receipt.</p>
+                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Receipt</h3>
+                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this receipt.</p>
                   </div>
                 </div>
               </Card>
@@ -404,7 +402,8 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                         <th className="p-2 w-24 text-center">Qty</th>
                         <th className="p-2 w-32 text-right">Unit Price (€)</th>
                         <th className="p-2 w-32 text-right">Total (€)</th>
-                        {debtEnabled && receipt.SplitType === 'line_item' && <th className="p-2 w-40 text-right">Debtor</th>}
+                        {debtEnabled && receipt.SplitType === 'line_item' &&
+                          <th className="p-2 w-40 text-right">Debtor</th>}
                       </tr>
                       </thead>
                       <tbody className="divide-y dark:divide-gray-800">
@@ -508,7 +507,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
 
             {debtEnabled && receipt.SplitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
               <div>
-                <Divider text="Debt Breakdown" />
+                <Divider text="Debt Breakdown"/>
                 <div className="space-y-2 mt-4">
                   {debtSummary.debtors.map((debtor) => {
                     const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
@@ -540,7 +539,8 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                           </div>
                         </div>
                         <div className="flex justify-between items-baseline mt-1">
-                          <p className={cn("font-bold truncate", isPaid ? "text-green" : "text-red")} style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                          <p className={cn("font-bold truncate", isPaid ? "text-green" : "text-red")}
+                             style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                             €{debtor.amount.toFixed(2)}
                           </p>
                           <div className="text-right flex-shrink-0 pl-2">
@@ -560,7 +560,8 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
                         <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
                       </div>
                       <div className="flex justify-between items-baseline mt-1">
-                        <p className="font-bold text-blue-700 dark:text-blue-300 truncate" style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                        <p className="font-bold text-blue-700 dark:text-blue-300 truncate"
+                           style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                           €{debtSummary.ownShare.amount.toFixed(2)}
                         </p>
                         <div className="text-right flex-shrink-0 pl-2">
@@ -597,7 +598,10 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
         isOpen={isMarkAsPaidModalOpen}
         onClose={() => setIsMarkAsPaidModalOpen(false)}
         onConfirm={handleMarkAsPaid}
-        paymentMethods={(activePaymentMethods || []).map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName }))}
+        paymentMethods={(activePaymentMethods || []).map(pm => ({
+          value: pm.PaymentMethodID,
+          label: pm.PaymentMethodName
+        }))}
       />
 
       <ConfirmModal

@@ -129,11 +129,11 @@ const ReceiptsPage: React.FC = () => {
       render: (row: Receipt) => (
         <div className="flex items-center justify-center gap-3">
           {row.IsNonItemised ? (
-            <Tooltip content="Item-less Receipt">
+            <Tooltip content="Total-only receipt">
               <ClipboardIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           ) : (
-            <Tooltip content="Itemised Receipt">
+            <Tooltip content="Detailed Receipt">
               <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           )}
