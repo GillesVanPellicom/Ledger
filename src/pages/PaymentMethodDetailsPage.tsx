@@ -19,6 +19,7 @@ import { PaymentMethod, TopUp } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../utils/discountCalculator';
+import { useQueryClient } from '@tanstack/react-query';
 
 const tryParseJson = (str: string) => {
   try {
@@ -53,6 +54,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const chartRef = useRef<ReactECharts>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [transactions, setTransactions] = useState<PageTransaction[]>([]);
   const [balance, setBalance] = useState(0);
@@ -117,10 +119,11 @@ const PaymentMethodDetailsPage: React.FC = () => {
         name: string;
         note: string;
         amount: number;
+        TransferID: number | null;
       }
 
       const topupsData = await db.query<TopUpQueryResult>(`
-        SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount
+        SELECT TopUpID as id, TopUpDate as date, '-' as name, TopUpNote as note, TopUpAmount as amount, TransferID
         FROM TopUps
         WHERE PaymentMethodID = ?
       `, [id]);
@@ -136,7 +139,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
         }),
         ...topupsData.map((t): PageTransaction => ({
           ...t,
-          type: t.amount > 0 ? 'deposit' : 'transfer'
+          type: t.TransferID ? 'transfer' : 'deposit'
         }))
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -177,23 +180,13 @@ const PaymentMethodDetailsPage: React.FC = () => {
     try {
       if (itemToDelete.type === 'receipt') {
         await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [itemToDelete.id]);
-      } else if (itemToDelete.type === 'deposit' || itemToDelete.type === 'transfer') {
-        if (itemToDelete.type === 'transfer') {
-            const note = itemToDelete.note;
-            const transferRegex = /Transfer (to|from) (.+)/;
-            const match = note.match(transferRegex);
-            if(match) {
-                const otherMethodName = match[2].split(' - ')[0];
-                const otherMethod = await db.queryOne<PaymentMethod>('SELECT PaymentMethodID FROM PaymentMethods WHERE PaymentMethodName = ?', [otherMethodName]);
-                if(otherMethod) {
-                    const oppositeAmount = -itemToDelete.amount;
-                    const date = format(new Date(itemToDelete.date), 'yyyy-MM-dd');
-                    await db.execute(`DELETE FROM TopUps WHERE PaymentMethodID = ? AND TopUpAmount = ? AND TopUpDate = ? AND TopUpNote LIKE 'Transfer %'`, [otherMethod.PaymentMethodID, oppositeAmount, date]);
-                }
-            }
-        }
-        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [itemToDelete.id]);
+      } else {
+        await window.electronAPI.deleteTransaction({ topUpId: itemToDelete.id });
       }
+      
+      queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+
       fetchDetails();
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
@@ -216,19 +209,8 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const handleRowClick = (row: PageTransaction) => {
     if (row.type === 'receipt') {
       navigate(`/receipts/view/${row.id}`);
-    } else if (row.type === 'deposit' || row.type === 'transfer') {
-      if (row.type === 'deposit') {
-        const fullTopUp = transactions.find(t => t.id === row.id && t.type === 'deposit');
-        if (fullTopUp) {
-          openTransferModal({
-            TopUpID: fullTopUp.id,
-            TopUpAmount: fullTopUp.amount,
-            TopUpDate: fullTopUp.date,
-            TopUpNote: fullTopUp.note,
-          });
-        }
-      }
     }
+    // Editing transfers/deposits is disabled for now
   };
 
   const filteredTransactions = useMemo(() => {

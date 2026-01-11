@@ -1,246 +1,125 @@
-PRAGMA foreign_keys = ON;
-
---------------------------------------------------
--- Product units
---------------------------------------------------
-
-CREATE TABLE ProductUnits
-(
-  ProductUnitID          INTEGER PRIMARY KEY,
-  ProductUnitType        TEXT NOT NULL,
-  ProductUnitDescription TEXT
+CREATE TABLE IF NOT EXISTS ProductUnits (
+    ProductUnitID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProductUnitType TEXT NOT NULL UNIQUE,
+    ProductUnitDescription TEXT
 );
 
-INSERT INTO ProductUnits (ProductUnitType, ProductUnitDescription)
-VALUES
-  ('mg', 'Milligram'),
-  ('g',  'Gram'),
-  ('kg', 'Kilogram'),
-  ('ml', 'Milliliter'),
-  ('cl', 'Centiliter'),
-  ('dl', 'Deciliter'),
-  ('l',  'Liter'),
-  ('cm', 'Centimeter'),
-  ('m',  'Meter');
-
---------------------------------------------------
--- Stores
---------------------------------------------------
-
-CREATE TABLE Stores
-(
-  StoreID       INTEGER PRIMARY KEY,
-  StoreName     TEXT    NOT NULL,
-  StoreIsActive INTEGER NOT NULL DEFAULT 1
+CREATE TABLE IF NOT EXISTS Products (
+    ProductID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProductName TEXT NOT NULL,
+    ProductBrand TEXT,
+    ProductSize REAL,
+    ProductUnitID INTEGER,
+    ProductIsActive INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (ProductUnitID) REFERENCES ProductUnits (ProductUnitID),
+    UNIQUE (ProductName, ProductBrand, ProductSize, ProductUnitID)
 );
 
---------------------------------------------------
--- Products
---------------------------------------------------
-
-CREATE TABLE Products
-(
-  ProductID       INTEGER PRIMARY KEY,
-  ProductName     TEXT    NOT NULL,
-  ProductBrand    TEXT,
-  ProductSize     INTEGER,
-  ProductUnitID   INTEGER,
-  ProductIsActive INTEGER NOT NULL DEFAULT 1,
-  FOREIGN KEY (ProductUnitID)
-    REFERENCES ProductUnits (ProductUnitID),
-  UNIQUE (ProductName, ProductBrand, ProductSize)
+CREATE TABLE IF NOT EXISTS Stores (
+    StoreID INTEGER PRIMARY KEY AUTOINCREMENT,
+    StoreName TEXT NOT NULL UNIQUE,
+    StoreIsActive INTEGER NOT NULL DEFAULT 1
 );
 
---------------------------------------------------
--- Debtors
---------------------------------------------------
-
-CREATE TABLE Debtors
-(
-  DebtorID       INTEGER PRIMARY KEY,
-  DebtorName     TEXT    NOT NULL UNIQUE,
-  DebtorIsActive INTEGER NOT NULL DEFAULT 1
+CREATE TABLE IF NOT EXISTS PaymentMethods (
+    PaymentMethodID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PaymentMethodName TEXT NOT NULL UNIQUE,
+    PaymentMethodFunds REAL NOT NULL DEFAULT 0,
+    PaymentMethodIsActive INTEGER NOT NULL DEFAULT 1
 );
 
---------------------------------------------------
--- Payment methods
---------------------------------------------------
-
-CREATE TABLE PaymentMethods
-(
-  PaymentMethodID    INTEGER PRIMARY KEY,
-  PaymentMethodName  TEXT NOT NULL UNIQUE,
-  PaymentMethodFunds NUMERIC NOT NULL,
-  PaymentMethodIsActive INTEGER NOT NULL DEFAULT 1
+CREATE TABLE IF NOT EXISTS Debtors (
+    DebtorID INTEGER PRIMARY KEY AUTOINCREMENT,
+    DebtorName TEXT NOT NULL UNIQUE,
+    DebtorIsActive INTEGER NOT NULL DEFAULT 1
 );
 
-INSERT INTO PaymentMethods
-  (PaymentMethodID, PaymentMethodName, PaymentMethodFunds)
-VALUES
-  (1, 'Cash', 0);
-
---------------------------------------------------
--- Receipts
---------------------------------------------------
-
-CREATE TABLE Receipts
-(
-  ReceiptID        INTEGER PRIMARY KEY,
-  ReceiptDate      TEXT    NOT NULL,
-  StoreID          INTEGER NOT NULL,
-  PaymentMethodID  INTEGER, -- Null for unpaid receipts
-  ReceiptNote      TEXT,
-  ReceiptEntryDate TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  SplitType        TEXT    DEFAULT 'none', -- 'none', 'line_item', 'total_split'
-  OwnShares        INTEGER,
-  TotalShares      INTEGER,
-  Status           TEXT    NOT NULL DEFAULT 'paid', -- 'paid', 'unpaid'
-  OwedToDebtorID   INTEGER,
-  Discount         NUMERIC DEFAULT 0,
-  IsNonItemised    INTEGER NOT NULL DEFAULT 0,
-  NonItemisedTotal NUMERIC,
-  FOREIGN KEY (StoreID)
-    REFERENCES Stores (StoreID),
-  FOREIGN KEY (PaymentMethodID)
-    REFERENCES PaymentMethods (PaymentMethodID),
-  FOREIGN KEY (OwedToDebtorID)
-    REFERENCES Debtors (DebtorID)
+CREATE TABLE IF NOT EXISTS Transfers (
+    TransferID INTEGER PRIMARY KEY AUTOINCREMENT,
+    FromPaymentMethodID INTEGER NOT NULL,
+    ToPaymentMethodID INTEGER NOT NULL,
+    Amount REAL NOT NULL,
+    TransferDate TEXT NOT NULL,
+    Note TEXT,
+    FOREIGN KEY (FromPaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID) ON DELETE CASCADE,
+    FOREIGN KEY (ToPaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID) ON DELETE CASCADE
 );
 
---------------------------------------------------
--- Receipt Splits (for total_split mode)
---------------------------------------------------
-
-CREATE TABLE ReceiptSplits
-(
-  SplitID   INTEGER PRIMARY KEY,
-  ReceiptID INTEGER NOT NULL,
-  DebtorID  INTEGER NOT NULL,
-  SplitPart INTEGER NOT NULL,
-  FOREIGN KEY (ReceiptID)
-    REFERENCES Receipts (ReceiptID)
-    ON DELETE CASCADE,
-  FOREIGN KEY (DebtorID)
-    REFERENCES Debtors (DebtorID)
+CREATE TABLE IF NOT EXISTS TopUps (
+    TopUpID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PaymentMethodID INTEGER NOT NULL,
+    TopUpAmount REAL NOT NULL,
+    TopUpDate TEXT NOT NULL,
+    TopUpNote TEXT,
+    TransferID INTEGER,
+    FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID) ON DELETE CASCADE,
+    FOREIGN KEY (TransferID) REFERENCES Transfers (TransferID) ON DELETE CASCADE
 );
 
---------------------------------------------------
--- Receipt images
---------------------------------------------------
-
-CREATE TABLE ReceiptImages
-(
-  ImageID   INTEGER PRIMARY KEY,
-  ReceiptID INTEGER NOT NULL,
-  ImagePath TEXT    NOT NULL,
-  FOREIGN KEY (ReceiptID)
-    REFERENCES Receipts (ReceiptID)
-    ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS Receipts (
+    ReceiptID INTEGER PRIMARY KEY AUTOINCREMENT,
+    StoreID INTEGER NOT NULL,
+    ReceiptDate TEXT NOT NULL,
+    ReceiptNote TEXT,
+    PaymentMethodID INTEGER,
+    Discount REAL DEFAULT 0,
+    Status TEXT DEFAULT 'paid', -- 'paid' or 'unpaid'
+    OwedToDebtorID INTEGER,
+    SplitType TEXT DEFAULT 'none', -- 'none', 'total_split', 'line_item'
+    OwnShares REAL,
+    TotalShares REAL,
+    IsNonItemised INTEGER DEFAULT 0,
+    NonItemisedTotal REAL,
+    IsTentative INTEGER DEFAULT 0,
+    FOREIGN KEY (StoreID) REFERENCES Stores (StoreID),
+    FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID),
+    FOREIGN KEY (OwedToDebtorID) REFERENCES Debtors (DebtorID)
 );
 
---------------------------------------------------
--- Line items
---------------------------------------------------
-
-CREATE TABLE LineItems
-(
-  LineItemID    INTEGER PRIMARY KEY,
-  ReceiptID     INTEGER NOT NULL,
-  ProductID     INTEGER NOT NULL,
-  DebtorID      INTEGER DEFAULT NULL, -- For line_item mode
-  LineQuantity  INTEGER NOT NULL,
-  LineUnitPrice NUMERIC NOT NULL,
-  IsExcludedFromDiscount INTEGER NOT NULL DEFAULT 0,
-  FOREIGN KEY (ReceiptID)
-    REFERENCES Receipts (ReceiptID)
-    ON DELETE CASCADE,
-  FOREIGN KEY (ProductID)
-    REFERENCES Products (ProductID),
-  FOREIGN KEY (DebtorID)
-    REFERENCES Debtors (DebtorID)
-);
-
---------------------------------------------------
--- Top-ups
---------------------------------------------------
-
-CREATE TABLE TopUps
-(
-  TopUpID          INTEGER PRIMARY KEY,
-  PaymentMethodID  INTEGER NOT NULL,
-  TopUpAmount      NUMERIC NOT NULL,
-  TopUpDate        TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  TopUpNote        TEXT,
-  FOREIGN KEY (PaymentMethodID)
-    REFERENCES PaymentMethods (PaymentMethodID)
-    ON DELETE CASCADE
-);
-
---------------------------------------------------
--- Receipt Debtor Payments
---------------------------------------------------
-
-CREATE TABLE ReceiptDebtorPayments
-(
-    PaymentID INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS LineItems (
+    LineItemID INTEGER PRIMARY KEY AUTOINCREMENT,
     ReceiptID INTEGER NOT NULL,
-    DebtorID  INTEGER NOT NULL,
-    PaidDate  TEXT    NOT NULL,
-    TopUpID   INTEGER NOT NULL,
+    ProductID INTEGER NOT NULL,
+    LineQuantity REAL NOT NULL,
+    LineUnitPrice REAL NOT NULL,
+    DebtorID INTEGER,
+    IsExcludedFromDiscount INTEGER DEFAULT 0,
     FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE,
-    FOREIGN KEY (DebtorID) REFERENCES Debtors (DebtorID) ON DELETE CASCADE,
-    FOREIGN KEY (TopUpID) REFERENCES TopUps (TopUpID) ON DELETE CASCADE
+    FOREIGN KEY (ProductID) REFERENCES Products (ProductID),
+    FOREIGN KEY (DebtorID) REFERENCES Debtors (DebtorID)
 );
 
+CREATE TABLE IF NOT EXISTS ReceiptImages (
+    ImageID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ReceiptID INTEGER NOT NULL,
+    ImagePath TEXT NOT NULL,
+    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE
+);
 
---------------------------------------------------
--- Indexes
---------------------------------------------------
+CREATE TABLE IF NOT EXISTS ReceiptSplits (
+    SplitID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ReceiptID INTEGER NOT NULL,
+    DebtorID INTEGER NOT NULL,
+    SplitPart REAL NOT NULL,
+    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE,
+    FOREIGN KEY (DebtorID) REFERENCES Debtors (DebtorID)
+);
 
-CREATE INDEX idx_products_unit
-  ON Products (ProductUnitID);
+CREATE TABLE IF NOT EXISTS ReceiptDebtorPayments (
+    PaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ReceiptID INTEGER NOT NULL,
+    DebtorID INTEGER NOT NULL,
+    PaidDate TEXT NOT NULL,
+    TopUpID INTEGER,
+    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE,
+    FOREIGN KEY (DebtorID) REFERENCES Debtors (DebtorID),
+    FOREIGN KEY (TopUpID) REFERENCES TopUps (TopUpID) ON DELETE SET NULL
+);
 
-CREATE INDEX idx_products_active
-  ON Products (ProductIsActive);
-
-CREATE INDEX idx_stores_active
-  ON Stores (StoreIsActive);
-
-CREATE INDEX idx_receipts_store
-  ON Receipts (StoreID);
-
-CREATE INDEX idx_receipts_paymentmethod
-  ON Receipts (PaymentMethodID);
-
-CREATE INDEX idx_receipts_date
-  ON Receipts (ReceiptDate);
-
-CREATE INDEX idx_receipt_images_receipt
-  ON ReceiptImages (ReceiptID);
-
-CREATE INDEX idx_lineitems_receipt
-  ON LineItems (ReceiptID);
-
-CREATE INDEX idx_lineitems_product
-  ON LineItems (ProductID);
-
-CREATE INDEX idx_lineitems_debtor
-  ON LineItems (DebtorID);
-
-CREATE INDEX idx_topups_paymentmethod
-  ON TopUps (PaymentMethodID);
-
-CREATE INDEX idx_topups_date
-  ON TopUps (TopUpDate);
-
-CREATE INDEX idx_debtors_active
-  ON Debtors (DebtorIsActive);
-
-CREATE INDEX idx_receiptsplits_receipt
-  ON ReceiptSplits (ReceiptID);
-
-CREATE INDEX idx_receiptdebtorpayments_receipt_debtor
-  ON ReceiptDebtorPayments (ReceiptID, DebtorID);
-
-CREATE INDEX idx_receipts_is_non_itemised
-  ON Receipts (IsNonItemised);
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_receipts_date ON Receipts (ReceiptDate);
+CREATE INDEX IF NOT EXISTS idx_lineitems_receipt_id ON LineItems (ReceiptID);
+CREATE INDEX IF NOT EXISTS idx_receiptimages_receipt_id ON ReceiptImages (ReceiptID);
+CREATE INDEX IF NOT EXISTS idx_receiptsplits_receipt_id ON ReceiptSplits (ReceiptID);
+CREATE INDEX IF NOT EXISTS idx_receiptdebtorpayments_receipt_id ON ReceiptDebtorPayments (ReceiptID);
+CREATE INDEX IF NOT EXISTS idx_topups_transfer_id ON TopUps (TransferID);

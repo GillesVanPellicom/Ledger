@@ -7,6 +7,7 @@ import { db } from '../../utils/db';
 import { format } from 'date-fns';
 import { PaymentMethod, TopUp } from '../../types';
 import Select from '../ui/Select';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
   const [transferType, setTransferType] = useState<'deposit' | 'transfer'>('deposit');
   const [transferTo, setTransferTo] = useState<string>('');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchPaymentMethods = async () => {
@@ -52,12 +54,10 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
   useEffect(() => {
     if (isOpen) {
       if (topUpToEdit) {
-        setFormData({
-          amount: String(Math.abs(topUpToEdit.TopUpAmount)),
-          date: new Date(topUpToEdit.TopUpDate),
-          notes: topUpToEdit.TopUpNote || '',
-        });
-        setTransferType(topUpToEdit.TopUpAmount > 0 ? 'deposit' : 'transfer');
+        // Editing is disabled for now with the new system
+        // This can be re-implemented if needed
+        setFormData({ amount: '', date: new Date(), notes: '' });
+        setTransferType('deposit');
       } else {
         setFormData({ amount: '', date: new Date(), notes: '' });
         setTransferType('deposit');
@@ -65,17 +65,6 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
       setErrors({});
     }
   }, [isOpen, topUpToEdit]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleDateChange = (date: Date | null) => {
-    if (date) {
-      setFormData(prev => ({ ...prev, date }));
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,38 +74,28 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
     setErrors({});
 
     try {
-      const amount = Number(formData.amount);
-      const date = format(formData.date, 'yyyy-MM-dd');
-      const notes = formData.notes;
+      const transactionDetails = {
+        type: transferType,
+        amount: Number(formData.amount),
+        date: format(formData.date, 'yyyy-MM-dd'),
+        note: formData.notes,
+        from: paymentMethodId,
+        to: transferTo,
+      };
 
-      if (topUpToEdit) {
-        await db.execute(
-          'UPDATE TopUps SET TopUpAmount = ?, TopUpDate = ?, TopUpNote = ? WHERE TopUpID = ?',
-          [transferType === 'deposit' ? amount : -amount, date, notes, topUpToEdit.TopUpID]
-        );
-      } else if (transferType === 'deposit') {
-        await db.execute(
-          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
-          [paymentMethodId, amount, date, notes]
-        );
-      } else { // New transfer
-        const targetMethodId = transferTo;
-        const currentMethodName = (await db.queryOne<PaymentMethod>('SELECT PaymentMethodName FROM PaymentMethods WHERE PaymentMethodID = ?', [paymentMethodId]))?.PaymentMethodName;
-        const targetMethodName = (await db.queryOne<PaymentMethod>('SELECT PaymentMethodName FROM PaymentMethods WHERE PaymentMethodID = ?', [targetMethodId]))?.PaymentMethodName;
-
-        await db.execute(
-          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
-          [paymentMethodId, -amount, date, `Transfer to ${targetMethodName}${notes ? ` - ${notes}`: ''}`]
-        );
-        await db.execute(
-          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
-          [targetMethodId, amount, date, `Transfer from ${currentMethodName}${notes ? ` - ${notes}`: ''}`]
-        );
+      await window.electronAPI.createTransaction(transactionDetails);
+      
+      // Invalidate queries to refetch data
+      queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance', parseInt(paymentMethodId)] });
+      if (transferType === 'transfer') {
+        queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance', parseInt(transferTo)] });
       }
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+
       onSave();
       onClose();
     } catch (err: any) {
-      setErrors({ form: err.message || 'Failed to save transfer' });
+      setErrors({ form: err.message || 'Failed to save transaction' });
     } finally {
       setLoading(false);
     }
@@ -128,7 +107,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={topUpToEdit ? "Edit Transaction" : "New Transfer"}
+      title={topUpToEdit ? "Edit Transaction" : "New Transaction"}
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -156,13 +135,13 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
           />
         )}
 
-        <Input label="Amount" name="amount" type="number" value={formData.amount} onChange={handleChange} placeholder="0.00" error={errors.amount} />
+        <Input label="Amount" name="amount" type="number" value={formData.amount} onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))} placeholder="0.00" error={errors.amount} />
         
         <div className="z-100">
-          <DatePicker label="Date" selected={formData.date} onChange={handleDateChange} error={errors.date} />
+          <DatePicker label="Date" selected={formData.date} onChange={(date: Date | null) => date && setFormData(prev => ({ ...prev, date }))} error={errors.date} />
         </div>
 
-        <Input label="Notes (Optional)" name="notes" value={formData.notes} onChange={handleChange} placeholder="e.g., Monthly savings" />
+        <Input label="Notes (Optional)" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly savings" />
       </form>
     </Modal>
   );

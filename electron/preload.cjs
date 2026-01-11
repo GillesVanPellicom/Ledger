@@ -4,6 +4,8 @@ const isDev = process.env.NODE_ENV === 'development';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   queryDb: (sql, params) => ipcRenderer.invoke('query-db', sql, params),
+  createTransaction: (transaction) => ipcRenderer.invoke('create-transaction', transaction),
+  deleteTransaction: (transaction) => ipcRenderer.invoke('delete-transaction', transaction),
   savePdf: () => ipcRenderer.invoke('save-pdf'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),

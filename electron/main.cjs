@@ -79,6 +79,10 @@ function connectDatabase(dbPath) {
         return reject({ success: false, error: err.message });
       }
       
+      db.run('PRAGMA foreign_keys = ON;', (fkErr) => {
+        if (fkErr) console.error('Failed to enable foreign keys:', fkErr);
+      });
+
       db.run('PRAGMA journal_mode = WAL;', async (walErr) => {
         if (walErr) {
            console.error('Failed to set WAL mode:', walErr);
@@ -236,6 +240,70 @@ ipcMain.handle('query-db', (event, sql, params = []) => {
         resolve({ changes: this.changes, lastID: this.lastID });
       });
     }
+  });
+});
+
+ipcMain.handle('create-transaction', async (event, { type, from, to, amount, date, note }) => {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION');
+
+      if (type === 'deposit') {
+        db.run('INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)', [from, amount, date, note], function(err) {
+          if (err) {
+            db.run('ROLLBACK');
+            return reject(err);
+          }
+          db.run('COMMIT', (err) => err ? reject(err) : resolve({ success: true }));
+        });
+      } else if (type === 'transfer') {
+        db.run('INSERT INTO Transfers (FromPaymentMethodID, ToPaymentMethodID, Amount, TransferDate, Note) VALUES (?, ?, ?, ?, ?)', [from, to, amount, date, note], function(err) {
+          if (err) {
+            db.run('ROLLBACK');
+            return reject(err);
+          }
+          const transferId = this.lastID;
+          const fromNote = `Transfer to method ${to}`;
+          const toNote = `Transfer from method ${from}`;
+
+          db.run('INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)', [from, -amount, date, fromNote, transferId], (err) => {
+            if (err) {
+              db.run('ROLLBACK');
+              return reject(err);
+            }
+            db.run('INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)', [to, amount, date, toNote, transferId], (err) => {
+              if (err) {
+                db.run('ROLLBACK');
+                return reject(err);
+              }
+              db.run('COMMIT', (err) => err ? reject(err) : resolve({ success: true }));
+            });
+          });
+        });
+      }
+    });
+  });
+});
+
+ipcMain.handle('delete-transaction', async (event, { topUpId }) => {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT TransferID FROM TopUps WHERE TopUpID = ?', [topUpId], (err, row) => {
+      if (err) return reject(err);
+
+      if (row && row.TransferID) {
+        // It's a transfer, delete the whole transfer record
+        db.run('DELETE FROM Transfers WHERE TransferID = ?', [row.TransferID], function(err) {
+          if (err) return reject(err);
+          resolve({ success: true, changes: this.changes });
+        });
+      } else {
+        // It's a simple deposit or other top-up, delete just this one
+        db.run('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId], function(err) {
+          if (err) return reject(err);
+          resolve({ success: true, changes: this.changes });
+        });
+      }
+    });
   });
 });
 
