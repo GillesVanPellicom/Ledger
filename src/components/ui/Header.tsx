@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 import { BackgroundGradientAnimation } from './background-gradient-animation';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface HeaderProps {
   title: string;
@@ -31,6 +32,10 @@ export const Header: React.FC<HeaderProps> = ({
   rightBoxContent,
   tabs,
 }) => {
+  const theme = useSettingsStore((state) => state.settings.theme);
+  const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const bgColor = isDarkMode ? '#000000' : '#FFFFFF';
+
   return (
     <div
       className={cn(
@@ -40,8 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
       style={{ minHeight: `${minHeight}px` }}
     >
       <BackgroundGradientAnimation
-        gradientBackgroundStart="#000000"
-        gradientBackgroundEnd="#000000"
+        gradientBackgroundStart={bgColor}
+        gradientBackgroundEnd={bgColor}
         color="135, 94, 242"
         pointerColor="135, 94, 242"
         interactive={false}
