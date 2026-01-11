@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {format} from 'date-fns';
 import DataTable from '../components/ui/DataTable';
@@ -27,6 +27,7 @@ import BulkDebtModal from '../components/debt/BulkDebtModal';
 import {Receipt, LineItem} from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
+import { useReceipts, useDeleteReceipt } from '../hooks/useReceipts';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -34,10 +35,6 @@ interface FullReceipt extends Receipt {
 }
 
 const ReceiptsPage: React.FC = () => {
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [totalCount, setTotalCount] = useState<number>(0);
-
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [pageSize, setPageSize] = useState<number>(10);
@@ -57,120 +54,23 @@ const ReceiptsPage: React.FC = () => {
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const navigate = useNavigate();
 
-  const fetchReceipts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const offset = (currentPage - 1) * pageSize;
+  const { data, isLoading, refetch } = useReceipts({
+    page: currentPage,
+    pageSize,
+    searchTerm,
+    startDate: dateRange[0],
+    endDate: dateRange[1],
+    debtEnabled
+  });
 
-      let debtSubQueries = '';
-      if (debtEnabled) {
-        debtSubQueries = `,
-          r.Status,
-          (
-            SELECT COUNT(DISTINCT d.DebtorID)
-            FROM Debtors d
-            WHERE (
-              (r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID)) OR
-              (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID))
-            )
-          ) as TotalDebtorCount,
-          (
-            SELECT COUNT(DISTINCT d.DebtorID)
-            FROM Debtors d
-            LEFT JOIN ReceiptDebtorPayments rdp ON d.DebtorID = rdp.DebtorID AND rdp.ReceiptID = r.ReceiptID
-            WHERE rdp.PaymentID IS NULL AND (
-              (r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID)) OR
-              (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID))
-            )
-          ) as UnpaidDebtorCount
-        `;
-      }
-
-      let query = `
-          SELECT r.ReceiptID,
-                 r.ReceiptDate,
-                 r.ReceiptNote,
-                 r.Discount,
-                 r.IsNonItemised,
-                 r.IsTentative,
-                 r.NonItemisedTotal,
-                 s.StoreName,
-                 pm.PaymentMethodName,
-                 CASE
-                     WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
-                     ELSE (
-                         (SELECT SUM(li.LineQuantity * li.LineUnitPrice)
-                          FROM LineItems li
-                          WHERE li.ReceiptID = r.ReceiptID) -
-                         IFNULL((SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
-                                 FROM LineItems li_discountable
-                                 WHERE li_discountable.ReceiptID = r.ReceiptID
-                                   AND (li_discountable.IsExcludedFromDiscount = 0 OR
-                                        li_discountable.IsExcludedFromDiscount IS NULL)), 0) * r.Discount / 100
-                         )
-                     END as Total
-              ${debtSubQueries}
-          FROM Receipts r
-                   JOIN Stores s ON r.StoreID = s.StoreID
-                   LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-      `;
-      const params: any[] = [];
-      const whereClauses: string[] = [];
-
-      if (searchTerm) {
-        const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
-        keywords.forEach(keyword => {
-          whereClauses.push(`(
-            LOWER(s.StoreName) LIKE ? OR 
-            LOWER(r.ReceiptNote) LIKE ?
-          )`);
-          params.push(`%${keyword}%`, `%${keyword}%`);
-        });
-      }
-
-      const [startDate, endDate] = dateRange;
-      if (startDate) {
-        whereClauses.push(`r.ReceiptDate >= ?`);
-        params.push(format(startDate, 'yyyy-MM-dd'));
-      }
-      if (endDate) {
-        whereClauses.push(`r.ReceiptDate <= ?`);
-        params.push(format(endDate, 'yyyy-MM-dd'));
-      }
-
-      if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
-
-      const countQuery = `SELECT COUNT(*) as count
-                          FROM (${query.replace(/SELECT r.ReceiptID,.*?as Total/s, 'SELECT r.ReceiptID')})`;
-      const countResult = await db.queryOne<{ count: number }>(countQuery, params);
-      setTotalCount(countResult ? countResult.count : 0);
-
-      query += ` ORDER BY r.ReceiptDate DESC, r.ReceiptID DESC LIMIT ? OFFSET ?`;
-      params.push(pageSize, offset);
-
-      const results = await db.query<Receipt>(query, params);
-      setReceipts(results);
-    } catch (error) {
-      showError(error as Error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, pageSize, searchTerm, dateRange, showError, debtEnabled]);
-
-  useEffect(() => {
-    fetchReceipts();
-  }, [fetchReceipts]);
+  const deleteReceiptMutation = useDeleteReceipt();
 
   const handleDelete = async () => {
     const idsToDelete = receiptToDelete ? [receiptToDelete] : selectedReceiptIds;
     if (idsToDelete.length === 0) return;
 
     try {
-      const placeholders = idsToDelete.map(() => '?').join(',');
-      await db.execute(`DELETE
-                        FROM Receipts
-                        WHERE ReceiptID IN (${placeholders})`, idsToDelete);
-      fetchReceipts();
+      await deleteReceiptMutation.mutateAsync(idsToDelete);
       setSelectedReceiptIds([]);
       setDeleteModalOpen(false);
       setReceiptToDelete(null);
@@ -333,16 +233,16 @@ const ReceiptsPage: React.FC = () => {
             </div>
           )}
           <DataTable
-            data={receipts}
+            data={data?.receipts || []}
             columns={columns}
-            totalCount={totalCount}
+            totalCount={data?.totalCount || 0}
             pageSize={pageSize}
             onPageSizeChange={setPageSize}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
             onSearch={setSearchTerm}
             searchable={true}
-            loading={loading}
+            loading={isLoading}
             onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
             selectable={true}
             onSelectionChange={setSelectedReceiptIds}
@@ -388,7 +288,7 @@ const ReceiptsPage: React.FC = () => {
               onClose={() => setIsBulkDebtModalOpen(false)}
               receiptIds={selectedReceiptIds}
               onComplete={() => {
-                fetchReceipts();
+                refetch();
                 setSelectedReceiptIds([]);
               }}
             />

@@ -30,9 +30,17 @@ The current state management relies heavily on `useState`, `useEffect`, and `use
 Implement:
 ### 2.1. Data Fetching and Caching
 We should introduce a data fetching and caching library like **React Query (TanStack Query)**. This will simplify data fetching, handle caching, and reduce the need for manual loading and error states. 
-Specifically this has to be implemented to cache costly query results. This has to be a global change.
+Specifically this has to be implemented to cache costly query results. This has to be a global change. Implement the caching wherever it's deemed useful.
+
+**Status:**
+- Added `@tanstack/react-query` dependency.
+- Configured `QueryClient` in `src/lib/queryClient.ts`.
+- Wrapped application with `QueryClientProvider` in `src/main.tsx`.
+- Implemented `useReceipts` hook in `src/hooks/useReceipts.ts` to fetch receipts using React Query.
+- Updated `ReceiptsPage.tsx` to use `useReceipts` hook.
+
 ### 2.1. Global State
-For cross-component state that doesn't fit into the server-state model of React Query (e.g., user settings, theme), we can use a lightweight global state management library like **Zustand**.
+For cross-component state that doesn't fit into the server-state model of React Query (e.g., user settings, theme), we can use a lightweight global state management library like **Zustand**. Implement and switch over features e.g theme and any other deemed applicable.
 
 ## 3. Addressing Technical Debt
 

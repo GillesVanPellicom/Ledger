@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { calculateDebts, ProcessedReceipt } from '../utils/debtCalculator';
-import { useError } from '../context/ErrorContext';
 
 interface DebtStats {
   debtToEntity: number;
@@ -12,31 +11,25 @@ interface UseDebtCalculationResult {
   receipts: ProcessedReceipt[];
   stats: DebtStats;
   loading: boolean;
-  calculate: (entityId: string | number) => Promise<void>;
+  refetch: () => void;
 }
 
-export const useDebtCalculation = (): UseDebtCalculationResult => {
-  const [receipts, setReceipts] = useState<ProcessedReceipt[]>([]);
-  const [stats, setStats] = useState<DebtStats>({ debtToEntity: 0, debtToMe: 0, netBalance: 0 });
-  const [loading, setLoading] = useState<boolean>(false);
-  const { showError } = useError();
+export const useDebtCalculation = (entityId: string | number): UseDebtCalculationResult => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['debt', entityId],
+    queryFn: () => calculateDebts(entityId),
+    enabled: !!entityId,
+    staleTime: 1000 * 60, // 1 minute
+  });
 
-  const calculate = useCallback(async (entityId: string | number) => {
-    setLoading(true);
-    try {
-      const result = await calculateDebts(entityId);
-      setReceipts(result.receipts);
-      setStats({
-        debtToEntity: result.debtToEntity,
-        debtToMe: result.debtToMe,
-        netBalance: result.netBalance
-      });
-    } catch (error) {
-      showError(error as Error);
-    } finally {
-      setLoading(false);
-    }
-  }, [showError]);
-
-  return { receipts, stats, loading, calculate };
+  return {
+    receipts: data?.receipts || [],
+    stats: {
+      debtToEntity: data?.debtToEntity || 0,
+      debtToMe: data?.debtToMe || 0,
+      netBalance: data?.netBalance || 0,
+    },
+    loading: isLoading,
+    refetch,
+  };
 };

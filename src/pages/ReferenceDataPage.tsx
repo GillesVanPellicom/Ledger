@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
-import { db } from '../utils/db';
 import ProductModal from '../components/products/ProductModal';
 import StoreModal from '../components/stores/StoreModal';
 import Tooltip from '../components/ui/Tooltip';
@@ -10,14 +9,13 @@ import { Product, Store } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { cn } from '../utils/cn';
+import { useProducts, useStores, useInvalidateReferenceData } from '../hooks/useReferenceData';
 
 const ReferenceDataPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'stores'>('products');
+  const invalidateReferenceData = useInvalidateReferenceData();
 
   // Products state
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState<boolean>(true);
-  const [productsTotalCount, setProductsTotalCount] = useState<number>(0);
   const [productsCurrentPage, setProductsCurrentPage] = useState<number>(1);
   const [productsSearchTerm, setProductsSearchTerm] = useState<string>('');
   const [productsPageSize, setProductsPageSize] = useState<number>(10);
@@ -25,95 +23,23 @@ const ReferenceDataPage: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Stores state
-  const [stores, setStores] = useState<Store[]>([]);
-  const [storesLoading, setStoresLoading] = useState<boolean>(true);
-  const [storesTotalCount, setStoresTotalCount] = useState<number>(0);
   const [storesCurrentPage, setStoresCurrentPage] = useState<number>(1);
   const [storesSearchTerm, setStoresSearchTerm] = useState<string>('');
   const [storesPageSize, setStoresPageSize] = useState<number>(10);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
 
-  const fetchProducts = useCallback(async () => {
-    setProductsLoading(true);
-    try {
-      const offset = (productsCurrentPage - 1) * productsPageSize;
-      let query = `
-        SELECT p.*, u.ProductUnitType 
-        FROM Products p
-        LEFT JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
-        WHERE p.ProductIsActive = 1
-      `;
-      const params: any[] = [];
-      
-      if (productsSearchTerm) {
-        const keywords = productsSearchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0);
-        if (keywords.length > 0) {
-          const conditions = keywords.map(() => `(
-            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(p.ProductName), 'é', 'e'), 'è', 'e'), 'ë', 'e'), 'á', 'a'), 'à', 'a'), 'ä', 'a') LIKE ? 
-            OR 
-            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(p.ProductBrand), 'é', 'e'), 'è', 'e'), 'ë', 'e'), 'á', 'a'), 'à', 'a'), 'ä', 'a') LIKE ?
-          )`).join(' AND ');
-          
-          query += ` AND (${conditions})`;
-          keywords.forEach(k => {
-            const term = `%${k}%`;
-            params.push(term, term);
-          });
-        }
-      }
-      
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType', 'SELECT p.ProductID')})`;
-      const countResult = await db.queryOne<{ count: number }>(countQuery, params.slice(0, params.length - (productsSearchTerm ? (productsSearchTerm.toLowerCase().split(/\s+/).filter(k => k.length > 0).length * 2) : 0)));
-      setProductsTotalCount(countResult ? countResult.count : 0);
-      
-      query += ` ORDER BY p.ProductName ASC LIMIT ? OFFSET ?`;
-      params.push(productsPageSize, offset);
-      
-      const results = await db.query<Product>(query, params);
-      setProducts(results);
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
-    } finally {
-      setProductsLoading(false);
-    }
-  }, [productsCurrentPage, productsPageSize, productsSearchTerm]);
+  const { data: productsData, isLoading: productsLoading } = useProducts({
+    page: productsCurrentPage,
+    pageSize: productsPageSize,
+    searchTerm: productsSearchTerm
+  });
 
-  const fetchStores = useCallback(async () => {
-    setStoresLoading(true);
-    try {
-      const offset = (storesCurrentPage - 1) * storesPageSize;
-      let query = `SELECT * FROM Stores`;
-      const params: any[] = [];
-      
-      if (storesSearchTerm) {
-        query += ` WHERE StoreName LIKE ?`;
-        params.push(`%${storesSearchTerm}%`);
-      }
-      
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT StoreID')})`;
-      const countResult = await db.queryOne<{ count: number }>(countQuery, params);
-      setStoresTotalCount(countResult ? countResult.count : 0);
-      
-      query += ` ORDER BY StoreName ASC LIMIT ? OFFSET ?`;
-      params.push(storesPageSize, offset);
-      
-      const results = await db.query<Store>(query, params);
-      setStores(results);
-    } catch (error) {
-      console.error("Failed to fetch stores:", error);
-    } finally {
-      setStoresLoading(false);
-    }
-  }, [storesCurrentPage, storesPageSize, storesSearchTerm]);
-
-  useEffect(() => {
-    if (activeTab === 'products') {
-      fetchProducts();
-    } else {
-      fetchStores();
-    }
-  }, [activeTab, fetchProducts, fetchStores]);
+  const { data: storesData, isLoading: storesLoading } = useStores({
+    page: storesCurrentPage,
+    pageSize: storesPageSize,
+    searchTerm: storesSearchTerm
+  });
 
   const handleAddProduct = () => {
     setEditingProduct(null);
@@ -133,6 +59,10 @@ const ReferenceDataPage: React.FC = () => {
   const handleEditStore = (store: Store) => {
     setEditingStore(store);
     setIsStoreModalOpen(true);
+  };
+
+  const handleSave = () => {
+    invalidateReferenceData();
   };
 
   const productColumns = [
@@ -250,9 +180,9 @@ const ReferenceDataPage: React.FC = () => {
         <div className="py-6">
           {activeTab === 'products' && (
             <DataTable
-              data={products}
+              data={productsData?.products || []}
               columns={productColumns}
-              totalCount={productsTotalCount}
+              totalCount={productsData?.totalCount || 0}
               pageSize={productsPageSize}
               onPageSizeChange={setProductsPageSize}
               currentPage={productsCurrentPage}
@@ -264,9 +194,9 @@ const ReferenceDataPage: React.FC = () => {
           )}
           {activeTab === 'stores' && (
             <DataTable
-              data={stores}
+              data={storesData?.stores || []}
               columns={storeColumns}
-              totalCount={storesTotalCount}
+              totalCount={storesData?.totalCount || 0}
               pageSize={storesPageSize}
               onPageSizeChange={setStoresPageSize}
               currentPage={storesCurrentPage}
@@ -282,13 +212,13 @@ const ReferenceDataPage: React.FC = () => {
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
         productToEdit={editingProduct}
-        onSave={fetchProducts}
+        onSave={handleSave}
       />
       <StoreModal
         isOpen={isStoreModalOpen}
         onClose={() => setIsStoreModalOpen(false)}
         storeToEdit={editingStore}
-        onSave={fetchStores}
+        onSave={handleSave}
       />
     </div>
   );

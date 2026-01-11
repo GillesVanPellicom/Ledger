@@ -1,0 +1,124 @@
+src/components/debt/DebtSettlementModal.tsx(39,60): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
+src/components/debt/DebtSettlementModal.tsx(39,87): error TS2339: Property 'PaymentMethodName' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
+src/components/debt/DebtSettlementModal.tsx(44,50): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
+src/components/debt/DebtSettlementModal.tsx(106,11): error TS2322: Type '{ label: string; value: Date; onChange: (date: any) => void; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+  Property 'value' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
+src/components/payment/TransferModal.tsx(162,36): error TS2322: Type '{ label: string; value: Date; onChange: (date: Date | null) => void; error: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+  Property 'value' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
+src/components/products/ProductModal.tsx(38,44): error TS2339: Property 'ProductUnitID' does not exist on type '{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string; }[]'.
+src/components/products/ProductModal.tsx(38,71): error TS2339: Property 'ProductUnitType' does not exist on type '{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string; }[]'.
+src/components/products/ProductModal.tsx(38,93): error TS2339: Property 'ProductUnitDescription' does not exist on type '{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string; }[]'.
+src/components/ui/DatePicker.tsx(7,35): error TS2312: An interface can only extend an object type or intersection of object types with statically known members.
+src/components/ui/DatePicker.tsx(12,50): error TS2339: Property 'className' does not exist on type 'DatePickerProps'.
+src/pages/AnalyticsPage.tsx(70,39): error TS2339: Property 'year' does not exist on type '{ year: string; }[]'.
+src/pages/AnalyticsPage.tsx(134,53): error TS2339: Property 'month' does not exist on type '{ month: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(135,84): error TS2339: Property 'month' does not exist on type '{ month: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(135,126): error TS2339: Property 'total' does not exist on type '{ month: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(136,69): error TS2339: Property 'month' does not exist on type '{ month: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(137,35): error TS2339: Property 'total' does not exist on type '{ month: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(137,102): error TS2339: Property 'total' does not exist on type '{ month: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(152,55): error TS2339: Property 'StoreName' does not exist on type '{ StoreName: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(152,75): error TS2339: Property 'total' does not exist on type '{ StoreName: string; total: number; }[]'.
+src/pages/AnalyticsPage.tsx(189,101): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; PaymentMethodFunds: number; IsActive: number; }[]'.
+src/pages/AnalyticsPage.tsx(192,96): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; PaymentMethodFunds: number; IsActive: number; }[]'.
+src/pages/AnalyticsPage.tsx(193,35): error TS2339: Property 'PaymentMethodFunds' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; PaymentMethodFunds: number; IsActive: number; }[]'.
+src/pages/AnalyticsPage.tsx(195,30): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; PaymentMethodFunds: number; IsActive: number; }[]'.
+src/pages/AnalyticsPage.tsx(195,60): error TS2339: Property 'PaymentMethodName' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; PaymentMethodFunds: number; IsActive: number; }[]'.
+src/pages/AnalyticsPage.tsx(209,72): error TS2339: Property 'DebtorID' does not exist on type 'Debtor[]'.
+src/pages/AnalyticsPage.tsx(211,44): error TS2339: Property 'DebtorName' does not exist on type 'Debtor[]'.
+src/pages/AnalyticsPage.tsx(211,99): error TS2339: Property 'DebtorID' does not exist on type 'Debtor[]'.
+src/pages/AnalyticsPage.tsx(386,38): error TS2339: Property 'id' does not exist on type '{ name: string; balance: number; }'.
+src/pages/AnalyticsPage.tsx(391,78): error TS2339: Property 'id' does not exist on type '{ name: string; balance: number; }'.
+src/pages/AnalyticsPage.tsx(591,68): error TS2339: Property 'id' does not exist on type '{ name: string; value: number; }'.
+src/pages/DebtorDetailsPage.tsx(20,27): error TS2305: Module '"../types"' has no exported member 'FullReceipt'.
+src/pages/DebtorDetailsPage.tsx(87,19): error TS2345: Argument of type 'Receipt[][]' is not assignable to parameter of type 'SetStateAction<Receipt[]>'.
+  Type 'Receipt[][]' is not assignable to type 'Receipt[]'.
+    Type 'Receipt[]' is missing the following properties from type 'Receipt': ReceiptID, ReceiptDate, ReceiptNote, Discount, and 4 more.
+src/pages/DebtorDetailsPage.tsx(89,65): error TS2339: Property 'DebtorTotal' does not exist on type 'Receipt[]'.
+src/pages/DebtorDetailsPage.tsx(90,50): error TS2339: Property 'ReceiptIsSettled' does not exist on type 'Receipt[]'.
+src/pages/DebtorDetailsPage.tsx(90,96): error TS2339: Property 'DebtorTotal' does not exist on type 'Receipt[]'.
+src/pages/DebtorDetailsPage.tsx(144,53): error TS2339: Property 'ReceiptID' does not exist on type 'LineItem[]'.
+src/pages/DebtorDetailsPage.tsx(144,75): error TS2339: Property 'ReceiptID' does not exist on type 'any[]'.
+src/pages/DebtorDetailsPage.tsx(145,31): error TS2339: Property 'IsNonItemised' does not exist on type 'any[]'.
+src/pages/DebtorDetailsPage.tsx(145,55): error TS2339: Property 'NonItemisedTotal' does not exist on type 'any[]'.
+src/pages/DebtorDetailsPage.tsx(145,114): error TS2339: Property 'LineQuantity' does not exist on type 'LineItem[]'.
+src/pages/DebtorDetailsPage.tsx(145,134): error TS2339: Property 'LineUnitPrice' does not exist on type 'LineItem[]'.
+src/pages/DebtorDetailsPage.tsx(312,13): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+  Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/EntitiesPage.tsx(19,26): error TS2307: Cannot find module '../utils/cache' or its corresponding type declarations.
+src/pages/EntityDetailsPage.tsx(22,45): error TS2305: Module '"../types"' has no exported member 'FullReceipt'.
+src/pages/EntityDetailsPage.tsx(28,26): error TS2307: Cannot find module '../utils/cache' or its corresponding type declarations.
+src/pages/EntityDetailsPage.tsx(131,57): error TS2339: Property 'PaymentMethodID' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
+src/pages/EntityDetailsPage.tsx(131,84): error TS2339: Property 'PaymentMethodName' does not exist on type '{ PaymentMethodID: number; PaymentMethodName: string; }[]'.
+src/pages/EntityDetailsPage.tsx(196,13): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/pages/EntityDetailsPage.tsx(198,54): error TS2345: Argument of type 'LineItem[][]' is not assignable to parameter of type 'LineItem[]'.
+  Type 'LineItem[]' is missing the following properties from type 'LineItem': key, ProductID, ProductName, ProductBrand, and 4 more.
+src/pages/EntityDetailsPage.tsx(511,19): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+  Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/PaymentMethodDetailsPage.tsx(22,26): error TS2307: Cannot find module '../utils/cache' or its corresponding type declarations.
+src/pages/PaymentMethodDetailsPage.tsx(148,54): error TS2345: Argument of type 'LineItem[]' is not assignable to parameter of type 'import("/Users/gvp/IdeaProjects/homefin/src/types").LineItem[]'.
+  Type 'LineItem' is missing the following properties from type 'LineItem': key, ProductID, ProductName, ProductBrand, and 2 more.
+src/pages/PaymentMethodDetailsPage.tsx(410,21): error TS2322: Type '(row: PageTransaction) => string' is not assignable to type 'string'.
+src/pages/PaymentMethodDetailsPage.tsx(421,19): error TS2322: Type '{ startDate: Date | null; endDate: Date | null; onChange: (update: [Date | null, Date | null]) => void; isClearable: boolean; placeholderText: string; selectsRange: boolean; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+  Property 'startDate' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/PaymentMethodsPage.tsx(18,26): error TS2307: Cannot find module '../utils/cache' or its corresponding type declarations.
+src/pages/ReceiptFormPage.tsx(168,19): error TS2322: Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'LineItem[]'.
+  Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'LineItem': ProductID, ProductName, ProductBrand, ProductSize, and 3 more.
+src/pages/ReceiptFormPage.tsx(197,32): error TS2345: Argument of type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to parameter of type 'SetStateAction<ReceiptSplit[]>'.
+  Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }[]' is not assignable to type 'ReceiptSplit[]'.
+    Type '{ key: string; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }' is missing the following properties from type 'ReceiptSplit': DebtorID, DebtorName, SplitPart
+src/pages/ReceiptFormPage.tsx(340,19): error TS2345: Argument of type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to parameter of type 'SetStateAction<{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }>'.
+  Type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to type '(prevState: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }'.
+    Call signature return types '{ status: "unpaid" | "paid"; paymentMethodId: string | null; storeId: string; receiptDate: Date; note: string; ownShares: number; owedToDebtorId: number | null; discount: number; }' and '{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }' are incompatible.
+      The types of 'paymentMethodId' are incompatible between these types.
+        Type 'string | null' is not assignable to type 'string'.
+          Type 'null' is not assignable to type 'string'.
+src/pages/ReceiptFormPage.tsx(345,17): error TS2345: Argument of type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to parameter of type 'SetStateAction<{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }>'.
+  Type '(prev: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }' is not assignable to type '(prevState: { storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }) => { ...; }'.
+    Call signature return types '{ status: "unpaid"; paymentMethodId: null; storeId: string; receiptDate: Date; note: string; ownShares: number; owedToDebtorId: number | null; discount: number; }' and '{ storeId: string; receiptDate: Date; note: string; paymentMethodId: string; ownShares: number; status: "unpaid" | "paid"; owedToDebtorId: number | null; discount: number; }' are incompatible.
+      The types of 'paymentMethodId' are incompatible between these types.
+        Type 'null' is not assignable to type 'string'.
+src/pages/ReceiptFormPage.tsx(750,82): error TS2322: Type '{ label: string; selected: Date; onChange: (date: Date | null) => void; error: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+  Property 'selected' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/ReceiptsPage.tsx(217,33): error TS2345: Argument of type 'FullReceipt[]' is not assignable to parameter of type 'FullReceipt[]'.
+  Property 'images' is missing in type 'FullReceipt' but required in type 'FullReceipt'.
+src/pages/ReceiptsPage.tsx(255,16): error TS2339: Property 'IsTentative' does not exist on type 'Receipt'.
+src/pages/ReceiptsPage.tsx(354,19): error TS2322: Type '{ selectsRange: true; startDate: Date | null; endDate: Date | null; onChange: (update: any) => void; isClearable: boolean; placeholderText: string; }' is not assignable to type 'IntrinsicAttributes & DatePickerProps'.
+  Property 'selectsRange' does not exist on type 'IntrinsicAttributes & DatePickerProps'.
+src/pages/ReceiptViewPage.tsx(38,10): error TS2614: Module '"jspdf"' has no exported member 'Image'. Did you mean to use 'import Image from "jspdf"' instead?
+src/pages/ReceiptViewPage.tsx(392,24): error TS2339: Property 'IsTentative' does not exist on type 'Receipt'.
+src/utils/debtCalculator.ts(46,54): error TS2339: Property 'ReceiptID' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(55,9): error TS2322: Type '{ amount: number; isSettled: boolean; splitPart: number | undefined; totalShares: number | undefined; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopa...' is not assignable to type 'ProcessedReceipt[]'.
+  Type '{ amount: number; isSettled: boolean; splitPart: number | undefined; totalShares: number | undefined; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopa...' is missing the following properties from type 'ProcessedReceipt': StoreName, type, ReceiptID, ReceiptDate, and 5 more.
+src/utils/debtCalculator.ts(57,11): error TS2339: Property 'IsNonItemised' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(58,23): error TS2339: Property 'NonItemisedTotal' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(60,50): error TS2339: Property 'ReceiptID' does not exist on type 'LineItem[]'.
+src/utils/debtCalculator.ts(60,66): error TS2339: Property 'ReceiptID' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(61,48): error TS2345: Argument of type 'LineItem[][]' is not assignable to parameter of type 'LineItem[]'.
+  Type 'LineItem[]' is missing the following properties from type 'LineItem': key, ProductID, ProductName, ProductBrand, and 4 more.
+src/utils/debtCalculator.ts(61,57): error TS2339: Property 'Discount' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(69,11): error TS2339: Property 'type' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(71,21): error TS2339: Property 'Status' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(73,13): error TS2339: Property 'SplitType' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(74,50): error TS2339: Property 'ReceiptID' does not exist on type 'ReceiptSplit[]'.
+src/utils/debtCalculator.ts(74,66): error TS2339: Property 'ReceiptID' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(75,50): error TS2339: Property 'DebtorID' does not exist on type 'ReceiptSplit[]'.
+src/utils/debtCalculator.ts(77,27): error TS2339: Property 'TotalShares' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(77,47): error TS2339: Property 'TotalShares' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(77,96): error TS2339: Property 'SplitPart' does not exist on type 'ReceiptSplit[]'.
+src/utils/debtCalculator.ts(77,115): error TS2339: Property 'OwnShares' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(78,35): error TS2339: Property 'SplitPart' does not exist on type 'ReceiptSplit[]'.
+src/utils/debtCalculator.ts(79,15): error TS18048: 'totalShares' is possibly 'undefined'.
+src/utils/debtCalculator.ts(80,49): error TS2339: Property 'SplitPart' does not exist on type 'ReceiptSplit[]'.
+src/utils/debtCalculator.ts(80,62): error TS18048: 'totalShares' is possibly 'undefined'.
+src/utils/debtCalculator.ts(83,20): error TS2339: Property 'SplitType' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(84,58): error TS2339: Property 'ReceiptID' does not exist on type 'LineItem[]'.
+src/utils/debtCalculator.ts(84,74): error TS2339: Property 'ReceiptID' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(84,90): error TS2339: Property 'DebtorID' does not exist on type 'LineItem[]'.
+src/utils/debtCalculator.ts(86,59): error TS2345: Argument of type 'LineItem[]' is not assignable to parameter of type 'LineItem'.
+  Type 'LineItem[]' is missing the following properties from type 'LineItem': key, ProductID, ProductName, ProductBrand, and 4 more.
+src/utils/debtCalculator.ts(86,67): error TS2339: Property 'Discount' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(89,43): error TS2339: Property 'ReceiptID' does not exist on type 'ReceiptDebtorPayment[]'.
+src/utils/debtCalculator.ts(89,59): error TS2339: Property 'ReceiptID' does not exist on type 'DebtReceipt[]'.
+src/utils/debtCalculator.ts(89,74): error TS2339: Property 'DebtorID' does not exist on type 'ReceiptDebtorPayment[]'.

@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon, PaintBrushIcon, UserIcon } from '@heroicons/react/24/solid';
-import { db } from '../utils/db';
 import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Debtor, DebtorStyle } from '../types';
@@ -16,16 +15,15 @@ import * as SolidIcons from '@heroicons/react/24/solid';
 import EntityStyleModal from '../components/debt/EntityStyleModal';
 import PageSpinner from '../components/ui/PageSpinner';
 import Spinner from '../components/ui/Spinner';
+import { useEntities, useInvalidateEntities } from '../hooks/useEntities';
 
 const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, onStyle: (entity: Debtor) => void }> = ({ entity, onEdit, onStyle }) => {
   const { settings } = useSettings();
-  const { stats, calculate: calculateDebt, loading } = useDebtCalculation();
+  // Now using the cached hook directly
+  const { stats, loading } = useDebtCalculation(entity.DebtorID);
+  
   const style = settings.debtorStyles?.[entity.DebtorID];
   const IconComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
-
-  useEffect(() => {
-    calculateDebt(entity.DebtorID);
-  }, [entity.DebtorID, calculateDebt]);
 
   return (
     <div className={cn("flex flex-col justify-between h-full relative group", !entity.DebtorIsActive && "opacity-60")}>
@@ -74,8 +72,6 @@ const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, o
 
 const EntitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [entities, setEntities] = useState<Debtor[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [showHidden, setShowHidden] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -83,22 +79,9 @@ const EntitiesPage: React.FC = () => {
   const [editingEntity, setEditingEntity] = useState<Debtor | null>(null);
   
   const { settings, updateSettings } = useSettings();
+  const invalidateEntities = useInvalidateEntities();
 
-  const fetchEntities = useCallback(async () => {
-    setLoading(true);
-    try {
-      const results = await db.query<Debtor>('SELECT * FROM Debtors ORDER BY DebtorName ASC');
-      setEntities(results);
-    } catch (error) {
-      console.error("Failed to fetch entities:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchEntities();
-  }, [fetchEntities]);
+  const { data: entities, isLoading } = useEntities();
 
   const handleAdd = () => {
     setEditingEntity(null);
@@ -120,7 +103,7 @@ const EntitiesPage: React.FC = () => {
   };
   
   const handleSave = () => {
-    fetchEntities();
+    invalidateEntities();
     setIsModalOpen(false);
   };
   
@@ -130,9 +113,9 @@ const EntitiesPage: React.FC = () => {
     setIsStyleModalOpen(false);
   };
   
-  const filteredEntities = entities.filter(e => showHidden || e.DebtorIsActive);
+  const filteredEntities = (entities || []).filter(e => showHidden || e.DebtorIsActive);
   
-  if (loading) return <PageSpinner />;
+  if (isLoading) return <PageSpinner />;
 
   return (
     <div>

@@ -21,6 +21,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.1.3",
+    "@tanstack/react-query": "^5.28.4",
     "chalk": "^5.4.1",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",

@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusIcon, PaintBrushIcon, PencilIcon, EyeIcon, EyeSlashIcon, CreditCardIcon } from '@heroicons/react/24/solid';
 import Button from '../components/ui/Button';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import PaymentMethodStyleModal from '../components/payment/PaymentMethodStyleModal';
-import { db } from '../utils/db';
 import { useSettings } from '../context/SettingsContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
@@ -15,6 +14,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import PageSpinner from '../components/ui/PageSpinner';
 import DataGrid from '../components/ui/DataGrid';
 import Spinner from '../components/ui/Spinner';
+import { usePaymentMethods, usePaymentMethodBalance, useInvalidatePaymentMethods } from '../hooks/usePaymentMethods';
 
 interface PaymentMethodItemProps {
   method: PaymentMethod;
@@ -26,27 +26,8 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
     const { settings } = useSettings();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
     const IconComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
-    const [balance, setBalance] = useState<number | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-
-    useEffect(() => {
-      const fetchBalance = async () => {
-        setLoading(true);
-        try {
-          const expensesResult = await db.queryOne<{ total: number }>('SELECT SUM(li.LineQuantity * li.LineUnitPrice) as total FROM LineItems li JOIN Receipts r ON li.ReceiptID = r.ReceiptID WHERE r.PaymentMethodID = ? AND r.IsTentative = 0', [method.PaymentMethodID]);
-          const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?', [method.PaymentMethodID]);
-          const expenses = expensesResult?.total || 0;
-          const topups = topupsResult?.total || 0;
-          setBalance(method.PaymentMethodFunds + topups - expenses);
-        } catch (error) {
-          console.error("Failed to fetch balance for method:", method.PaymentMethodID, error);
-          setBalance(0);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchBalance();
-    }, [method]);
+    
+    const { data: balance, isLoading } = usePaymentMethodBalance(method.PaymentMethodID, method.PaymentMethodFunds);
 
     return (
         <div className={cn("flex flex-col justify-between h-full relative group", method.PaymentMethodIsActive === 0 && "opacity-60")}>
@@ -68,7 +49,7 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
             </div>
             <div className="mt-4 text-right">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Current Balance</p>
-                {loading || balance === null ? (
+                {isLoading || balance === undefined ? (
                   <div className="flex justify-end items-center h-7">
                     <Spinner className="h-5 w-5 text-gray-400" />
                   </div>
@@ -90,8 +71,6 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
 };
 
 const PaymentMethodsPage: React.FC = () => {
-  const [methods, setMethods] = useState<PaymentMethod[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isStyleModalOpen, setIsStyleModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
@@ -99,29 +78,18 @@ const PaymentMethodsPage: React.FC = () => {
   const [showHidden, setShowHidden] = useState<boolean>(false);
   const { settings, updateSettings } = useSettings();
   const navigate = useNavigate();
+  const invalidatePaymentMethods = useInvalidatePaymentMethods();
 
-  const fetchPaymentMethods = useCallback(async () => {
-    setLoading(true);
-    try {
-      const methodsData = await db.query<PaymentMethod>('SELECT * FROM PaymentMethods');
-      setMethods(methodsData);
-    } catch (error) {
-      console.error("Failed to fetch payment methods:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: methods, isLoading } = usePaymentMethods();
 
   useEffect(() => {
     if (!settings.modules.paymentMethods?.enabled) {
       navigate('/');
-    } else {
-      fetchPaymentMethods();
     }
-  }, [settings.modules.paymentMethods, fetchPaymentMethods, navigate]);
+  }, [settings.modules.paymentMethods, navigate]);
 
   const handleSave = () => {
-    fetchPaymentMethods();
+    invalidatePaymentMethods();
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
   };
@@ -142,9 +110,9 @@ const PaymentMethodsPage: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const filteredMethods = methods.filter(m => showHidden || m.PaymentMethodIsActive === 1);
+  const filteredMethods = (methods || []).filter(m => showHidden || m.PaymentMethodIsActive === 1);
 
-  if (loading) {
+  if (isLoading) {
     return <PageSpinner />;
   }
 

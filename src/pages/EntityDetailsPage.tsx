@@ -102,7 +102,9 @@ const EntityDetailsPage: React.FC = () => {
   const { showError } = useError();
   const { settings } = useSettings();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
-  const { receipts, stats, loading: debtLoading, calculate: calculateDebt } = useDebtCalculation();
+  
+  // Use the new hook signature
+  const { receipts, stats, loading: debtLoading, refetch: refetchDebt } = useDebtCalculation(id || '');
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
@@ -117,17 +119,16 @@ const EntityDetailsPage: React.FC = () => {
         const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
         setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
       }
-
-      if (id) {
-        await calculateDebt(id);
-      }
+      
+      // Debt calculation is now handled by the hook, but we might want to trigger a refetch if needed
+      // refetchDebt(); 
 
     } catch (error) {
       showError(error as Error);
     } finally {
       setLoading(false);
     }
-  }, [id, showError, paymentMethodsEnabled, calculateDebt]);
+  }, [id, showError, paymentMethodsEnabled]);
 
   useEffect(() => {
     fetchDetails();
@@ -245,7 +246,7 @@ const EntityDetailsPage: React.FC = () => {
         'UPDATE Receipts SET Status = ?, PaymentMethodID = ? WHERE ReceiptID = ?',
         ['paid', paymentMethodId, receiptToMarkAsPaid.ReceiptID]
       );
-      await fetchDetails();
+      refetchDebt(); // Refetch debt data
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -267,7 +268,7 @@ const EntityDetailsPage: React.FC = () => {
       } else {
         await db.execute('UPDATE Receipts SET Status = ?, PaymentMethodID = NULL WHERE ReceiptID = ?', ['unpaid', receiptId]);
       }
-      await fetchDetails();
+      refetchDebt(); // Refetch debt data
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -516,7 +517,7 @@ const EntityDetailsPage: React.FC = () => {
           <DebtSettlementModal
             isOpen={isSettlementModalOpen}
             onClose={() => setIsSettlementModalOpen(false)}
-            onSave={fetchDetails}
+            onSave={refetchDebt}
             debtInfo={selectedDebtForSettlement}
           />
 
