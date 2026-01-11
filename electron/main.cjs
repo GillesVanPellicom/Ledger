@@ -113,6 +113,17 @@ function connectDatabase(dbPath) {
   });
 }
 
+function installDevTools() {
+  const { default: install, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = require('electron-devtools-installer');
+  
+  const extensions = [REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS];
+  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
+
+  return Promise.all(extensions.map(ext => install(ext, forceDownload)))
+    .then((names) => console.log(`Added Extension: ${names.join(', ')}`))
+    .catch((err) => console.log('An error occurred: ', err));
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -147,6 +158,10 @@ function createWindow() {
 
 app.on('ready', async () => {
   await initializeStore();
+
+  if (process.env.NODE_ENV === 'development') {
+    await installDevTools();
+  }
 
   protocol.handle('local-file', (request) => {
     const url = request.url.slice('local-file://'.length);

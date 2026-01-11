@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
 interface ErrorState {
   error: Error | null;
@@ -7,14 +8,19 @@ interface ErrorState {
   closeError: () => void;
 }
 
-export const useErrorStore = create<ErrorState>((set) => ({
-  error: null,
-  isOpen: false,
-  showError: (err: Error) => {
-    console.error("Global error handler caught:", err);
-    set({ error: err, isOpen: true });
-  },
-  closeError: () => {
-    set({ error: null, isOpen: false });
-  },
-}));
+export const useErrorStore = create<ErrorState>()(
+  devtools(
+    (set) => ({
+      error: null,
+      isOpen: false,
+      showError: (err: Error) => {
+        console.error("Global error handler caught:", err);
+        set({ error: err, isOpen: true }, false, 'showError');
+      },
+      closeError: () => {
+        set({ error: null, isOpen: false }, false, 'closeError');
+      },
+    }),
+    { name: 'Error Store' }
+  )
+);
