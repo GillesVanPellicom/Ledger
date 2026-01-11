@@ -38,8 +38,18 @@ Specifically this has to be implemented to cache costly query results. This has 
 - Wrapped application with `QueryClientProvider` in `src/main.tsx`.
 - Implemented `useReceipts` hook in `src/hooks/useReceipts.ts` to fetch receipts using React Query.
 - Updated `ReceiptsPage.tsx` to use `useReceipts` hook.
+- Implemented `useReferenceData` hooks (`useProducts`, `useStores`, `useActiveStores`) in `src/hooks/useReferenceData.ts`.
+- Updated `ReferenceDataPage.tsx` to use `useReferenceData` hooks.
+- Implemented `usePaymentMethods` hooks (`usePaymentMethods`, `useActivePaymentMethods`, `usePaymentMethodBalance`) in `src/hooks/usePaymentMethods.ts`.
+- Updated `PaymentMethodsPage.tsx` to use `usePaymentMethods` hooks.
+- Implemented `useEntities` hooks (`useEntities`, `useActiveEntities`) in `src/hooks/useEntities.ts`.
+- Updated `EntitiesPage.tsx` to use `useEntities` hooks.
+- Refactored `useDebtCalculation` to use React Query for caching debt stats.
+- Updated `EntitiesPage.tsx` and `EntityDetailsPage.tsx` to use the refactored `useDebtCalculation`.
+- Implemented `useAnalytics` hooks (`useAvailableYears`, `useAnalyticsData`) in `src/hooks/useAnalytics.ts` to cache expensive aggregation queries.
+- Updated `AnalyticsPage.tsx` to use `useAnalytics` hooks.
 
-### 2.1. Global State
+### 2.2. Global State
 For cross-component state that doesn't fit into the server-state model of React Query (e.g., user settings, theme), we can use a lightweight global state management library like **Zustand**. Implement and switch over features e.g theme and any other deemed applicable.
 
 ## 3. Addressing Technical Debt

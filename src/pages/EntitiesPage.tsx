@@ -10,16 +10,15 @@ import PageWrapper from '../components/layout/PageWrapper';
 import DataGrid from '../components/ui/DataGrid';
 import { cn } from '../utils/cn';
 import { useDebtCalculation } from '../hooks/useDebtCalculation';
-import { useSettings } from '../context/SettingsContext';
 import * as SolidIcons from '@heroicons/react/24/solid';
 import EntityStyleModal from '../components/debt/EntityStyleModal';
 import PageSpinner from '../components/ui/PageSpinner';
 import Spinner from '../components/ui/Spinner';
 import { useEntities, useInvalidateEntities } from '../hooks/useEntities';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, onStyle: (entity: Debtor) => void }> = ({ entity, onEdit, onStyle }) => {
-  const { settings } = useSettings();
-  // Now using the cached hook directly
+  const { settings } = useSettingsStore();
   const { stats, loading } = useDebtCalculation(entity.DebtorID);
   
   const style = settings.debtorStyles?.[entity.DebtorID];
@@ -78,7 +77,7 @@ const EntitiesPage: React.FC = () => {
   const [isStyleModalOpen, setIsStyleModalOpen] = useState<boolean>(false);
   const [editingEntity, setEditingEntity] = useState<Debtor | null>(null);
   
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings } = useSettingsStore();
   const invalidateEntities = useInvalidateEntities();
 
   const { data: entities, isLoading } = useEntities();

@@ -10,7 +10,6 @@ import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
 import { XMarkIcon, PlusIcon, PhotoIcon, ArrowPathIcon, InformationCircleIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { nanoid } from 'nanoid';
-import { useSettings } from '../context/SettingsContext';
 import { cn } from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
 import { ConfirmModal } from '../components/ui/Modal';
@@ -24,12 +23,13 @@ import Spinner from '../components/ui/Spinner';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEditing = !!id;
-  const { settings } = useSettings();
+  const { settings } = useSettingsStore();
   const { incrementEdits } = useBackupContext();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;

@@ -4,9 +4,9 @@ import Input from '../ui/Input';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
 import { db } from '../../utils/db';
-import { useSettings } from '../../context/SettingsContext';
 import { Product } from '../../types';
 import Separator from '../ui/Separator';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
   const [units, setUnits] = useState<{ value: number; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { settings } = useSettings();
+  const { settings } = useSettingsStore();
 
   const validate = () => {
     const newErrors: Record<string, string> = {};

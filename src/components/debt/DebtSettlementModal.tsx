@@ -5,7 +5,7 @@ import DatePicker from '../ui/DatePicker';
 import Select from '../ui/Select';
 import { db } from '../../utils/db';
 import { format } from 'date-fns';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface DebtInfo {
   receiptId: number;
@@ -28,7 +28,7 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
   const [paymentMethods, setPaymentMethods] = useState<{ value: number; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { settings } = useSettings();
+  const { settings } = useSettingsStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
   useEffect(() => {

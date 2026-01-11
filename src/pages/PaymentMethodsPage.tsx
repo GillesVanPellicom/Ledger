@@ -3,7 +3,6 @@ import { PlusIcon, PaintBrushIcon, PencilIcon, EyeIcon, EyeSlashIcon, CreditCard
 import Button from '../components/ui/Button';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import PaymentMethodStyleModal from '../components/payment/PaymentMethodStyleModal';
-import { useSettings } from '../context/SettingsContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import * as SolidIcons from '@heroicons/react/24/solid';
@@ -15,6 +14,7 @@ import PageSpinner from '../components/ui/PageSpinner';
 import DataGrid from '../components/ui/DataGrid';
 import Spinner from '../components/ui/Spinner';
 import { usePaymentMethods, usePaymentMethodBalance, useInvalidatePaymentMethods } from '../hooks/usePaymentMethods';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 interface PaymentMethodItemProps {
   method: PaymentMethod;
@@ -23,7 +23,7 @@ interface PaymentMethodItemProps {
 }
 
 const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleClick, onEditClick }) => {
-    const { settings } = useSettings();
+    const { settings } = useSettingsStore();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
     const IconComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
     
@@ -76,7 +76,7 @@ const PaymentMethodsPage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [showHidden, setShowHidden] = useState<boolean>(false);
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings } = useSettingsStore();
   const navigate = useNavigate();
   const invalidatePaymentMethods = useInvalidatePaymentMethods();
 

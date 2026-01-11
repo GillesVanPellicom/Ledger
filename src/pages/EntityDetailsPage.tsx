@@ -15,7 +15,6 @@ import Modal, { ConfirmModal } from '../components/ui/Modal';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
 import { useError } from '../context/ErrorContext';
-import { useSettings } from '../context/SettingsContext';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
 import EntityModal from '../components/debt/EntityModal';
@@ -25,6 +24,7 @@ import { Header } from '../components/ui/Header';
 import Tooltip from '../components/ui/Tooltip';
 import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../utils/discountCalculator';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -100,7 +100,7 @@ const EntityDetailsPage: React.FC = () => {
   const [isEditEntityModalOpen, setIsEditEntityModalOpen] = useState<boolean>(false);
 
   const { showError } = useError();
-  const { settings } = useSettings();
+  const { settings } = useSettingsStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   
   // Use the new hook signature

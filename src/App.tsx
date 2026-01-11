@@ -11,15 +11,15 @@ import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
 import EntitiesPage from './pages/EntitiesPage';
 import EntityDetailsPage from './pages/EntityDetailsPage';
 import { useError } from './context/ErrorContext';
-import { useSettings } from './context/SettingsContext';
 import WelcomeScreen from './components/layout/WelcomeScreen';
 import UserNameSetup from './components/layout/UserNameSetup';
 import SettingsModal from './components/settings/SettingsModal';
 import { BackupProvider } from './context/BackupContext';
+import { useSettingsStore } from './store/useSettingsStore';
 
 function App() {
   const { showError } = useError();
-  const { settings, loading } = useSettings();
+  const { settings, loading } = useSettingsStore();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [initialSettingsTab, setInitialSettingsTab] = useState('appearance');
 

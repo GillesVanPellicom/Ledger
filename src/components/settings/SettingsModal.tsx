@@ -4,13 +4,13 @@ import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentT
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
-import { useSettings } from '../../context/SettingsContext';
 import Tooltip from '../ui/Tooltip';
 import Input from '../ui/Input';
 import { useBackupContext } from '../../context/BackupContext';
 import Card from '../ui/Card';
 import Switch from '../ui/Switch';
 import '../../electron.d';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,17 +20,16 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'appearance' }) => {
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [uiScale, setUiScale] = useState(100);
   const [isDev, setIsDev] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [testError, setTestError] = useState<Error | null>(null);
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings } = useSettingsStore();
   const { backupCount, triggerBackup, isBackingUp } = useBackupContext();
   const [datastorePath, setDatastorePath] = useState('');
   const [tooltipText, setTooltipText] = useState('');
   const [backupSettings, setBackupSettings] = useState({ maxBackups: 5, interval: 5, editsSinceLastBackup: 0 });
   const [userName, setUserName] = useState('');
+  const [uiScale, setUiScale] = useState(100);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,74 +38,58 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   }, [isOpen, initialTab]);
 
   useEffect(() => {
-    const loadInitialSettings = async () => {
-      if (window.electronAPI) {
-        const electronSettings = await window.electronAPI.getSettings();
-        if (electronSettings.theme) setIsDarkMode(electronSettings.theme === 'dark');
-        if (electronSettings.uiScale) setUiScale(electronSettings.uiScale);
-        if (electronSettings.datastore?.folderPath) setDatastorePath(electronSettings.datastore.folderPath);
-        if (electronSettings.backup) setBackupSettings(electronSettings.backup);
-        if (electronSettings.userName) setUserName(electronSettings.userName);
-      } else {
-        const localSettings = JSON.parse(localStorage.getItem('app-settings') || '{}');
-        if (localSettings.theme) setIsDarkMode(localSettings.theme === 'dark');
-        if (localSettings.uiScale) setUiScale(localSettings.uiScale);
-        if (localSettings.userName) setUserName(localSettings.userName);
-      }
-      if (import.meta.env.DEV) setIsDev(true);
-    };
-    loadInitialSettings();
+    if (import.meta.env.DEV) setIsDev(true);
   }, []);
 
   useEffect(() => {
     setDatastorePath(settings.datastore?.folderPath || '');
     setTooltipText(settings.datastore?.folderPath || '');
-    setIsDarkMode(settings.theme === 'dark');
     if (settings.backup) {
       setBackupSettings(settings.backup);
     }
     if (settings.userName) {
       setUserName(settings.userName);
     }
+    if (settings.uiScale) {
+      setUiScale(settings.uiScale);
+    }
   }, [settings]);
 
   const handleThemeChange = (newTheme: string) => {
-    if (newTheme === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-    updateSettings({ ...settings, theme: newTheme });
+    updateSettings({ theme: newTheme });
   };
 
   const handleUiScaleChange = (e: React.ChangeEvent<HTMLInputElement>) => setUiScale(parseInt(e.target.value, 10));
   const handleUiScaleSave = () => {
     document.documentElement.style.fontSize = `${uiScale}%`;
-    updateSettings({ ...settings, uiScale });
+    updateSettings({ uiScale });
   };
   const resetUiScale = () => {
     setUiScale(100);
     document.documentElement.style.fontSize = '100%';
-    updateSettings({ ...settings, uiScale: 100 });
+    updateSettings({ uiScale: 100 });
   };
 
   const handleModuleToggle = (key: string) => {
     const newModules = { ...settings.modules, [key]: { ...(settings.modules as any)[key], enabled: !(settings.modules as any)[key].enabled } };
-    updateSettings({ ...settings, modules: newModules });
+    updateSettings({ modules: newModules });
   };
 
   const handlePdfToggle = (key: string) => {
     const newPdfSettings = { ...settings.pdf, [key]: !(settings.pdf as any)[key] };
-    updateSettings({ ...settings, pdf: newPdfSettings });
+    updateSettings({ pdf: newPdfSettings });
   };
 
   const handleBackupSettingChange = (key: string, value: string) => {
     const newBackupSettings = { ...backupSettings, [key]: parseInt(value, 10) };
     setBackupSettings(newBackupSettings);
-    updateSettings({ ...settings, backup: newBackupSettings });
+    updateSettings({ backup: newBackupSettings });
   };
 
   const resetBackupSettings = () => {
     const defaultBackupSettings = { maxBackups: 5, interval: 5, editsSinceLastBackup: 0 };
     setBackupSettings(defaultBackupSettings);
-    updateSettings({ ...settings, backup: defaultBackupSettings });
+    updateSettings({ backup: defaultBackupSettings });
   };
 
   const handleUserNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,7 +99,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const handleUserNameSave = () => {
     if (userName.trim()) {
       const capitalizedName = userName.trim().charAt(0).toUpperCase() + userName.trim().slice(1);
-      updateSettings({ ...settings, userName: capitalizedName });
+      updateSettings({ userName: capitalizedName });
     }
   };
 
@@ -134,14 +117,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
       const path = await window.electronAPI.selectDirectory();
       if (path) {
         setDatastorePath(path);
-        updateSettings({ ...settings, datastore: { folderPath: path } });
+        updateSettings({ datastore: { folderPath: path } });
       }
     }
   };
   
   const handleRemoveDatastore = () => {
     setDatastorePath('');
-    updateSettings({ ...settings, datastore: { folderPath: '' } });
+    updateSettings({ datastore: { folderPath: '' } });
   };
 
   const handleResetAllSettings = async () => {
@@ -188,8 +171,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               <div className="space-y-6">
                 <div>
                   <SectionTitle title="Theme" tooltip="Choose between light and dark mode for the application interface." />
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", !isDarkMode ? "bg-blue-100 text-blue-600" : "bg-gray-800 text-gray-400")}><SunIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Light Mode</p><p className="text-sm text-gray-500">Default appearance</p></div></div><button onClick={() => handleThemeChange('light')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", !isDarkMode ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{!isDarkMode && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-3"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", isDarkMode ? "bg-blue-900/30 text-blue-400" : "bg-gray-100 text-gray-400")}><MoonIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</p><p className="text-sm text-gray-500">Easier on the eyes</p></div></div><button onClick={() => handleThemeChange('dark')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", isDarkMode ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{isDarkMode && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
+                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'light' ? "bg-blue-100 text-blue-600" : "bg-gray-800 text-gray-400")}><SunIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Light Mode</p><p className="text-sm text-gray-500">Default appearance</p></div></div><button onClick={() => handleThemeChange('light')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'light' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'light' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
+                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-3"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'dark' ? "bg-blue-900/30 text-blue-400" : "bg-gray-100 text-gray-400")}><MoonIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</p><p className="text-sm text-gray-500">Easier on the eyes</p></div></div><button onClick={() => handleThemeChange('dark')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'dark' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'dark' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-4">

@@ -12,7 +12,7 @@ import {
   CircleStackIcon
 } from '@heroicons/react/24/solid';
 import {cn} from '../../utils/cn';
-import {useSettings} from '../../context/SettingsContext';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface SidenavProps {
   isCollapsed: boolean;
@@ -22,7 +22,7 @@ interface SidenavProps {
 
 const Sidenav: React.FC<SidenavProps> = ({isCollapsed, toggleSidebar, openSettingsModal}) => {
   const location = useLocation();
-  const {settings} = useSettings();
+  const { settings } = useSettingsStore();
 
   const navItems = [
     {path: '/', label: 'Receipts', icon: ReceiptPercentIcon, activePaths: ['/', '/receipts']},

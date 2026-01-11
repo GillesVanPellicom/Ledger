@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSettings } from '../context/SettingsContext';
 import { Settings } from '../types';
 import '../electron.d';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export const useBackup = () => {
-  const { settings, updateSettings } = useSettings() as { settings: Settings; updateSettings: (settings: Settings) => void; };
+  const { settings, updateSettings } = useSettingsStore();
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
   const [backupCount, setBackupCount] = useState<number>(0);
 
@@ -38,9 +38,9 @@ export const useBackup = () => {
     const newCount = (settings.backup.editsSinceLastBackup || 0) + 1;
     if (newCount >= settings.backup.interval) {
       await triggerBackup();
-      updateSettings({ ...settings, backup: { ...settings.backup, editsSinceLastBackup: 0 } });
+      updateSettings({ backup: { ...settings.backup, editsSinceLastBackup: 0 } });
     } else {
-      updateSettings({ ...settings, backup: { ...settings.backup, editsSinceLastBackup: newCount } });
+      updateSettings({ backup: { ...settings.backup, editsSinceLastBackup: newCount } });
     }
   }, [settings, updateSettings, triggerBackup]);
 

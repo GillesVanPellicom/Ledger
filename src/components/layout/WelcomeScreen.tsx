@@ -1,11 +1,11 @@
 import React from 'react';
 import {FolderPlusIcon} from '@heroicons/react/24/outline';
 import Button from '../ui/Button';
-import {useSettings} from '../../context/SettingsContext';
 import '../../electron.d';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 const WelcomeScreen: React.FC = () => {
-  const {updateSettings} = useSettings();
+  const {updateSettings} = useSettingsStore();
 
   const handleSelectDatastore = async () => {
     if (window.electronAPI) {
