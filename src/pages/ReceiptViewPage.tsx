@@ -22,7 +22,6 @@ import {
   InformationCircleIcon
 } from '@heroicons/react/24/solid';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
-import {useError} from '../context/ErrorContext';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import Tooltip from '../components/ui/Tooltip';
@@ -36,6 +35,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
 import { Image } from 'jspdf';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useErrorStore } from '../store/useErrorStore';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -81,7 +81,7 @@ const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) =>
   const [images, setImages] = useState<ReceiptImage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const {settings} = useSettingsStore();
-  const {showError} = useError();
+  const {showError} = useErrorStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 

@@ -1,8 +1,8 @@
 import React, {useState, useEffect} from 'react';
 import {Outlet, useLocation} from 'react-router-dom';
 import Sidenav from './Sidenav';
-import {useBackupContext} from '../../context/BackupContext';
 import Spinner from '../ui/Spinner';
+import { useBackupStore } from '../../store/useBackupStore';
 
 interface MainLayoutProps {
   openSettingsModal: () => void;
@@ -15,7 +15,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({openSettingsModal}) => {
   });
 
   const location = useLocation();
-  const {isBackingUp} = useBackupContext();
+  const {isBackingUp} = useBackupStore();
 
   // Log path changes to debug back button issue
   useEffect(() => {

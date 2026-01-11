@@ -6,11 +6,11 @@ import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
 import Tooltip from '../ui/Tooltip';
 import Input from '../ui/Input';
-import { useBackupContext } from '../../context/BackupContext';
 import Card from '../ui/Card';
 import Switch from '../ui/Switch';
 import '../../electron.d';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useBackupStore } from '../../store/useBackupStore';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [testError, setTestError] = useState<Error | null>(null);
   const { settings, updateSettings } = useSettingsStore();
-  const { backupCount, triggerBackup, isBackingUp } = useBackupContext();
+  const { backupCount, triggerBackup, isBackingUp } = useBackupStore();
   const [datastorePath, setDatastorePath] = useState('');
   const [tooltipText, setTooltipText] = useState('');
   const [backupSettings, setBackupSettings] = useState({ maxBackups: 5, interval: 5, editsSinceLastBackup: 0 });

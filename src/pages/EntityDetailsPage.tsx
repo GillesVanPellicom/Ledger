@@ -14,7 +14,6 @@ import { DocumentArrowDownIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, PencilIc
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
-import { useError } from '../context/ErrorContext';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
 import EntityModal from '../components/debt/EntityModal';
@@ -25,6 +24,7 @@ import Tooltip from '../components/ui/Tooltip';
 import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../utils/discountCalculator';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useErrorStore } from '../store/useErrorStore';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -99,7 +99,7 @@ const EntityDetailsPage: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<{ value: number; label: string }[]>([]);
   const [isEditEntityModalOpen, setIsEditEntityModalOpen] = useState<boolean>(false);
 
-  const { showError } = useError();
+  const { showError } = useErrorStore();
   const { settings } = useSettingsStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   

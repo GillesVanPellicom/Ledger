@@ -20,7 +20,6 @@ import {ConfirmModal} from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
-import {useError} from '../context/ErrorContext';
 import Tooltip from '../components/ui/Tooltip';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
 import {Receipt, LineItem} from '../types';
@@ -28,6 +27,7 @@ import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { useReceipts, useDeleteReceipt } from '../hooks/useReceipts';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useErrorStore } from '../store/useErrorStore';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -48,7 +48,7 @@ const ReceiptsPage: React.FC = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [isBulkDebtModalOpen, setIsBulkDebtModalOpen] = useState<boolean>(false);
 
-  const {showError} = useError();
+  const {showError} = useErrorStore();
   const { settings } = useSettingsStore();
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;

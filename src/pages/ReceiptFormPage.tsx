@@ -13,7 +13,6 @@ import { nanoid } from 'nanoid';
 import { cn } from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
 import { ConfirmModal } from '../components/ui/Modal';
-import { useBackupContext } from '../context/BackupContext';
 import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
 import StoreModal from '../components/stores/StoreModal';
 import { Debtor, LineItem, ReceiptImage, ReceiptSplit, Store } from '../types';
@@ -24,13 +23,14 @@ import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useBackupStore } from '../store/useBackupStore';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEditing = !!id;
   const { settings } = useSettingsStore();
-  const { incrementEdits } = useBackupContext();
+  const { incrementEdits } = useBackupStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 

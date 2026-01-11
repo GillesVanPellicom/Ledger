@@ -10,15 +10,14 @@ import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
 import EntitiesPage from './pages/EntitiesPage';
 import EntityDetailsPage from './pages/EntityDetailsPage';
-import { useError } from './context/ErrorContext';
 import WelcomeScreen from './components/layout/WelcomeScreen';
 import UserNameSetup from './components/layout/UserNameSetup';
 import SettingsModal from './components/settings/SettingsModal';
-import { BackupProvider } from './context/BackupContext';
 import { useSettingsStore } from './store/useSettingsStore';
+import { useErrorStore } from './store/useErrorStore';
 
 function App() {
-  const { showError } = useError();
+  const { showError } = useErrorStore();
   const { settings, loading } = useSettingsStore();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [initialSettingsTab, setInitialSettingsTab] = useState('appearance');
@@ -61,30 +60,28 @@ function App() {
 
   return (
     <>
-      <BackupProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<MainLayout openSettingsModal={openSettingsModal} />}>
-              <Route index element={<ReceiptsPage />} />
-              <Route path="reference-data" element={<ReferenceDataPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="payment-methods" element={<PaymentMethodsPage />} />
-              <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />
-              <Route path="entities" element={<EntitiesPage />} />
-              <Route path="entities/:id" element={<EntityDetailsPage />} />
-              
-              <Route path="receipts/new" element={<ReceiptFormPage />} />
-              <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />
-              <Route path="receipts/view/:id" element={<ReceiptViewPage openSettingsModal={openSettingsModal} />} />
-            </Route>
-          </Routes>
-        </Router>
-        <SettingsModal 
-          isOpen={isSettingsModalOpen} 
-          onClose={() => setIsSettingsModalOpen(false)}
-          initialTab={initialSettingsTab}
-        />
-      </BackupProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainLayout openSettingsModal={openSettingsModal} />}>
+            <Route index element={<ReceiptsPage />} />
+            <Route path="reference-data" element={<ReferenceDataPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="payment-methods" element={<PaymentMethodsPage />} />
+            <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />
+            <Route path="entities" element={<EntitiesPage />} />
+            <Route path="entities/:id" element={<EntityDetailsPage />} />
+            
+            <Route path="receipts/new" element={<ReceiptFormPage />} />
+            <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />
+            <Route path="receipts/view/:id" element={<ReceiptViewPage openSettingsModal={openSettingsModal} />} />
+          </Route>
+        </Routes>
+      </Router>
+      <SettingsModal 
+        isOpen={isSettingsModalOpen} 
+        onClose={() => setIsSettingsModalOpen(false)}
+        initialTab={initialSettingsTab}
+      />
     </>
   );
 }
