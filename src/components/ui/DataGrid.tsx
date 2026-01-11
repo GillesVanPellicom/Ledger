@@ -8,7 +8,6 @@ interface DataGridProps<T> {
   onItemClick?: (item: T) => void;
   itemKey: keyof T;
   minItemWidth?: number;
-  itemHeight?: number;
   className?: string;
 }
 
@@ -18,7 +17,6 @@ const DataGrid = <T extends { [key: string]: any }>({
   onItemClick,
   itemKey,
   minItemWidth = 220,
-  itemHeight = 88,
   className,
 }: DataGridProps<T>) => {
   const gridRef = useRef<HTMLDivElement>(null);
@@ -33,9 +31,20 @@ const DataGrid = <T extends { [key: string]: any }>({
   }, [minItemWidth]);
 
   useLayoutEffect(() => {
+    const gridEl = gridRef.current;
+    if (!gridEl) return;
+
     calculateGridParams();
-    window.addEventListener('resize', calculateGridParams);
-    return () => window.removeEventListener('resize', calculateGridParams);
+
+    const resizeObserver = new ResizeObserver(() => {
+      calculateGridParams();
+    });
+
+    resizeObserver.observe(gridEl);
+
+    return () => {
+      resizeObserver.unobserve(gridEl);
+    };
   }, [calculateGridParams]);
 
   const numToRender = data.length > 0 ? Math.ceil(data.length / cols) * cols : cols;
@@ -47,7 +56,6 @@ const DataGrid = <T extends { [key: string]: any }>({
         {items.map((item, index) => (
           <div
             key={item ? item[itemKey] : `placeholder-${index}`}
-            style={{ height: `${itemHeight}px` }}
             className={cn(
               "p-4",
               // Add top border to items not in the first row
@@ -61,7 +69,7 @@ const DataGrid = <T extends { [key: string]: any }>({
             {item ? (
               renderItem(item)
             ) : (
-              <div className="h-full w-full flex items-center justify-center">
+              <div className="h-full w-full flex items-center justify-center min-h-[120px]">
                 <MinusIcon className="h-8 w-8 text-gray-300 dark:text-gray-700" />
               </div>
             )}

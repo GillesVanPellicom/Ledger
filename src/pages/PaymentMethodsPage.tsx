@@ -149,7 +149,6 @@ const PaymentMethodsPage: React.FC = () => {
               />
             )}
             minItemWidth={320}
-            itemHeight={120}
           />
 
           <PaymentMethodModal

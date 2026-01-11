@@ -149,7 +149,6 @@ const EntitiesPage: React.FC = () => {
               />
             )}
             minItemWidth={280}
-            itemHeight={120}
           />
 
           <EntityModal
