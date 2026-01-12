@@ -358,7 +358,7 @@ const ReceiptViewPage: React.FC = () => {
             )}
 
             {receipt.IsNonItemised ? (
-              <Card>
+              <Card className="overflow-hidden">
                 <div className="relative p-6">
                   <div className="blur-sm">
                     <table className="w-full text-sm select-none">

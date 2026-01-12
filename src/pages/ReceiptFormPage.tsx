@@ -25,6 +25,7 @@ import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useBackupStore } from '../store/useBackupStore';
 import { useQueryClient } from '@tanstack/react-query';
+import Divider from '../components/ui/Divider';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -679,16 +680,8 @@ const ReceiptFormPage: React.FC = () => {
       />
       <PageWrapper>
         <div className="py-6 space-y-6">
-          {hasSettledDebts && (
-            <InfoCard
-              variant="warning"
-              title="Debts Settled"
-              message="One or more debts on this receipt have been settled. Debt configuration is now locked."
-            />
-          )}
-          
-          <Card>
-            <div className="p-6 space-y-6">
+          <Card className="overflow-hidden">
+            <div className="relative p-6 space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-1">
                   <div className="flex items-end gap-2">
@@ -703,153 +696,193 @@ const ReceiptFormPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
-                <div className="col-span-2"><Input label="Note (Optional)" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" /></div>
+                
+                <div className={cn("grid grid-cols-2 gap-6 col-span-2 items-end", !paymentMethodsEnabled && "grid-cols-1")}>
+                  {debtEnabled && (
+                    <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
+                      <Tooltip className="w-full" content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
+                        <div className="w-full">
+                          <Select 
+                            label="Paid by" 
+                            name="paidById" 
+                            value={String(paidById)} 
+                            onChange={handlePaidByChange} 
+                            options={paidByOptions} 
+                            placeholder="Select who paid" 
+                            error={errors.paidById} 
+                            disabled={hasSettledDebts}
+                          />
+                        </div>
+                      </Tooltip>
+                    </div>
+                  )}
 
-                {debtEnabled && (
-                  <div className="col-span-2">
-                    <Select label="Paid by" name="paidById" value={String(paidById)} onChange={handlePaidByChange} options={paidByOptions} placeholder="Select who paid" error={errors.paidById} />
+                  {paymentMethodsEnabled && (
+                    <div>
+                      <Tooltip className="w-full" content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
+                        <div className="w-full">
+                          <Select 
+                            label="Payment Method" 
+                            name="paymentMethodId" 
+                            value={String(formData.paymentMethodId)} 
+                            onChange={handleFormChange} 
+                            options={paymentMethods} 
+                            placeholder="Select a method" 
+                            disabled={paidById !== 'me'}
+                          />
+                        </div>
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
+
+                <div className="col-span-2">
+                  <Divider text="Optional Details" className="mb-4" />
+                  <Input label="Note" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" />
+                </div>
+
+                <div className="col-span-2">
+                  <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">Images</h2>
+                    <Tooltip content="Attach images of the physical receipt for your records."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
                   </div>
-                )}
-
-                {paidById === 'me' && paymentMethodsEnabled && (
-                  <div className="col-span-2"><Select label="Payment Method" name="paymentMethodId" value={String(formData.paymentMethodId)} onChange={handleFormChange} options={paymentMethods} placeholder="Select a method" /></div>
-                )}
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-lg font-semibold">Images</h2>
-                <Tooltip content="Attach images of the physical receipt for your records."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                {images.map(image => (
-                  <div key={image.key} className="relative group">
-                    <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
-                    <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <XMarkIcon className="h-3 w-3" />
-                    </button>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                    {images.map(image => (
+                      <div key={image.key} className="relative group">
+                        <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
+                        <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <XMarkIcon className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-gray-600 hover:border-gray-400 dark:hover:border-gray-500 cursor-pointer">
+                      <PhotoIcon className="h-8 w-8" />
+                      <span className="text-xs mt-1">Add Images</span>
+                      <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                    </label>
                   </div>
-                ))}
-                <label className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-gray-600 hover:border-gray-400 dark:hover:border-gray-500 cursor-pointer">
-                  <PhotoIcon className="h-8 w-8" />
-                  <span className="text-xs mt-1">Add Images</span>
-                  <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
-                </label>
+                </div>
               </div>
             </div>
           </Card>
 
           {debtEnabled && (
-            <Card>
-              <div className="p-6 space-y-4">
-                {isUnpaid ? (
-                  <InfoCard
-                    variant="info"
-                    title="Debt Management Disabled"
-                    message="Debt management is disabled when a receipt isn't paid by you."
-                  />
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-semibold">Debt Management</h2>
-                        <Tooltip content="Split the cost of this receipt with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+            <Card className="overflow-hidden">
+              <div className="relative p-6 space-y-4">
+                {hasSettledDebts && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                    <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
+                    <p className="mt-1 text-sm text-gray-500">One or more debts on this receipt have been settled. Debt configuration is now locked.</p>
+                  </div>
+                )}
+                <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
+                  {isUnpaid ? (
+                    <InfoCard
+                      variant="info"
+                      title="Debt Management Disabled"
+                      message="Debt management is disabled when a receipt isn't paid by you."
+                    />
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-lg font-semibold">Debt Management</h2>
+                          <Tooltip content="Split the cost of this receipt with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                        </div>
+                        <SplitTypeSelector />
                       </div>
-                      <SplitTypeSelector />
-                    </div>
 
-                    {splitType === 'total_split' && (
-                      <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
-                        <div className="grid grid-cols-2 gap-4 items-end">
-                          <Select
-                            label="Add Debtor"
-                            value=""
-                            onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
-                            options={[{ value: '', label: 'Choose...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                            className="bg-white dark:bg-gray-800"
-                            disabled={isDebtDisabled}
-                          />
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Own Shares</label>
-                              <Tooltip content="How many shares of the total cost you are responsible for."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-                            </div>
-                            <Input
-                              type="number"
-                              name="ownShares"
-                              value={String(formData.ownShares)}
-                              onChange={handleFormChange}
-                              min="0"
+                      {splitType === 'total_split' && (
+                        <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+                          <div className="grid grid-cols-2 gap-4 items-end">
+                            <Select
+                              label="Add Debtor"
+                              value=""
+                              onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
+                              options={[{ value: '', label: 'Choose...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                              className="bg-white dark:bg-gray-800"
                               disabled={isDebtDisabled}
                             />
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Own Shares</label>
+                                <Tooltip content="How many shares of the total cost you are responsible for."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                              </div>
+                              <Input
+                                type="number"
+                                name="ownShares"
+                                value={String(formData.ownShares)}
+                                onChange={handleFormChange}
+                                min="0"
+                                disabled={isDebtDisabled}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {receiptSplits.map(split => (
+                              <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span className="font-medium">{split.DebtorName}</span>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">Shares:</span>
+                                    <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" disabled={isDebtDisabled} />
+                                  </div>
+                                  {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
+                                </div>
+                              </div>
+                            ))}
+                            {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          {receiptSplits.map(split => (
-                            <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                              <span className="font-medium">{split.DebtorName}</span>
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-500">Shares:</span>
-                                  <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" disabled={isDebtDisabled} />
+                      )}
+
+                      {splitType === 'line_item' && receiptFormat === 'itemised' && (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
+                          <p className="text-sm text-blue-700 dark:text-blue-300">Assign items to debtors.</p>
+                          <Button onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
+                            Assign Debtors
+                          </Button>
+                        </div>
+                      )}
+
+                      {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Debt</h3>
+                            <Tooltip content="Projected debt amounts based on current split configuration."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {debtSummary.debtors.map((debtor) => (
+                              <div key={debtor.name} className="w-full">
+                                <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                                  {splitType === 'line_item' && !isDebtDisabled && (
+                                    <button
+                                      onClick={() => handleRemoveDebtorFromItems(debtor.debtorId)}
+                                      className="absolute top-1 right-1 bg-gray-200 dark:bg-gray-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <XMarkIcon className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                  <span className="text-gray-500 block">{debtor.name}</span>
+                                  <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
                                 </div>
-                                {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
                               </div>
-                            </div>
-                          ))}
-                          {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
-                        </div>
-                      </div>
-                    )}
-
-                    {splitType === 'line_item' && receiptFormat === 'itemised' && (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
-                        <p className="text-sm text-blue-700 dark:text-blue-300">Assign items to debtors.</p>
-                        <Button onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
-                          Assign Debtors
-                        </Button>
-                      </div>
-                    )}
-
-                    {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Debt</h3>
-                          <Tooltip content="Projected debt amounts based on current split configuration."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {debtSummary.debtors.map((debtor) => (
-                            <div key={debtor.name} className="w-full">
-                              <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                                {splitType === 'line_item' && !isDebtDisabled && (
-                                  <button
-                                    onClick={() => handleRemoveDebtorFromItems(debtor.debtorId)}
-                                    className="absolute top-1 right-1 bg-gray-200 dark:bg-gray-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <XMarkIcon className="h-3 w-3" />
-                                  </button>
-                                )}
-                                <span className="text-gray-500 block">{debtor.name}</span>
-                                <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
+                            ))}
+                            {debtSummary.self && (
+                              <div className="w-full">
+                                <div className="p-2 rounded border text-sm w-full bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+                                  <span className="text-blue-500 block">Self</span>
+                                  <span className="font-bold text-blue-800 dark:text-blue-200">€{debtSummary.self.toFixed(2)}</span>
+                                </div>
                               </div>
-                            </div>
-                          ))}
-                          {debtSummary.self && (
-                            <div className="w-full">
-                              <div className="p-2 rounded border text-sm w-full bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-                                <span className="text-blue-500 block">Self</span>
-                                <span className="font-bold text-blue-800 dark:text-blue-200">€{debtSummary.self.toFixed(2)}</span>
-                              </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </Card>
           )}
@@ -857,10 +890,10 @@ const ReceiptFormPage: React.FC = () => {
           <Card>
             <div className="p-6">
               <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6">
-                <Tooltip content={hasSettledDebts ? "Cannot change format when debts are settled" : "Enter each product individually."}>
+                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
                   <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Items</button>
                 </Tooltip>
-                <Tooltip content={hasSettledDebts ? "Cannot change format when debts are settled" : "Enter only the final total of the receipt."}>
+                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the receipt."}>
                   <button onClick={() => handleFormatChange('item-less')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Total Only</button>
                 </Tooltip>
               </div>

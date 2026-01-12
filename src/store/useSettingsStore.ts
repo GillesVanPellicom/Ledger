@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { Settings } from '../types';
+import {create} from 'zustand';
+import {devtools} from 'zustand/middleware';
+import {Settings} from '../types';
 
 interface SettingsState {
   settings: Settings;
@@ -47,10 +47,10 @@ export const useSettingsStore = create<SettingsState>()(
       settings: initialSettings,
       loading: true,
 
-      setSettings: (settings) => set({ settings }, false, 'setSettings'),
+      setSettings: (settings) => set({settings}, false, 'setSettings'),
 
       loadSettings: async () => {
-        set({ loading: true }, false, 'loadSettings/start');
+        set({loading: true}, false, 'loadSettings/start');
         try {
           let loadedSettings: Partial<Settings> = {};
           if (window.electronAPI) {
@@ -82,41 +82,41 @@ export const useSettingsStore = create<SettingsState>()(
             settings: {
               ...state.settings,
               ...loadedSettings,
-              modules: { ...state.settings.modules, ...loadedSettings.modules },
-              pdf: { ...state.settings.pdf, ...loadedSettings.pdf },
-              backup: { ...state.settings.backup, ...loadedSettings.backup },
-              paymentMethodStyles: { ...state.settings.paymentMethodStyles, ...loadedSettings.paymentMethodStyles },
-              datastore: { ...state.settings.datastore, ...loadedSettings.datastore },
+              modules: {...state.settings.modules, ...loadedSettings.modules},
+              pdf: {...state.settings.pdf, ...loadedSettings.pdf},
+              backup: {...state.settings.backup, ...loadedSettings.backup},
+              paymentMethodStyles: {...state.settings.paymentMethodStyles, ...loadedSettings.paymentMethodStyles},
+              datastore: {...state.settings.datastore, ...loadedSettings.datastore},
             },
             loading: false,
           }), false, 'loadSettings/success');
         } catch (error) {
           console.error("Failed to load settings:", error);
-          set({ loading: false }, false, 'loadSettings/error');
+          set({loading: false}, false, 'loadSettings/error');
         }
       },
 
       updateSettings: async (newSettings) => {
         const currentSettings = get().settings;
-        const updatedSettings = { ...currentSettings, ...newSettings };
-        
-        set({ settings: updatedSettings }, false, `updateSettings/${Object.keys(newSettings).join(',')}`);
+        const updatedSettings = {...currentSettings, ...newSettings};
+
+        set({settings: updatedSettings}, false, `updateSettings/${Object.keys(newSettings).join(',')}`);
 
         // Apply theme if changed
         if (newSettings.theme) {
-            if (newSettings.theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else if (newSettings.theme === 'light') {
-                document.documentElement.classList.remove('dark');
+          if (newSettings.theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else if (newSettings.theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+              document.documentElement.classList.add('dark');
             } else {
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
+              document.documentElement.classList.remove('dark');
             }
+          }
         }
-        
+
         try {
           if (window.electronAPI) {
             const result = await window.electronAPI.saveSettings(updatedSettings);
@@ -131,7 +131,7 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
     }),
-    { name: 'Settings Store' }
+    {name: 'Settings Store'}
   )
 );
 
