@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import ReferenceDataPage from './pages/ReferenceDataPage';
@@ -15,12 +15,12 @@ import UserNameSetup from './components/layout/UserNameSetup';
 import SettingsModal from './components/settings/SettingsModal';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useErrorStore } from './store/useErrorStore';
+import { useUIStore } from './store/useUIStore';
 
 function App() {
   const { showError } = useErrorStore();
   const { settings, loading } = useSettingsStore();
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [initialSettingsTab, setInitialSettingsTab] = useState('appearance');
+  const { isSettingsModalOpen, closeSettingsModal, settingsModalInitialTab } = useUIStore();
 
   useEffect(() => {
     const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
@@ -40,11 +40,6 @@ function App() {
     };
   }, [showError]);
 
-  const openSettingsModal = (tab = 'appearance') => {
-    setInitialSettingsTab(tab);
-    setIsSettingsModalOpen(true);
-  };
-
   if (loading) {
     return null; // Or a loading spinner
   }
@@ -62,7 +57,7 @@ function App() {
     <>
       <Router>
         <Routes>
-          <Route path="/" element={<MainLayout openSettingsModal={openSettingsModal} />}>
+          <Route path="/" element={<MainLayout />}>
             <Route index element={<ReceiptsPage />} />
             <Route path="reference-data" element={<ReferenceDataPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
@@ -73,14 +68,14 @@ function App() {
             
             <Route path="receipts/new" element={<ReceiptFormPage />} />
             <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />
-            <Route path="receipts/view/:id" element={<ReceiptViewPage openSettingsModal={openSettingsModal} />} />
+            <Route path="receipts/view/:id" element={<ReceiptViewPage />} />
           </Route>
         </Routes>
       </Router>
       <SettingsModal 
         isOpen={isSettingsModalOpen} 
-        onClose={() => setIsSettingsModalOpen(false)}
-        initialTab={initialSettingsTab}
+        onClose={closeSettingsModal}
+        initialTab={settingsModalInitialTab}
       />
     </>
   );

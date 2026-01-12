@@ -71,11 +71,7 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({isOpen, onClose, onCon
   );
 };
 
-interface ReceiptViewPageProps {
-  openSettingsModal: (tab: string) => void;
-}
-
-const ReceiptViewPage: React.FC<ReceiptViewPageProps> = ({openSettingsModal}) => {
+const ReceiptViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {settings} = useSettingsStore();
