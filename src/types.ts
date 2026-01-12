@@ -43,6 +43,12 @@ export interface Store {
   StoreIsActive: boolean;
 }
 
+export interface Category {
+  CategoryID: number;
+  CategoryName: string;
+  CategoryIsActive: boolean;
+}
+
 export interface Entity {
   EntityID: number;
   DebtorID: number;
@@ -59,6 +65,8 @@ export interface Product {
   ProductUnitID: number;
   ProductUnitType: string;
   ProductIsActive: boolean;
+  CategoryID?: number;
+  CategoryName?: string;
 }
 
 export interface Receipt {

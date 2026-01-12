@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../utils/db';
-import { Product, Store } from '../types';
+import { Product, Store, Category } from '../types';
 
 // --- Products ---
 
@@ -16,9 +16,10 @@ export const useProducts = (params: FetchProductsParams) => {
     queryFn: async () => {
       const offset = (params.page - 1) * params.pageSize;
       let query = `
-        SELECT p.*, u.ProductUnitType 
+        SELECT p.*, u.ProductUnitType, c.CategoryName
         FROM Products p
         LEFT JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
+        LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
         WHERE p.ProductIsActive = 1
       `;
       const queryParams: any[] = [];
@@ -40,7 +41,7 @@ export const useProducts = (params: FetchProductsParams) => {
         }
       }
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType', 'SELECT p.ProductID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType, c.CategoryName', 'SELECT p.ProductID')})`;
       const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
       const totalCount = countResult ? countResult.count : 0;
       
@@ -97,6 +98,50 @@ export const useActiveStores = () => {
   });
 };
 
+// --- Categories ---
+
+interface FetchCategoriesParams {
+  page: number;
+  pageSize: number;
+  searchTerm?: string;
+}
+
+export const useCategories = (params: FetchCategoriesParams) => {
+  return useQuery({
+    queryKey: ['categories', params],
+    queryFn: async () => {
+      const offset = (params.page - 1) * params.pageSize;
+      let query = `SELECT * FROM Categories`;
+      const queryParams: any[] = [];
+      
+      if (params.searchTerm) {
+        query += ` WHERE CategoryName LIKE ?`;
+        queryParams.push(`%${params.searchTerm}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT CategoryID')})`;
+      const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
+      const totalCount = countResult ? countResult.count : 0;
+      
+      query += ` ORDER BY CategoryName ASC LIMIT ? OFFSET ?`;
+      queryParams.push(params.pageSize, offset);
+      
+      const categories = await db.query<Category>(query, queryParams);
+      return { categories, totalCount };
+    },
+  });
+};
+
+export const useActiveCategories = () => {
+  return useQuery({
+    queryKey: ['categories', 'active'],
+    queryFn: async () => {
+      return await db.query<Category>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
+    },
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+};
+
 // --- Mutations ---
 
 export const useInvalidateReferenceData = () => {
@@ -104,5 +149,6 @@ export const useInvalidateReferenceData = () => {
   return () => {
     queryClient.invalidateQueries({ queryKey: ['products'] });
     queryClient.invalidateQueries({ queryKey: ['stores'] });
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
   };
 };

@@ -4,15 +4,16 @@ import Button from '../components/ui/Button';
 import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 import ProductModal from '../components/products/ProductModal';
 import StoreModal from '../components/stores/StoreModal';
+import CategoryModal from '../components/categories/CategoryModal';
 import Tooltip from '../components/ui/Tooltip';
-import { Product, Store } from '../types';
+import { Product, Store, Category } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { cn } from '../utils/cn';
-import { useProducts, useStores, useInvalidateReferenceData } from '../hooks/useReferenceData';
+import { useProducts, useStores, useCategories, useInvalidateReferenceData } from '../hooks/useReferenceData';
 
 const ReferenceDataPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'stores'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'stores' | 'categories'>('products');
   const invalidateReferenceData = useInvalidateReferenceData();
 
   // Products state
@@ -29,6 +30,13 @@ const ReferenceDataPage: React.FC = () => {
   const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
 
+  // Categories state
+  const [categoriesCurrentPage, setCategoriesCurrentPage] = useState<number>(1);
+  const [categoriesSearchTerm, setCategoriesSearchTerm] = useState<string>('');
+  const [categoriesPageSize, setCategoriesPageSize] = useState<number>(10);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
   const { data: productsData, isLoading: productsLoading } = useProducts({
     page: productsCurrentPage,
     pageSize: productsPageSize,
@@ -39,6 +47,12 @@ const ReferenceDataPage: React.FC = () => {
     page: storesCurrentPage,
     pageSize: storesPageSize,
     searchTerm: storesSearchTerm
+  });
+
+  const { data: categoriesData, isLoading: categoriesLoading } = useCategories({
+    page: categoriesCurrentPage,
+    pageSize: categoriesPageSize,
+    searchTerm: categoriesSearchTerm
   });
 
   const handleAddProduct = () => {
@@ -61,14 +75,25 @@ const ReferenceDataPage: React.FC = () => {
     setIsStoreModalOpen(true);
   };
 
+  const handleAddCategory = () => {
+    setEditingCategory(null);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category);
+    setIsCategoryModalOpen(true);
+  };
+
   const handleSave = () => {
     invalidateReferenceData();
   };
 
   const productColumns = [
-    { header: 'Name', accessor: 'ProductName', width: '40%' },
-    { header: 'Brand', accessor: 'ProductBrand', width: '35%' },
+    { header: 'Name', accessor: 'ProductName', width: '30%' },
+    { header: 'Brand', accessor: 'ProductBrand', width: '25%' },
     { header: 'Size', width: '15%', render: (row: Product) => `${row.ProductSize} ${row.ProductUnitType}` },
+    { header: 'Category', accessor: 'CategoryName', width: '20%' },
     {
       header: 'Actions',
       width: '10%',
@@ -123,6 +148,40 @@ const ReferenceDataPage: React.FC = () => {
     }
   ];
 
+  const categoryColumns = [
+    { header: 'Name', accessor: 'CategoryName', width: '80%' },
+    { 
+      header: 'Visibility', 
+      width: '10%',
+      className: 'text-center',
+      render: (row: Category) => (
+        <Tooltip content={row.CategoryIsActive ? 'Shown in lists' : 'Hidden from lists'}>
+          {row.CategoryIsActive ? 
+          <EyeIcon className="h-5 w-5 text-green inline-block" /> :
+          <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
+        </Tooltip>
+      )
+    },
+    {
+      header: '',
+      width: '10%',
+      className: 'text-right',
+      render: (row: Category) => (
+        <div className="flex justify-end">
+          <Tooltip content="Edit Category">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleEditCategory(row); }}
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+        </div>
+      )
+    }
+  ];
+
   const renderActions = () => {
     if (activeTab === 'products') {
       return (
@@ -133,9 +192,18 @@ const ReferenceDataPage: React.FC = () => {
         </Tooltip>
       );
     }
+    if (activeTab === 'stores') {
+      return (
+        <Tooltip content="Add Store">
+          <Button variant="ghost" size="icon" onClick={handleAddStore}>
+            <PlusIcon className="h-5 w-5" />
+          </Button>
+        </Tooltip>
+      );
+    }
     return (
-      <Tooltip content="Add Store">
-        <Button variant="ghost" size="icon" onClick={handleAddStore}>
+      <Tooltip content="Add Category">
+        <Button variant="ghost" size="icon" onClick={handleAddCategory}>
           <PlusIcon className="h-5 w-5" />
         </Button>
       </Tooltip>
@@ -146,6 +214,7 @@ const ReferenceDataPage: React.FC = () => {
     const tabs = [
       { id: 'products', label: 'Products' },
       { id: 'stores', label: 'Stores' },
+      { id: 'categories', label: 'Categories' },
     ];
 
     return (
@@ -153,7 +222,7 @@ const ReferenceDataPage: React.FC = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as 'products' | 'stores')}
+            onClick={() => setActiveTab(tab.id as 'products' | 'stores' | 'categories')}
             className={cn(
               tab.id === activeTab
                 ? 'border-accent text-accent'
@@ -206,6 +275,20 @@ const ReferenceDataPage: React.FC = () => {
               loading={storesLoading}
             />
           )}
+          {activeTab === 'categories' && (
+            <DataTable
+              data={categoriesData?.categories || []}
+              columns={categoryColumns}
+              totalCount={categoriesData?.totalCount || 0}
+              pageSize={categoriesPageSize}
+              onPageSizeChange={setCategoriesPageSize}
+              currentPage={categoriesCurrentPage}
+              onPageChange={setCategoriesCurrentPage}
+              onSearch={setCategoriesSearchTerm}
+              searchable={true}
+              loading={categoriesLoading}
+            />
+          )}
         </div>
       </PageWrapper>
       <ProductModal
@@ -218,6 +301,12 @@ const ReferenceDataPage: React.FC = () => {
         isOpen={isStoreModalOpen}
         onClose={() => setIsStoreModalOpen(false)}
         storeToEdit={editingStore}
+        onSave={handleSave}
+      />
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categoryToEdit={editingCategory}
         onSave={handleSave}
       />
     </div>

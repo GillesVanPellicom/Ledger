@@ -11,16 +11,31 @@ BEGIN
     UPDATE ProductUnits SET UpdatedAt = CURRENT_TIMESTAMP WHERE ProductUnitID = NEW.ProductUnitID;
 END;
 
+CREATE TABLE IF NOT EXISTS Categories (
+    CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CategoryName TEXT NOT NULL UNIQUE,
+    CategoryIsActive INTEGER NOT NULL DEFAULT 1,
+    CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER IF NOT EXISTS trigger_categories_updated_at AFTER UPDATE ON Categories
+BEGIN
+    UPDATE Categories SET UpdatedAt = CURRENT_TIMESTAMP WHERE CategoryID = NEW.CategoryID;
+END;
+
 CREATE TABLE IF NOT EXISTS Products (
     ProductID INTEGER PRIMARY KEY AUTOINCREMENT,
     ProductName TEXT NOT NULL,
     ProductBrand TEXT,
     ProductSize REAL,
+    CategoryID INTEGER,
     ProductUnitID INTEGER,
     ProductIsActive INTEGER NOT NULL DEFAULT 1,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ProductUnitID) REFERENCES ProductUnits (ProductUnitID),
+    FOREIGN KEY (CategoryID) REFERENCES Categories (CategoryID),
     UNIQUE (ProductName, ProductBrand, ProductSize, ProductUnitID)
 );
 
