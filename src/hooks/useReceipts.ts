@@ -112,6 +112,8 @@ export const useReceipts = (params: FetchReceiptsParams) => {
       const receipts = await db.query<Receipt>(query, queryParams);
       return { receipts, totalCount };
     },
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 
@@ -159,6 +161,8 @@ export const useReceipt = (id: string | undefined) => {
       return { receipt: receiptData, lineItems, images, splits, payments };
     },
     enabled: !!id,
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 

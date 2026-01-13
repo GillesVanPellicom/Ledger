@@ -8,6 +8,7 @@ interface FetchProductsParams {
   page: number;
   pageSize: number;
   searchTerm?: string;
+  enabled?: boolean;
 }
 
 export const useProducts = (params: FetchProductsParams) => {
@@ -51,6 +52,9 @@ export const useProducts = (params: FetchProductsParams) => {
       const products = await db.query<Product>(query, queryParams);
       return { products, totalCount };
     },
+    staleTime: 0,
+    gcTime: 0,
+    enabled: params.enabled !== false,
   });
 };
 
@@ -60,6 +64,7 @@ interface FetchStoresParams {
   page: number;
   pageSize: number;
   searchTerm?: string;
+  enabled?: boolean;
 }
 
 export const useStores = (params: FetchStoresParams) => {
@@ -85,6 +90,9 @@ export const useStores = (params: FetchStoresParams) => {
       const stores = await db.query<Store>(query, queryParams);
       return { stores, totalCount };
     },
+    staleTime: 0,
+    gcTime: 0,
+    enabled: params.enabled !== false,
   });
 };
 
@@ -94,7 +102,8 @@ export const useActiveStores = () => {
     queryFn: async () => {
       return await db.query<Store>('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 
@@ -104,6 +113,7 @@ interface FetchCategoriesParams {
   page: number;
   pageSize: number;
   searchTerm?: string;
+  enabled?: boolean;
 }
 
 export const useCategories = (params: FetchCategoriesParams) => {
@@ -129,6 +139,9 @@ export const useCategories = (params: FetchCategoriesParams) => {
       const categories = await db.query<Category>(query, queryParams);
       return { categories, totalCount };
     },
+    staleTime: 0,
+    gcTime: 0,
+    enabled: params.enabled !== false,
   });
 };
 
@@ -138,7 +151,8 @@ export const useActiveCategories = () => {
     queryFn: async () => {
       return await db.query<Category>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 

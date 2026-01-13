@@ -23,7 +23,7 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
     if (isOpen) {
       if (storeToEdit) {
         setName(storeToEdit.StoreName);
-        setIsActive(!!storeToEdit.StoreIsActive);
+        setIsActive(storeToEdit.StoreIsActive);
       } else {
         setName('');
         setIsActive(true);

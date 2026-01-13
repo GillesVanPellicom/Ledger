@@ -8,6 +8,8 @@ export const useEntities = () => {
     queryFn: async () => {
       return await db.query<Debtor>('SELECT * FROM Debtors ORDER BY DebtorName ASC');
     },
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 
@@ -17,6 +19,8 @@ export const useActiveEntities = () => {
     queryFn: async () => {
       return await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
     },
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 

@@ -40,19 +40,22 @@ const ReferenceDataPage: React.FC = () => {
   const { data: productsData, isLoading: productsLoading } = useProducts({
     page: productsCurrentPage,
     pageSize: productsPageSize,
-    searchTerm: productsSearchTerm
+    searchTerm: productsSearchTerm,
+    enabled: activeTab === 'products'
   });
 
   const { data: storesData, isLoading: storesLoading } = useStores({
     page: storesCurrentPage,
     pageSize: storesPageSize,
-    searchTerm: storesSearchTerm
+    searchTerm: storesSearchTerm,
+    enabled: activeTab === 'stores'
   });
 
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories({
     page: categoriesCurrentPage,
     pageSize: categoriesPageSize,
-    searchTerm: categoriesSearchTerm
+    searchTerm: categoriesSearchTerm,
+    enabled: activeTab === 'categories'
   });
 
   const handleAddProduct = () => {
