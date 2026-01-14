@@ -28,7 +28,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
           <input
             ref={ref}
             type="number"
-            className="border-x-0 h-10 text-center w-full bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 py-2.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 focus:border-gray-300 dark:focus:border-gray-700"
+            className="border-x-0 h-10 text-center w-full bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 py-2.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 focus:border-gray-300 dark:focus:border-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             placeholder="0"
             {...props}
           />

@@ -846,48 +846,40 @@ const ReceiptFormPage: React.FC = () => {
                   </div>
                   <NanoDataTable
                     headers={[
-                      { label: 'Product', className: 'col-span-5' },
-                      { label: 'Qty', className: 'col-span-2' },
-                      { label: 'Unit Price (€)', className: 'col-span-2' },
-                      { label: 'Total (€)', className: 'col-span-2 text-right' },
-                      { label: '', className: 'col-span-1' },
+                      { label: 'Product', className: 'w-2/5' },
+                      { label: 'Qty', className: 'w-1/5' },
+                      { label: 'Unit Price (€)', className: 'w-1/5' },
+                      { label: 'Total (€)', className: 'w-1/5 text-right' },
+                      { label: '', className: 'w-[5%]' },
                     ]}
-                    rows={lineItems.map(item => (
-                      <>
-                        <div className="col-span-5">
-                          <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                          <p className="text-xs text-gray-500">{item.ProductBrand}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            type="text"
-                            value={String(item.LineQuantity)}
-                            onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)}
-                            onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
-                            className="h-9"
-                            error={errors[`qty_${item.key}`]}
-                            disabled={isDebtDisabled}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            type="text"
-                            value={String(item.LineUnitPrice)}
-                            onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)}
-                            onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
-                            className="h-9"
-                            error={errors[`price_${item.key}`]}
-                            disabled={isDebtDisabled}
-                          />
-                        </div>
-                        <div className="col-span-2 text-right font-medium">
-                          {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                        </div>
-                        <div className="col-span-1 text-center">
-                          {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
-                        </div>
-                      </>
-                    ))}
+                    rows={lineItems.map(item => [
+                      <div>
+                        <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                        <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                      </div>,
+                      <Input
+                        type="text"
+                        value={String(item.LineQuantity)}
+                        onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)}
+                        onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
+                        className="h-9"
+                        error={errors[`qty_${item.key}`]}
+                        disabled={isDebtDisabled}
+                      />,
+                      <Input
+                        type="text"
+                        value={String(item.LineUnitPrice)}
+                        onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)}
+                        onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
+                        className="h-9"
+                        error={errors[`price_${item.key}`]}
+                        disabled={isDebtDisabled}
+                      />,
+                      <span className="font-medium text-right block">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</span>,
+                      <div className="text-center">
+                        {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
+                      </div>
+                    ])}
                   />
                   <Button variant="secondary" onClick={() => setIsProductSelectorOpen(true)} disabled={isDebtDisabled}><PlusIcon className="h-4 w-4 mr-2" />Add Item</Button>
                 </div>
@@ -971,16 +963,16 @@ const ReceiptFormPage: React.FC = () => {
                         <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
                           <NanoDataTable
                             headers={[
-                              { label: 'Name', className: 'col-span-6' },
-                              { label: 'Shares', className: 'col-span-4 text-center' },
-                              { label: '', className: 'col-span-2' },
+                              { label: 'Name', className: 'w-3/5' },
+                              { label: 'Shares', className: 'w-2/5 text-center' },
+                              { label: '', className: 'w-[5%]' },
                             ]}
                             rows={[
-                              <>
-                                <div className="col-span-6 font-medium">{settings.userName || 'User'} (Me)</div>
-                                <div className="col-span-4"><div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-full"></div></div>
-                                <div className="col-span-2"></div>
-                              </>
+                              [
+                                <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
+                                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-full"></div>,
+                                <div></div>
+                              ]
                             ]}
                           />
                         </div>
@@ -1002,55 +994,49 @@ const ReceiptFormPage: React.FC = () => {
                       </div>
 
                       {splitType === 'total_split' && (
-                        <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+                        <div className="space-y-4">
                           <NanoDataTable
                             headers={[
-                              { label: 'Name', className: 'col-span-6' },
-                              { label: 'Shares', className: 'col-span-4 text-center' },
-                              { label: '', className: 'col-span-2' },
+                              { label: 'Name', className: 'w-1/2' },
+                              { label: 'Shares', className: 'w-1/3 text-center' },
+                              { label: '', className: 'w-auto' },
                             ]}
                             rows={[
-                              <>
-                                <div className="col-span-6 font-medium">{settings.userName || 'User'} (Me)</div>
-                                <div className="col-span-4">
-                                  <StepperInput
-                                    value={String(formData.ownShares)}
-                                    onChange={handleFormChange}
-                                    name="ownShares"
-                                    onDecrement={() => setFormData(prev => ({ ...prev, ownShares: Math.max(0, (Number(prev.ownShares) || 0) - 1) }))}
-                                    onIncrement={() => setFormData(prev => ({ ...prev, ownShares: (Number(prev.ownShares) || 0) + 1 }))}
-                                    disabled={isDebtDisabled}
-                                    className="w-full"
-                                  />
-                                </div>
-                                <div className="col-span-2 text-center text-gray-400">
+                              [
+                                <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
+                                <StepperInput
+                                  value={String(formData.ownShares)}
+                                  onChange={handleFormChange}
+                                  name="ownShares"
+                                  onDecrement={() => setFormData(prev => ({ ...prev, ownShares: Math.max(0, (Number(prev.ownShares) || 0) - 1) }))}
+                                  onIncrement={() => setFormData(prev => ({ ...prev, ownShares: (Number(prev.ownShares) || 0) + 1 }))}
+                                  disabled={isDebtDisabled}
+                                  className="w-full"
+                                />,
+                                <div className="text-center text-gray-400">
                                   <Tooltip content="You cannot remove yourself">
                                     <LockClosedIcon className="h-4 w-4 mx-auto" />
                                   </Tooltip>
                                 </div>
-                              </>,
-                              ...receiptSplits.map(split => (
-                                <>
-                                  <div className="col-span-6 font-medium truncate">{split.DebtorName}</div>
-                                  <div className="col-span-4">
-                                    <StepperInput
-                                      value={String(split.SplitPart)}
-                                      onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
-                                      onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(1, (Number(split.SplitPart) || 0) - 1)))}
-                                      onIncrement={() => handleUpdateSplitPart(split.key, String((Number(split.SplitPart) || 0) + 1))}
-                                      disabled={isDebtDisabled}
-                                      className="w-full"
-                                    />
-                                  </div>
-                                  <div className="col-span-2 text-center">
-                                    {!isDebtDisabled && (
-                                      <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                        <XMarkIcon className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </>
-                              ))
+                              ],
+                              ...receiptSplits.map(split => ([
+                                <span className="font-medium truncate">{split.DebtorName}</span>,
+                                <StepperInput
+                                  value={String(split.SplitPart)}
+                                  onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
+                                  onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(1, (Number(split.SplitPart) || 0) - 1)))}
+                                  onIncrement={() => handleUpdateSplitPart(split.key, String((Number(split.SplitPart) || 0) + 1))}
+                                  disabled={isDebtDisabled}
+                                  className="w-full"
+                                />,
+                                <div className="text-center">
+                                  {!isDebtDisabled && (
+                                    <button onClick={() => handleRemoveSplit(split.key)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                      <XMarkIcon className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              ]))
                             ]}
                           />
                           <div className="flex items-center justify-between pt-2">
@@ -1102,11 +1088,17 @@ const ReceiptFormPage: React.FC = () => {
                         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estimated Debt</h3>
                           <DataGrid
-                            columns={[{ key: 'name', name: 'Name' }, { key: 'amount', name: 'Amount', className: 'text-right' }]}
+                            itemKey="name"
                             data={[
-                              ...(debtSummary.self ? [{ name: 'Self', amount: `€${debtSummary.self.toFixed(2)}` }] : []),
+                              ...(debtSummary.self ? [{ name: `${settings.userName || 'User'} (Me)`, amount: `€${debtSummary.self.toFixed(2)}` }] : []),
                               ...debtSummary.debtors.map(d => ({ name: d.name, amount: `€${d.amount.toFixed(2)}` }))
                             ]}
+                            renderItem={(item) => (
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium">{item.name}</span>
+                                <span className="text-lg font-semibold">{item.amount}</span>
+                              </div>
+                            )}
                           />
                         </div>
                       )}

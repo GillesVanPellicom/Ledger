@@ -3,28 +3,35 @@ import { cn } from '../../utils/cn';
 
 interface NanoDataTableProps {
   headers: { label: string; className?: string }[];
-  rows: React.ReactNode[];
+  rows: React.ReactNode[][];
   className?: string;
 }
 
 const NanoDataTable: React.FC<NanoDataTableProps> = ({ headers, rows, className }) => {
   return (
-    <div className={cn("space-y-2", className)}>
-      {/* Header Row */}
-      <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500 px-2">
-        {headers.map((header, index) => (
-          <div key={index} className={cn('col-span-1', header.className)}>
-            {header.label}
-          </div>
-        ))}
-      </div>
-
-      {/* Data Rows */}
-      {rows.map((row, index) => (
-        <div key={index} className="grid grid-cols-12 gap-4 items-center bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-          {row}
-        </div>
-      ))}
+    <div className={cn("overflow-x-auto", className)}>
+      <table className="w-full text-sm">
+        <thead className="text-left text-gray-500">
+          <tr>
+            {headers.map((header, index) => (
+              <th key={index} className={cn("p-2", header.className)}>
+                {header.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800">
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex} className="p-2">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
