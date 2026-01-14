@@ -38,7 +38,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   }, [isOpen, initialTab]);
 
   useEffect(() => {
-    if (import.meta.env.DEV) setIsDev(true);
+    const meta = import.meta as ImportMeta & { env: { DEV?: boolean } };
+    if (meta.env.DEV) setIsDev(true);
   }, []);
 
   useEffect(() => {

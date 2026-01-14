@@ -35,7 +35,9 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
     if (isOpen && debtInfo) {
       const fetchPaymentMethods = async () => {
         if (paymentMethodsEnabled) {
-          const methods = await db.query<{ PaymentMethodID: number; PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
+          const methods = await db.query<{ PaymentMethodID: number; PaymentMethodName: string }>(
+            'SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName'
+          );
           setPaymentMethods(methods.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
           
           if (debtInfo.receiptPaymentMethodId) {

@@ -1,12 +1,16 @@
 import React from 'react';
-import ReactDatePicker, { ReactDatePickerProps } from 'react-datepicker';
+import ReactDatePicker from 'react-datepicker';
+import type { ReactDatePickerProps as BaseDatePickerProps } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { cn } from '../../utils/cn';
 import { CalendarIcon } from '@heroicons/react/24/outline';
 
-interface DatePickerProps extends ReactDatePickerProps {
+// BaseDatePickerProps comes from react-datepicker and already includes props
+// like className, selected, startDate, endDate, selectsRange, etc.
+export interface DatePickerProps extends BaseDatePickerProps {
   label?: string;
   error?: string;
+  className?: string;
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({ className, label, error, ...props }) => {
