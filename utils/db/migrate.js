@@ -1,9 +1,11 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { task, info, success, done } from './styling.js';
+
+// Reuse the Electron migration system from the Node script
+import { runMigrations } from '../../electron/db/migrate.cjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, '../../datastore/fin.db');
 
 async function migrate() {
-  info('Starting database migration...');
+  info('Starting database migration using new migration system...');
 
   const db = await task('Connecting to database', () => {
     return new Promise((resolve, reject) => {
@@ -22,21 +24,8 @@ async function migrate() {
     });
   });
 
-  const schema = await task('Reading schema file', () => {
-    const schemaPath = path.join(__dirname, '../../electron/db_schema.sql');
-    if (!fs.existsSync(schemaPath)) {
-      throw new Error(`Schema file not found at ${schemaPath}`);
-    }
-    return fs.readFileSync(schemaPath, 'utf-8');
-  });
-
-  await task('Applying schema to database', () => {
-    return new Promise((resolve, reject) => {
-      db.exec(schema, (err) => {
-        if (err) reject(err);
-        else resolve('DONE');
-      });
-    });
+  await task('Running migrations', async () => {
+    await runMigrations(db);
   });
 
   await task('Closing database connection', () => {
@@ -49,7 +38,7 @@ async function migrate() {
   });
 
   done('Migration finished');
-  success('Database schema applied successfully');
+  success('All migrations applied successfully');
 }
 
 migrate().catch(err => {

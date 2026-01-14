@@ -61,7 +61,6 @@ function connectDatabase(dbPath) {
       return resolve({ success: true, disconnected: true });
     }
 
-    const dbExists = fs.existsSync(dbPath);
     const dbDir = path.dirname(dbPath);
     
     try {
@@ -89,28 +88,14 @@ function connectDatabase(dbPath) {
            return reject({ success: false, error: walErr.message });
         }
 
-        if (!dbExists) {
-          console.log('Database not found. Initializing from schema...');
-          const schemaPath = path.join(__dirname, 'db_schema.sql');
-          const schema = fs.readFileSync(schemaPath, 'utf8');
-          db.exec(schema, (execErr) => {
-            if (execErr) {
-              console.error('Failed to initialize database:', execErr);
-              return reject({ success: false, error: execErr.message });
-            }
-            console.log('Database initialized successfully.');
-            resolve({ success: true });
-          });
-        } else {
-          try {
-            await runMigrations(db);
-            console.log('Migrations run successfully');
-          } catch (migrationError) {
-            console.error('Failed to run migrations:', migrationError);
-            return reject({ success: false, error: migrationError.message });
-          }
+        try {
+          await runMigrations(db);
+          console.log('Migrations run successfully');
           console.log(`Connected to database: ${dbPath}`);
           resolve({ success: true });
+        } catch (migrationError) {
+          console.error('Failed to run migrations:', migrationError);
+          return reject({ success: false, error: migrationError.message });
         }
       });
     });

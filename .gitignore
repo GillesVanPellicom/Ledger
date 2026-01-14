@@ -17,6 +17,8 @@ dist-electron
 .vscode/*
 !.vscode/extensions.json
 .idea
+.qodo
+.aiassistant
 .DS_Store
 *.suo
 *.ntvs*

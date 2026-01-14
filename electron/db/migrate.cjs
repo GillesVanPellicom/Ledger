@@ -1,82 +1,97 @@
 const fs = require('fs/promises');
 const path = require('path');
+const crypto = require('crypto');
 
 const MIGRATIONS_DIR = path.join(__dirname, '../migrations');
 
-const runMigrations = async (db) => {
+async function runMigrations(db) {
   await createMigrationsTable(db);
 
   const appliedMigrations = await getAppliedMigrations(db);
-  const allMigrations = await getAllMigrations();
+  const allMigrations = await getAllMigrationFiles();
 
-  for (const migration of allMigrations) {
-    if (!appliedMigrations.includes(migration)) {
-      await applyMigration(db, migration);
+  for (const migrationFile of allMigrations) {
+    const version = migrationFile.split('_')[0];
+    const filePath = path.join(MIGRATIONS_DIR, migrationFile);
+    const sql = await fs.readFile(filePath, 'utf-8');
+    const checksum = crypto.createHash('sha256').update(sql).digest('hex');
+
+    const applied = appliedMigrations.get(version);
+
+    if (applied) {
+      if (applied.checksum !== checksum) {
+        throw new Error(`Checksum mismatch for migration ${version}. Expected ${applied.checksum} but got ${checksum}.`);
+      }
+    } else {
+      console.log(`Applying migration ${version}...`);
+      await applyMigration(db, version, sql, checksum);
     }
   }
-};
+}
 
-const createMigrationsTable = async (db) => {
+function createMigrationsTable(db) {
   return new Promise((resolve, reject) => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS migrations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        version TEXT PRIMARY KEY,
+        checksum TEXT NOT NULL,
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `, (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
+      if (err) reject(err);
+      else resolve();
     });
   });
-};
+}
 
-const getAppliedMigrations = async (db) => {
+function getAppliedMigrations(db) {
   return new Promise((resolve, reject) => {
-    db.all('SELECT name FROM migrations', (err, rows) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(rows.map(row => row.name));
-      }
+    db.all('SELECT version, checksum FROM migrations', (err, rows) => {
+      if (err) return reject(err);
+      const applied = new Map(rows.map(row => [row.version, { checksum: row.checksum }]));
+      resolve(applied);
     });
   });
-};
+}
 
-const getAllMigrations = async () => {
-  const files = await fs.readdir(MIGRATIONS_DIR);
-  return files.filter(file => file.endsWith('.sql')).sort();
-};
+async function getAllMigrationFiles() {
+  try {
+    const files = await fs.readdir(MIGRATIONS_DIR);
+    return files.filter(file => file.endsWith('.sql')).sort();
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      // Migrations directory might not exist, which is fine.
+      return [];
+    }
+    throw error;
+  }
+}
 
-const applyMigration = async (db, migration) => {
-  const migrationPath = path.join(MIGRATIONS_DIR, migration);
-  const sql = await fs.readFile(migrationPath, 'utf-8');
-
+function applyMigration(db, version, sql, checksum) {
   return new Promise((resolve, reject) => {
-    db.exec(sql, async (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        await recordMigration(db, migration);
-        resolve();
-      }
-    });
-  });
-};
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION', (err) => {
+        if (err) return reject(err);
 
-const recordMigration = async (db, migration) => {
-  return new Promise((resolve, reject) => {
-    db.run('INSERT INTO migrations (name) VALUES (?)', [migration], (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
+        db.exec(sql, (execErr) => {
+          if (execErr) {
+            return db.run('ROLLBACK', () => reject(execErr));
+          }
+
+          db.run('INSERT INTO migrations (version, checksum) VALUES (?, ?)', [version, checksum], (insertErr) => {
+            if (insertErr) {
+              return db.run('ROLLBACK', () => reject(insertErr));
+            }
+
+            db.run('COMMIT', (commitErr) => {
+              if (commitErr) return reject(commitErr);
+              resolve();
+            });
+          });
+        });
+      });
     });
   });
-};
+}
 
 module.exports = { runMigrations };
