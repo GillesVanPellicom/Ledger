@@ -379,6 +379,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
   const getTransactionTypeDisplayName = (type: PageTransaction['type']) => {
     if (type === 'transfer_in' || type === 'transfer_out') return 'transfer';
+    if (type === 'receipt') return 'expense';
     return type;
   }
 
@@ -526,7 +527,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
                   onChange={(e) => setFilter(e.target.value)}
                   options={[
                     { value: 'all', label: 'All Transactions' },
-                    { value: 'receipt', label: 'Receipts' },
+                    { value: 'receipt', label: 'Expenses' },
                     { value: 'deposit', label: 'Deposits' },
                     { value: 'transfer', label: 'Transfers' },
                   ]}

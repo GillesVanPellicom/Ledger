@@ -39,7 +39,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   useEffect(() => {
     const meta = import.meta as ImportMeta & { env: { DEV?: boolean } };
-    if (meta.env.DEV) setIsDev(true);
+    if (meta.env && meta.env.DEV) setIsDev(true);
   }, []);
 
   useEffect(() => {
@@ -222,12 +222,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 </div>
               </div>
             )}
-            {activeTab === 'pdf' && (<div className="space-y-4"><div><SectionTitle title="Receipt Export" tooltip="Customize the content included when exporting individual receipts to PDF." /><Switch label="Show Unique Item Count" description="Include the number of unique items on the receipt." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Switch label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Switch label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Switch label="Add Receipt Images" description="Include receipt images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple receipts at once." /><Switch label="Add Summary Page" description="Append a 'super-receipt' summarizing all receipts in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
+            {activeTab === 'pdf' && (<div className="space-y-4"><div><SectionTitle title="Expense Export" tooltip="Customize the content included when exporting individual expenses to PDF." /><Switch label="Show Unique Item Count" description="Include the number of unique items on the expense." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} /><div className="mt-3"><Switch label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} /></div><div className="mt-3"><Switch label="Show Payment Method" description="Display the payment method used." isEnabled={settings.pdf.showPaymentMethod} onToggle={() => handlePdfToggle('showPaymentMethod')} /></div><div className="mt-3"><Switch label="Add Expense Images" description="Include expense images in the PDF." isEnabled={settings.pdf.addReceiptImages} onToggle={() => handlePdfToggle('addReceiptImages')} /></div></div><div><SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple expenses at once." /><Switch label="Add Summary Page" description="Append a 'super-expense' summarizing all expenses in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} /></div></div>)}
             {activeTab === 'data' && (
               <div className="space-y-6">
                 <Card>
                   <div className="p-4">
-                    <SectionTitle title="Your Name" tooltip="This name is used on generated documents like PDF receipts to identify you." />
+                    <SectionTitle title="Your Name" tooltip="This name is used on generated documents like PDF expenses to identify you." />
                     <div className="flex items-center gap-2">
                       <Input
                         type="text"

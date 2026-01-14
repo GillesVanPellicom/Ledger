@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS TopUps (
+    TopUpID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PaymentMethodID INTEGER NOT NULL,
+    TopUpAmount REAL NOT NULL,
+    TopUpDate TEXT NOT NULL,
+    TopUpNote TEXT,
+    TransferID INTEGER,
+    CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID) ON DELETE CASCADE,
+    FOREIGN KEY (TransferID) REFERENCES Transfers (TransferID) ON DELETE CASCADE
+);
+
+CREATE TRIGGER trigger_topups_updated_at AFTER UPDATE ON TopUps
+BEGIN
+    UPDATE TopUps SET UpdatedAt = CURRENT_TIMESTAMP WHERE TopUpID = NEW.TopUpID;
+END;
+
+CREATE INDEX IF NOT EXISTS idx_topups_transfer_id ON TopUps (TransferID);

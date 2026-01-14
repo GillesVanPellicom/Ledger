@@ -150,7 +150,7 @@ const EntityDetailsPage: React.FC = () => {
       }
 
       if (receiptsToProcess.length === 0) {
-        showError(new Error("No receipts match the selected criteria."));
+        showError(new Error("No expenses match the selected criteria."));
         return;
       }
 

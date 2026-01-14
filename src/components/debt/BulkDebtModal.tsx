@@ -130,15 +130,15 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
       <Modal
         isOpen={isOpen && !isProcessing}
         onClose={onClose}
-        title={`Bulk Assign Debt to ${receiptIds.length} Receipts`}
+        title={`Bulk Assign Debt to ${receiptIds.length} Expenses`}
         footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={startBulkUpdate}
                                                                                        disabled={totalShares === 0}>Apply
                                                                                                                     Debt</Button></>}
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">This will apply a 'Split Total' debt configuration to
-                                                                  all selected receipts. Any existing debt assignments
-                                                                  on these receipts will be affected.</p>
+                                                                  all selected expenses. Any existing debt assignments
+                                                                  on these expenses will be affected.</p>
           <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
             <div className="grid grid-cols-2 gap-4 items-end">
               <Select
@@ -197,7 +197,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
         isOpen={isConflictModalOpen}
         onClose={() => setIsConflictModalOpen(false)}
         title="Debt Assignment Conflict"
-        message={`${conflictingReceipts.length} of the selected receipts already have debt assignments. How would you like to proceed?`}
+        message={`${conflictingReceipts.length} of the selected expenses already have debt assignments. How would you like to proceed?`}
         confirmText="Overwrite All"
         onConfirm={() => {
           setIsConflictModalOpen(false);

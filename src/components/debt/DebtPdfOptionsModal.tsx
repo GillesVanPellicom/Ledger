@@ -31,13 +31,13 @@ const DebtPdfOptionsModal: React.FC<DebtPdfOptionsModalProps> = ({isOpen, onClos
     >
       <div className="space-y-4">
         <Select
-          label="Include Receipts"
+          label="Include Expenses"
           value={direction}
           onChange={(e) => setDirection(e.target.value as 'all' | 'to_me' | 'to_entity')}
           options={[
-            {value: 'all', label: 'All Receipts'},
-            {value: 'to_me', label: 'Receipts where they owe you'},
-            {value: 'to_entity', label: 'Receipts where you owe them'},
+            {value: 'all', label: 'All Expenses'},
+            {value: 'to_me', label: 'Expenses where they owe you'},
+            {value: 'to_entity', label: 'Expenses where you owe them'},
           ]}
         />
         <Select

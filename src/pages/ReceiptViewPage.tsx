@@ -277,7 +277,7 @@ const ReceiptViewPage: React.FC = () => {
   }
 
   if (!receipt) {
-    return <div className="text-center">Receipt not found.</div>;
+    return <div className="text-center">Expense not found.</div>;
   }
 
   return (
@@ -310,7 +310,7 @@ const ReceiptViewPage: React.FC = () => {
               </Button>
             </Tooltip>
             {receipt.Status === 'unpaid' && (
-              <Tooltip content={receipt.IsTentative ? "Cannot mark a tentative receipt as paid" : "Mark as Paid"}>
+              <Tooltip content={receipt.IsTentative ? "Cannot mark a tentative expense as paid" : "Mark as Paid"}>
                 <div className={cn(!receipt.IsTentative && "cursor-pointer")}>
                   <Button
                     variant="ghost"
@@ -332,8 +332,8 @@ const ReceiptViewPage: React.FC = () => {
             {!!receipt.IsTentative && (
               <InfoCard
                 variant="info"
-                title="Tentative Receipt"
-                message="This is a draft receipt. It won't affect analytics or debts until made permanent."
+                title="Tentative Expense"
+                message="This is a draft expense. It won't affect analytics or debts until made permanent."
               >
                 <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
               </InfoCard>
@@ -382,8 +382,8 @@ const ReceiptViewPage: React.FC = () => {
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
                     <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Receipt</h3>
-                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this receipt.</p>
+                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Expense</h3>
+                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this expense.</p>
                   </div>
                 </div>
               </Card>
@@ -465,7 +465,7 @@ const ReceiptViewPage: React.FC = () => {
                     <p className="text-sm text-gray-500">Total Amount</p>
                     <p className="text-2xl font-bold">€{totalAmount.toFixed(2)}</p>
                   </div>
-                  <Tooltip content={receipt.Status === 'paid' ? 'This receipt has been paid for.' : `Total amount is owed to ${receipt.OwedToDebtorName}.`}>
+                  <Tooltip content={receipt.Status === 'paid' ? 'This expense has been paid for.' : `Total amount is owed to ${receipt.OwedToDebtorName}.`}>
                     <span
                       className={cn(
                         'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
@@ -604,16 +604,16 @@ const ReceiptViewPage: React.FC = () => {
         isOpen={makePermanentModalOpen}
         onClose={() => setMakePermanentModalOpen(false)}
         onConfirm={handleMakePermanent}
-        title="Make Receipt Permanent"
-        message="Are you sure you want to make this receipt permanent? This action is irreversible."
+        title="Make Expense Permanent"
+        message="Are you sure you want to make this expense permanent? This action is irreversible."
       />
 
       <ConfirmModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDelete}
-        title="Delete Receipt"
-        message="Are you sure you want to permanently delete this receipt? This action cannot be undone."
+        title="Delete Expense"
+        message="Are you sure you want to permanently delete this expense? This action cannot be undone."
       />
     </div>
   );

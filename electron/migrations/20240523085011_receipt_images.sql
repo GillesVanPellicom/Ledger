@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS ReceiptImages (
+    ImageID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ReceiptID INTEGER NOT NULL,
+    ImagePath TEXT NOT NULL,
+    CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE
+);
+
+CREATE TRIGGER trigger_receiptimages_updated_at AFTER UPDATE ON ReceiptImages
+BEGIN
+    UPDATE ReceiptImages SET UpdatedAt = CURRENT_TIMESTAMP WHERE ImageID = NEW.ImageID;
+END;
+
+CREATE INDEX IF NOT EXISTS idx_receiptimages_receipt_id ON ReceiptImages (ReceiptID);

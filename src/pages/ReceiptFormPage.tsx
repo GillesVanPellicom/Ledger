@@ -355,9 +355,9 @@ const ReceiptFormPage: React.FC = () => {
       key: nanoid(), 
       ProductID: product.ProductID, 
       ProductName: product.ProductName, 
-      ProductBrand: product.ProductBrand,
-      ProductSize: product.ProductSize,
-      ProductUnitType: product.ProductUnitType,
+      ProductBrand: product.ProductBrand, 
+      ProductSize: product.ProductSize, 
+      ProductUnitType: product.ProductUnitType, 
       LineQuantity: 1, 
       LineUnitPrice: 0.00,
       DebtorID: null
@@ -628,7 +628,7 @@ const ReceiptFormPage: React.FC = () => {
   const SplitTypeSelector = () => {
     const buttons = [
       { type: 'none' as const, label: 'None', tooltip: 'No debt splitting.' },
-      { type: 'total_split' as const, label: 'Split Total', tooltip: 'Split the total receipt amount by shares.' },
+      { type: 'total_split' as const, label: 'Split Total', tooltip: 'Split the total expense amount by shares.' },
       ...(receiptFormat === 'itemised' ? [{ type: 'line_item' as const, label: 'Per Item', tooltip: 'Assign specific items to debtors.' }] : [])
     ];
 
@@ -660,7 +660,7 @@ const ReceiptFormPage: React.FC = () => {
   return (
     <div>
       <Header
-        title={isEditing ? 'Edit Receipt' : 'Create New Receipt'}
+        title={isEditing ? 'Edit Expense' : 'Create New Expense'}
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -695,7 +695,7 @@ const ReceiptFormPage: React.FC = () => {
                     </Tooltip>
                   </div>
                 </div>
-                <div className="col-span-1"><DatePicker label="Receipt Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
+                <div className="col-span-1"><DatePicker label="Expense Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
                 
                 <div className={cn("grid grid-cols-2 gap-6 col-span-2 items-end", !paymentMethodsEnabled && "grid-cols-1")}>
                   {debtEnabled && (
@@ -773,7 +773,7 @@ const ReceiptFormPage: React.FC = () => {
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
                     <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
                     <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
-                    <p className="mt-1 text-sm text-gray-500">One or more debts on this receipt have been settled. Debt configuration is now locked.</p>
+                    <p className="mt-1 text-sm text-gray-500">One or more debts on this expense have been settled. Debt configuration is now locked.</p>
                   </div>
                 )}
                 <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
@@ -781,14 +781,14 @@ const ReceiptFormPage: React.FC = () => {
                     <InfoCard
                       variant="info"
                       title="Debt Management Disabled"
-                      message="Debt management is disabled when a receipt isn't paid by you."
+                      message="Debt management is disabled when an expense isn't paid by you."
                     />
                   ) : (
                     <>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <h2 className="text-lg font-semibold">Debt Management</h2>
-                          <Tooltip content="Split the cost of this receipt with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                          <Tooltip content="Split the cost of this expense with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
                         </div>
                         <SplitTypeSelector />
                       </div>
@@ -893,7 +893,7 @@ const ReceiptFormPage: React.FC = () => {
                 <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
                   <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Items</button>
                 </Tooltip>
-                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the receipt."}>
+                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
                   <button onClick={() => handleFormatChange('item-less')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Total Only</button>
                 </Tooltip>
               </div>
@@ -1044,21 +1044,21 @@ const ReceiptFormPage: React.FC = () => {
           <div className="flex justify-end gap-4">
             <Button variant="secondary" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
             {isEditing && initialIsTentative && (
-              <Tooltip content="This receipt is currently tentative. Saving it will make it permanent.">
+              <Tooltip content="This expense is currently tentative. Saving it will make it permanent.">
                 <Button onClick={() => handleSubmit(false)} loading={saving}>
                   Save as Permanent
                 </Button>
               </Tooltip>
             )}
             {!isEditing && (
-              <Tooltip content="Tentative receipts are drafts and won't affect analytics or debts until made permanent.">
+              <Tooltip content="Tentative expenses are drafts and won't affect analytics or debts until made permanent.">
                 <Button onClick={() => handleSubmit(true)} loading={saving}>
                   Save Tentatively
                 </Button>
               </Tooltip>
             )}
             <Button onClick={() => handleSubmit(isEditing ? initialIsTentative : false)} loading={saving}>
-              {isEditing ? (initialIsTentative ? 'Update Tentative Receipt' : 'Save') : 'Save'}
+              {isEditing ? (initialIsTentative ? 'Update Tentative Expense' : 'Save') : 'Save'}
             </Button>
           </div>
 
@@ -1084,7 +1084,7 @@ const ReceiptFormPage: React.FC = () => {
             onClose={() => setUnpaidConfirmModalOpen(false)}
             onConfirm={confirmStatusChange}
             title="Discard Debt Information?"
-            message="Changing status to 'Unpaid' will clear all existing debt splits and assignments for this receipt. Are you sure?"
+            message="Changing status to 'Unpaid' will clear all existing debt splits and assignments for this expense. Are you sure?"
           />
 
           <ConfirmModal
@@ -1099,8 +1099,8 @@ const ReceiptFormPage: React.FC = () => {
             isOpen={formatChangeModal.isOpen}
             onClose={() => setFormatChangeModal({ isOpen: false, newFormat: null })}
             onConfirm={confirmFormatChange}
-            title="Change Receipt Format?"
-            message="Are you sure you want to change the receipt format? Some data will be cleared."
+            title="Change Expense Format?"
+            message="Are you sure you want to change the expense format? Some data will be cleared."
           />
 
           <LineItemSelectionModal

@@ -134,7 +134,7 @@ export const generateReceiptsPdf = async (receipts: FullReceipt[], options: PdfO
     if (options.addReceiptImages && receipt.images && receipt.images.length > 0) {
       doc.addPage();
       doc.setFontSize(16);
-      doc.text('Receipt Images', 14, 22);
+      doc.text('Expense Images', 14, 22);
       let imageY = 30;
       for (const image of receipt.images) {
         try {
@@ -175,7 +175,7 @@ export const generateReceiptsPdf = async (receipts: FullReceipt[], options: PdfO
     doc.addPage();
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(24);
-    doc.text('Receipts Summary', 14, 22);
+    doc.text('Expenses Summary', 14, 22);
 
     const summaryColumns = ["Store", "Date", "Note", "Total"];
     const summaryRows = receipts.map(r => [
@@ -196,5 +196,5 @@ export const generateReceiptsPdf = async (receipts: FullReceipt[], options: PdfO
     });
   }
 
-  doc.save(`receipts-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  doc.save(`expenses-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 };

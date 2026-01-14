@@ -129,17 +129,17 @@ const ReceiptsPage: React.FC = () => {
       render: (row: Receipt) => (
         <div className="flex items-center justify-center gap-3">
           {row.IsNonItemised ? (
-            <Tooltip content="Total-only receipt">
+            <Tooltip content="Total-only expense">
               <ClipboardIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           ) : (
-            <Tooltip content="Detailed Receipt">
+            <Tooltip content="Detailed Expense">
               <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           )}
 
           {row.Status === 'unpaid' ? (
-            <Tooltip content="This is an unpaid receipt, meaning it is owed to the person who paid it by you.">
+            <Tooltip content="This is an unpaid expense, meaning it is owed to the person who paid it by you.">
               <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500"/>
             </Tooltip>
           ) : debtEnabled && (row.UnpaidDebtorCount || 0) > 0 ? (
@@ -153,7 +153,7 @@ const ReceiptsPage: React.FC = () => {
           ) : <div className="w-5"/>}
 
           {row.IsTentative ? (
-            <Tooltip content="Tentative Receipt">
+            <Tooltip content="Tentative Expense">
               <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           ) : <div className="w-5"/>}
@@ -182,7 +182,7 @@ const ReceiptsPage: React.FC = () => {
     className: 'text-right',
     render: (row: Receipt) => (
       <div className="flex justify-end items-center">
-          <Tooltip content="Delete Receipt">
+          <Tooltip content="Delete Expense">
             <Button
               variant="ghost"
               size="icon"
@@ -201,9 +201,9 @@ const ReceiptsPage: React.FC = () => {
   return (
     <div>
       <Header
-        title="Receipts"
+        title="Expenses"
         actions={
-          <Tooltip content="New Receipt">
+          <Tooltip content="New Expense">
             <Button variant="ghost" size="icon" onClick={() => navigate('/receipts/new')}>
               <PlusIcon className="h-5 w-5"/>
             </Button>
@@ -272,8 +272,8 @@ const ReceiptsPage: React.FC = () => {
               setReceiptToDelete(null);
             }}
             onConfirm={handleDelete}
-            title={`Delete ${receiptToDelete ? 'Receipt' : `${selectedReceiptIds.length} Receipts`}`}
-            message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this receipt' : `${selectedReceiptIds.length} selected receipts`}? This action cannot be undone.`}
+            title={`Delete ${receiptToDelete ? 'Expense' : `${selectedReceiptIds.length} Expenses`}`}
+            message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this expense' : `${selectedReceiptIds.length} selected expenses`}? This action cannot be undone.`}
           />
 
           <ProgressModal

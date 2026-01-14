@@ -20,7 +20,7 @@ const Sidenav: React.FC = () => {
   const { isSidenavCollapsed, toggleSidenav, openSettingsModal } = useUIStore();
 
   const navItems = [
-    { path: '/', label: 'Receipts', icon: ReceiptPercentIcon, activePaths: ['/', '/receipts'] },
+    { path: '/', label: 'Expenses', icon: ReceiptPercentIcon, activePaths: ['/', '/receipts'] },
     { path: '/reference-data', label: 'Reference Data', icon: CircleStackIcon, activePaths: ['/reference-data'] },
     { path: '/analytics', label: 'Analytics', icon: ChartBarIcon, activePaths: ['/analytics'] },
   ];

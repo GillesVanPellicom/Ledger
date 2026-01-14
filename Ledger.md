@@ -1,19 +1,19 @@
 # Versie 1
 ## Stijl
 - brand auto caps in settings
-- receipt edit unit price 0
-- receipt data tabel payment method info 
-- receipt data tabel empty note dash
+- expense edit unit price 0
+- expense data tabel payment method info 
+- expense data tabel empty note dash
 
 ## Technisch
-- bij het verwijderen van payment method, tussen haakjes oude payment method toevoegen bij de receipts
+- bij het verwijderen van payment method, tussen haakjes oude payment method toevoegen bij de expenses
 - brand required weg
 - size required weg
 - unit required weg
 ## Features
-- concept receipt form state save
+- concept expense form state save
 - save and select bij product add modal
-- receipt total korting
+- expense total korting
 
 
 # Versie 2
@@ -32,10 +32,10 @@
 - enforce capitalization schakelt capital uit niet aan
 - enforce capitalization ook inschakelen voor store/brand/debtor/text inputs
 - bij het bewaren van de concept:
-	- bewaar elk concept als nieuwe receipt met mogelijks incomplete data 
+	- bewaar elk concept als nieuwe expense met mogelijks incomplete data 
 	- voor concept gebruik een ander warning symbol
-	- zorg ervoor dat meerdere concept receipts tegelijk kunnen bestaan
-	- de kosten opgegeven in de concept receipts worden niet meegerekend
+	- zorg ervoor dat meerdere concept expenses tegelijk kunnen bestaan
+	- de kosten opgegeven in de concept expenses worden niet meegerekend
 - bij ### Assign Items to Debtors, items per page doesnt work
 - 
 ## Features
@@ -46,8 +46,8 @@
 	- bij overboeking komt dit automatisch bij de ander payment method te staan in de log
 	- een overboeking kan ook naar een entity
 
-- bij create new receipt, payment method, standaard preferred payment method selected
-- bij create new receipt, debt managed, standaard preferred debtor selected
-- bij create new receipt, items, qty up/down arrow to add and remove qty
-- bij create new receipt, items, items kunnen verschuiven van order
+- bij create new expense, payment method, standaard preferred payment method selected
+- bij create new expense, debt managed, standaard preferred debtor selected
+- bij create new expense, items, qty up/down arrow to add and remove qty
+- bij create new expense, items, items kunnen verschuiven van order
 - standard items per page changeable in settings
