@@ -10,6 +10,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { PlusIcon } from '@heroicons/react/24/solid';
 import Tooltip from '../ui/Tooltip';
 import CategoryModal from '../categories/CategoryModal';
+import StepperInput from '../ui/StepperInput';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -177,36 +178,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Size
-              </label>
-              <div className="relative flex items-center shadow-sm rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, ProductSize: String(Math.max(0, (parseFloat(prev.ProductSize) || 0) - 1)) }))}
-                  className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-l-lg text-sm px-3 focus:outline-none h-10 transition-colors"
-                >
-                  <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14"/></svg>
-                </button>
-                <input
-                  type="number"
-                  name="ProductSize"
-                  value={formData.ProductSize}
-                  onChange={handleChange}
-                  className="border-x-0 h-10 text-center w-full bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 py-2.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 focus:border-gray-300 dark:focus:border-gray-700"
-                  placeholder="0"
-                />
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, ProductSize: String((parseFloat(prev.ProductSize) || 0) + 1) }))}
-                  className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 transition-colors"
-                >
-                  <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7 7V5"/></svg>
-                </button>
-              </div>
-              {errors.ProductSize && <p className="mt-1 text-xs text-danger">{errors.ProductSize}</p>}
-            </div>
+            <StepperInput
+              label="Size"
+              name="ProductSize"
+              value={formData.ProductSize}
+              onChange={handleChange}
+              onDecrement={() => setFormData(prev => ({ ...prev, ProductSize: String(Math.max(0, (parseFloat(prev.ProductSize) || 0) - 1)) }))}
+              onIncrement={() => setFormData(prev => ({ ...prev, ProductSize: String((parseFloat(prev.ProductSize) || 0) + 1) }))}
+              error={errors.ProductSize}
+              className="col-span-1"
+            />
             <Select label="Unit" name="ProductUnitID" value={formData.ProductUnitID} onChange={handleChange} options={units} placeholder="Select Unit" error={errors.ProductUnitID} />
           </div>
         </form>
