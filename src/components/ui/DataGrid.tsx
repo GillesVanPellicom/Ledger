@@ -9,6 +9,7 @@ interface DataGridProps<T> {
   itemKey: keyof T;
   minItemWidth?: number;
   className?: string;
+  disableMinHeight?: boolean;
 }
 
 const DataGrid = <T extends { [key: string]: any }>({
@@ -18,6 +19,7 @@ const DataGrid = <T extends { [key: string]: any }>({
   itemKey,
   minItemWidth = 220,
   className,
+  disableMinHeight = false,
 }: DataGridProps<T>) => {
   const gridRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(3);
@@ -69,7 +71,7 @@ const DataGrid = <T extends { [key: string]: any }>({
             {item ? (
               renderItem(item)
             ) : (
-              <div className="h-full w-full flex items-center justify-center min-h-[120px]">
+              <div className={cn("h-full w-full flex items-center justify-center", !disableMinHeight && "min-h-[5rem]")}>
                 <MinusIcon className="h-8 w-8 text-gray-300 dark:text-gray-700" />
               </div>
             )}
