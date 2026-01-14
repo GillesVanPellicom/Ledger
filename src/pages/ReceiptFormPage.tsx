@@ -15,6 +15,8 @@ import Tooltip from '../components/ui/Tooltip';
 import { ConfirmModal } from '../components/ui/Modal';
 import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
 import StoreModal from '../components/stores/StoreModal';
+import EntityModal from '../components/debt/EntityModal';
+import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import { Debtor, LineItem, ReceiptImage, ReceiptSplit, Store } from '../types';
 import InfoCard from '../components/ui/InfoCard';
 import '../electron.d';
@@ -57,6 +59,8 @@ const ReceiptFormPage: React.FC = () => {
   const [saving, setSaving] = useState<boolean>(false);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState<boolean>(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
+  const [isEntityModalOpen, setIsEntityModalOpen] = useState<boolean>(false);
+  const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [receiptFormat, setReceiptFormat] = useState<'itemised' | 'item-less'>('itemised');
@@ -112,6 +116,31 @@ const ReceiptFormPage: React.FC = () => {
       setFormData(prev => ({ ...prev, storeId: String(newStoreId) }));
     }
     setIsStoreModalOpen(false);
+  };
+
+  const handleEntitySave = async () => {
+    const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+    setDebtors(debtorsData);
+    
+    const newDebtor = await db.queryOne<{ DebtorID: number }>('SELECT DebtorID FROM Debtors ORDER BY DebtorID DESC LIMIT 1');
+    if (newDebtor) {
+      setPaidById(newDebtor.DebtorID);
+    }
+    
+    setIsEntityModalOpen(false);
+  };
+
+  const handlePaymentMethodSave = async () => {
+    if (paymentMethodsEnabled) {
+      const paymentMethodData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
+      setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
+      
+      const newMethod = await db.queryOne<{ PaymentMethodID: number }>('SELECT PaymentMethodID FROM PaymentMethods ORDER BY PaymentMethodID DESC LIMIT 1');
+      if (newMethod) {
+        setFormData(prev => ({ ...prev, paymentMethodId: String(newMethod.PaymentMethodID) }));
+      }
+    }
+    setIsPaymentMethodModalOpen(false);
   };
 
   useEffect(() => {
@@ -700,38 +729,53 @@ const ReceiptFormPage: React.FC = () => {
                 <div className={cn("grid grid-cols-2 gap-6 col-span-2 items-end", !paymentMethodsEnabled && "grid-cols-1")}>
                   {debtEnabled && (
                     <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
-                      <Tooltip className="w-full" content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
-                        <div className="w-full">
-                          <Select 
-                            label="Paid by" 
-                            name="paidById" 
-                            value={String(paidById)} 
-                            onChange={handlePaidByChange} 
-                            options={paidByOptions} 
-                            placeholder="Select who paid" 
-                            error={errors.paidById} 
-                            disabled={hasSettledDebts}
-                          />
+                      <div className="flex items-end gap-2">
+                        <div className="flex-grow">
+                          <Tooltip className="w-full flex" content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
+                            <Select 
+                              label="Paid by" 
+                              name="paidById" 
+                              value={String(paidById)} 
+                              onChange={handlePaidByChange} 
+                              options={paidByOptions} 
+                              placeholder="Select who paid" 
+                              error={errors.paidById} 
+                              disabled={hasSettledDebts}
+                              className="w-full"
+                            />
+                          </Tooltip>
                         </div>
-                      </Tooltip>
+                        <Tooltip content="Add Entity">
+                          <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)} disabled={hasSettledDebts}>
+                            <PlusIcon className="h-5 w-5" />
+                          </Button>
+                        </Tooltip>
+                      </div>
                     </div>
                   )}
 
                   {paymentMethodsEnabled && (
                     <div>
-                      <Tooltip className="w-full" content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
-                        <div className="w-full">
-                          <Select 
-                            label="Payment Method" 
-                            name="paymentMethodId" 
-                            value={String(formData.paymentMethodId)} 
-                            onChange={handleFormChange} 
-                            options={paymentMethods} 
-                            placeholder="Select a method" 
-                            disabled={paidById !== 'me'}
-                          />
+                      <div className="flex items-end gap-2">
+                        <div className="flex-grow">
+                          <Tooltip className="w-full flex" content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
+                            <Select 
+                              label="Payment Method" 
+                              name="paymentMethodId" 
+                              value={String(formData.paymentMethodId)} 
+                              onChange={handleFormChange} 
+                              options={paymentMethods} 
+                              placeholder="Select a method" 
+                              disabled={paidById !== 'me'}
+                            />
+                          </Tooltip>
                         </div>
-                      </Tooltip>
+                        <Tooltip content="Add Payment Method">
+                          <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsPaymentMethodModalOpen(true)} disabled={paidById !== 'me'}>
+                            <PlusIcon className="h-5 w-5" />
+                          </Button>
+                        </Tooltip>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -765,127 +809,6 @@ const ReceiptFormPage: React.FC = () => {
               </div>
             </div>
           </Card>
-
-          {debtEnabled && (
-            <Card className="overflow-hidden">
-              <div className="relative p-6 space-y-4">
-                {hasSettledDebts && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                    <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
-                    <p className="mt-1 text-sm text-gray-500">One or more debts on this expense have been settled. Debt configuration is now locked.</p>
-                  </div>
-                )}
-                <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
-                  {isUnpaid ? (
-                    <InfoCard
-                      variant="info"
-                      title="Debt Management Disabled"
-                      message="Debt management is disabled when an expense isn't paid by you."
-                    />
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-lg font-semibold">Debt Management</h2>
-                          <Tooltip content="Split the cost of this expense with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
-                        </div>
-                        <SplitTypeSelector />
-                      </div>
-
-                      {splitType === 'total_split' && (
-                        <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
-                          <div className="grid grid-cols-2 gap-4 items-end">
-                            <Select
-                              label="Add Debtor"
-                              value=""
-                              onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
-                              options={[{ value: '', label: 'Choose...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                              className="bg-white dark:bg-gray-800"
-                              disabled={isDebtDisabled}
-                            />
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Own Shares</label>
-                                <Tooltip content="How many shares of the total cost you are responsible for."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-                              </div>
-                              <Input
-                                type="number"
-                                name="ownShares"
-                                value={String(formData.ownShares)}
-                                onChange={handleFormChange}
-                                min="0"
-                                disabled={isDebtDisabled}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            {receiptSplits.map(split => (
-                              <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                <span className="font-medium">{split.DebtorName}</span>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-500">Shares:</span>
-                                    <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" disabled={isDebtDisabled} />
-                                  </div>
-                                  {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
-                                </div>
-                              </div>
-                            ))}
-                            {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
-                          </div>
-                        </div>
-                      )}
-
-                      {splitType === 'line_item' && receiptFormat === 'itemised' && (
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
-                          <p className="text-sm text-blue-700 dark:text-blue-300">Assign items to debtors.</p>
-                          <Button onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
-                            Assign Debtors
-                          </Button>
-                        </div>
-                      )}
-
-                      {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
-                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Debt</h3>
-                            <Tooltip content="Projected debt amounts based on current split configuration."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {debtSummary.debtors.map((debtor) => (
-                              <div key={debtor.name} className="w-full">
-                                <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                                  {splitType === 'line_item' && !isDebtDisabled && (
-                                    <button
-                                      onClick={() => handleRemoveDebtorFromItems(debtor.debtorId)}
-                                      className="absolute top-1 right-1 bg-gray-200 dark:bg-gray-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <XMarkIcon className="h-3 w-3" />
-                                    </button>
-                                  )}
-                                  <span className="text-gray-500 block">{debtor.name}</span>
-                                  <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            ))}
-                            {debtSummary.self && (
-                              <div className="w-full">
-                                <div className="p-2 rounded border text-sm w-full bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-                                  <span className="text-blue-500 block">Self</span>
-                                  <span className="font-bold text-blue-800 dark:text-blue-200">€{debtSummary.self.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </Card>
-          )}
 
           <Card>
             <div className="p-6">
@@ -932,7 +855,7 @@ const ReceiptFormPage: React.FC = () => {
                           <th className="p-2 w-12"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y dark:divide-gray-800">
+                      <tbody className="divide-y dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800">
                         {lineItems.map((item, index) => (
                           <tr key={item.key}>
                             <td className="p-2">
@@ -1041,6 +964,158 @@ const ReceiptFormPage: React.FC = () => {
             )}
           </Card>
 
+          {debtEnabled && (
+            <Card className="overflow-hidden">
+              <div className="relative p-6 space-y-4">
+                {hasSettledDebts && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                    <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
+                    <p className="mt-1 text-sm text-gray-500">One or more debts on this expense have been settled. Debt configuration is now locked.</p>
+                  </div>
+                )}
+                <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
+                  {isUnpaid ? (
+                    <div className="relative">
+                      <div className="blur-sm select-none pointer-events-none opacity-50">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-semibold">Debt Management</h2>
+                            <InformationCircleIcon className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                            <div className="px-3 py-1.5 text-sm font-medium rounded-md text-gray-500">None</div>
+                            <div className="px-3 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-900">Split Total</div>
+                          </div>
+                        </div>
+                        <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+                          <div className="grid grid-cols-2 gap-4 items-end">
+                            <div className="w-full h-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                            <div className="w-full h-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="h-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
+                        <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                        <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debt Management Disabled</h3>
+                        <p className="mt-1 text-sm text-gray-500">Debt management is disabled when an expense isn't paid by you.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-lg font-semibold">Debt Management</h2>
+                          <Tooltip content="Split the cost of this expense with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                        </div>
+                        <SplitTypeSelector />
+                      </div>
+
+                      {splitType === 'total_split' && (
+                        <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+                          <div className="grid grid-cols-2 gap-4 items-end">
+                            <Select
+                              label="Add Debtor"
+                              value=""
+                              onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
+                              options={[{ value: '', label: 'Choose...' }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                              className="bg-white dark:bg-gray-800"
+                              disabled={isDebtDisabled}
+                            />
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Own Shares</label>
+                                <Tooltip content="How many shares of the total cost you are responsible for."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                              </div>
+                              <Input
+                                type="number"
+                                name="ownShares"
+                                value={String(formData.ownShares)}
+                                onChange={handleFormChange}
+                                min="0"
+                                disabled={isDebtDisabled}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {receiptSplits.map(split => (
+                              <div key={split.key} className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span className="font-medium">{split.DebtorName}</span>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">Shares:</span>
+                                    <input type="number" min="1" value={split.SplitPart} onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)} className="w-16 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" disabled={isDebtDisabled} />
+                                  </div>
+                                  {!isDebtDisabled && <button onClick={() => handleRemoveSplit(split.key)} className="text-red hover:text-red-700"><XMarkIcon className="h-4 w-4" /></button>}
+                                </div>
+                              </div>
+                            ))}
+                            {totalShares > 0 && <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
+                          </div>
+                        </div>
+                      )}
+
+                      {splitType === 'line_item' && receiptFormat === 'itemised' && (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl flex items-center justify-between">
+                          <p className="text-sm text-blue-700 dark:text-blue-300">Assign items to debtors.</p>
+                          <Button onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
+                            Assign Debtors
+                          </Button>
+                        </div>
+                      )}
+
+                      {splitType === 'none' && (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <InformationCircleIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Debt Splitting</h3>
+                          <p className="text-sm text-gray-500 max-w-sm">The full amount of this expense is assigned to you. Select a split type above to share the cost.</p>
+                        </div>
+                      )}
+
+                      {splitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.self) && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Debt</h3>
+                            <Tooltip content="Projected debt amounts based on current split configuration."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {debtSummary.debtors.map((debtor) => (
+                              <div key={debtor.name} className="w-full">
+                                <div className="relative group p-2 rounded border text-sm w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                                  {splitType === 'line_item' && !isDebtDisabled && (
+                                    <button
+                                      onClick={() => handleRemoveDebtorFromItems(debtor.debtorId)}
+                                      className="absolute top-1 right-1 bg-gray-200 dark:bg-gray-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <XMarkIcon className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                  <span className="text-gray-500 block">{debtor.name}</span>
+                                  <span className="font-bold">€{debtor.amount.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            ))}
+                            {debtSummary.self && (
+                              <div className="w-full">
+                                <div className="p-2 rounded border text-sm w-full bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+                                  <span className="text-blue-500 block">Self</span>
+                                  <span className="font-bold text-blue-800 dark:text-blue-200">€{debtSummary.self.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
+
           <div className="flex justify-end gap-4">
             <Button variant="secondary" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
             {isEditing && initialIsTentative && (
@@ -1069,6 +1144,20 @@ const ReceiptFormPage: React.FC = () => {
             onClose={() => setIsStoreModalOpen(false)}
             onSave={handleStoreSave}
             storeToEdit={null}
+          />
+
+          <EntityModal
+            isOpen={isEntityModalOpen}
+            onClose={() => setIsEntityModalOpen(false)}
+            onSave={handleEntitySave}
+            entityToEdit={null}
+          />
+
+          <PaymentMethodModal
+            isOpen={isPaymentMethodModalOpen}
+            onClose={() => setIsPaymentMethodModalOpen(false)}
+            onSave={handlePaymentMethodSave}
+            methodToEdit={null}
           />
 
           <ConfirmModal
