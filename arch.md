@@ -17,7 +17,7 @@ The application is structured as a standard Electron app with two main processes
     *   **Client State**: Zustand (`useSettingsStore`, `useErrorStore`)
     *   **Server State**: TanStack Query (React Query)
 *   **Database**: SQLite3 (via `sqlite3` Node driver)
-*   **Persistence**: `electron-store` for user preferences (theme, paths).
+*   **Persistence**: Custom JSON file-based store (`electron/store.cjs`) for user preferences. Settings are stored in `datastore/settings/settings.json` with a bootstrap pointer in `userData`.
 *   **Charting**: ECharts (via `echarts-for-react`)
 *   **Utilities**: `date-fns`, `jspdf`
 
@@ -28,6 +28,7 @@ The application is structured as a standard Electron app with two main processes
 ├── electron/               # Backend (Main Process) code
 │   ├── main.cjs            # Entry point, IPC handlers, DB connection
 │   ├── preload.cjs         # Context bridge, exposes API to Renderer
+│   ├── store.cjs           # Custom settings store implementation
 │   ├── db_schema.sql       # Database schema definition
 │   ├── db/                 # Database helpers (migrations, seeding)
 │   └── migrations/         # SQL migration files

@@ -1,0 +1,32 @@
+{
+  "theme": "dark",
+  "modules": {
+    "paymentMethods": {
+      "enabled": true
+    },
+    "debt": {
+      "enabled": true
+    },
+    "capitalizationProtection": {
+      "enabled": true
+    }
+  },
+  "pdf": {
+    "showUniqueItems": true,
+    "showTotalQuantity": true,
+    "showPaymentMethod": true,
+    "addSummaryPage": true,
+    "addReceiptImages": true
+  },
+  "backup": {
+    "maxBackups": 5,
+    "interval": 5,
+    "editsSinceLastBackup": 0
+  },
+  "paymentMethodStyles": {},
+  "datastore": {
+    "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
+  },
+  "userName": "Gilles",
+  "uiScale": 100
+}

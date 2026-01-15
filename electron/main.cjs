@@ -3,16 +3,17 @@ const path = require('path');
 const sqlite3 = require('sqlite3');
 const fs = require('fs');
 const { runMigrations } = require('./db/migrate.cjs');
+const Store = require('./store.cjs');
 
 let mainWindow;
 let db;
 let store;
 
-// Initialize electron-store
-async function initializeStore() {
+// Initialize store
+function initializeStore() {
   try {
-    const { default: Store } = await import('electron-store');
     store = new Store({
+      userDataPath: app.getPath('userData'),
       defaults: {
         theme: 'light',
         modules: {
@@ -41,9 +42,9 @@ async function initializeStore() {
         },
       }
     });
-    console.log('electron-store initialized successfully.');
+    console.log('Store initialized successfully.');
   } catch (error) {
-    console.error('Failed to initialize electron-store:', error);
+    console.error('Failed to initialize store:', error);
   }
 }
 
@@ -146,7 +147,7 @@ function createWindow() {
 }
 
 app.on('ready', async () => {
-  await initializeStore();
+  initializeStore();
 
   if (process.env.NODE_ENV === 'development') {
     await installDevTools();
