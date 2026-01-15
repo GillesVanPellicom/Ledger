@@ -411,7 +411,7 @@ const ReceiptViewPage: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 {receipt.Discount > 0 && (
                                   <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-                                    <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "text-green")}></div>
+                                    <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
                                   </Tooltip>
                                 )}
                                 <div>

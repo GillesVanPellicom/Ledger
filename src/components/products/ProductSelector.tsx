@@ -20,7 +20,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ isOpen, onClose, onSe
   
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(15);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -142,7 +142,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ isOpen, onClose, onSe
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title="Select Product" size="xl">
+      <Modal isOpen={isOpen} onClose={onClose} title="Select Product" size="viewport">
         <div className="space-y-4">
           <div className="flex justify-end">
             <Button variant="secondary" size="sm" onClick={() => setIsCreateModalOpen(true)}>

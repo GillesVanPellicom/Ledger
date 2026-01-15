@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import DataTable from '../ui/DataTable';
 import Select from '../ui/Select';
-import { InformationCircleIcon } from '@heroicons/react/24/solid';
+import InfoCard from '../ui/InfoCard';
 import { LineItem, Debtor } from '../../types';
+import { cn } from '../../utils/cn';
 
 interface LineItemSelectionModalProps {
   isOpen: boolean;
@@ -29,15 +30,16 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
 }) => {
   const [selectedKeys, setSelectedKeys] = useState(new Set(initialSelectedKeys));
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [initialAssignments, setInitialAssignments] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [bulkDebtorId, setBulkDebtorId] = useState('');
   const [lastSelectedKey, setLastSelectedKey] = useState<string | null>(null);
   const itemKey = "key";
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(15);
 
-  const filteredItems = useCallback(() => {
+  const allFilteredItems = useMemo(() => {
     if (!searchTerm) return lineItems;
     const lowercasedTerm = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const keywords = lowercasedTerm.split(' ').filter(k => k);
@@ -54,8 +56,6 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
     });
   }, [lineItems, searchTerm]);
 
-  const allFilteredItems = filteredItems();
-
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
@@ -65,13 +65,14 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSelectedKeys(new Set(initialSelectedKeys));
-      const initialAssignments: Record<string, string> = {};
+      const initAsgn: Record<string, string> = {};
       lineItems.forEach(item => {
         if (item.DebtorID) {
-          initialAssignments[item.key] = String(item.DebtorID);
+          initAsgn[item.key] = String(item.DebtorID);
         }
       });
-      setAssignments(initialAssignments);
+      setAssignments(initAsgn);
+      setInitialAssignments(initAsgn);
       setBulkDebtorId('');
       setLastSelectedKey(null);
       setCurrentPage(1);
@@ -81,6 +82,25 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, pageSize]);
+
+  const hasChanges = useMemo(() => {
+    if (selectionMode === 'discount') {
+      const initialKeys = new Set(initialSelectedKeys);
+      if (selectedKeys.size !== initialKeys.size) return true;
+      for (const key of selectedKeys) {
+        if (!initialKeys.has(key)) return true;
+      }
+      return false;
+    } else {
+      const currentKeys = Object.keys(assignments);
+      const initialKeys = Object.keys(initialAssignments);
+      if (currentKeys.length !== initialKeys.length) return true;
+      for (const key of currentKeys) {
+        if (assignments[key] !== initialAssignments[key]) return true;
+      }
+      return false;
+    }
+  }, [selectionMode, selectedKeys, initialSelectedKeys, assignments, initialAssignments]);
 
   const handleRowClick = (item: LineItem, event: React.MouseEvent) => {
     if (disabled) return;
@@ -97,7 +117,9 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
       const [start, end] = [lastIndex, currentIndex].sort((a, b) => a - b);
       
       for (let i = start; i <= end; i++) {
-        newSelectedKeys.add(allFilteredItems[i][itemKey]);
+        if (allFilteredItems[i]) {
+          newSelectedKeys.add(allFilteredItems[i][itemKey]);
+        }
       }
     } else if (event.nativeEvent.ctrlKey || event.nativeEvent.metaKey) {
       if (newSelectedKeys.has(key)) {
@@ -119,7 +141,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   };
 
   const handleSave = () => {
-    if (disabled) return;
+    if (disabled || !hasChanges) return;
     if (selectionMode === 'debtor') {
       const assignmentList = Object.entries(assignments).map(([key, debtorId]) => ({ key, debtorId }));
       onSave(assignmentList);
@@ -130,7 +152,15 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   };
 
   const handleAssignmentChange = (key: string, debtorId: string) => {
-    setAssignments(prev => ({ ...prev, [key]: debtorId }));
+    setAssignments(prev => {
+        const newAsgn = { ...prev };
+        if (debtorId === '') {
+            delete newAsgn[key];
+        } else {
+            newAsgn[key] = debtorId;
+        }
+        return newAsgn;
+    });
   };
 
   const handleBulkAssign = () => {
@@ -145,44 +175,46 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   const title = selectionMode === 'debtor' ? 'Assign Items to Debtors' : 'Exclude Items from Discount';
 
   const columns: any[] = [
-    { header: 'Product', render: (item: LineItem) => (
+    { header: 'Product', width: '50%', render: (item: LineItem) => (
       <div>
         <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
         <p className="text-xs text-gray-500">{item.ProductBrand || ''}</p>
       </div>
     )},
-    { header: 'Total Price', render: (item: LineItem) => `€${(item.LineQuantity * item.LineUnitPrice).toFixed(2)}` },
+    { header: 'Total Price', width: '25%', render: (item: LineItem) => `€${(item.LineQuantity * item.LineUnitPrice).toFixed(2)}` },
   ];
 
   if (selectionMode === 'debtor') {
     columns.push({
       header: 'Assign to',
+      width: '25%',
       render: (item: LineItem) => (
         <div onClick={(e) => e.stopPropagation()}>
-          <Select
-            value={assignments[item.key] || ''}
-            onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
-            options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-            className="w-full"
-            disabled={disabled}
-          />
+          {selectedKeys.has(item.key) ? (
+            <Select
+              value={assignments[item.key] || ''}
+              onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
+              options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+              className="w-full"
+              disabled={disabled}
+            />
+          ) : <div className="h-10" />}
         </div>
       )
     });
   } else {
-    columns.push({ header: 'Assigned', accessor: 'DebtorName' });
+    columns.push({ header: 'Assigned', accessor: 'DebtorName', width: '25%' });
   }
 
   const saveButtonText = selectionMode === 'debtor' ? 'Save Assignments' : 'Exclude Selected Items';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="xl">
-      <div className="p-6 space-y-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
-          <InformationCircleIcon className="h-5 w-5 text-gray-400" />
-          <span>Use Click, Ctrl+Click, and Shift+Click to select items.</span>
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="viewport">
+      <div className="flex flex-col h-full">
+        <div className="shrink-0 p-6 pb-0">
+          <InfoCard title="Instructions" message="Use Click, Ctrl+Click, and Shift+Click to select items." />
         </div>
-        <div style={{ userSelect: 'none' }}>
+        <div className="flex-1 p-6 min-h-0 overflow-y-auto" style={{ userSelect: 'none' }}>
           <DataTable
             data={paginatedItems}
             columns={columns}
@@ -202,30 +234,30 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
             disabled={disabled}
             middleRowLeft={
               selectionMode === 'debtor' ? (
-                <div className="flex items-center gap-2">
+                <div className={cn("flex items-center gap-2", selectedKeys.size === 0 && "invisible")}>
                   <Select
                     value={bulkDebtorId}
                     onChange={(e) => setBulkDebtorId(e.target.value)}
                     options={[{ value: '', label: 'Assign to...' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                    className="w-48"
+                    className="w-40"
                     disabled={disabled}
                   />
                   <Button 
                     variant="secondary" 
                     onClick={handleBulkAssign} 
-                    disabled={!bulkDebtorId || selectedKeys.size === 0 || disabled}
+                    disabled={!bulkDebtorId || disabled}
                     className="whitespace-nowrap"
                   >
-                    Assign to Selected
+                    Apply
                   </Button>
                 </div>
-              ) : null
+              ) : <div className="h-10" />
             }
           />
         </div>
-        <div className="flex justify-end gap-4">
+        <div className="shrink-0 p-6 flex justify-end gap-4 pt-4">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={disabled}>{saveButtonText}</Button>
+          <Button onClick={handleSave} disabled={disabled || !hasChanges}>{saveButtonText}</Button>
         </div>
       </div>
     </Modal>

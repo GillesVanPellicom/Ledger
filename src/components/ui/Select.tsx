@@ -28,7 +28,10 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({ className, error, l
         <select
           ref={ref}
           className={cn(
-            "flex h-10 w-full appearance-none rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 pr-8 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+            // Match Button secondary visual: background, text, shadow, border and hover
+            "flex h-10 w-full appearance-none rounded-lg px-3 py-2 pr-8 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+            "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 shadow-lg border border-gray-200 dark:border-gray-700",
+            // Keep error handling
             error && "border-danger focus:ring-danger",
             className
           )}

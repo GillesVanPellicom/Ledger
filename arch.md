@@ -2,7 +2,7 @@
 
 ## High-Level Overview
 
-**HomeFin** (internally named `ledger`) is a desktop personal finance application built with **Electron**, **React**, and **SQLite**. It follows a local-first architecture where the database and all user data reside on the user's machine.
+**ledger** (originally named `homefin`) is a desktop personal finance application built with **Electron**, **React**, and **SQLite**. It follows a local-first architecture where the database and all user data reside on the user's machine.
 
 The application is structured as a standard Electron app with two main processes:
 1.  **Main Process (Node.js)**: Handles the application lifecycle, window management, native file system access, and direct database interactions.

@@ -6,10 +6,11 @@ interface StepperInputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   error?: string;
   onIncrement?: () => void;
   onDecrement?: () => void;
+  inputClassName?: string;
 }
 
 const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
-  ({ className, label, error, onIncrement, onDecrement, ...props }, ref) => {
+  ({ className, label, error, onIncrement, onDecrement, inputClassName, ...props }, ref) => {
     return (
       <div className={className}>
         {label && (
@@ -28,7 +29,10 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
           <input
             ref={ref}
             type="number"
-            className="border-x-0 h-10 text-center w-full bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 py-2.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 focus:border-gray-300 dark:focus:border-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className={cn(
+              "border-x-0 h-10 text-center w-full bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 py-2.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 focus:border-gray-300 dark:focus:border-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+              inputClassName
+            )}
             placeholder="0"
             {...props}
           />
