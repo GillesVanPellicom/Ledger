@@ -232,10 +232,14 @@ async function seed() {
                         if (err) return reject(err);
                         const receiptId = this.lastID;
 
-                        if (Math.random() < 0.1 && seedImages.length > 0) {
-                            const numImages = getRandomInt(1, 3);
-                            for (let k = 0; k < numImages; k++) {
-                                const img = getRandomElement(seedImages);
+                        if (Math.random() < 0.3 && seedImages.length > 0) {
+                            const n = seedImages.length;
+                            const numImages = getRandomInt(1, n);
+                            const shuffledImages = [...seedImages].sort(() => 0.5 - Math.random());
+                            const selectedImages = shuffledImages.slice(0, numImages);
+
+                            for (let k = 0; k < selectedImages.length; k++) {
+                                const img = selectedImages[k];
                                 const newName = `${receiptId}_${k + 1}.webp`;
                                 fs.copyFileSync(path.join(seedImgPath, img), path.join(receiptImgPath, newName));
                                 db.run(insertImage, [receiptId, newName]);
