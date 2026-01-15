@@ -37,7 +37,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   const itemKey = "key";
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState<number>(15);
 
   const allFilteredItems = useMemo(() => {
     if (!searchTerm) return lineItems;
@@ -57,8 +57,9 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   }, [lineItems, searchTerm]);
 
   const paginatedItems = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    const end = start + pageSize;
+    const size = Number(pageSize) || 15;
+    const start = (currentPage - 1) * size;
+    const end = start + size;
     return allFilteredItems.slice(start, end);
   }, [allFilteredItems, currentPage, pageSize]);
 
@@ -175,19 +176,18 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   const title = selectionMode === 'debtor' ? 'Assign Items to Debtors' : 'Exclude Items from Discount';
 
   const columns: any[] = [
-    { header: 'Product', width: '50%', render: (item: LineItem) => (
+    { header: 'Product', render: (item: LineItem) => (
       <div>
         <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
         <p className="text-xs text-gray-500">{item.ProductBrand || ''}</p>
       </div>
     )},
-    { header: 'Total Price', width: '25%', render: (item: LineItem) => `€${(item.LineQuantity * item.LineUnitPrice).toFixed(2)}` },
+    { header: 'Total Price', render: (item: LineItem) => `€${(item.LineQuantity * item.LineUnitPrice).toFixed(2)}` },
   ];
 
   if (selectionMode === 'debtor') {
     columns.push({
       header: 'Assign to',
-      width: '25%',
       render: (item: LineItem) => (
         <div onClick={(e) => e.stopPropagation()}>
           {selectedKeys.has(item.key) ? (
@@ -203,7 +203,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
       )
     });
   } else {
-    columns.push({ header: 'Assigned', accessor: 'DebtorName', width: '25%' });
+    columns.push({ header: 'Assigned', accessor: 'DebtorName' });
   }
 
   const saveButtonText = selectionMode === 'debtor' ? 'Save Assignments' : 'Exclude Selected Items';
@@ -239,7 +239,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
                     value={bulkDebtorId}
                     onChange={(e) => setBulkDebtorId(e.target.value)}
                     options={[{ value: '', label: 'Assign to...' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-                    className="w-40"
+                    className="w-auto"
                     disabled={disabled}
                   />
                   <Button 
