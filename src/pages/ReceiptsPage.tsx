@@ -1,6 +1,6 @@
-import React, {useState} from 'react';
-import {useNavigate} from 'react-router-dom';
-import {format} from 'date-fns';
+import React, {useState, useEffect} from 'react';
+import {useNavigate, useSearchParams} from 'react-router-dom';
+import {format, parseISO} from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import {
@@ -35,10 +35,16 @@ interface FullReceipt extends Receipt {
 }
 
 const ReceiptsPage: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [pageSize, setPageSize] = useState<number>(10);
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const [currentPage, setCurrentPage] = useState<number>(Number(searchParams.get('page')) || 1);
+  const [searchTerm, setSearchTerm] = useState<string>(searchParams.get('search') || '');
+  const [pageSize, setPageSize] = useState<number>(Number(searchParams.get('pageSize')) || 10);
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
+    searchParams.get('startDate') ? parseISO(searchParams.get('startDate')!) : null,
+    searchParams.get('endDate') ? parseISO(searchParams.get('endDate')!) : null,
+  ]);
 
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<number[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -52,7 +58,16 @@ const ReceiptsPage: React.FC = () => {
   const { settings } = useSettingsStore();
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentPage !== 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('pageSize', String(pageSize));
+    if (searchTerm) params.set('search', searchTerm);
+    if (dateRange[0]) params.set('startDate', dateRange[0].toISOString());
+    if (dateRange[1]) params.set('endDate', dateRange[1].toISOString());
+    setSearchParams(params, { replace: true });
+  }, [currentPage, pageSize, searchTerm, dateRange, setSearchParams]);
 
   const { data, isLoading, refetch } = useReceipts({
     page: currentPage,

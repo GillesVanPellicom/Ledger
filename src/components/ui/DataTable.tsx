@@ -82,7 +82,6 @@ const DataTable: React.FC<DataTableProps> = ({
       const table = tableContainerRef.current.querySelector('table');
       if (!table) return;
 
-      // Step 1: Find natural width with table-layout: auto
       table.style.tableLayout = 'auto';
       table.style.width = 'auto';
 
@@ -93,17 +92,14 @@ const DataTable: React.FC<DataTableProps> = ({
       const totalTableWidth = widths.reduce((sum, w) => sum + w, 0);
       const containerWidth = tableContainerRef.current.offsetWidth;
 
-      // Step 2: Decide whether to scale or not
       if (totalTableWidth < containerWidth) {
-        // If content is smaller, make table 100% and re-measure the browser-scaled columns
         table.style.width = '100%';
         const scaledWidths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
         setColWidths(scaledWidths);
       } else {
-        // If content is larger, use the natural widths and allow scrolling
         setColWidths(widths);
       }
-      
+
       hasMeasuredRef.current = true;
     }
   }, [data, loading]);
@@ -177,13 +173,13 @@ const DataTable: React.FC<DataTableProps> = ({
     if (disabled) return;
     const newSelectedRows = new Set(selectedRows);
     const currentIds = data.map(row => row[itemKey]);
-    
+
     if (e.target.checked) {
       currentIds.forEach(id => newSelectedRows.add(id));
     } else {
       currentIds.forEach(id => newSelectedRows.delete(id));
     }
-    
+
     setSelectedRows(newSelectedRows);
     if (onSelectionChange) onSelectionChange(Array.from(newSelectedRows));
   };
@@ -207,9 +203,73 @@ const DataTable: React.FC<DataTableProps> = ({
 
   const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endItem = Math.min(currentPage * pageSize, totalCount);
-  
+
   const totalPagesDigits = (totalPages || 1).toString().length;
   const inputWidth = `${1.5 + (totalPagesDigits * 0.6)}rem`;
+
+  const tableContent = useMemo(() => {
+    if (loading && data.length === 0) {
+      return Array.from({ length: pageSize }).map((_, i) => (
+        <tr key={`skeleton-${i}`} className="animate-pulse">
+          {selectable && (
+            <td className="px-4 py-3 align-middle">
+              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-800 rounded-md"></div>
+            </td>
+          )}
+          {columns.map((col, colIdx) => (
+            <td key={colIdx} className={cn("px-4 py-3 align-middle", col.className)}>
+              <div className="h-5 bg-gray-200 dark:bg-gray-800 rounded-md w-full"></div>
+            </td>
+          ))}
+        </tr>
+      ));
+    }
+
+    if (data.length === 0) {
+      return (
+        <tr>
+          <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
+            <div className="flex flex-col items-center gap-2 h-full justify-center" style={{height: '300px'}}>
+              <FileSearch className="h-10 w-10 opacity-50" />
+              <span>No results found.</span>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    return data.map((row, rowIdx) => (
+      <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900")}>
+        {selectable && (
+          <td className="px-4 py-3 align-middle">
+            <div className="checkbox-wrapper-13 flex items-center justify-center">
+              <input
+                id={`checkbox-${row[itemKey]}`}
+                type="checkbox"
+                checked={selectedRows.has(row[itemKey])}
+                onChange={(e) => handleSelectRow(e, row[itemKey])}
+                onClick={(e) => e.stopPropagation()}
+                disabled={disabled}
+              />
+              <label htmlFor={`checkbox-${row[itemKey]}`}></label>
+            </div>
+          </td>
+        )}
+        {columns.map((col, colIdx) => {
+          const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
+          let displayContent = content;
+          if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
+            displayContent = <span className="text-gray-500 dark:text-gray-600">-</span>;
+          }
+          return (
+            <td key={colIdx} className={cn("px-4 py-3 text-gray-900 dark:text-gray-100 break-words align-middle", col.className)}>
+              {displayContent}
+            </td>
+          );
+        })}
+      </tr>
+    ));
+  }, [loading, pageSize, data, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow]);
 
   return (
     <div className={cn("flex flex-col gap-4", className, disabled && "opacity-50 cursor-not-allowed")}>
@@ -290,22 +350,22 @@ const DataTable: React.FC<DataTableProps> = ({
             </div>
           </div>
           <Tooltip content="Items per page">
-            <Select 
-              value={pageSize} 
-              onChange={(e) => { 
+            <Select
+              value={pageSize}
+              onChange={(e) => {
                 if (typeof onPageSizeChange === 'function') {
                   onPageSizeChange(Number(e.target.value));
                 }
                 if (typeof onPageChange === 'function') {
                   onPageChange(1);
                 }
-              }} 
+              }}
               options={[
-                { value: 5, label: '5' }, { value: 10, label: '10' }, { value: 15, label: '15' }, 
-                { value: 20, label: '20' }, { value: 25, label: '25' }, { value: 30, label: '30' }, 
-                { value: 35, label: '35' }, { value: 40, label: '40' }, { value: 45, label: '45' }, 
+                { value: 5, label: '5' }, { value: 10, label: '10' }, { value: 15, label: '15' },
+                { value: 20, label: '20' }, { value: 25, label: '25' }, { value: 30, label: '30' },
+                { value: 35, label: '35' }, { value: 40, label: '40' }, { value: 45, label: '45' },
                 { value: 50, label: '50' }, { value: 75, label: '75' }, { value: 100, label: '100' }
-              ]} 
+              ]}
               className="h-10 w-20 text-center bg-white dark:bg-gray-900 border-gray-300 dark:border-zinc-700"
               disabled={disabled}
             />
@@ -313,8 +373,11 @@ const DataTable: React.FC<DataTableProps> = ({
         </div>
       </div>
 
-      <div ref={tableContainerRef} className="rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-950 shadow-sm relative">
-        <div className={cn("overflow-x-auto", (loading || disabled) && "blur-sm pointer-events-none")}>
+      <div
+        ref={tableContainerRef}
+        className="rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-950 shadow-sm relative"
+      >
+        <div className={cn("overflow-x-auto", (loading && data.length > 0) && "blur-sm pointer-events-none", disabled && "pointer-events-none")}>
           <table
             className="text-left text-sm w-full"
             style={{
@@ -343,55 +406,14 @@ const DataTable: React.FC<DataTableProps> = ({
                   </th>
                 )}
                 {columns.map((col, idx) => (
-                  <th key={idx} className={cn("px-4 py-3 font-medium text-gray-500 dark:text-gray-400 truncate", col.className)}>
+                  <th key={idx} className={cn("px-4 py-3 font-medium text-gray-500 dark:text-gray-400 truncate align-middle", col.className)}>
                     {col.header}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-zinc-800">
-              {data.length === 0 && !loading ? (
-                <tr>
-                  <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
-                    <div className="flex flex-col items-center gap-2">
-                      <FileSearch className="h-10 w-10 opacity-50" />
-                      <span>No results found.</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                data.map((row, rowIdx) => (
-                  <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900")}>
-                    {selectable && (
-                      <td className="px-4 py-3 align-middle">
-                        <div className="checkbox-wrapper-13 flex items-center justify-center">
-                          <input 
-                            id={`checkbox-${row[itemKey]}`} 
-                            type="checkbox" 
-                            checked={selectedRows.has(row[itemKey])}
-                            onChange={(e) => handleSelectRow(e, row[itemKey])} 
-                            onClick={(e) => e.stopPropagation()} 
-                            disabled={disabled}
-                          />
-                          <label htmlFor={`checkbox-${row[itemKey]}`}></label>
-                        </div>
-                      </td>
-                    )}
-                    {columns.map((col, colIdx) => {
-                      const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
-                      let displayContent = content;
-                      if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
-                        displayContent = <span className="text-gray-500 dark:text-gray-600">-</span>;
-                      }
-                      return (
-                        <td key={colIdx} className={cn("px-4 py-3 text-gray-900 dark:text-gray-100 break-words", col.className)}>
-                          {displayContent}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              )}
+              {tableContent}
             </tbody>
           </table>
         </div>

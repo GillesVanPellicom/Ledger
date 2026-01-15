@@ -4,11 +4,14 @@ import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { task, info, success, done } from './styling.js';
 import { format } from 'date-fns';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dbPath = path.join(__dirname, '../../datastore/fin.db');
+const seedImgPath = path.join(__dirname, 'seed-img');
+const receiptImgPath = path.join(__dirname, '../../datastore/receipt_images');
 
 // --- Data Arrays ---
 const productUnits = [
@@ -163,10 +166,14 @@ async function seed() {
     });
 
     await task('Generating Receipts with Line Items and Debt', async () => {
+        if (!fs.existsSync(receiptImgPath)) {
+            fs.mkdirSync(receiptImgPath, { recursive: true });
+        }
         const storeIds = (await getQuery(db, 'SELECT StoreID FROM Stores')).map(s => s.StoreID);
         const productIds = (await getQuery(db, 'SELECT ProductID FROM Products')).map(p => p.ProductID);
         const paymentMethodIds = (await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods')).map(pm => pm.PaymentMethodID);
         const debtorIds = (await getQuery(db, 'SELECT DebtorID FROM Debtors')).map(d => d.DebtorID);
+        const seedImages = fs.readdirSync(seedImgPath).filter(f => f.endsWith('.webp'));
 
         if (productIds.length === 0) throw new Error('No products found. Cannot create receipts.');
 
@@ -174,6 +181,7 @@ async function seed() {
         const insertLineItem = 'INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)';
         const insertReceiptSplit = 'INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)';
         const insertPayment = 'INSERT INTO ReceiptDebtorPayments (ReceiptID, DebtorID, PaidDate) VALUES (?, ?, ?)';
+        const insertImage = 'INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)';
 
         const paymentMethods = await getQuery(db, 'SELECT * FROM PaymentMethods');
         const pmMap = {};
@@ -223,6 +231,16 @@ async function seed() {
                     db.run(insertReceipt, [date, storeId, note, receiptPaymentMethodId, splitType, status, owedToDebtorID, isNonItemised ? 1 : 0, null, isTentative ? 1 : 0, ownShares, totalShares, discount], function (err) {
                         if (err) return reject(err);
                         const receiptId = this.lastID;
+
+                        if (Math.random() < 0.1 && seedImages.length > 0) {
+                            const numImages = getRandomInt(1, 3);
+                            for (let k = 0; k < numImages; k++) {
+                                const img = getRandomElement(seedImages);
+                                const newName = `${receiptId}_${k + 1}.webp`;
+                                fs.copyFileSync(path.join(seedImgPath, img), path.join(receiptImgPath, newName));
+                                db.run(insertImage, [receiptId, newName]);
+                            }
+                        }
                         
                         if (isNonItemised) {
                             const total = (Math.random() * 100 + 5).toFixed(2);
