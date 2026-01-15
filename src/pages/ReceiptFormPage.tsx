@@ -665,19 +665,19 @@ const ReceiptFormPage: React.FC = () => {
       { type: 'total_split' as const, label: 'Split Total', tooltip: 'Split the total expense amount by shares.' },
       ...(receiptFormat === 'itemised' ? [{ type: 'line_item' as const, label: 'Per Item', tooltip: 'Assign specific items to debtors.' }] : [])
     ];
-
-    const content = (
-      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+  
+    return (
+      <div className="flex rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
         {buttons.map(btn => (
           <Tooltip key={btn.type} content={btn.tooltip}>
             <button 
               onClick={() => handleSplitTypeChange(btn.type)} 
               disabled={isDebtDisabled}
               className={cn(
-                "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                "px-3 py-1.5 text-sm font-medium rounded-md transition-colors w-full",
                 splitType === btn.type 
-                  ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" 
-                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
+                  ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" 
+                  : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50",
                 isDebtDisabled ? "opacity-50 cursor-not-allowed" : ""
               )}
             >
@@ -687,8 +687,6 @@ const ReceiptFormPage: React.FC = () => {
         ))}
       </div>
     );
-
-    return content;
   };
 
   return (
@@ -804,8 +802,8 @@ const ReceiptFormPage: React.FC = () => {
                         </button>
                       </div>
                     ))}
-                    <label className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:text-gray-600 hover:border-gray-400 dark:hover:border-gray-500 cursor-pointer">
-                      <PhotoIcon className="h-8 w-8" />
+                    <label className="w-full h-24 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                      <PhotoIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
                       <span className="text-xs mt-1">Add Images</span>
                       <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
                     </label>
@@ -817,12 +815,12 @@ const ReceiptFormPage: React.FC = () => {
 
           <Card>
             <div className="p-6">
-              <div className="grid grid-cols-2 gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6">
+              <div className="grid grid-cols-2 gap-1 rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 mb-6">
                 <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
-                  <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Items</button>
+                  <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Items</button>
                 </Tooltip>
                 <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
-                  <button onClick={() => handleFormatChange('item-less')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Total Only</button>
+                  <button onClick={() => handleFormatChange('item-less')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Total Only</button>
                 </Tooltip>
               </div>
 
