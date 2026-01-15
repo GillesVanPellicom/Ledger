@@ -640,7 +640,11 @@ const ReceiptFormPage: React.FC = () => {
         localStorage.removeItem('receipt_concept');
       }
   
-      navigate(`/receipts/view/${receiptId}`, { replace: true });
+      if (isEditing) {
+        navigate(-1);
+      } else {
+        navigate(`/receipts/view/${receiptId}`, { replace: true });
+      }
     } catch (error) {
       console.error("Failed to save receipt:", error);
     } finally {
