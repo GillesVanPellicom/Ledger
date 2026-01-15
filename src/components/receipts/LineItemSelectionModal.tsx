@@ -6,6 +6,7 @@ import Select from '../ui/Select';
 import InfoCard from '../ui/InfoCard';
 import { LineItem, Debtor } from '../../types';
 import { cn } from '../../utils/cn';
+import { Kbd } from '../ui/kbd';
 
 interface LineItemSelectionModalProps {
   isOpen: boolean;
@@ -190,15 +191,13 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
       header: 'Assign to',
       render: (item: LineItem) => (
         <div onClick={(e) => e.stopPropagation()}>
-          {selectedKeys.has(item.key) ? (
-            <Select
-              value={assignments[item.key] || ''}
-              onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
-              options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-              className="w-full"
-              disabled={disabled}
-            />
-          ) : <div className="h-10" />}
+          <Select
+            value={assignments[item.key] || ''}
+            onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
+            options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+            className="w-full"
+            disabled={disabled}
+          />
         </div>
       )
     });
@@ -212,7 +211,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="viewport">
       <div className="flex flex-col h-full">
         <div className="shrink-0 p-6 pb-0">
-          <InfoCard title="Instructions" message="Use Click, Ctrl+Click, and Shift+Click to select items." />
+          <InfoCard title="Instructions" message="Use Click, ctrl + click, and ⇧ + click to select items." />
         </div>
         <div className="flex-1 p-6 min-h-0 overflow-y-auto" style={{ userSelect: 'none' }}>
           <DataTable

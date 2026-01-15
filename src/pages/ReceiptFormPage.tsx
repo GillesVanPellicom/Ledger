@@ -848,8 +848,8 @@ const ReceiptFormPage: React.FC = () => {
                       { label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]' },
                       { label: 'Qty', className: 'w-[10%] text-center' },
                       { label: 'Unit Price (€)', className: 'w-[10%] text-center' },
-                      { label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]' },
-                      ...(splitType === 'line_item' ? [{ label: 'Debtor', className: 'w-[15%]' }] : []),
+                      { label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%] text-right' : 'w-[20%] text-right' },
+                      ...(splitType === 'line_item' ? [{ label: 'Debtor', className: 'w-[15%] text-right' }] : []),
                       { label: '', className: 'w-auto' },
                     ]}
                     rows={lineItems.map(item => [

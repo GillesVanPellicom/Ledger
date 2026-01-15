@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   ClipboardList,
   Clipboard,
-  HelpCircle
+  HelpCircle,
+  RotateCcw
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -22,12 +23,14 @@ import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
 import Tooltip from '../components/ui/Tooltip';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
-import {Receipt, LineItem} from '../types';
+import {Receipt, LineItem, Debtor} from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { useReceipts, useDeleteReceipt } from '../hooks/useReceipts';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
+import Select from '../components/ui/Select';
+import { cn } from '../utils/cn';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -45,6 +48,10 @@ const ReceiptsPage: React.FC = () => {
     searchParams.get('startDate') ? parseISO(searchParams.get('startDate')!) : null,
     searchParams.get('endDate') ? parseISO(searchParams.get('endDate')!) : null,
   ]);
+  const [debtFilter, setDebtFilter] = useState<string>(searchParams.get('debt') || 'all');
+  const [typeFilter, setTypeFilter] = useState<string>(searchParams.get('type') || 'all');
+  const [tentativeFilter, setTentativeFilter] = useState<string>(searchParams.get('tentative') || 'all');
+  const [attachmentFilter, setAttachmentFilter] = useState<string>(searchParams.get('attachment') || 'all');
 
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<number[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -66,8 +73,12 @@ const ReceiptsPage: React.FC = () => {
     if (searchTerm) params.set('search', searchTerm);
     if (dateRange[0]) params.set('startDate', dateRange[0].toISOString());
     if (dateRange[1]) params.set('endDate', dateRange[1].toISOString());
+    if (debtFilter !== 'all') params.set('debt', debtFilter);
+    if (typeFilter !== 'all') params.set('type', typeFilter);
+    if (tentativeFilter !== 'all') params.set('tentative', tentativeFilter);
+    if (attachmentFilter !== 'all') params.set('attachment', attachmentFilter);
     setSearchParams(params, { replace: true });
-  }, [currentPage, pageSize, searchTerm, dateRange, setSearchParams]);
+  }, [currentPage, pageSize, searchTerm, dateRange, debtFilter, typeFilter, tentativeFilter, attachmentFilter, setSearchParams]);
 
   const { data, isLoading, refetch } = useReceipts({
     page: currentPage,
@@ -75,10 +86,23 @@ const ReceiptsPage: React.FC = () => {
     searchTerm,
     startDate: dateRange[0],
     endDate: dateRange[1],
+    debtFilter,
+    typeFilter,
+    tentativeFilter,
+    attachmentFilter,
     debtEnabled
   });
 
   const deleteReceiptMutation = useDeleteReceipt();
+
+  const resetFilters = () => {
+    setDebtFilter('all');
+    setTypeFilter('all');
+    setTentativeFilter('all');
+    setAttachmentFilter('all');
+    setDateRange([null, null]);
+    setSearchTerm('');
+  };
 
   const handleDelete = async () => {
     const idsToDelete = receiptToDelete ? [receiptToDelete] : selectedReceiptIds;
@@ -213,6 +237,32 @@ const ReceiptsPage: React.FC = () => {
     )
   });
 
+  const debtFilterOptions = [
+    { value: 'all', label: 'Debt: All' },
+    { value: 'none', label: 'No Debt' },
+    { value: 'unpaid', label: 'Unpaid Debt' },
+    { value: 'own_debt', label: 'Own Debt' },
+    { value: 'paid', label: 'Paid Debt' },
+  ];
+
+  const typeFilterOptions = [
+    { value: 'all', label: 'Type: All' },
+    { value: 'detailed', label: 'Detailed' },
+    { value: 'total-only', label: 'Total-only' },
+  ];
+
+  const tentativeFilterOptions = [
+    { value: 'all', label: 'Status: All' },
+    { value: 'finished', label: 'Finished' },
+    { value: 'tentative', label: 'Tentative' },
+  ];
+
+  const attachmentFilterOptions = [
+    { value: 'all', label: 'Attachments: All' },
+    { value: 'none', label: 'No Attachments' },
+    { value: 'yes', label: 'Has Attachments' },
+  ];
+
   return (
     <div>
       <Header
@@ -227,26 +277,24 @@ const ReceiptsPage: React.FC = () => {
       />
       <PageWrapper>
         <div className="py-6">
-          {selectedReceiptIds.length > 0 && (
-            <div className="flex items-center gap-2 mb-4">
-              <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
-                <Trash className="h-4 w-4 mr-2"/>
-                Delete ({selectedReceiptIds.length})
+          <div className={cn("flex items-center gap-2 h-10 mb-4", selectedReceiptIds.length === 0 && "invisible")}>
+            <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
+              <Trash className="h-4 w-4 mr-2"/>
+              Delete ({selectedReceiptIds.length})
+            </Button>
+            <Tooltip content="Feature broken, WIP">
+              <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
+                <FileDown className="h-4 w-4 mr-2"/>
+                Save as PDF
               </Button>
-              <Tooltip content="Feature broken, WIP">
-                <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
-                  <FileDown className="h-4 w-4 mr-2"/>
-                  Save as PDF
-                </Button>
-              </Tooltip>
-              {debtEnabled && (
-                <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
-                  <Users className="h-4 w-4 mr-2"/>
-                  Bulk Debt
-                </Button>
-              )}
-            </div>
-          )}
+            </Tooltip>
+            {debtEnabled && (
+              <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
+                <Users className="h-4 w-4 mr-2"/>
+                Bulk Debt
+              </Button>
+            )}
+          </div>
           <DataTable
             data={data?.receipts || []}
             columns={columns}
@@ -264,7 +312,7 @@ const ReceiptsPage: React.FC = () => {
             selectedIds={selectedReceiptIds}
             itemKey="ReceiptID"
             middleRowLeft={
-              <div className="w-1/2">
+              <div className="w-1/3">
                 <DatePicker
                   selectsRange
                   startDate={dateRange[0]}
@@ -276,6 +324,35 @@ const ReceiptsPage: React.FC = () => {
                   isClearable={true}
                   placeholderText="Filter by date range"
                 />
+              </div>
+            }
+            middleRowRight={
+              <div className="flex items-center gap-2">
+                <Tooltip content="Filter by debt status">
+                  <div className="w-40">
+                    {debtEnabled && <Select options={debtFilterOptions} value={debtFilter} onChange={e => setDebtFilter(e.target.value)} />}
+                  </div>
+                </Tooltip>
+                <Tooltip content="Filter by expense type">
+                  <div className="w-40">
+                    <Select options={typeFilterOptions} value={typeFilter} onChange={e => setTypeFilter(e.target.value)} />
+                  </div>
+                </Tooltip>
+                <Tooltip content="Filter by tentative status">
+                  <div className="w-40">
+                    <Select options={tentativeFilterOptions} value={tentativeFilter} onChange={e => setTentativeFilter(e.target.value)} />
+                  </div>
+                </Tooltip>
+                <Tooltip content="Filter by attachments">
+                  <div className="w-40">
+                    <Select options={attachmentFilterOptions} value={attachmentFilter} onChange={e => setAttachmentFilter(e.target.value)} />
+                  </div>
+                </Tooltip>
+                <Tooltip content="Reset Filters">
+                  <Button variant="ghost" size="icon" onClick={resetFilters}>
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
               </div>
             }
           />

@@ -11,6 +11,10 @@ interface FetchReceiptsParams {
   searchTerm?: string;
   startDate?: Date | null;
   endDate?: Date | null;
+  debtFilter?: string;
+  typeFilter?: string;
+  tentativeFilter?: string;
+  attachmentFilter?: string;
   debtEnabled?: boolean;
 }
 
@@ -58,6 +62,7 @@ export const useReceipts = (params: FetchReceiptsParams) => {
                  r.NonItemisedTotal,
                  s.StoreName,
                  pm.PaymentMethodName,
+                 (SELECT COUNT(*) FROM ReceiptImages ri WHERE ri.ReceiptID = r.ReceiptID) as AttachmentCount,
                  CASE
                      WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
                      ELSE (
@@ -97,6 +102,36 @@ export const useReceipts = (params: FetchReceiptsParams) => {
       if (params.endDate) {
         whereClauses.push(`r.ReceiptDate <= ?`);
         queryParams.push(format(params.endDate, 'yyyy-MM-dd'));
+      }
+
+      if (params.debtEnabled && params.debtFilter && params.debtFilter !== 'all') {
+        if (params.debtFilter === 'none') {
+          whereClauses.push(`(TotalDebtorCount = 0 OR TotalDebtorCount IS NULL)`);
+        } else if (params.debtFilter === 'unpaid') {
+          whereClauses.push(`UnpaidDebtorCount > 0`);
+        } else if (params.debtFilter === 'paid') {
+          whereClauses.push(`TotalDebtorCount > 0 AND UnpaidDebtorCount = 0`);
+        } else if (params.debtFilter === 'own_debt') {
+          whereClauses.push(`r.Status = 'unpaid'`);
+        }
+      }
+
+      if (params.typeFilter && params.typeFilter !== 'all') {
+        whereClauses.push(`r.IsNonItemised = ?`);
+        queryParams.push(params.typeFilter === 'total-only' ? 1 : 0);
+      }
+
+      if (params.tentativeFilter && params.tentativeFilter !== 'all') {
+        whereClauses.push(`r.IsTentative = ?`);
+        queryParams.push(params.tentativeFilter === 'tentative' ? 1 : 0);
+      }
+      
+      if (params.attachmentFilter && params.attachmentFilter !== 'all') {
+        if (params.attachmentFilter === 'none') {
+          whereClauses.push(`AttachmentCount = 0`);
+        } else if (params.attachmentFilter === 'yes') {
+          whereClauses.push(`AttachmentCount > 0`);
+        }
       }
 
       if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;

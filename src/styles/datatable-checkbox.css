@@ -1,0 +1,7 @@
+.checkbox-wrapper-13 input[type="checkbox"] + label:before {
+    border-color: #e5e7eb; /* light theme border color */
+}
+
+.dark .checkbox-wrapper-13 input[type="checkbox"] + label:before {
+    border-color: #27272a; /* dark theme border color */
+}
