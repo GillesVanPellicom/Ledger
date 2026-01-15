@@ -1,5 +1,8 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import Button from './Button';
+import Input from './Input';
 
 interface StepperInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -7,10 +10,15 @@ interface StepperInputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   onIncrement?: () => void;
   onDecrement?: () => void;
   inputClassName?: string;
+  min?: number;
+  max?: number;
 }
 
 const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
-  ({ className, label, error, onIncrement, onDecrement, inputClassName, ...props }, ref) => {
+  ({ className, label, error, onIncrement, onDecrement, inputClassName, min, max, value, ...props }, ref) => {
+    const numericValue = Number(value);
+    const buttonBaseClasses = "bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200 focus:z-10";
+
     return (
       <div className={className}>
         {label && (
@@ -18,31 +26,37 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
             {label}
           </label>
         )}
-        <div className="relative flex items-center shadow-sm rounded-lg">
-          <button
-            type="button"
-            onClick={onDecrement}
-            className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-l-lg text-sm px-3 focus:outline-none h-10 transition-colors"
-          >
-            <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14"/></svg>
-          </button>
-          <input
+        <div className="flex items-center">
+          <Input
             ref={ref}
             type="number"
             className={cn(
-              "border-x-0 h-10 text-center w-full bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 py-2.5 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 focus:border-gray-300 dark:focus:border-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+              "rounded-r-none relative [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
               inputClassName
             )}
-            placeholder="0"
+            value={value}
             {...props}
           />
-          <button
-            type="button"
-            onClick={onIncrement}
-            className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 transition-colors"
-          >
-            <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7 7V5"/></svg>
-          </button>
+          <div className="flex flex-col">
+            <Button
+              type="button"
+              aria-label="Increase value"
+              className={cn(buttonBaseClasses, "px-2 h-5 rounded-l-none rounded-br-none border border-gray-300 dark:border-gray-700 border-l-0 border-b-[0.5px]")}
+              onClick={onIncrement}
+              disabled={(max !== undefined && numericValue >= max) || props.disabled}
+            >
+              <ChevronUp size={15} />
+            </Button>
+            <Button
+              type="button"
+              aria-label="Decrease value"
+              className={cn(buttonBaseClasses, "px-2 h-5 rounded-l-none rounded-tr-none border border-gray-300 dark:border-gray-700 border-l-0 border-t-[0.5px]")}
+              onClick={onDecrement}
+              disabled={(min !== undefined && numericValue <= min) || props.disabled}
+            >
+              <ChevronDown size={15} />
+            </Button>
+          </div>
         </div>
         {error && <p className="mt-1 text-xs text-danger">{error}</p>}
       </div>

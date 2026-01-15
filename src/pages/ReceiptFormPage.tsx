@@ -845,12 +845,12 @@ const ReceiptFormPage: React.FC = () => {
                   {errors.lineItems && <p className="text-sm text-danger text-right -mb-2">{errors.lineItems}</p>}
                   <NanoDataTable
                     headers={[
-                      { label: 'Product', className: splitType === 'line_item' ? 'w-[35%]' : 'w-[45%]' },
-                      { label: 'Qty', className: splitType === 'line_item' ? 'w-[12%] text-center' : 'w-[15%] text-center' },
-                      { label: 'Unit Price (€)', className: splitType === 'line_item' ? 'w-[12%] text-center' : 'w-[15%] text-center' },
-                      { label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%] text-right' : 'w-[20%] text-right' },
-                      ...(splitType === 'line_item' ? [{ label: 'Debtor', className: 'w-[15%] text-right' }] : []),
-                      { label: '', className: 'w-auto text-right' },
+                      { label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]' },
+                      { label: 'Qty', className: 'w-[10%] text-center' },
+                      { label: 'Unit Price (€)', className: 'w-[10%] text-center' },
+                      { label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]' },
+                      ...(splitType === 'line_item' ? [{ label: 'Debtor', className: 'w-[15%]' }] : []),
+                      { label: '', className: 'w-auto' },
                     ]}
                     rows={lineItems.map(item => [
                       <div className="flex items-center gap-2">
@@ -870,6 +870,8 @@ const ReceiptFormPage: React.FC = () => {
                         onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
                         onIncrement={() => handleLineItemChange(item.key, 'LineQuantity', (Number(item.LineQuantity) || 0) + 1)}
                         onDecrement={() => handleLineItemChange(item.key, 'LineQuantity', Math.max(0, (Number(item.LineQuantity) || 0) - 1))}
+                        min={0}
+                        max={1000000}
                         className="w-full"
                         inputClassName="text-center"
                         error={errors[`qty_${item.key}`]}
@@ -881,6 +883,8 @@ const ReceiptFormPage: React.FC = () => {
                         onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
                         onIncrement={() => handleLineItemChange(item.key, 'LineUnitPrice', (Number(item.LineUnitPrice) || 0) + 1)}
                         onDecrement={() => handleLineItemChange(item.key, 'LineUnitPrice', Math.max(0, (Number(item.LineUnitPrice) || 0) - 1))}
+                        min={0}
+                        max={1000000}
                         className="w-full"
                         inputClassName="text-center"
                         error={errors[`price_${item.key}`]}
@@ -1032,7 +1036,7 @@ const ReceiptFormPage: React.FC = () => {
                           <NanoDataTable
                             headers={[
                               { label: 'Name', className: 'w-[55%]' },
-                              { label: 'Shares', className: 'w-[25%] text-center' },
+                              { label: 'Shares', className: 'w-[15%] text-center' },
                               { label: '', className: 'w-auto text-right' },
                             ]}
                             rows={[
@@ -1044,6 +1048,8 @@ const ReceiptFormPage: React.FC = () => {
                                   name="ownShares"
                                   onDecrement={() => setFormData(prev => ({ ...prev, ownShares: Math.max(0, (Number(prev.ownShares) || 0) - 1) }))}
                                   onIncrement={() => setFormData(prev => ({ ...prev, ownShares: (Number(prev.ownShares) || 0) + 1 }))}
+                                  min={0}
+                                  max={1000}
                                   disabled={isDebtDisabled}
                                   className="w-full"
                                   inputClassName="text-center"
@@ -1061,6 +1067,8 @@ const ReceiptFormPage: React.FC = () => {
                                   onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
                                   onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(1, (Number(split.SplitPart) || 0) - 1)))}
                                   onIncrement={() => handleUpdateSplitPart(split.key, String((Number(split.SplitPart) || 0) + 1))}
+                                  min={0}
+                                  max={1000}
                                   disabled={isDebtDisabled}
                                   className="w-full"
                                   inputClassName="text-center"
