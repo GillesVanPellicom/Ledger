@@ -151,6 +151,11 @@ export interface StoreSpending {
   value: number;
 }
 
+export interface CategorySpending {
+  name: string;
+  value: number;
+}
+
 export interface Averages {
   avgPerReceipt: number;
   avgItemsPerReceipt: number;

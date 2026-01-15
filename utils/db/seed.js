@@ -76,6 +76,12 @@ const sizes = [1, 2, 5, 10, 20, 50, 100, 150, 200, 250, 300, 330, 400, 500, 750,
 
 const debtors = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'];
 
+const categories = [
+    'Foodstuffs', 'Medical', 'Clothing', 'Electronics', 'Household', 
+    'Transport', 'Entertainment', 'Personal Care', 'Housing', 'Utilities', 
+    'Insurance', 'Education', 'Gifts', 'Other'
+];
+
 // --- Helper Functions ---
 function runQuery(db, sql, params = []) {
     return new Promise((resolve, reject) => db.run(sql, params, function (err) {
@@ -124,6 +130,11 @@ async function seed() {
         for (const debtor of debtors) await runQuery(db, insert, [debtor]);
     });
 
+    await task('Seeding Categories', async () => {
+        const insert = 'INSERT OR IGNORE INTO Categories (CategoryName) VALUES (?)';
+        for (const cat of categories) await runQuery(db, insert, [cat]);
+    });
+
     await task('Seeding Payment Methods', async () => {
         const paymentMethods = ['KBC', 'Knab', 'Paypal', 'Argenta'];
         for (const name of paymentMethods) {
@@ -131,13 +142,23 @@ async function seed() {
         }
     });
 
+    await task('Updating Products Schema', async () => {
+        try {
+            await runQuery(db, 'ALTER TABLE Products ADD COLUMN CategoryID INTEGER REFERENCES Categories(CategoryID)');
+        } catch (e) {
+            // Ignore if column already exists
+        }
+    });
+
     await task('Generating and Inserting Products', async () => {
         const unitIds = (await getQuery(db, 'SELECT ProductUnitID FROM ProductUnits')).map(u => u.ProductUnitID);
-        const insert = 'INSERT OR IGNORE INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID) VALUES (?, ?, ?, ?)';
+        const categoryIds = (await getQuery(db, 'SELECT CategoryID FROM Categories')).map(c => c.CategoryID);
+        const insert = 'INSERT OR IGNORE INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, CategoryID) VALUES (?, ?, ?, ?, ?)';
         for (let i = 0; i < 10000; i++) {
             const name = getRandomElement(productNames).toLowerCase();
             const brand = getRandomElement(brands);
-            await runQuery(db, insert, [name, brand, getRandomElement(sizes), getRandomElement(unitIds)]);
+            const categoryId = Math.random() < 0.95 ? getRandomElement(categoryIds) : null; // Leave some uncategorized
+            await runQuery(db, insert, [name, brand, getRandomElement(sizes), getRandomElement(unitIds), categoryId]);
         }
     });
 

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { db } from '../utils/db';
-import { MonthlySpending, StoreSpending, Averages, PaymentMethodStats, DebtStats, Debtor } from '../types';
+import { MonthlySpending, StoreSpending, CategorySpending, Averages, PaymentMethodStats, DebtStats, Debtor } from '../types';
 
 export const useAvailableYears = () => {
   return useQuery({
@@ -10,6 +10,50 @@ export const useAvailableYears = () => {
       return result.map(r => r.year);
     },
     staleTime: 1000 * 60 * 60, // 1 hour
+  });
+};
+
+export const useCategoryAnalytics = (year: string, month: string | null, week: string | null) => {
+  return useQuery({
+    queryKey: ['analytics', 'category', year, month, week],
+    queryFn: async () => {
+      let dateFilter = `STRFTIME('%Y', r.ReceiptDate) = ?`;
+      const params: any[] = [year];
+
+      if (month && month !== 'all') {
+        dateFilter += ` AND STRFTIME('%m', r.ReceiptDate) = ?`;
+        params.push(month.padStart(2, '0'));
+      }
+
+      if (week && week !== 'all') {
+        dateFilter += ` AND STRFTIME('%W', r.ReceiptDate) = ?`;
+        params.push(week.padStart(2, '0'));
+      }
+
+      const baseWhere = `r.IsTentative = 0`;
+      const totalQueryPart = `SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END)`;
+
+      const categoryResult = await db.query<{ CategoryName: string, total: number, count: number }>(`
+        SELECT c.CategoryName, ${totalQueryPart} as total, COUNT(DISTINCT r.ReceiptID) as count
+        FROM Receipts r 
+        LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID 
+        LEFT JOIN Products p ON li.ProductID = p.ProductID
+        LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+        WHERE ${dateFilter} AND ${baseWhere} 
+        GROUP BY c.CategoryName 
+        ORDER BY total DESC
+      `, params);
+      
+      const categorySpending: (CategorySpending & { count: number, avg: number })[] = categoryResult.map(c => ({ 
+        name: c.CategoryName || 'Uncategorized', 
+        value: c.total,
+        count: c.count,
+        avg: c.count > 0 ? c.total / c.count : 0
+      }));
+
+      return { categorySpending };
+    },
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -45,6 +89,13 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       // Store Spending
       const storeResult = await db.query<{ StoreName: string, total: number }>(`SELECT s.StoreName, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID JOIN Stores s ON r.StoreID = s.StoreID WHERE ${yearFilter} AND ${baseWhere} GROUP BY s.StoreName ORDER BY total DESC`, [selectedYear]);
       const storeSpending: StoreSpending[] = storeResult.map(s => ({ name: s.StoreName, value: s.total }));
+
+      const uncategorizedCountResult = await db.queryOne<{ count: number }>(`
+        SELECT COUNT(*) as count
+        FROM Products p
+        WHERE p.CategoryID IS NULL
+      `);
+      const hasUncategorizedProducts = (uncategorizedCountResult?.count || 0) > 0;
 
       // Averages
       const averagesResult = await db.queryOne<{ receiptCount: number, totalItems: number, totalSpent: number }>(`SELECT COUNT(DISTINCT r.ReceiptID) as receiptCount, SUM(li.LineQuantity) as totalItems, SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as totalSpent FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE ${yearFilter} AND ${baseWhere}`, [selectedYear]);
@@ -98,6 +149,7 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       return {
         hasItemlessReceipts,
         hasTentativeReceipts,
+        hasUncategorizedProducts,
         monthlySpending,
         storeSpending,
         averages,

@@ -244,7 +244,6 @@ const TopProducts: React.FC = () => {
             </div>
             
             <div className="mt-8">
-              <h3 className="text-md font-medium mb-4">All Products ({getDateLabel()})</h3>
               <DataTable
                 data={paginatedData}
                 columns={columns}
