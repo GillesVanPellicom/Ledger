@@ -1,13 +1,16 @@
 import React, {useState, useEffect, useMemo} from 'react';
 import Modal, {ConfirmModal} from '../ui/Modal';
 import Button from '../ui/Button';
-import Select from '../ui/Select';
-import Input from '../ui/Input';
 import {db} from '../../utils/db';
-import {X} from 'lucide-react';
+import {X, Lock} from 'lucide-react';
 import {nanoid} from 'nanoid';
 import ProgressModal from '../ui/ProgressModal';
 import {Debtor, ReceiptSplit} from '../../types';
+import Card from "../ui/Card";
+import Combobox from "../ui/Combobox";
+import StepperInput from "../ui/StepperInput";
+import {useSettingsStore} from '../../store/useSettingsStore';
+import Tooltip from '../ui/Tooltip';
 
 interface BulkDebtModalProps {
   isOpen: boolean;
@@ -17,6 +20,7 @@ interface BulkDebtModalProps {
 }
 
 const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptIds, onComplete}) => {
+  const {settings} = useSettingsStore();
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);
   const [ownShares, setOwnShares] = useState(0);
@@ -130,65 +134,70 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
       <Modal
         isOpen={isOpen && !isProcessing}
         onClose={onClose}
-        title={`Bulk Assign Debt to ${receiptIds.length} Expenses`}
+        title={`Bulk Assign Debt (${receiptIds.length} items effected)`}
         footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={startBulkUpdate}
-                                                                                       disabled={totalShares === 0}>Apply
-                                                                                                                    Debt</Button></>}
+                                                                                       disabled={totalShares === 0}>Apply</Button></>}
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">This will apply a 'Split Total' debt configuration to
                                                                   all selected expenses. Any existing debt assignments
                                                                   on these expenses will be affected.</p>
-          <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
-            <div className="grid grid-cols-2 gap-4 items-end">
-              <Select
-                label="Add Debtor"
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    handleAddSplit(String(e.target.value));
-                  }
-                }}
-                options={[{
-                  value: '',
-                  label: 'Add Debtor...'
-                }, ...debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
-                  value: d.DebtorID,
-                  label: d.DebtorName
-                }))]}
-                className="bg-white dark:bg-gray-800"
-              />
-              <Input
-                label="Own Shares"
-                type="number"
-                name="ownShares"
-                value={ownShares.toString()}
-                onChange={(e) => setOwnShares(parseInt(e.target.value) || 0)}
-                min="0"
-              />
-            </div>
-            <div className="space-y-2">
-              {receiptSplits.map(split => (
-                <div key={split.key}
-                     className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  <span className="font-medium">{split.DebtorName}</span>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">Shares:</span>
-                      <input type="number"
-                             min="1"
-                             value={split.SplitPart}
-                             onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
-                             className="w-16 rounded-md border-gray-300 dark:border-gray-700 text-sm"/>
-                    </div>
-                    <button onClick={() => handleRemoveSplit(split.key)} className="text-red hover:text-red-700">
-                      <X className="h-4 w-4"/></button>
-                  </div>
+          <div className="space-y-2">
+            <Card className="flex items-center justify-between p-3">
+              <span className="font-medium">{settings.userName || 'User'} (Me)</span>
+              <div className="flex items-center gap-3">
+                <StepperInput
+                  value={String(ownShares)}
+                  onChange={(e) => setOwnShares(parseInt(e.target.value) || 0)}
+                  onIncrement={() => setOwnShares(prev => prev + 1)}
+                  onDecrement={() => setOwnShares(prev => Math.max(0, prev - 1))}
+                  min={0}
+                  className="w-32"
+                />
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <Tooltip content="You cannot remove yourself.">
+                    <Lock className="h-4 w-4 text-gray-400"/>
+                  </Tooltip>
                 </div>
-              ))}
-              {totalShares > 0 &&
-                <div className="text-sm text-gray-500 text-right mt-2">Total Shares: {totalShares}</div>}
-            </div>
+              </div>
+            </Card>
+
+            {receiptSplits.map(split => (
+              <Card key={split.key} className="flex items-center justify-between p-3">
+                <span className="font-medium">{split.DebtorName}</span>
+                <div className="flex items-center gap-3">
+                  <StepperInput
+                    value={String(split.SplitPart)}
+                    onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
+                    onIncrement={() => handleUpdateSplitPart(split.key, String(Number(split.SplitPart) + 1))}
+                    onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(1, Number(split.SplitPart) - 1)))}
+                    min={1}
+                    className="w-32"
+                  />
+                  <Button variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveSplit(split.key)}
+                          className="text-danger hover:text-danger/90">
+                    <X className="h-4 w-4"/>
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 items-end">
+            <Combobox
+              options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
+                value: String(d.DebtorID),
+                label: d.DebtorName
+              }))}
+              value=""
+              onChange={handleAddSplit}
+              placeholder="Add Debtor..."
+              searchPlaceholder="Search for a debtor..."
+              noResultsText="No debtors found."
+            />
+            <div className="text-sm text-gray-500 text-right">Total Shares: {totalShares}</div>
           </div>
         </div>
       </Modal>
