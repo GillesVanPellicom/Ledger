@@ -21,7 +21,7 @@
   "backup": {
     "maxBackups": 5,
     "interval": 5,
-    "editsSinceLastBackup": 1
+    "editsSinceLastBackup": 3
   },
   "paymentMethodStyles": {},
   "datastore": {

@@ -5,7 +5,6 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
 import { X, Plus, Image, RotateCw, Info, ArrowLeft, Lock } from 'lucide-react';
@@ -31,6 +30,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Divider from '../components/ui/Divider';
 import NanoDataTable from '../components/ui/NanoDataTable';
 import DataGrid from '../components/ui/DataGrid';
+import Combobox from '../components/ui/Combobox';
 
 const ReceiptFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,10 +42,10 @@ const ReceiptFormPage: React.FC = () => {
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
-  const [stores, setStores] = useState<{ value: number, label: string }[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<{ value: number, label: string }[]>([]);
+  const [stores, setStores] = useState<{ value: string, label: string }[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<{ value: string, label: string }[]>([]);
   const [debtors, setDebtors] = useState<Debtor[]>([]);
-  const [paidById, setPaidById] = useState<string | number>('me');
+  const [paidById, setPaidById] = useState<string>('me');
 
   const [formData, setFormData] = useState({ 
     storeId: '', 
@@ -109,7 +109,7 @@ const ReceiptFormPage: React.FC = () => {
 
   const fetchStores = async () => {
     const storeData = await db.query<Store>('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
-    setStores(storeData.map(s => ({ value: s.StoreID, label: s.StoreName })));
+    setStores(storeData.map(s => ({ value: String(s.StoreID), label: s.StoreName })));
   };
 
   const handleStoreSave = async (newStoreId?: number) => {
@@ -126,7 +126,7 @@ const ReceiptFormPage: React.FC = () => {
     
     const newDebtor = await db.queryOne<{ DebtorID: number }>('SELECT DebtorID FROM Debtors ORDER BY DebtorID DESC LIMIT 1');
     if (newDebtor) {
-      setPaidById(newDebtor.DebtorID);
+      setPaidById(String(newDebtor.DebtorID));
     }
     
     setIsEntityModalOpen(false);
@@ -135,7 +135,7 @@ const ReceiptFormPage: React.FC = () => {
   const handlePaymentMethodSave = async () => {
     if (paymentMethodsEnabled) {
       const paymentMethodData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
-      setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
+      setPaymentMethods(paymentMethodData.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })));
       
       const newMethod = await db.queryOne<{ PaymentMethodID: number }>('SELECT PaymentMethodID FROM PaymentMethods ORDER BY PaymentMethodID DESC LIMIT 1');
       if (newMethod) {
@@ -152,7 +152,7 @@ const ReceiptFormPage: React.FC = () => {
 
       if (paymentMethodsEnabled) {
         const paymentMethodData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
-        setPaymentMethods(paymentMethodData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
+        setPaymentMethods(paymentMethodData.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })));
       }
 
       if (debtEnabled) {
@@ -168,13 +168,13 @@ const ReceiptFormPage: React.FC = () => {
           if (receiptData.IsNonItemised) {
             setNonItemisedTotal(receiptData.NonItemisedTotal);
           }
-          setPaidById(receiptData.Status === 'unpaid' ? receiptData.OwedToDebtorID : 'me');
+          setPaidById(receiptData.Status === 'unpaid' ? String(receiptData.OwedToDebtorID) : 'me');
           setFormData(prev => ({
             ...prev,
-            storeId: receiptData.StoreID,
+            storeId: String(receiptData.StoreID),
             receiptDate: parseISO(receiptData.ReceiptDate),
             note: receiptData.ReceiptNote || '',
-            paymentMethodId: receiptData.PaymentMethodID,
+            paymentMethodId: String(receiptData.PaymentMethodID),
             ownShares: receiptData.OwnShares || 0,
             discount: receiptData.Discount || 0,
           }));
@@ -353,22 +353,18 @@ const ReceiptFormPage: React.FC = () => {
     };
   }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, totalShares, formData.ownShares, formData.discount, isExclusionMode, excludedLineItemKeys, receiptFormat, nonItemisedTotal]);
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleFormChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePaidByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+  const handlePaidByChange = (value: string) => {
     if (hasSettledDebts) return;
-
-    const newPaidById = value === 'me' ? 'me' : Number(value);
     
-    if (newPaidById !== 'me' && (splitType !== 'none' || receiptSplits.length > 0 || lineItems.some(li => li.DebtorID))) {
+    if (value !== 'me' && (splitType !== 'none' || receiptSplits.length > 0 || lineItems.some(li => li.DebtorID))) {
       setDebtInfoModal({
         isOpen: true,
         onConfirm: () => {
-          setPaidById(newPaidById);
+          setPaidById(value);
           setSplitType('none');
           setReceiptSplits([]);
           setLineItems(prev => prev.map(item => ({ ...item, DebtorID: null, DebtorName: null })));
@@ -376,7 +372,7 @@ const ReceiptFormPage: React.FC = () => {
         }
       });
     } else {
-      setPaidById(newPaidById);
+      setPaidById(value);
     }
   };
 
@@ -656,7 +652,7 @@ const ReceiptFormPage: React.FC = () => {
 
   const paidByOptions = [
     { value: 'me', label: `${settings.userName || 'User'} (Me)` },
-    ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))
+    ...debtors.map(d => ({ value: String(d.DebtorID), label: d.DebtorName }))
   ];
 
   const SplitTypeSelector = () => {
@@ -718,7 +714,16 @@ const ReceiptFormPage: React.FC = () => {
                 <div className="col-span-1">
                   <div className="flex items-end gap-2">
                     <div className="flex-grow">
-                      <Select label="Store" name="storeId" value={String(formData.storeId)} onChange={handleFormChange} options={stores} placeholder="Select a store" error={errors.storeId} />
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Store</label>
+                      <Combobox
+                        options={stores}
+                        value={formData.storeId}
+                        onChange={(value) => handleFormChange('storeId', value)}
+                        placeholder="Select a store"
+                        searchPlaceholder="Search stores..."
+                        noResultsText="No stores found."
+                      />
+                      {errors.storeId && <p className="mt-1 text-xs text-danger">{errors.storeId}</p>}
                     </div>
                     <Tooltip content="Add Store">
                       <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsStoreModalOpen(true)}>
@@ -734,19 +739,19 @@ const ReceiptFormPage: React.FC = () => {
                     <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
                       <div className="flex items-end gap-2">
                         <div className="flex-grow">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid by</label>
                           <Tooltip className="w-full flex" content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
-                            <Select 
-                              label="Paid by" 
-                              name="paidById" 
-                              value={String(paidById)} 
-                              onChange={handlePaidByChange} 
-                              options={paidByOptions} 
-                              placeholder="Select who paid" 
-                              error={errors.paidById} 
-                              disabled={hasSettledDebts}
+                            <Combobox
+                              options={paidByOptions}
+                              value={paidById}
+                              onChange={handlePaidByChange}
+                              placeholder="Select who paid"
+                              searchPlaceholder="Search..."
+                              noResultsText="No one found."
                               className="w-full"
                             />
                           </Tooltip>
+                          {errors.paidById && <p className="mt-1 text-xs text-danger">{errors.paidById}</p>}
                         </div>
                         <Tooltip content="Add Entity">
                           <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)} disabled={hasSettledDebts}>
@@ -761,14 +766,15 @@ const ReceiptFormPage: React.FC = () => {
                     <div>
                       <div className="flex items-end gap-2">
                         <div className="flex-grow">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method</label>
                           <Tooltip className="w-full flex" content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
-                            <Select 
-                              label="Payment Method" 
-                              name="paymentMethodId" 
-                              value={String(formData.paymentMethodId)} 
-                              onChange={handleFormChange} 
-                              options={paymentMethods} 
-                              placeholder="Select a method" 
+                            <Combobox
+                              options={paymentMethods}
+                              value={formData.paymentMethodId}
+                              onChange={(value) => handleFormChange('paymentMethodId', value)}
+                              placeholder="Select a method"
+                              searchPlaceholder="Search methods..."
+                              noResultsText="No methods found."
                               disabled={paidById !== 'me'}
                             />
                           </Tooltip>
@@ -785,7 +791,7 @@ const ReceiptFormPage: React.FC = () => {
 
                 <div className="col-span-2">
                   <Divider text="Optional Details" className="mb-4" />
-                  <Input label="Note" name="note" value={formData.note} onChange={handleFormChange} placeholder="e.g., Weekly groceries" />
+                  <Input label="Note" name="note" value={formData.note} onChange={(e) => handleFormChange('note', e.target.value)} placeholder="e.g., Weekly groceries" />
                 </div>
 
                 <div className="col-span-2">
@@ -913,11 +919,11 @@ const ReceiptFormPage: React.FC = () => {
                         type="text"
                         name="discount"
                         value={String(formData.discount)}
-                        onChange={handleFormChange}
+                        onChange={(e) => handleFormChange('discount', e.target.value)}
                         onBlur={(e) => {
                           const val = parseFloat(e.target.value);
-                          if (isNaN(val) || val < 0) setFormData(prev => ({ ...prev, discount: 0 }));
-                          else if (val > 100) setFormData(prev => ({ ...prev, discount: 100 }));
+                          if (isNaN(val) || val < 0) handleFormChange('discount', '0');
+                          else if (val > 100) handleFormChange('discount', '100');
                         }}
                         className="h-8 text-right"
                         error={errors.discount}
@@ -1004,9 +1010,11 @@ const ReceiptFormPage: React.FC = () => {
                             />
                             <div className="flex items-center justify-between pt-2">
                                 <div className="w-48">
-                                    <Select
+                                    <Combobox
                                         value=""
-                                        options={[{ value: '', label: 'Add Person...' }]}
+                                        options={[]}
+                                        onChange={() => {}}
+                                        placeholder="Add Person..."
                                         className="bg-white dark:bg-gray-800"
                                         disabled={true}
                                     />
@@ -1044,10 +1052,10 @@ const ReceiptFormPage: React.FC = () => {
                                 <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
                                 <StepperInput
                                   value={String(formData.ownShares)}
-                                  onChange={handleFormChange}
+                                  onChange={(e) => handleFormChange('ownShares', e.target.value)}
                                   name="ownShares"
-                                  onDecrement={() => setFormData(prev => ({ ...prev, ownShares: Math.max(0, (Number(prev.ownShares) || 0) - 1) }))}
-                                  onIncrement={() => setFormData(prev => ({ ...prev, ownShares: (Number(prev.ownShares) || 0) + 1 }))}
+                                  onDecrement={() => handleFormChange('ownShares', String(Math.max(0, (Number(formData.ownShares) || 0) - 1)))}
+                                  onIncrement={() => handleFormChange('ownShares', String((Number(formData.ownShares) || 0) + 1))}
                                   min={0}
                                   max={1000}
                                   disabled={isDebtDisabled}
@@ -1084,25 +1092,15 @@ const ReceiptFormPage: React.FC = () => {
                               <div></div>
                               <div className="relative flex justify-center">
                                 <div className="relative w-full max-w-xs">
-                                  <div className={cn(
-                                    "flex items-center justify-center w-full rounded-lg font-medium transition-colors shadow-lg border px-6 py-3 text-lg",
-                                    "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700",
-                                    isDebtDisabled && "opacity-50 cursor-not-allowed"
-                                  )}>
-                                    <Plus className="h-5 w-5 mr-2" />
-                                    <span>Add Person</span>
-                                  </div>
-                                  <select
+                                  <Combobox
+                                    options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: String(d.DebtorID), label: d.DebtorName }))}
                                     value=""
-                                    onChange={(e) => { if (e.target.value) { handleAddSplit(e.target.value); } }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                                    onChange={handleAddSplit}
+                                    placeholder="Add Person"
+                                    searchPlaceholder="Search person..."
+                                    noResultsText="No one found."
                                     disabled={isDebtDisabled}
-                                  >
-                                    <option value="" disabled>Add Person</option>
-                                    {debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => (
-                                      <option key={d.DebtorID} value={d.DebtorID}>{d.DebtorName}</option>
-                                    ))}
-                                  </select>
+                                  />
                                 </div>
                               </div>
                               <div className="text-sm text-gray-500 text-right">{totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0'}</div>
