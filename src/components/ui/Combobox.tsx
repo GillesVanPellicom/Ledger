@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronsUpDown, Check } from 'lucide-react';
+import { ChevronsUpDown, Check, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from './Button';
 import Input from './Input';
@@ -66,7 +66,6 @@ const Combobox: React.FC<ComboboxProps> = ({
   useEffect(() => {
     if (isOpen) {
       setActiveIndex(Math.max(0, filteredOptions.findIndex(opt => opt.value === value)));
-      // Focus input after a short delay to allow the popover to render
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
       setSearchTerm('');
@@ -135,34 +134,36 @@ const Combobox: React.FC<ComboboxProps> = ({
 
   return (
     <div className={cn("relative w-full", className)} ref={containerRef}>
-      <Button
-        variant="outline"
+      <button
         role="combobox"
         aria-expanded={isOpen}
-        className="w-full justify-between"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
+        className={cn(
+          "flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+        )}
       >
         <span className="truncate">
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-      </Button>
+      </button>
       {isOpen && (
         <div 
-          className="absolute z-50 mt-1 w-full rounded-md border bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 shadow-md outline-none animate-in fade-in-0 zoom-in-95"
+          className="absolute z-50 mt-1 w-full rounded-xl bg-white dark:bg-zinc-950 shadow-xl border border-gray-200 dark:border-zinc-800 outline-none animate-in fade-in-0 zoom-in-95"
         >
-          <div className="p-2">
+          <div className="p-2 relative">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <Input
               ref={inputRef}
               type="text"
               placeholder={searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9"
+              className="w-full h-9 pl-8"
             />
           </div>
-          <Separator className="my-0" />
+          <Separator className="border-gray-200 dark:border-zinc-800" />
           <div ref={listRef} className="max-h-60 overflow-auto p-1">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option, index) => (
@@ -172,9 +173,9 @@ const Combobox: React.FC<ComboboxProps> = ({
                   aria-selected={value === option.value}
                   data-active={index === activeIndex}
                   className={cn(
-                    "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none",
-                    "data-[active=true]:bg-gray-100 dark:data-[active=true]:bg-gray-800",
-                    "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none",
+                    "data-[active=true]:bg-gray-100 dark:data-[active=true]:bg-zinc-800",
+                    "hover:bg-gray-100 dark:hover:bg-zinc-800"
                   )}
                   onClick={() => handleSelectOption(option.value)}
                 >
