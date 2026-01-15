@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {useParams, useNavigate, Link} from 'react-router-dom';
 import {format, parseISO} from 'date-fns';
 import {db} from '../utils/db';
@@ -19,8 +19,7 @@ import {
   Link as LinkIcon,
   Trash2,
   ArrowLeft,
-  Info,
-  Paperclip
+  Info
 } from 'lucide-react';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import {cn} from '../utils/cn';
@@ -485,12 +484,6 @@ const ReceiptViewPage: React.FC = () => {
                       <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
                     </div>
                   )}
-                  {images.length > 0 && (
-                    <div className="flex items-center gap-3">
-                      <Paperclip className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm">{images.length} attachment{images.length > 1 ? 's' : ''}</span>
-                    </div>
-                  )}
                   {!receipt.IsNonItemised && (
                     <>
                       <div className="flex items-center gap-3">
@@ -528,7 +521,7 @@ const ReceiptViewPage: React.FC = () => {
                             <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
                             <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
                           </Link>
-                          <div className="flex items-center justify-center w-40">
+                          <div className="flex items-center">
                             {isPaid ? (
                               <Tooltip content={`Paid on ${payment.PaidDate}`}>
                                 <CheckCircle className="h-5 w-5 text-green"/>

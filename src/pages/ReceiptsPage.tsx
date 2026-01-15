@@ -23,14 +23,13 @@ import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
 import Tooltip from '../components/ui/Tooltip';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
-import {Receipt, LineItem, Debtor} from '../types';
+import {Receipt, LineItem} from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { useReceipts, useDeleteReceipt } from '../hooks/useReceipts';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
 import Select from '../components/ui/Select';
-import { cn } from '../utils/cn';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -48,10 +47,13 @@ const ReceiptsPage: React.FC = () => {
     searchParams.get('startDate') ? parseISO(searchParams.get('startDate')!) : null,
     searchParams.get('endDate') ? parseISO(searchParams.get('endDate')!) : null,
   ]);
-  const [debtFilter, setDebtFilter] = useState<string>(searchParams.get('debt') || 'all');
-  const [typeFilter, setTypeFilter] = useState<string>(searchParams.get('type') || 'all');
-  const [tentativeFilter, setTentativeFilter] = useState<string>(searchParams.get('tentative') || 'all');
-  const [attachmentFilter, setAttachmentFilter] = useState<string>(searchParams.get('attachment') || 'all');
+
+  const [filters, setFilters] = useState({
+    debt: searchParams.get('debt') || 'all',
+    type: searchParams.get('type') || 'all',
+    tentative: searchParams.get('tentative') || 'all',
+    attachment: searchParams.get('attachment') || 'all',
+  });
 
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<number[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -73,12 +75,12 @@ const ReceiptsPage: React.FC = () => {
     if (searchTerm) params.set('search', searchTerm);
     if (dateRange[0]) params.set('startDate', dateRange[0].toISOString());
     if (dateRange[1]) params.set('endDate', dateRange[1].toISOString());
-    if (debtFilter !== 'all') params.set('debt', debtFilter);
-    if (typeFilter !== 'all') params.set('type', typeFilter);
-    if (tentativeFilter !== 'all') params.set('tentative', tentativeFilter);
-    if (attachmentFilter !== 'all') params.set('attachment', attachmentFilter);
+    if (filters.debt !== 'all') params.set('debt', filters.debt);
+    if (filters.type !== 'all') params.set('type', filters.type);
+    if (filters.tentative !== 'all') params.set('tentative', filters.tentative);
+    if (filters.attachment !== 'all') params.set('attachment', filters.attachment);
     setSearchParams(params, { replace: true });
-  }, [currentPage, pageSize, searchTerm, dateRange, debtFilter, typeFilter, tentativeFilter, attachmentFilter, setSearchParams]);
+  }, [currentPage, pageSize, searchTerm, dateRange, filters, setSearchParams]);
 
   const { data, isLoading, refetch } = useReceipts({
     page: currentPage,
@@ -86,22 +88,25 @@ const ReceiptsPage: React.FC = () => {
     searchTerm,
     startDate: dateRange[0],
     endDate: dateRange[1],
-    debtFilter,
-    typeFilter,
-    tentativeFilter,
-    attachmentFilter,
+    debtFilter: filters.debt,
+    typeFilter: filters.type,
+    tentativeFilter: filters.tentative,
+    attachmentFilter: filters.attachment,
     debtEnabled
   });
+
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+    setCurrentPage(1);
+  };
 
   const deleteReceiptMutation = useDeleteReceipt();
 
   const resetFilters = () => {
-    setDebtFilter('all');
-    setTypeFilter('all');
-    setTentativeFilter('all');
-    setAttachmentFilter('all');
+    setFilters({ debt: 'all', type: 'all', tentative: 'all', attachment: 'all' });
     setDateRange([null, null]);
     setSearchTerm('');
+    setCurrentPage(1);
   };
 
   const handleDelete = async () => {
@@ -268,33 +273,38 @@ const ReceiptsPage: React.FC = () => {
       <Header
         title="Expenses"
         actions={
-          <Tooltip content="New Expense">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/receipts/new')}>
-              <Plus className="h-5 w-5"/>
-            </Button>
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            {selectedReceiptIds.length > 0 && (
+              <>
+                <Tooltip content={`Delete ${selectedReceiptIds.length} expense(s)`}>
+                  <Button variant="secondary" size="icon" onClick={() => openDeleteModal()}>
+                    <Trash className="h-5 w-5"/>
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Feature broken, WIP">
+                  <Button variant="secondary" size="icon" onClick={handleMassPdfSave} disabled>
+                    <FileDown className="h-5 w-5"/>
+                  </Button>
+                </Tooltip>
+                {debtEnabled && (
+                  <Tooltip content="Bulk Debt">
+                    <Button variant="secondary" size="icon" onClick={() => setIsBulkDebtModalOpen(true)}>
+                      <Users className="h-5 w-5"/>
+                    </Button>
+                  </Tooltip>
+                )}
+              </>
+            )}
+            <Tooltip content="New Expense">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/receipts/new')}>
+                <Plus className="h-5 w-5"/>
+              </Button>
+            </Tooltip>
+          </div>
         }
       />
       <PageWrapper>
         <div className="py-6">
-          <div className={cn("flex items-center gap-2 h-10 mb-4", selectedReceiptIds.length === 0 && "invisible")}>
-            <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
-              <Trash className="h-4 w-4 mr-2"/>
-              Delete ({selectedReceiptIds.length})
-            </Button>
-            <Tooltip content="Feature broken, WIP">
-              <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
-                <FileDown className="h-4 w-4 mr-2"/>
-                Save as PDF
-              </Button>
-            </Tooltip>
-            {debtEnabled && (
-              <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
-                <Users className="h-4 w-4 mr-2"/>
-                Bulk Debt
-              </Button>
-            )}
-          </div>
           <DataTable
             data={data?.receipts || []}
             columns={columns}
@@ -330,22 +340,22 @@ const ReceiptsPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Tooltip content="Filter by debt status">
                   <div className="w-40">
-                    {debtEnabled && <Select options={debtFilterOptions} value={debtFilter} onChange={e => setDebtFilter(e.target.value)} />}
+                    {debtEnabled && <Select options={debtFilterOptions} value={filters.debt} onChange={e => handleFilterChange('debt', e.target.value)} />}
                   </div>
                 </Tooltip>
                 <Tooltip content="Filter by expense type">
                   <div className="w-40">
-                    <Select options={typeFilterOptions} value={typeFilter} onChange={e => setTypeFilter(e.target.value)} />
+                    <Select options={typeFilterOptions} value={filters.type} onChange={e => handleFilterChange('type', e.target.value)} />
                   </div>
                 </Tooltip>
                 <Tooltip content="Filter by tentative status">
                   <div className="w-40">
-                    <Select options={tentativeFilterOptions} value={tentativeFilter} onChange={e => setTentativeFilter(e.target.value)} />
+                    <Select options={tentativeFilterOptions} value={filters.tentative} onChange={e => handleFilterChange('tentative', e.target.value)} />
                   </div>
                 </Tooltip>
                 <Tooltip content="Filter by attachments">
                   <div className="w-40">
-                    <Select options={attachmentFilterOptions} value={attachmentFilter} onChange={e => setAttachmentFilter(e.target.value)} />
+                    <Select options={attachmentFilterOptions} value={filters.attachment} onChange={e => handleFilterChange('attachment', e.target.value)} />
                   </div>
                 </Tooltip>
                 <Tooltip content="Reset Filters">

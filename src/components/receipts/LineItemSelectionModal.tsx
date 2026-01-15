@@ -6,7 +6,6 @@ import Select from '../ui/Select';
 import InfoCard from '../ui/InfoCard';
 import { LineItem, Debtor } from '../../types';
 import { cn } from '../../utils/cn';
-import { Kbd } from '../ui/kbd';
 
 interface LineItemSelectionModalProps {
   isOpen: boolean;
@@ -191,13 +190,15 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
       header: 'Assign to',
       render: (item: LineItem) => (
         <div onClick={(e) => e.stopPropagation()}>
-          <Select
-            value={assignments[item.key] || ''}
-            onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
-            options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
-            className="w-full"
-            disabled={disabled}
-          />
+          {selectedKeys.has(item.key) ? (
+            <Select
+              value={assignments[item.key] || ''}
+              onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
+              options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+              className="w-full"
+              disabled={disabled}
+            />
+          ) : <div className="h-10" />}
         </div>
       )
     });

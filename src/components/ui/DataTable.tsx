@@ -5,7 +5,6 @@ import Input from './Input';
 import Select from './Select';
 import Tooltip from './Tooltip';
 import Spinner from './Spinner';
-import '../../styles/datatable-checkbox.css';
 
 interface Column {
   header: string;
