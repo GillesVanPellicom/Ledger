@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, PaintBrushIcon, PencilIcon, EyeIcon, EyeSlashIcon, CreditCardIcon } from '@heroicons/react/24/solid';
+import { Plus, Palette, Pencil, Eye, EyeOff, CreditCard } from 'lucide-react';
 import Button from '../components/ui/Button';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import PaymentMethodStyleModal from '../components/payment/PaymentMethodStyleModal';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
-import * as SolidIcons from '@heroicons/react/24/solid';
 import Tooltip from '../components/ui/Tooltip';
 import { PaymentMethod, PaymentMethodStyle } from '../types';
 import { Header } from '../components/ui/Header';
@@ -15,6 +14,7 @@ import DataGrid from '../components/ui/DataGrid';
 import Spinner from '../components/ui/Spinner';
 import { usePaymentMethods, usePaymentMethodBalance, useInvalidatePaymentMethods } from '../hooks/usePaymentMethods';
 import { useSettingsStore } from '../store/useSettingsStore';
+import * as LucideIcons from 'lucide-react';
 
 interface PaymentMethodItemProps {
   method: PaymentMethod;
@@ -25,7 +25,7 @@ interface PaymentMethodItemProps {
 const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleClick, onEditClick }) => {
     const { settings } = useSettingsStore();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
-    const IconComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
+    const IconComponent = style?.type === 'icon' && style.symbol && (LucideIcons as any)[style.symbol];
     
     const { data: balance, isLoading } = usePaymentMethodBalance(method.PaymentMethodID, method.PaymentMethodFunds);
 
@@ -36,7 +36,7 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
                 <div className="w-8 h-8 flex items-center justify-center">
                   {IconComponent ? <IconComponent className="h-8 w-8 text-gray-400" /> :
                    style?.type === 'emoji' ? <span className="text-3xl">{style.symbol}</span> :
-                   <CreditCardIcon className="h-8 w-8 text-gray-300 dark:text-gray-700" />}
+                   <CreditCard className="h-8 w-8 text-gray-300 dark:text-gray-700" />}
                 </div>
             </div>
             <div className="mt-4 text-right">
@@ -53,14 +53,14 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
             </div>
             <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <Tooltip content="Edit Style">
-                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PaintBrushIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
+                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><Palette className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
               </Tooltip>
               <Tooltip content="Edit">
-                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><PencilIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
+                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><Pencil className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
               </Tooltip>
               {method.PaymentMethodIsActive === 0 && (
                 <Tooltip content="Hidden">
-                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                  <EyeOff className="h-5 w-5 text-gray-400" />
                 </Tooltip>
               )}
             </div>
@@ -122,12 +122,12 @@ const PaymentMethodsPage: React.FC = () => {
           <>
             <Tooltip content={showHidden ? 'Hide Inactive' : 'Show Hidden'}>
               <Button variant="ghost" size="icon" onClick={() => setShowHidden(!showHidden)}>
-                {showHidden ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                {showHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </Button>
             </Tooltip>
             <Tooltip content="Add Method">
               <Button variant="ghost" size="icon" onClick={() => { setSelectedMethod(null); setIsAddModalOpen(true); }}>
-                <PlusIcon className="h-5 w-5" />
+                <Plus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </>

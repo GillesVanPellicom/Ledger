@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import * as SolidIcons from '@heroicons/react/24/solid';
+import * as SolidIcons from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { PaymentMethod, PaymentMethodStyle } from '../../types';
 
@@ -11,7 +11,7 @@ const emojis = [
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
 ];
 
-const iconOrder = ['CreditCardIcon'];
+const iconOrder = ['CreditCard'];
 
 interface PaymentMethodStyleModalProps {
   isOpen: boolean;
@@ -22,14 +22,14 @@ interface PaymentMethodStyleModalProps {
 }
 
 const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpen, onClose, onSave, method, currentStyle }) => {
-  const [selectedSymbol, setSelectedSymbol] = useState('CreditCardIcon');
+  const [selectedSymbol, setSelectedSymbol] = useState('CreditCard');
   const [symbolType, setSymbolType] = useState<'icon' | 'emoji'>('icon');
   const [iconSearchTerm, setIconSearchTerm] = useState('');
   const [emojiSearchTerm, setEmojiSearchTerm] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSymbol(currentStyle?.symbol || 'CreditCardIcon');
+      setSelectedSymbol(currentStyle?.symbol || 'CreditCard');
       setSymbolType(currentStyle?.type || 'icon');
       setIconSearchTerm('');
       setEmojiSearchTerm('');
@@ -69,7 +69,7 @@ const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpe
     >
       <div className="space-y-4">
         <div className="flex border-b border-gray-200 dark:border-gray-700">
-          <button onClick={() => { setSymbolType('icon'); setSelectedSymbol('CreditCardIcon'); }} className={cn("px-4 py-2 text-sm font-medium", symbolType === 'icon' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700')}>Icons</button>
+          <button onClick={() => { setSymbolType('icon'); setSelectedSymbol('CreditCard'); }} className={cn("px-4 py-2 text-sm font-medium", symbolType === 'icon' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700')}>Icons</button>
           <button onClick={() => { setSymbolType('emoji'); setSelectedSymbol(emojis[0]); }} className={cn("px-4 py-2 text-sm font-medium", symbolType === 'emoji' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700')}>Emojis</button>
         </div>
         {symbolType === 'icon' && (

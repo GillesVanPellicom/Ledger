@@ -8,7 +8,7 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
-import { XMarkIcon, PlusIcon, PhotoIcon, ArrowPathIcon, InformationCircleIcon, ArrowLeftIcon, LockClosedIcon } from '@heroicons/react/24/solid';
+import { X, Plus, Image, RotateCw, Info, ArrowLeft, Lock } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { cn } from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
@@ -696,7 +696,7 @@ const ReceiptFormPage: React.FC = () => {
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeftIcon className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </Tooltip>
         }
@@ -704,7 +704,7 @@ const ReceiptFormPage: React.FC = () => {
           !isEditing && isConcept && (
             <Tooltip content="Clear Concept">
               <Button variant="ghost" size="icon" onClick={clearConcept}>
-                <ArrowPathIcon className="h-5 w-5" />
+                <RotateCw className="h-5 w-5" />
               </Button>
             </Tooltip>
           )
@@ -722,7 +722,7 @@ const ReceiptFormPage: React.FC = () => {
                     </div>
                     <Tooltip content="Add Store">
                       <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsStoreModalOpen(true)}>
-                        <PlusIcon className="h-5 w-5" />
+                        <Plus className="h-5 w-5" />
                       </Button>
                     </Tooltip>
                   </div>
@@ -750,7 +750,7 @@ const ReceiptFormPage: React.FC = () => {
                         </div>
                         <Tooltip content="Add Entity">
                           <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)} disabled={hasSettledDebts}>
-                            <PlusIcon className="h-5 w-5" />
+                            <Plus className="h-5 w-5" />
                           </Button>
                         </Tooltip>
                       </div>
@@ -775,7 +775,7 @@ const ReceiptFormPage: React.FC = () => {
                         </div>
                         <Tooltip content="Add Payment Method">
                           <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsPaymentMethodModalOpen(true)} disabled={paidById !== 'me'}>
-                            <PlusIcon className="h-5 w-5" />
+                            <Plus className="h-5 w-5" />
                           </Button>
                         </Tooltip>
                       </div>
@@ -791,19 +791,19 @@ const ReceiptFormPage: React.FC = () => {
                 <div className="col-span-2">
                   <div className="flex items-center gap-2 mb-4">
                     <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">Images</h2>
-                    <Tooltip content="Attach images of the physical receipt for your records."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip>
+                    <Tooltip content="Attach images of the physical receipt for your records."><Info className="h-4 w-4 text-gray-400" /></Tooltip>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                     {images.map(image => (
                       <div key={image.key} className="relative group">
                         <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
                         <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <XMarkIcon className="h-3 w-3" />
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
                     ))}
                     <label className="w-full h-24 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                      <PhotoIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                      <Image className="h-8 w-8 text-gray-400 dark:text-gray-500" />
                       <span className="text-xs mt-1">Add Images</span>
                       <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
                     </label>
@@ -893,12 +893,12 @@ const ReceiptFormPage: React.FC = () => {
                       <span className="font-medium text-right block">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</span>,
                       ...(splitType === 'line_item' ? [<div className="text-right text-sm text-gray-600 dark:text-gray-400">{item.DebtorName || '-'}</div>] : []),
                       <div className="text-right">
-                        {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><XMarkIcon className="h-4 w-4 text-danger" /></Button>}
+                        {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-danger" /></Button>}
                       </div>
                     ])}
                   />
                   <div className="flex justify-center mt-4">
-                    <Button variant="secondary" size="lg" className="w-1/4" onClick={() => setIsProductSelectorOpen(true)} disabled={isDebtDisabled}><PlusIcon className="h-5 w-5 mr-2" />Add Item</Button>
+                    <Button variant="secondary" size="lg" className="w-1/4" onClick={() => setIsProductSelectorOpen(true)} disabled={isDebtDisabled}><Plus className="h-5 w-5 mr-2" />Add Item</Button>
                   </div>
                 </div>
               )}
@@ -959,7 +959,7 @@ const ReceiptFormPage: React.FC = () => {
               <div className="relative p-6 space-y-4 min-h-[300px]">
                 {hasSettledDebts && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                    <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
                     <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
                     <p className="mt-1 text-sm text-gray-500">One or more debts on this expense have been settled. Debt configuration is now locked.</p>
                   </div>
@@ -971,7 +971,7 @@ const ReceiptFormPage: React.FC = () => {
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-2">
                             <h2 className="text-lg font-semibold">Debt Management</h2>
-                            <Tooltip content="Split the cost of this expense with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                            <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400" /></Tooltip>
                           </div>
                           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                             <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">None</button>
@@ -996,7 +996,7 @@ const ReceiptFormPage: React.FC = () => {
                                         />,
                                         <div className="text-right text-gray-400">
                                             <Tooltip content="You cannot remove yourself">
-                                                <LockClosedIcon className="h-4 w-4" />
+                                                <Lock className="h-4 w-4" />
                                             </Tooltip>
                                         </div>
                                     ]
@@ -1016,7 +1016,7 @@ const ReceiptFormPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
-                        <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                        <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
                         <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debt Management Disabled</h3>
                         <p className="mt-1 text-sm text-gray-500">Debt management is disabled when an expense isn't paid by you.</p>
                       </div>
@@ -1026,7 +1026,7 @@ const ReceiptFormPage: React.FC = () => {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <h2 className="text-lg font-semibold">Debt Management</h2>
-                          <Tooltip content="Split the cost of this expense with others."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                          <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400" /></Tooltip>
                         </div>
                         <SplitTypeSelector />
                       </div>
@@ -1056,7 +1056,7 @@ const ReceiptFormPage: React.FC = () => {
                                 />,
                                 <div className="text-right text-gray-400">
                                   <Tooltip content="You cannot remove yourself">
-                                    <LockClosedIcon className="h-4 w-4 ml-auto" />
+                                    <Lock className="h-4 w-4 ml-auto" />
                                   </Tooltip>
                                 </div>
                               ],
@@ -1074,7 +1074,7 @@ const ReceiptFormPage: React.FC = () => {
                                   inputClassName="text-center"
                                 />,
                                 <div className="text-right">
-                                  {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><XMarkIcon className="h-4 w-4 text-danger ml-auto" /></Button>}
+                                  {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><X className="h-4 w-4 text-danger ml-auto" /></Button>}
                                 </div>
                               ]))
                             ]}
@@ -1089,7 +1089,7 @@ const ReceiptFormPage: React.FC = () => {
                                     "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700",
                                     isDebtDisabled && "opacity-50 cursor-not-allowed"
                                   )}>
-                                    <PlusIcon className="h-5 w-5 mr-2" />
+                                    <Plus className="h-5 w-5 mr-2" />
                                     <span>Add Person</span>
                                   </div>
                                   <select
@@ -1137,7 +1137,7 @@ const ReceiptFormPage: React.FC = () => {
 
                       {splitType === 'none' && (
                         <div className="flex flex-col items-center justify-center py-8 text-center min-h-[400px]">
-                          <InformationCircleIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />
+                          <Info className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />
                           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Debt Splitting</h3>
                           <p className="text-sm text-gray-500 max-w-sm">The full amount of this expense is assigned to you. Select a split type above to share the cost.</p>
                         </div>
@@ -1146,7 +1146,7 @@ const ReceiptFormPage: React.FC = () => {
                       <div className={cn("mt-4 pt-4 border-t border-gray-200 dark:border-gray-700", splitType === 'none' && "invisible")}>
                         <div className="flex items-center gap-2 mb-4">
                           <h2 className="text-lg font-semibold">Estimated Debt</h2>
-                          <Tooltip content="This is an estimate of what each person owes based on the current split."><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+                          <Tooltip content="This is an estimate of what each person owes based on the current split."><Info className="h-5 w-5 text-gray-400" /></Tooltip>
                         </div>
                         <DataGrid
                           itemKey="name"

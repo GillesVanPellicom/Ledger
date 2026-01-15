@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { MoonIcon, SunIcon, ArrowPathIcon, BugAntIcon, CreditCardIcon, DocumentTextIcon, FolderIcon, TrashIcon, InformationCircleIcon, UserGroupIcon, ServerIcon, PencilIcon as PencilIconSolid } from '@heroicons/react/24/solid';
+import { Moon, Sun, RotateCw, Bug, CreditCard, FileText, Folder, Trash2, Info, Users, Server, Pencil } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -156,7 +156,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const SectionTitle = ({ title, tooltip }: { title: string, tooltip?: string }) => (
     <div className="flex items-center gap-2 mb-4">
       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
-      {tooltip && <Tooltip content={tooltip}><InformationCircleIcon className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>}
+      {tooltip && <Tooltip content={tooltip}><Info className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>}
     </div>
   );
 
@@ -172,13 +172,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               <div className="space-y-6">
                 <div>
                   <SectionTitle title="Theme" tooltip="Choose between light and dark mode for the application interface." />
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'light' ? "bg-blue-100 text-blue-600" : "bg-gray-800 text-gray-400")}><SunIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Light Mode</p><p className="text-sm text-gray-500">Default appearance</p></div></div><button onClick={() => handleThemeChange('light')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'light' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'light' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-3"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'dark' ? "bg-blue-900/30 text-blue-400" : "bg-gray-100 text-gray-400")}><MoonIcon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</p><p className="text-sm text-gray-500">Easier on the eyes</p></div></div><button onClick={() => handleThemeChange('dark')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'dark' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'dark' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
+                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'light' ? "bg-blue-100 text-blue-600" : "bg-gray-800 text-gray-400")}><Sun className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Light Mode</p><p className="text-sm text-gray-500">Default appearance</p></div></div><button onClick={() => handleThemeChange('light')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'light' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'light' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
+                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-3"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'dark' ? "bg-blue-900/30 text-blue-400" : "bg-gray-100 text-gray-400")}><Moon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</p><p className="text-sm text-gray-500">Easier on the eyes</p></div></div><button onClick={() => handleThemeChange('dark')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'dark' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'dark' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <SectionTitle title="UI Scale" tooltip="Adjust the size of text and other interface elements." />
-                    <Button variant="ghost" size="sm" onClick={resetUiScale} className="h-8 px-2 text-xs"><ArrowPathIcon className="h-3 w-3 mr-1" />Reset</Button>
+                    <Button variant="ghost" size="sm" onClick={resetUiScale} className="h-8 px-2 text-xs"><RotateCw className="h-3 w-3 mr-1" />Reset</Button>
                   </div>
                   <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" /><span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-12 text-right">{uiScale}%</span></div>
                 </div>
@@ -194,14 +194,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       description="Track spending across different payment methods." 
                       isEnabled={settings.modules.paymentMethods.enabled} 
                       onToggle={() => handleModuleToggle('paymentMethods')}
-                      icon={CreditCardIcon}
+                      icon={CreditCard}
                     />
                     <Switch 
                       label="Debt Tracking" 
                       description="Track debts and shared expenses." 
                       isEnabled={settings.modules.debt?.enabled} 
                       onToggle={() => handleModuleToggle('debt')}
-                      icon={UserGroupIcon}
+                      icon={Users}
                     />
                   </div>
                 </div>
@@ -277,16 +277,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                          <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
                           <Input id="max-backups" type="number" className="w-full mt-2" value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', e.target.value)} />
                         </div>
                         <div>
-                          <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><InformationCircleIcon className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                          <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
                           <Input id="backup-interval" type="number" className="w-full mt-2" value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', e.target.value)} />
                         </div>
                       </div>
                       <div className="text-right mt-2">
-                        <Button variant="ghost" size="sm" onClick={resetBackupSettings} className="h-8 px-2 text-xs"><ArrowPathIcon className="h-3 w-3 mr-1" />Reset to Defaults</Button>
+                        <Button variant="ghost" size="sm" onClick={resetBackupSettings} className="h-8 px-2 text-xs"><RotateCw className="h-3 w-3 mr-1" />Reset to Defaults</Button>
                       </div>
                     </div>
                     <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp} className="w-full">Backup Now</Button>
@@ -302,7 +302,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 mr-4">
                         <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                          <BugAntIcon className="h-6 w-6" />
+                          <Bug className="h-6 w-6" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">Test Error Modal</p>
@@ -316,7 +316,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 mr-4">
                         <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400">
-                          <TrashIcon className="h-6 w-6" />
+                          <Trash2 className="h-6 w-6" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">Reset Datastore</p>
@@ -330,7 +330,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 mr-4">
                         <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                          <TrashIcon className="h-6 w-6" />
+                          <Trash2 className="h-6 w-6" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">Reset All Settings</p>

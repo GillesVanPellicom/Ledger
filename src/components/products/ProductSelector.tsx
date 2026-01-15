@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
 import DataTable from '../ui/DataTable';
 import Button from '../ui/Button';
-import { PlusIcon } from '@heroicons/react/24/solid';
+import { Plus } from 'lucide-react';
 import { db } from '../../utils/db';
 import ProductModal from './ProductModal';
 import { Product } from '../../types';
@@ -146,7 +146,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ isOpen, onClose, onSe
         <div className="space-y-4">
           <div className="flex justify-end">
             <Button variant="secondary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
-              <PlusIcon className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" />
               Create New Product
             </Button>
           </div>

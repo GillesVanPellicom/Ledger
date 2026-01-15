@@ -6,7 +6,7 @@ import Card from '../ui/Card';
 import Select from '../ui/Select';
 import DataTable from '../ui/DataTable';
 import Spinner from '../ui/Spinner';
-import { DocumentMagnifyingGlassIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { FileSearch, Info } from 'lucide-react';
 import Tooltip from '../ui/Tooltip';
 
 interface ProductSpending {
@@ -191,7 +191,7 @@ const TopProducts: React.FC = () => {
   const CardHeader = ({ title, tooltipText }: { title: string, tooltipText: string }) => (
     <div className="flex items-center gap-2">
       <h2 className="text-lg font-semibold">{title}</h2>
-      <Tooltip content={tooltipText}><InformationCircleIcon className="h-5 w-5 text-gray-400" /></Tooltip>
+      <Tooltip content={tooltipText}><Info className="h-5 w-5 text-gray-400" /></Tooltip>
     </div>
   );
 
@@ -234,7 +234,7 @@ const TopProducts: React.FC = () => {
           <div className="h-64 flex items-center justify-center w-full"><Spinner /></div>
         ) : data.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-gray-500 gap-2">
-            <DocumentMagnifyingGlassIcon className="h-12 w-12 opacity-50" />
+            <FileSearch className="h-12 w-12 opacity-50" />
             <p>No data for this period.</p>
           </div>
         ) : (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, ReactNode, useLayoutEffect } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, DocumentMagnifyingGlassIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/24/solid';
+import { ChevronLeft, ChevronRight, Search, FileSearch, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Input from './Input';
 import Select from './Select';
@@ -229,7 +229,7 @@ const DataTable: React.FC<DataTableProps> = ({
         <div className="flex-1">
           {searchable && (
             <div className="relative w-90 mr-4">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-zinc-700" disabled={disabled} />
             </div>
           )}
@@ -243,7 +243,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 disabled={currentPage === 1 || loading || disabled}
                 className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 rounded-l-lg text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronDoubleLeftIcon className="h-3 w-3" />
+                <ChevronsLeft className="h-3 w-3" />
               </button>
               <button
                 type="button"
@@ -251,7 +251,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 disabled={currentPage === 1 || loading || disabled}
                 className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors border-l-0"
               >
-                <ChevronLeftIcon className="h-3 w-3" />
+                <ChevronLeft className="h-3 w-3" />
               </button>
               <div className="relative h-10 flex items-center bg-white dark:bg-gray-900 border-y border-gray-300 dark:border-zinc-700">
                 <input
@@ -277,7 +277,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 disabled={currentPage === totalPages || loading || totalCount === 0 || disabled}
                 className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRightIcon className="h-3 w-3" />
+                <ChevronRight className="h-3 w-3" />
               </button>
               <button
                 type="button"
@@ -285,7 +285,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 disabled={currentPage === totalPages || loading || totalCount === 0 || disabled}
                 className="bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-700 dark:hover:text-gray-100 focus:ring-2 focus:ring-accent focus:z-10 font-medium leading-5 rounded-r-lg text-sm px-3 focus:outline-none h-10 disabled:bg-gray-100 dark:disabled:bg-zinc-950 disabled:cursor-not-allowed transition-colors border-l-0"
               >
-                <ChevronDoubleRightIcon className="h-3 w-3" />
+                <ChevronsRight className="h-3 w-3" />
               </button>
             </div>
           </div>
@@ -354,7 +354,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 <tr>
                   <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
                     <div className="flex flex-col items-center gap-2">
-                      <DocumentMagnifyingGlassIcon className="h-10 w-10 opacity-50" />
+                      <FileSearch className="h-10 w-10 opacity-50" />
                       <span>No results found.</span>
                     </div>
                   </td>

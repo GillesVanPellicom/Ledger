@@ -4,17 +4,17 @@ import {format} from 'date-fns';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import {
-  PlusIcon,
-  TrashIcon,
-  DocumentArrowDownIcon,
-  ExclamationCircleIcon,
-  CheckCircleIcon,
-  UserGroupIcon,
-  ExclamationTriangleIcon,
-  ClipboardDocumentListIcon,
-  ClipboardIcon,
-  QuestionMarkCircleIcon
-} from '@heroicons/react/24/solid';
+  Plus,
+  Trash,
+  FileDown,
+  AlertCircle,
+  CheckCircle,
+  Users,
+  AlertTriangle,
+  ClipboardList,
+  Clipboard,
+  HelpCircle
+} from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -130,31 +130,31 @@ const ReceiptsPage: React.FC = () => {
         <div className="flex items-center justify-center gap-3">
           {row.IsNonItemised ? (
             <Tooltip content="Total-only expense">
-              <ClipboardIcon className="h-5 w-5 text-gray-400"/>
+              <Clipboard className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           ) : (
             <Tooltip content="Detailed Expense">
-              <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400"/>
+              <ClipboardList className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           )}
 
           {row.Status === 'unpaid' ? (
             <Tooltip content="This is an unpaid expense, meaning it is owed to the person who paid it by you.">
-              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500"/>
+              <AlertTriangle className="h-5 w-5 text-yellow-500"/>
             </Tooltip>
           ) : debtEnabled && (row.UnpaidDebtorCount || 0) > 0 ? (
             <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-              <ExclamationCircleIcon className="h-5 w-5 text-red"/>
+              <AlertCircle className="h-5 w-5 text-red"/>
             </Tooltip>
           ) : debtEnabled && (row.TotalDebtorCount || 0) > 0 ? (
             <Tooltip content="All debts settled">
-              <CheckCircleIcon className="h-5 w-5 text-green"/>
+              <CheckCircle className="h-5 w-5 text-green"/>
             </Tooltip>
           ) : <div className="w-5"/>}
 
           {row.IsTentative ? (
             <Tooltip content="Tentative Expense">
-              <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400"/>
+              <HelpCircle className="h-5 w-5 text-gray-400"/>
             </Tooltip>
           ) : <div className="w-5"/>}
         </div>
@@ -191,7 +191,7 @@ const ReceiptsPage: React.FC = () => {
                 openDeleteModal(row.ReceiptID);
               }}
             >
-              <TrashIcon className="h-4 w-4"/>
+              <Trash className="h-4 w-4"/>
             </Button>
           </Tooltip>
       </div>
@@ -205,7 +205,7 @@ const ReceiptsPage: React.FC = () => {
         actions={
           <Tooltip content="New Expense">
             <Button variant="ghost" size="icon" onClick={() => navigate('/receipts/new')}>
-              <PlusIcon className="h-5 w-5"/>
+              <Plus className="h-5 w-5"/>
             </Button>
           </Tooltip>
         }
@@ -215,18 +215,18 @@ const ReceiptsPage: React.FC = () => {
           {selectedReceiptIds.length > 0 && (
             <div className="flex items-center gap-2 mb-4">
               <Button variant="danger" size="sm" onClick={() => openDeleteModal()}>
-                <TrashIcon className="h-4 w-4 mr-2"/>
+                <Trash className="h-4 w-4 mr-2"/>
                 Delete ({selectedReceiptIds.length})
               </Button>
               <Tooltip content="Feature broken, WIP">
                 <Button variant="secondary" size="sm" onClick={handleMassPdfSave} disabled>
-                  <DocumentArrowDownIcon className="h-4 w-4 mr-2"/>
+                  <FileDown className="h-4 w-4 mr-2"/>
                   Save as PDF
                 </Button>
               </Tooltip>
               {debtEnabled && (
                 <Button variant="secondary" size="sm" onClick={() => setIsBulkDebtModalOpen(true)}>
-                  <UserGroupIcon className="h-4 w-4 mr-2"/>
+                  <Users className="h-4 w-4 mr-2"/>
                   Bulk Debt
                 </Button>
               )}

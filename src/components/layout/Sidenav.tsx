@@ -1,15 +1,15 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  ReceiptPercentIcon,
-  ChartBarIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Cog6ToothIcon,
-  CreditCardIcon,
-  UserGroupIcon,
-  CircleStackIcon
-} from '@heroicons/react/24/solid';
+  Receipt,
+  BarChart2,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  CreditCard,
+  Users,
+  Database
+} from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useUIStore } from '../../store/useUIStore';
@@ -20,22 +20,22 @@ const Sidenav: React.FC = () => {
   const { isSidenavCollapsed, toggleSidenav, openSettingsModal } = useUIStore();
 
   const navItems = [
-    { path: '/', label: 'Expenses', icon: ReceiptPercentIcon, activePaths: ['/', '/receipts'] },
-    { path: '/reference-data', label: 'Reference Data', icon: CircleStackIcon, activePaths: ['/reference-data'] },
-    { path: '/analytics', label: 'Analytics', icon: ChartBarIcon, activePaths: ['/analytics'] },
+    { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts'] },
+    { path: '/reference-data', label: 'Reference Data', icon: Database, activePaths: ['/reference-data'] },
+    { path: '/analytics', label: 'Analytics', icon: BarChart2, activePaths: ['/analytics'] },
   ];
 
   if (settings.modules.paymentMethods?.enabled) {
     navItems.push({
       path: '/payment-methods',
       label: 'Payment Methods',
-      icon: CreditCardIcon,
+      icon: CreditCard,
       activePaths: ['/payment-methods']
     });
   }
 
   if (settings.modules.debt?.enabled) {
-    navItems.push({ path: '/entities', label: 'Entities', icon: UserGroupIcon, activePaths: ['/entities'] });
+    navItems.push({ path: '/entities', label: 'Entities', icon: Users, activePaths: ['/entities'] });
   }
 
   return (
@@ -55,7 +55,7 @@ const Sidenav: React.FC = () => {
           onClick={toggleSidenav}
           className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 transition-colors ml-auto"
         >
-          {isSidenavCollapsed ? <ChevronRightIcon className="h-5 w-5" /> : <ChevronLeftIcon className="h-5 w-5" />}
+          {isSidenavCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>
       </div>
 
@@ -94,7 +94,7 @@ const Sidenav: React.FC = () => {
           )}
           title="Settings"
         >
-          <Cog6ToothIcon className="h-5 w-5" />
+          <Settings className="h-5 w-5" />
           {!isSidenavCollapsed && (
             <span className="font-medium">
               Settings

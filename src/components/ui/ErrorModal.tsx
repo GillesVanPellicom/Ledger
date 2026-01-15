@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import Button from './Button';
-import { ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
+import { TriangleAlert, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface ErrorModalProps {
@@ -29,7 +29,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
     >
       <div className="flex flex-col items-center text-center space-y-4">
         <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-          <ExclamationTriangleIcon className="h-8 w-8 text-red" />
+          <TriangleAlert className="h-8 w-8 text-red" />
         </div>
         
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -48,9 +48,9 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
             >
               <span>{isExpanded ? 'Hide details' : 'Show details'}</span>
               {isExpanded ? (
-                <ChevronUpIcon className="h-4 w-4" />
+                <ChevronUp className="h-4 w-4" />
               ) : (
-                <ChevronDownIcon className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4" />
               )}
             </button>
 

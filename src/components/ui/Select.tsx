@@ -1,6 +1,6 @@
 import React, { forwardRef, SelectHTMLAttributes } from 'react';
 import { cn } from '../../utils/cn';
-import { ChevronDownIcon } from '@heroicons/react/24/solid';
+import { ChevronDown } from 'lucide-react';
 
 interface Option {
   value: string | number;
@@ -42,7 +42,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({ className, error, l
             </option>
           ))}
         </select>
-        <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
       </div>
       {error && (
         <p className="mt-1 text-xs text-danger">{error}</p>

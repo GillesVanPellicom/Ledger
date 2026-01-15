@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon, ArrowsPointingOutIcon } from '@heroicons/react/24/solid';
+import { X, ChevronLeft, ChevronRight, Expand } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface Image {
@@ -59,7 +59,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], onDelete }) => {
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <ArrowsPointingOutIcon className="h-6 w-6 text-white drop-shadow-md" />
+              <Expand className="h-6 w-6 text-white drop-shadow-md" />
             </div>
             {onDelete && (
               <button
@@ -69,7 +69,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], onDelete }) => {
                 }}
                 className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
               >
-                <XMarkIcon className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -84,7 +84,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], onDelete }) => {
             onClick={closeLightbox}
             className="absolute top-4 right-4 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-50"
           >
-            <XMarkIcon className="h-8 w-8" />
+            <X className="h-8 w-8" />
           </button>
 
           {/* Navigation Buttons */}
@@ -94,13 +94,13 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], onDelete }) => {
                 onClick={handlePrev}
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-50"
               >
-                <ChevronLeftIcon className="h-10 w-10" />
+                <ChevronLeft className="h-10 w-10" />
               </button>
               <button 
                 onClick={handleNext}
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-50"
               >
-                <ChevronRightIcon className="h-10 w-10" />
+                <ChevronRight className="h-10 w-10" />
               </button>
             </>
           )}

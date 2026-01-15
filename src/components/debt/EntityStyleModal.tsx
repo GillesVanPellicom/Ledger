@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import * as SolidIcons from '@heroicons/react/24/solid';
+import * as SolidIcons from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Debtor, DebtorStyle } from '../../types';
 
@@ -10,7 +10,7 @@ const emojis = [
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
 ];
 
-const iconOrder = ['UserIcon'];
+const iconOrder = ['User'];
 
 interface EntityStyleModalProps {
   isOpen: boolean;
@@ -21,14 +21,14 @@ interface EntityStyleModalProps {
 }
 
 const EntityStyleModal: React.FC<EntityStyleModalProps> = ({ isOpen, onClose, onSave, entity, currentStyle }) => {
-  const [selectedSymbol, setSelectedSymbol] = useState('UserIcon');
+  const [selectedSymbol, setSelectedSymbol] = useState('User');
   const [symbolType, setSymbolType] = useState<'icon' | 'emoji'>('icon');
   const [iconSearchTerm, setIconSearchTerm] = useState('');
   const [emojiSearchTerm, setEmojiSearchTerm] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSymbol(currentStyle?.symbol || 'UserIcon');
+      setSelectedSymbol(currentStyle?.symbol || 'User');
       setSymbolType(currentStyle?.type || 'icon');
       setIconSearchTerm('');
       setEmojiSearchTerm('');
@@ -68,7 +68,7 @@ const EntityStyleModal: React.FC<EntityStyleModalProps> = ({ isOpen, onClose, on
     >
       <div className="space-y-4">
         <div className="flex border-b border-gray-200 dark:border-gray-700">
-          <button onClick={() => { setSymbolType('icon'); setSelectedSymbol('UserIcon'); }} className={cn("px-4 py-2 text-sm font-medium", symbolType === 'icon' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700')}>Icons</button>
+          <button onClick={() => { setSymbolType('icon'); setSelectedSymbol('User'); }} className={cn("px-4 py-2 text-sm font-medium", symbolType === 'icon' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700')}>Icons</button>
           <button onClick={() => { setSymbolType('emoji'); setSelectedSymbol(emojis[0]); }} className={cn("px-4 py-2 text-sm font-medium", symbolType === 'emoji' ? 'border-b-2 border-accent text-accent' : 'text-gray-500 hover:text-gray-700')}>Emojis</button>
         </div>
         {symbolType === 'icon' && (

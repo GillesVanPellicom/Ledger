@@ -7,7 +7,7 @@ import { db } from '../../utils/db';
 import { Product } from '../../types';
 import Separator from '../ui/Separator';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { PlusIcon } from '@heroicons/react/24/solid';
+import { Plus } from 'lucide-react';
 import Tooltip from '../ui/Tooltip';
 import CategoryModal from '../categories/CategoryModal';
 import StepperInput from '../ui/StepperInput';
@@ -172,7 +172,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
             </div>
             <Tooltip content="Add Category">
               <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsCategoryModalOpen(true)}>
-                <PlusIcon className="h-5 w-5" />
+                <Plus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </div>

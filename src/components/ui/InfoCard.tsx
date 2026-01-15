@@ -1,5 +1,5 @@
 import React from 'react';
-import { InformationCircleIcon, ExclamationTriangleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
+import { Info, AlertTriangle, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 type InfoCardVariant = 'info' | 'warning' | 'danger';
@@ -14,21 +14,21 @@ interface InfoCardProps {
 const variantConfig = {
   info: {
     bg: 'bg-blue-50 dark:bg-blue-900/20',
-    icon: InformationCircleIcon,
+    icon: Info,
     iconColor: 'text-blue-500',
     titleColor: 'text-blue-800 dark:text-blue-200',
     messageColor: 'text-blue-700 dark:text-blue-300',
   },
   warning: {
     bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-    icon: ExclamationTriangleIcon,
+    icon: AlertTriangle,
     iconColor: 'text-yellow-500',
     titleColor: 'text-yellow-800 dark:text-yellow-200',
     messageColor: 'text-yellow-700 dark:text-yellow-300',
   },
   danger: {
     bg: 'bg-red-50 dark:bg-red-900/20',
-    icon: ExclamationCircleIcon,
+    icon: AlertCircle,
     iconColor: 'text-red-500',
     titleColor: 'text-red-800 dark:text-red-200',
     messageColor: 'text-red-700 dark:text-red-300',

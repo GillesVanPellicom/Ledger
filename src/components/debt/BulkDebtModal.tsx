@@ -4,7 +4,7 @@ import Button from '../ui/Button';
 import Select from '../ui/Select';
 import Input from '../ui/Input';
 import {db} from '../../utils/db';
-import {XMarkIcon} from '@heroicons/react/24/solid';
+import {X} from 'lucide-react';
 import {nanoid} from 'nanoid';
 import ProgressModal from '../ui/ProgressModal';
 import {Debtor, ReceiptSplit} from '../../types';
@@ -182,7 +182,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
                              className="w-16 rounded-md border-gray-300 dark:border-gray-700 text-sm"/>
                     </div>
                     <button onClick={() => handleRemoveSplit(split.key)} className="text-red hover:text-red-700">
-                      <XMarkIcon className="h-4 w-4"/></button>
+                      <X className="h-4 w-4"/></button>
                   </div>
                 </div>
               ))}

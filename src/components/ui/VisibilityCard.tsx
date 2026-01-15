@@ -1,5 +1,5 @@
 import React from 'react';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
+import { Eye, EyeOff } from 'lucide-react';
 import Switch from './Switch';
 
 interface VisibilityCardProps {
@@ -15,7 +15,7 @@ const VisibilityCard: React.FC<VisibilityCardProps> = ({ isActive, onToggle, ent
       description={isActive ? `Shown in lists` : `Hidden from lists`}
       isEnabled={isActive}
       onToggle={onToggle}
-      icon={isActive ? EyeIcon : EyeSlashIcon}
+      icon={isActive ? Eye : EyeOff}
     />
   );
 };

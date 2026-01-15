@@ -1,6 +1,6 @@
 import React, { useRef, useState, useLayoutEffect, useCallback, ReactNode } from 'react';
 import { cn } from '../../utils/cn';
-import { MinusIcon } from '@heroicons/react/24/solid';
+import { Minus } from 'lucide-react';
 
 interface DataGridProps<T> {
   data: T[];
@@ -72,7 +72,7 @@ const DataGrid = <T extends { [key: string]: any }>({
               renderItem(item)
             ) : (
               <div className={cn("h-full w-full flex items-center justify-center", !disableMinHeight && "min-h-[5rem]")}>
-                <MinusIcon className="h-8 w-8 text-gray-300 dark:text-gray-700" />
+                <Minus className="h-8 w-8 text-gray-300 dark:text-gray-700" />
               </div>
             )}
           </div>

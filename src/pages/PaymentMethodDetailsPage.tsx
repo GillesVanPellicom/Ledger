@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TransferModal from '../components/payment/TransferModal';
-import { BanknotesIcon, PencilIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
+import { Landmark, Pencil, Trash2, ArrowLeft } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
@@ -441,7 +441,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
               size="icon"
               onClick={(e: React.MouseEvent) => { e.stopPropagation(); openDeleteModal(row); }}
             >
-              <TrashIcon className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </Tooltip>
         </div>
@@ -459,7 +459,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeftIcon className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </Tooltip>
         }
@@ -467,12 +467,12 @@ const PaymentMethodDetailsPage: React.FC = () => {
           <>
             <Tooltip content="Edit">
               <Button variant="ghost" size="icon" onClick={() => setIsEditModalOpen(true)}>
-                <PencilIcon className="h-5 w-5" />
+                <Pencil className="h-5 w-5" />
               </Button>
             </Tooltip>
             <Tooltip content="New Transaction">
               <Button variant="ghost" size="icon" onClick={() => openTransferModal()}>
-                <BanknotesIcon className="h-5 w-5" />
+                <Landmark className="h-5 w-5" />
               </Button>
             </Tooltip>
           </>

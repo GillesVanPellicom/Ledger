@@ -7,20 +7,20 @@ import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import Gallery from '../components/ui/Gallery';
 import {
-  PencilIcon,
-  ShoppingCartIcon,
-  TagIcon,
-  DocumentArrowDownIcon,
-  CreditCardIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-  UserIcon,
-  BanknotesIcon,
-  LinkIcon,
-  TrashIcon,
-  ArrowLeftIcon,
-  InformationCircleIcon
-} from '@heroicons/react/24/solid';
+  Pencil,
+  ShoppingCart,
+  Tag,
+  FileDown,
+  CreditCard,
+  CheckCircle,
+  AlertCircle,
+  User,
+  Landmark,
+  Link as LinkIcon,
+  Trash2,
+  ArrowLeft,
+  Info
+} from 'lucide-react';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
@@ -288,7 +288,7 @@ const ReceiptViewPage: React.FC = () => {
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeftIcon className="h-5 w-5"/>
+              <ArrowLeft className="h-5 w-5"/>
             </Button>
           </Tooltip>
         }
@@ -296,17 +296,17 @@ const ReceiptViewPage: React.FC = () => {
           <>
             <Tooltip content="Delete">
               <Button variant="ghost" size="icon" onClick={() => setDeleteModalOpen(true)}>
-                <TrashIcon className="h-5 w-5"/>
+                <Trash2 className="h-5 w-5"/>
               </Button>
             </Tooltip>
             <Tooltip content="Edit">
               <Button variant="ghost" size="icon" onClick={() => navigate(`/receipts/edit/${id}`)}>
-                <PencilIcon className="h-5 w-5"/>
+                <Pencil className="h-5 w-5"/>
               </Button>
             </Tooltip>
             <Tooltip content="Save as PDF (WIP)">
               <Button variant="ghost" size="icon" onClick={handleSavePdf} disabled>
-                <DocumentArrowDownIcon className="h-5 w-5"/>
+                <FileDown className="h-5 w-5"/>
               </Button>
             </Tooltip>
             {receipt.Status === 'unpaid' && (
@@ -318,7 +318,7 @@ const ReceiptViewPage: React.FC = () => {
                     onClick={() => !receipt.IsTentative && setIsMarkAsPaidModalOpen(true)}
                     disabled={!!receipt.IsTentative}
                   >
-                    <BanknotesIcon className="h-5 w-5"/>
+                    <Landmark className="h-5 w-5"/>
                   </Button>
                 </div>
               </Tooltip>
@@ -381,7 +381,7 @@ const ReceiptViewPage: React.FC = () => {
                   </div>
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                    <InformationCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
                     <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Expense</h3>
                     <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this expense.</p>
                   </div>
@@ -481,18 +481,18 @@ const ReceiptViewPage: React.FC = () => {
                 <div className="mt-6 space-y-4">
                   {paymentMethodsEnabled && (
                     <div className="flex items-center gap-3">
-                      <CreditCardIcon className="h-5 w-5 text-gray-400"/>
+                      <CreditCard className="h-5 w-5 text-gray-400"/>
                       <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
                     </div>
                   )}
                   {!receipt.IsNonItemised && (
                     <>
                       <div className="flex items-center gap-3">
-                        <TagIcon className="h-5 w-5 text-gray-400"/>
+                        <Tag className="h-5 w-5 text-gray-400"/>
                         <span className="text-sm">{totalItems} Unique Items</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <ShoppingCartIcon className="h-5 w-5 text-gray-400"/>
+                        <ShoppingCart className="h-5 w-5 text-gray-400"/>
                         <span className="text-sm">{totalQuantity} Total Quantity</span>
                       </div>
                     </>
@@ -525,11 +525,11 @@ const ReceiptViewPage: React.FC = () => {
                           <div className="flex items-center">
                             {isPaid ? (
                               <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                                <CheckCircleIcon className="h-5 w-5 text-green"/>
+                                <CheckCircle className="h-5 w-5 text-green"/>
                               </Tooltip>
                             ) : (
                               <Tooltip content="Unpaid">
-                                <ExclamationCircleIcon className="h-5 w-5 text-red"/>
+                                <AlertCircle className="h-5 w-5 text-red"/>
                               </Tooltip>
                             )}
                           </div>
@@ -553,7 +553,7 @@ const ReceiptViewPage: React.FC = () => {
                     <Card className="p-4">
                       <div className="flex justify-between items-start">
                         <p className="font-medium text-gray-900 dark:text-gray-100">Own Share</p>
-                        <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
+                        <User className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
                       </div>
                       <div className="flex justify-between items-baseline mt-1">
                         <p className="font-bold text-blue-700 dark:text-blue-300 truncate"

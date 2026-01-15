@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
+import { Plus, Pencil, Eye, EyeOff } from 'lucide-react';
 import ProductModal from '../components/products/ProductModal';
 import StoreModal from '../components/stores/StoreModal';
 import CategoryModal from '../components/categories/CategoryModal';
@@ -109,7 +109,7 @@ const ReferenceDataPage: React.FC = () => {
               size="icon" 
               onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleEditProduct(row); }}
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </Button>
           </Tooltip>
         </div>
@@ -126,8 +126,8 @@ const ReferenceDataPage: React.FC = () => {
       render: (row: Store) => (
         <Tooltip content={row.StoreIsActive ? 'Shown in lists' : 'Hidden from lists'}>
           {row.StoreIsActive ? 
-          <EyeIcon className="h-5 w-5 text-green inline-block" /> :
-          <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
+          <Eye className="h-5 w-5 text-green inline-block" /> :
+          <EyeOff className="h-5 w-5 text-gray-400 inline-block" />}
         </Tooltip>
       )
     },
@@ -143,7 +143,7 @@ const ReferenceDataPage: React.FC = () => {
               size="icon" 
               onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleEditStore(row); }}
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </Button>
           </Tooltip>
         </div>
@@ -160,8 +160,8 @@ const ReferenceDataPage: React.FC = () => {
       render: (row: Category) => (
         <Tooltip content={row.CategoryIsActive ? 'Shown in lists' : 'Hidden from lists'}>
           {row.CategoryIsActive ? 
-          <EyeIcon className="h-5 w-5 text-green inline-block" /> :
-          <EyeSlashIcon className="h-5 w-5 text-gray-400 inline-block" />}
+          <Eye className="h-5 w-5 text-green inline-block" /> :
+          <EyeOff className="h-5 w-5 text-gray-400 inline-block" />}
         </Tooltip>
       )
     },
@@ -177,7 +177,7 @@ const ReferenceDataPage: React.FC = () => {
               size="icon" 
               onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleEditCategory(row); }}
             >
-              <PencilIcon className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </Button>
           </Tooltip>
         </div>
@@ -190,7 +190,7 @@ const ReferenceDataPage: React.FC = () => {
       return (
         <Tooltip content="Add Product">
           <Button variant="ghost" size="icon" onClick={handleAddProduct}>
-            <PlusIcon className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
           </Button>
         </Tooltip>
       );
@@ -199,7 +199,7 @@ const ReferenceDataPage: React.FC = () => {
       return (
         <Tooltip content="Add Store">
           <Button variant="ghost" size="icon" onClick={handleAddStore}>
-            <PlusIcon className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
           </Button>
         </Tooltip>
       );
@@ -207,7 +207,7 @@ const ReferenceDataPage: React.FC = () => {
     return (
       <Tooltip content="Add Category">
         <Button variant="ghost" size="icon" onClick={handleAddCategory}>
-          <PlusIcon className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
         </Button>
       </Tooltip>
     );

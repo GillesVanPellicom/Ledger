@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
-import { PlusIcon, PencilIcon, EyeIcon, EyeSlashIcon, PaintBrushIcon, UserIcon } from '@heroicons/react/24/solid';
+import { Plus, Pencil, Eye, EyeOff, Palette, User } from 'lucide-react';
 import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Debtor, DebtorStyle } from '../types';
@@ -10,7 +10,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import DataGrid from '../components/ui/DataGrid';
 import { cn } from '../utils/cn';
 import { useDebtCalculation } from '../hooks/useDebtCalculation';
-import * as SolidIcons from '@heroicons/react/24/solid';
+import * as SolidIcons from 'lucide-react';
 import EntityStyleModal from '../components/debt/EntityStyleModal';
 import PageSpinner from '../components/ui/PageSpinner';
 import Spinner from '../components/ui/Spinner';
@@ -31,7 +31,7 @@ const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, o
         <div className="w-8 h-8 flex items-center justify-center">
           {IconComponent ? <IconComponent className="h-8 w-8 text-gray-400" /> :
            style?.type === 'emoji' ? <span className="text-3xl">{style.symbol}</span> :
-           <UserIcon className="h-8 w-8 text-gray-300 dark:text-gray-700" />}
+           <User className="h-8 w-8 text-gray-300 dark:text-gray-700" />}
         </div>
       </div>
       <div className="mt-4 text-right">
@@ -49,17 +49,17 @@ const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, o
       <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <Tooltip content="Edit Style">
           <button onClick={(e) => { e.stopPropagation(); onStyle(entity); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-            <PaintBrushIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+            <Palette className="h-4 w-4 text-gray-600 dark:text-gray-300" />
           </button>
         </Tooltip>
         <Tooltip content="Edit">
           <button onClick={(e) => { e.stopPropagation(); onEdit(entity); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-            <PencilIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+            <Pencil className="h-4 w-4 text-gray-600 dark:text-gray-300" />
           </button>
         </Tooltip>
         {!entity.DebtorIsActive && (
           <Tooltip content="Hidden">
-            <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+            <EyeOff className="h-5 w-5 text-gray-400" />
           </Tooltip>
         )}
       </div>
@@ -122,12 +122,12 @@ const EntitiesPage: React.FC = () => {
           <>
             <Tooltip content={showHidden ? 'Hide Inactive' : 'Show Hidden'}>
               <Button variant="ghost" size="icon" onClick={() => setShowHidden(!showHidden)}>
-                {showHidden ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                {showHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </Button>
             </Tooltip>
             <Tooltip content="Add Entity">
               <Button variant="ghost" size="icon" onClick={handleAdd}>
-                <PlusIcon className="h-5 w-5" />
+                <Plus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </>

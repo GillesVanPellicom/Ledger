@@ -10,7 +10,7 @@ import ReactECharts from 'echarts-for-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
-import { DocumentArrowDownIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, PencilIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
+import { FileDown, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowLeft } from 'lucide-react';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import { generateReceiptsPdf } from '../utils/pdfGenerator';
 import ProgressModal from '../components/ui/ProgressModal';
@@ -366,8 +366,8 @@ const EntityDetailsPage: React.FC = () => {
       render: (row: Receipt) => (
         <div className="flex items-center">
           {row.type === 'to_me' ? 
-            <ArrowUpCircleIcon className="h-5 w-5 text-green mr-2" /> : 
-            <ArrowDownCircleIcon className="h-5 w-5 text-red mr-2" />}
+            <ArrowUpCircle className="h-5 w-5 text-green mr-2" /> : 
+            <ArrowDownCircle className="h-5 w-5 text-red mr-2" />}
           {row.type === 'to_me' ? 'Owes You' : 'You Owe'}
         </div>
       )
@@ -409,7 +409,7 @@ const EntityDetailsPage: React.FC = () => {
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeftIcon className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </Tooltip>
         }
@@ -417,12 +417,12 @@ const EntityDetailsPage: React.FC = () => {
           <>
             <Tooltip content="Edit">
               <Button variant="ghost" size="icon" onClick={() => setIsEditEntityModalOpen(true)}>
-                <PencilIcon className="h-5 w-5" />
+                <Pencil className="h-5 w-5" />
               </Button>
             </Tooltip>
             <Tooltip content="Save as PDF">
               <Button variant="ghost" size="icon" onClick={() => setIsPdfOptionsModalOpen(true)}>
-                <DocumentArrowDownIcon className="h-5 w-5" />
+                <FileDown className="h-5 w-5" />
               </Button>
             </Tooltip>
           </>
@@ -440,9 +440,9 @@ const EntityDetailsPage: React.FC = () => {
             <div className="flex items-center justify-center gap-2">
               <Tooltip content={stats.netBalance >= 0 ? `${entity.DebtorName} owes you` : `You owe ${entity.DebtorName}`}>
                 {stats.netBalance >= 0 ? (
-                  <ArrowUpCircleIcon className="h-6 w-6 text-green" />
+                  <ArrowUpCircle className="h-6 w-6 text-green" />
                 ) : (
-                  <ArrowDownCircleIcon className="h-6 w-6 text-red" />
+                  <ArrowDownCircle className="h-6 w-6 text-red" />
                 )}
               </Tooltip>
               <p className={cn("text-2xl font-bold", stats.netBalance >= 0 ? "text-green" : "text-red")}>

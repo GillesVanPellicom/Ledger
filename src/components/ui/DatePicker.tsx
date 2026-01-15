@@ -3,7 +3,7 @@ import ReactDatePicker from 'react-datepicker';
 import type { ReactDatePickerProps as BaseDatePickerProps } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { cn } from '../../utils/cn';
-import { CalendarIcon } from '@heroicons/react/24/outline';
+import { Calendar } from 'lucide-react';
 
 // BaseDatePickerProps comes from react-datepicker and already includes props
 // like className, selected, startDate, endDate, selectsRange, etc.
@@ -33,7 +33,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ className, label, error, ...pro
           portalId="modal-root"
           {...props}
         />
-        <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
       </div>
       {error && (
         <p className="mt-1 text-xs text-danger">{error}</p>
