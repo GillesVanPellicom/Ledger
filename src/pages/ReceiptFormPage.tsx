@@ -1,44 +1,44 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
-import { db } from '../utils/db';
+import React, {useState, useEffect, useMemo} from 'react';
+import {useParams, useNavigate} from 'react-router-dom';
+import {format, parseISO} from 'date-fns';
+import {db} from '../utils/db';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
-import { X, Plus, Image, RotateCw, Info, ArrowLeft, Lock } from 'lucide-react';
-import { nanoid } from 'nanoid';
-import { cn } from '../utils/cn';
+import {X, Plus, Image, RotateCw, Info, ArrowLeft, Lock} from 'lucide-react';
+import {nanoid} from 'nanoid';
+import {cn} from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
-import { ConfirmModal } from '../components/ui/Modal';
+import {ConfirmModal} from '../components/ui/Modal';
 import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
 import StoreModal from '../components/stores/StoreModal';
 import EntityModal from '../components/debt/EntityModal';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import StepperInput from '../components/ui/StepperInput';
-import { Debtor, LineItem, ReceiptImage, ReceiptSplit, Store } from '../types';
+import {Debtor, LineItem, ReceiptImage, ReceiptSplit, Store} from '../types';
 import InfoCard from '../components/ui/InfoCard';
 import '../electron.d';
 import Spinner from '../components/ui/Spinner';
-import { Header } from '../components/ui/Header';
+import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../utils/discountCalculator';
-import { useSettingsStore } from '../store/useSettingsStore';
-import { useBackupStore } from '../store/useBackupStore';
-import { useQueryClient } from '@tanstack/react-query';
+import {calculateLineItemTotalWithDiscount, calculateTotalWithDiscount} from '../utils/discountCalculator';
+import {useSettingsStore} from '../store/useSettingsStore';
+import {useBackupStore} from '../store/useBackupStore';
+import {useQueryClient} from '@tanstack/react-query';
 import Divider from '../components/ui/Divider';
 import NanoDataTable from '../components/ui/NanoDataTable';
 import DataGrid from '../components/ui/DataGrid';
 import Combobox from '../components/ui/Combobox';
 
 const ReceiptFormPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEditing = !!id;
-  const { settings } = useSettingsStore();
-  const { incrementEdits } = useBackupStore();
+  const {settings} = useSettingsStore();
+  const {incrementEdits} = useBackupStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
@@ -47,17 +47,17 @@ const ReceiptFormPage: React.FC = () => {
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [paidById, setPaidById] = useState<string>('me');
 
-  const [formData, setFormData] = useState({ 
-    storeId: '', 
-    receiptDate: new Date(), 
-    note: '', 
-    paymentMethodId: '1', 
+  const [formData, setFormData] = useState({
+    storeId: '',
+    receiptDate: new Date(),
+    note: '',
+    paymentMethodId: '1',
     ownShares: 0,
     discount: 0,
   });
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [images, setImages] = useState<ReceiptImage[]>([]);
-  
+
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState<boolean>(false);
@@ -67,19 +67,29 @@ const ReceiptFormPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [receiptFormat, setReceiptFormat] = useState<'itemised' | 'item-less'>('itemised');
-  const [formatChangeModal, setFormatChangeModal] = useState<{ isOpen: boolean, newFormat: 'itemised' | 'item-less' | null }>({ isOpen: false, newFormat: null });
+  const [formatChangeModal, setFormatChangeModal] = useState<{
+    isOpen: boolean,
+    newFormat: 'itemised' | 'item-less' | null
+  }>({isOpen: false, newFormat: null});
   const [nonItemisedTotal, setNonItemisedTotal] = useState<number>(0);
 
   const [splitType, setSplitType] = useState<'none' | 'total_split' | 'line_item'>('none');
   const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);
   const [paidDebtorIds, setPaidDebtorIds] = useState<number[]>([]);
-  const [debtInfoModal, setDebtInfoModal] = useState<{ isOpen: boolean, onConfirm: () => void }>({ isOpen: false, onConfirm: () => {} });
+  const [debtInfoModal, setDebtInfoModal] = useState<{ isOpen: boolean, onConfirm: () => void }>({
+    isOpen: false,
+    onConfirm: () => {
+    }
+  });
   const [isConcept, setIsConcept] = useState<boolean>(false);
   const [initialIsTentative, setInitialIsTentative] = useState<boolean>(false);
   const [excludedLineItemKeys, setExcludedLineItemKeys] = useState<Set<string>>(new Set());
   const [isExclusionMode, setIsExclusionMode] = useState<boolean>(false);
   const [exclusionConfirmModalOpen, setExclusionConfirmModalOpen] = useState<boolean>(false);
-  const [selectionModal, setSelectionModal] = useState<{ isOpen: boolean, mode: 'debtor' | 'discount' | null }>({ isOpen: false, mode: null });
+  const [selectionModal, setSelectionModal] = useState<{
+    isOpen: boolean,
+    mode: 'debtor' | 'discount' | null
+  }>({isOpen: false, mode: null});
 
   const hasSettledDebts = useMemo(() => paidDebtorIds.length > 0, [paidDebtorIds]);
   const isUnpaid = paidById !== 'me';
@@ -92,7 +102,7 @@ const ReceiptFormPage: React.FC = () => {
     if (!paidById) newErrors.paidById = 'Paid by is required.';
     if (receiptFormat === 'itemised' && lineItems.length === 0) newErrors.lineItems = 'At least one line item is required.';
     if (receiptFormat === 'item-less' && nonItemisedTotal <= 0) newErrors.nonItemisedTotal = 'Total must be greater than 0.';
-    
+
     const discount = parseFloat(String(formData.discount));
     if (isNaN(discount) || discount < 0 || discount > 100) newErrors.discount = 'Must be 0-100.';
 
@@ -109,13 +119,13 @@ const ReceiptFormPage: React.FC = () => {
 
   const fetchStores = async () => {
     const storeData = await db.query<Store>('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
-    setStores(storeData.map(s => ({ value: String(s.StoreID), label: s.StoreName })));
+    setStores(storeData.map(s => ({value: String(s.StoreID), label: s.StoreName})));
   };
 
   const handleStoreSave = async (newStoreId?: number) => {
     await fetchStores();
     if (newStoreId) {
-      setFormData(prev => ({ ...prev, storeId: String(newStoreId) }));
+      setFormData(prev => ({...prev, storeId: String(newStoreId)}));
     }
     setIsStoreModalOpen(false);
   };
@@ -123,23 +133,33 @@ const ReceiptFormPage: React.FC = () => {
   const handleEntitySave = async () => {
     const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
     setDebtors(debtorsData);
-    
-    const newDebtor = await db.queryOne<{ DebtorID: number }>('SELECT DebtorID FROM Debtors ORDER BY DebtorID DESC LIMIT 1');
+
+    const newDebtor = await db.queryOne<{
+      DebtorID: number
+    }>('SELECT DebtorID FROM Debtors ORDER BY DebtorID DESC LIMIT 1');
     if (newDebtor) {
       setPaidById(String(newDebtor.DebtorID));
     }
-    
+
     setIsEntityModalOpen(false);
   };
 
   const handlePaymentMethodSave = async () => {
     if (paymentMethodsEnabled) {
-      const paymentMethodData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
-      setPaymentMethods(paymentMethodData.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })));
-      
-      const newMethod = await db.queryOne<{ PaymentMethodID: number }>('SELECT PaymentMethodID FROM PaymentMethods ORDER BY PaymentMethodID DESC LIMIT 1');
+      const paymentMethodData = await db.query<{
+        PaymentMethodID: number,
+        PaymentMethodName: string
+      }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
+      setPaymentMethods(paymentMethodData.map(pm => ({
+        value: String(pm.PaymentMethodID),
+        label: pm.PaymentMethodName
+      })));
+
+      const newMethod = await db.queryOne<{
+        PaymentMethodID: number
+      }>('SELECT PaymentMethodID FROM PaymentMethods ORDER BY PaymentMethodID DESC LIMIT 1');
       if (newMethod) {
-        setFormData(prev => ({ ...prev, paymentMethodId: String(newMethod.PaymentMethodID) }));
+        setFormData(prev => ({...prev, paymentMethodId: String(newMethod.PaymentMethodID)}));
       }
     }
     setIsPaymentMethodModalOpen(false);
@@ -151,8 +171,14 @@ const ReceiptFormPage: React.FC = () => {
       await fetchStores();
 
       if (paymentMethodsEnabled) {
-        const paymentMethodData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
-        setPaymentMethods(paymentMethodData.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })));
+        const paymentMethodData = await db.query<{
+          PaymentMethodID: number,
+          PaymentMethodName: string
+        }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName');
+        setPaymentMethods(paymentMethodData.map(pm => ({
+          value: String(pm.PaymentMethodID),
+          label: pm.PaymentMethodName
+        })));
       }
 
       if (debtEnabled) {
@@ -182,17 +208,17 @@ const ReceiptFormPage: React.FC = () => {
 
           if (!receiptData.IsNonItemised) {
             const lineItemData = await db.query<any[]>(`
-              SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName
-              FROM LineItems li
-              JOIN Products p ON li.ProductID = p.ProductID
-              LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-              LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-              WHERE li.ReceiptID = ?
+                SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName
+                FROM LineItems li
+                         JOIN Products p ON li.ProductID = p.ProductID
+                         LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+                         LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
+                WHERE li.ReceiptID = ?
             `, [id]);
-            
-            const items: LineItem[] = lineItemData.map(li => ({ ...li, key: nanoid() }));
+
+            const items: LineItem[] = lineItemData.map(li => ({...li, key: nanoid()}));
             setLineItems(items);
-            
+
             const excludedKeys = new Set<string>();
             items.forEach(item => {
               if (item.IsExcludedFromDiscount) {
@@ -206,20 +232,22 @@ const ReceiptFormPage: React.FC = () => {
           }
 
           const imageData = await db.query<ReceiptImage>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [id]);
-          setImages(imageData.map(img => ({ ...img, key: nanoid() })));
+          setImages(imageData.map(img => ({...img, key: nanoid()})));
 
           if (debtEnabled) {
-            const paymentsData = await db.query<{ DebtorID: number }>('SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
+            const paymentsData = await db.query<{
+              DebtorID: number
+            }>('SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
             setPaidDebtorIds(paymentsData.map(p => p.DebtorID));
 
             if (receiptData.SplitType === 'total_split') {
               const splitsData = await db.query<any[]>(`
-                SELECT rs.*, d.DebtorName 
-                FROM ReceiptSplits rs
-                JOIN Debtors d ON rs.DebtorID = d.DebtorID
-                WHERE rs.ReceiptID = ?
+                  SELECT rs.*, d.DebtorName
+                  FROM ReceiptSplits rs
+                           JOIN Debtors d ON rs.DebtorID = d.DebtorID
+                  WHERE rs.ReceiptID = ?
               `, [id]);
-              setReceiptSplits(splitsData.map(s => ({ ...s, key: nanoid() })));
+              setReceiptSplits(splitsData.map(s => ({...s, key: nanoid()})));
             }
           }
         }
@@ -277,11 +305,11 @@ const ReceiptFormPage: React.FC = () => {
 
   const clearConcept = () => {
     localStorage.removeItem('receipt_concept');
-    setFormData({ 
-      storeId: '', 
-      receiptDate: new Date(), 
-      note: '', 
-      paymentMethodId: '1', 
+    setFormData({
+      storeId: '',
+      receiptDate: new Date(),
+      note: '',
+      paymentMethodId: '1',
       ownShares: 0,
       discount: 0,
     });
@@ -304,7 +332,7 @@ const ReceiptFormPage: React.FC = () => {
   }, [receiptSplits, formData.ownShares]);
 
   const calculateSubtotal = () => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
-  
+
   const calculateTotal = () => {
     if (receiptFormat === 'item-less') {
       return nonItemisedTotal;
@@ -314,8 +342,8 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const debtSummary = useMemo(() => {
-    if (!debtEnabled) return { debtors: [], self: null };
-    
+    if (!debtEnabled) return {debtors: [], self: null};
+
     const summary: Record<string, any> = {};
     const totalAmount = calculateTotal();
     let selfAmount: number | null = null;
@@ -347,19 +375,19 @@ const ReceiptFormPage: React.FC = () => {
       });
     }
 
-    return { 
+    return {
       debtors: Object.values(summary),
       self: selfAmount
     };
   }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, totalShares, formData.ownShares, formData.discount, isExclusionMode, excludedLineItemKeys, receiptFormat, nonItemisedTotal]);
 
   const handleFormChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({...prev, [name]: value}));
   };
 
   const handlePaidByChange = (value: string) => {
     if (hasSettledDebts) return;
-    
+
     if (value !== 'me' && (splitType !== 'none' || receiptSplits.length > 0 || lineItems.some(li => li.DebtorID))) {
       setDebtInfoModal({
         isOpen: true,
@@ -367,8 +395,11 @@ const ReceiptFormPage: React.FC = () => {
           setPaidById(value);
           setSplitType('none');
           setReceiptSplits([]);
-          setLineItems(prev => prev.map(item => ({ ...item, DebtorID: null, DebtorName: null })));
-          setDebtInfoModal({ isOpen: false, onConfirm: () => {} });
+          setLineItems(prev => prev.map(item => ({...item, DebtorID: null, DebtorName: null})));
+          setDebtInfoModal({
+            isOpen: false, onConfirm: () => {
+            }
+          });
         }
       });
     } else {
@@ -376,17 +407,17 @@ const ReceiptFormPage: React.FC = () => {
     }
   };
 
-  const handleDateChange = (date: Date | null) => setFormData(prev => ({ ...prev, receiptDate: date as Date }));
+  const handleDateChange = (date: Date | null) => setFormData(prev => ({...prev, receiptDate: date as Date}));
 
   const handleProductSelect = (product: any) => {
-    setLineItems(prev => [...prev, { 
-      key: nanoid(), 
-      ProductID: product.ProductID, 
-      ProductName: product.ProductName, 
-      ProductBrand: product.ProductBrand, 
-      ProductSize: product.ProductSize, 
-      ProductUnitType: product.ProductUnitType, 
-      LineQuantity: 1, 
+    setLineItems(prev => [...prev, {
+      key: nanoid(),
+      ProductID: product.ProductID,
+      ProductName: product.ProductName,
+      ProductBrand: product.ProductBrand,
+      ProductSize: product.ProductSize,
+      ProductUnitType: product.ProductUnitType,
+      LineQuantity: 1,
       LineUnitPrice: 0.00,
       DebtorID: null
     }]);
@@ -394,7 +425,7 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const handleLineItemChange = (key: string, field: keyof LineItem, value: any) => {
-    setLineItems(prev => prev.map(item => item.key === key ? { ...item, [field]: value } : item));
+    setLineItems(prev => prev.map(item => item.key === key ? {...item, [field]: value} : item));
   };
 
   const handleLineItemBlur = (key: string, field: keyof LineItem, value: any) => {
@@ -404,7 +435,7 @@ const ReceiptFormPage: React.FC = () => {
     } else if (field === 'LineUnitPrice') {
       processedValue = Math.max(0, parseFloat(value) || 0);
     }
-    setLineItems(prev => prev.map(item => item.key === key ? { ...item, [field]: processedValue } : item));
+    setLineItems(prev => prev.map(item => item.key === key ? {...item, [field]: processedValue} : item));
   };
 
   const removeLineItem = (key: string) => {
@@ -449,8 +480,15 @@ const ReceiptFormPage: React.FC = () => {
         onConfirm: () => {
           setSplitType(newType);
           if (newType !== 'total_split') setReceiptSplits([]);
-          if (newType !== 'line_item') setLineItems(prev => prev.map(item => ({ ...item, DebtorID: null, DebtorName: null })));
-          setDebtInfoModal({ isOpen: false, onConfirm: () => {} });
+          if (newType !== 'line_item') setLineItems(prev => prev.map(item => ({
+            ...item,
+            DebtorID: null,
+            DebtorName: null
+          })));
+          setDebtInfoModal({
+            isOpen: false, onConfirm: () => {
+            }
+          });
         }
       });
     } else {
@@ -462,12 +500,17 @@ const ReceiptFormPage: React.FC = () => {
     if (!debtorId || isDebtDisabled) return;
     const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId));
     if (debtor) {
-      setReceiptSplits(prev => [...prev, { key: nanoid(), DebtorID: debtor.DebtorID, DebtorName: debtor.DebtorName, SplitPart: 1 }]);
+      setReceiptSplits(prev => [...prev, {
+        key: nanoid(),
+        DebtorID: debtor.DebtorID,
+        DebtorName: debtor.DebtorName,
+        SplitPart: 1
+      }]);
     }
   };
 
   const handleUpdateSplitPart = (key: string, newPart: string) => {
-    setReceiptSplits(prev => prev.map(s => s.key === key ? { ...s, SplitPart: parseInt(newPart) || 1 } : s));
+    setReceiptSplits(prev => prev.map(s => s.key === key ? {...s, SplitPart: parseInt(newPart) || 1} : s));
   };
 
   const handleRemoveSplit = (key: string) => {
@@ -480,7 +523,7 @@ const ReceiptFormPage: React.FC = () => {
       if (assignmentsMap.has(item.key)) {
         const debtorId = assignmentsMap.get(item.key);
         const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId!));
-        return { ...item, DebtorID: debtor ? parseInt(debtorId!) : null, DebtorName: debtor ? debtor.DebtorName : null };
+        return {...item, DebtorID: debtor ? parseInt(debtorId!) : null, DebtorName: debtor ? debtor.DebtorName : null};
       }
       return item;
     }));
@@ -519,14 +562,14 @@ const ReceiptFormPage: React.FC = () => {
     const willLoseData = (receiptFormat === 'itemised' && lineItems.length > 0) || (receiptFormat === 'item-less' && nonItemisedTotal > 0);
 
     if (receiptFormat !== newFormat && willLoseData) {
-      setFormatChangeModal({ isOpen: true, newFormat });
+      setFormatChangeModal({isOpen: true, newFormat});
     } else {
       setReceiptFormat(newFormat);
     }
   };
 
   const confirmFormatChange = () => {
-    const { newFormat } = formatChangeModal;
+    const {newFormat} = formatChangeModal;
     if (newFormat) {
       setReceiptFormat(newFormat);
       if (newFormat === 'item-less') {
@@ -540,11 +583,15 @@ const ReceiptFormPage: React.FC = () => {
         setNonItemisedTotal(0);
       }
     }
-    setFormatChangeModal({ isOpen: false, newFormat: null });
+    setFormatChangeModal({isOpen: false, newFormat: null});
   };
 
   const handleRemoveDebtorFromItems = (debtorId: number) => {
-    setLineItems(prev => prev.map(item => item.DebtorID === debtorId ? { ...item, DebtorID: null, DebtorName: null } : item));
+    setLineItems(prev => prev.map(item => item.DebtorID === debtorId ? {
+      ...item,
+      DebtorID: null,
+      DebtorName: null
+    } : item));
   };
 
   const handleSubmit = async (isTentative: boolean) => {
@@ -552,7 +599,7 @@ const ReceiptFormPage: React.FC = () => {
     setSaving(true);
     try {
       let receiptId = id;
-  
+
       const receiptPayload = {
         StoreID: formData.storeId,
         ReceiptDate: format(formData.receiptDate, 'yyyy-MM-dd'),
@@ -571,50 +618,63 @@ const ReceiptFormPage: React.FC = () => {
 
       if (isEditing) {
         await db.execute(
-          `UPDATE Receipts SET 
-            StoreID = ?, ReceiptDate = ?, ReceiptNote = ?, PaymentMethodID = ?, 
-            SplitType = ?, OwnShares = ?, TotalShares = ?, Status = ?, OwedToDebtorID = ?, 
-            Discount = ?, IsNonItemised = ?, NonItemisedTotal = ?, IsTentative = ?
-           WHERE ReceiptID = ?`, 
+          `UPDATE Receipts
+           SET StoreID          = ?,
+               ReceiptDate      = ?,
+               ReceiptNote      = ?,
+               PaymentMethodID  = ?,
+               SplitType        = ?,
+               OwnShares        = ?,
+               TotalShares      = ?,
+               Status           = ?,
+               OwedToDebtorID   = ?,
+               Discount         = ?,
+               IsNonItemised    = ?,
+               NonItemisedTotal = ?,
+               IsTentative      = ?
+           WHERE ReceiptID = ?`,
           [...Object.values(receiptPayload), id]
         );
-        
+
         await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
         await db.execute('DELETE FROM ReceiptSplits WHERE ReceiptID = ?', [id]);
-        
+
         const existingImages = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
         const imagesToKeep = images.filter(img => !img.file).map(img => img.ImagePath);
         const imagesToDelete = existingImages.filter(img => !imagesToKeep.includes(img.ImagePath));
         if (imagesToDelete.length > 0) {
           const placeholders = imagesToDelete.map(() => '?').join(',');
-          await db.execute(`DELETE FROM ReceiptImages WHERE ReceiptID = ? AND ImagePath IN (${placeholders})`, [id, ...imagesToDelete.map(i => i.ImagePath)]);
+          await db.execute(`DELETE
+                            FROM ReceiptImages
+                            WHERE ReceiptID = ?
+                              AND ImagePath IN (${placeholders})`, [id, ...imagesToDelete.map(i => i.ImagePath)]);
         }
-        
+
         receiptId = id;
       } else {
         const result = await db.execute(
-          `INSERT INTO Receipts 
-            (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, OwnShares, 
-             TotalShares, Status, OwedToDebtorID, Discount, IsNonItemised, NonItemisedTotal, IsTentative) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+          `INSERT INTO Receipts
+           (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, OwnShares,
+            TotalShares, Status, OwedToDebtorID, Discount, IsNonItemised, NonItemisedTotal, IsTentative)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           Object.values(receiptPayload)
         );
         receiptId = String(result.lastID);
       }
-  
+
       if (receiptFormat === 'itemised') {
         for (const item of lineItems) {
-          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)', 
+          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)',
             [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice, item.DebtorID || null, excludedLineItemKeys.has(item.key) ? 1 : 0]);
         }
       }
-  
+
       if (splitType === 'total_split') {
         for (const split of receiptSplits) {
           await db.execute('INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
         }
       }
-  
+
       if (window.electronAPI && settings.datastore.folderPath) {
         const newImages = images.filter(img => img.file);
         for (const image of newImages) {
@@ -622,24 +682,24 @@ const ReceiptFormPage: React.FC = () => {
           await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, imagePathToSave]);
         }
       }
-      
+
       await incrementEdits();
 
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['receipts'] });
-      queryClient.invalidateQueries({ queryKey: ['receipt', receiptId] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
-      queryClient.invalidateQueries({ queryKey: ['debt'] });
-      
+      queryClient.invalidateQueries({queryKey: ['receipts']});
+      queryClient.invalidateQueries({queryKey: ['receipt', receiptId]});
+      queryClient.invalidateQueries({queryKey: ['analytics']});
+      queryClient.invalidateQueries({queryKey: ['paymentMethodBalance']});
+      queryClient.invalidateQueries({queryKey: ['debt']});
+
       if (!isEditing) {
         localStorage.removeItem('receipt_concept');
       }
-  
+
       if (isEditing) {
         navigate(-1);
       } else {
-        navigate(`/receipts/view/${receiptId}`, { replace: true });
+        navigate(`/receipts/view/${receiptId}`, {replace: true});
       }
     } catch (error) {
       console.error("Failed to save receipt:", error);
@@ -648,31 +708,36 @@ const ReceiptFormPage: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
+  if (loading) return <div className="flex justify-center items-center h-full">
+    <Spinner className="h-8 w-8 text-accent animate-spin"/></div>;
 
   const paidByOptions = [
-    { value: 'me', label: `${settings.userName || 'User'} (Me)` },
-    ...debtors.map(d => ({ value: String(d.DebtorID), label: d.DebtorName }))
+    {value: 'me', label: `${settings.userName || 'User'} (Me)`},
+    ...debtors.map(d => ({value: String(d.DebtorID), label: d.DebtorName}))
   ];
 
   const SplitTypeSelector = () => {
     const buttons = [
-      { type: 'none' as const, label: 'None', tooltip: 'No debt splitting.' },
-      { type: 'total_split' as const, label: 'Split Total', tooltip: 'Split the total expense amount by shares.' },
-      ...(receiptFormat === 'itemised' ? [{ type: 'line_item' as const, label: 'Per Item', tooltip: 'Assign specific items to debtors.' }] : [])
+      {type: 'none' as const, label: 'None', tooltip: 'No debt splitting.'},
+      {type: 'total_split' as const, label: 'Split Total', tooltip: 'Split the total expense amount by shares.'},
+      ...(receiptFormat === 'itemised' ? [{
+        type: 'line_item' as const,
+        label: 'Per Item',
+        tooltip: 'Assign specific items to debtors.'
+      }] : [])
     ];
-  
+
     return (
       <div className="flex rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
         {buttons.map(btn => (
           <Tooltip key={btn.type} content={btn.tooltip}>
-            <button 
-              onClick={() => handleSplitTypeChange(btn.type)} 
+            <button
+              onClick={() => handleSplitTypeChange(btn.type)}
               disabled={isDebtDisabled}
               className={cn(
                 "px-3 py-1.5 text-sm font-medium rounded-md transition-colors w-full",
-                splitType === btn.type 
-                  ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" 
+                splitType === btn.type
+                  ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100"
                   : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50",
                 isDebtDisabled ? "opacity-50 cursor-not-allowed" : ""
               )}
@@ -692,7 +757,7 @@ const ReceiptFormPage: React.FC = () => {
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5"/>
             </Button>
           </Tooltip>
         }
@@ -700,7 +765,7 @@ const ReceiptFormPage: React.FC = () => {
           !isEditing && isConcept && (
             <Tooltip content="Clear Concept">
               <Button variant="ghost" size="icon" onClick={clearConcept}>
-                <RotateCw className="h-5 w-5" />
+                <RotateCw className="h-5 w-5"/>
               </Button>
             </Tooltip>
           )
@@ -727,20 +792,25 @@ const ReceiptFormPage: React.FC = () => {
                     </div>
                     <Tooltip content="Add Store">
                       <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsStoreModalOpen(true)}>
-                        <Plus className="h-5 w-5" />
+                        <Plus className="h-5 w-5"/>
                       </Button>
                     </Tooltip>
                   </div>
                 </div>
-                <div className="col-span-1"><DatePicker label="Expense Date" selected={formData.receiptDate} onChange={handleDateChange} error={errors.receiptDate} /></div>
-                
+                <div className="col-span-1"><DatePicker label="Expense Date"
+                                                        selected={formData.receiptDate}
+                                                        onChange={handleDateChange}
+                                                        error={errors.receiptDate}/></div>
+
                 <div className={cn("grid grid-cols-2 gap-6 col-span-2 items-end", !paymentMethodsEnabled && "grid-cols-1")}>
                   {debtEnabled && (
                     <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
                       <div className="flex items-end gap-2">
                         <div className="flex-grow">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid by</label>
-                          <Tooltip className="w-full flex" content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid
+                                                                                                             by</label>
+                          <Tooltip className="w-full flex"
+                                   content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
                             <Combobox
                               options={paidByOptions}
                               value={paidById}
@@ -754,8 +824,11 @@ const ReceiptFormPage: React.FC = () => {
                           {errors.paidById && <p className="mt-1 text-xs text-danger">{errors.paidById}</p>}
                         </div>
                         <Tooltip content="Add Entity">
-                          <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)} disabled={hasSettledDebts}>
-                            <Plus className="h-5 w-5" />
+                          <Button variant="secondary"
+                                  className="h-10 w-10 p-0"
+                                  onClick={() => setIsEntityModalOpen(true)}
+                                  disabled={hasSettledDebts}>
+                            <Plus className="h-5 w-5"/>
                           </Button>
                         </Tooltip>
                       </div>
@@ -766,8 +839,10 @@ const ReceiptFormPage: React.FC = () => {
                     <div>
                       <div className="flex items-end gap-2">
                         <div className="flex-grow">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method</label>
-                          <Tooltip className="w-full flex" content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment
+                                                                                                             Method</label>
+                          <Tooltip className="w-full flex"
+                                   content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
                             <Combobox
                               options={paymentMethods}
                               value={formData.paymentMethodId}
@@ -780,8 +855,11 @@ const ReceiptFormPage: React.FC = () => {
                           </Tooltip>
                         </div>
                         <Tooltip content="Add Payment Method">
-                          <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsPaymentMethodModalOpen(true)} disabled={paidById !== 'me'}>
-                            <Plus className="h-5 w-5" />
+                          <Button variant="secondary"
+                                  className="h-10 w-10 p-0"
+                                  onClick={() => setIsPaymentMethodModalOpen(true)}
+                                  disabled={paidById !== 'me'}>
+                            <Plus className="h-5 w-5"/>
                           </Button>
                         </Tooltip>
                       </div>
@@ -790,28 +868,33 @@ const ReceiptFormPage: React.FC = () => {
                 </div>
 
                 <div className="col-span-2">
-                  <Divider text="Optional Details" className="mb-4" />
-                  <Input label="Note" name="note" value={formData.note} onChange={(e) => handleFormChange('note', e.target.value)} placeholder="e.g., Weekly groceries" />
+                  <Divider text="Optional Details" className="mb-4"/>
+                  <Input label="Note"
+                         name="note"
+                         value={formData.note}
+                         onChange={(e) => handleFormChange('note', e.target.value)}
+                         placeholder="e.g., Weekly groceries"/>
                 </div>
 
                 <div className="col-span-2">
                   <div className="flex items-center gap-2 mb-4">
                     <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">Images</h2>
-                    <Tooltip content="Attach images of the physical receipt for your records."><Info className="h-4 w-4 text-gray-400" /></Tooltip>
+                    <Tooltip content="Attach images of the physical receipt for your records."><Info className="h-4 w-4 text-gray-400"/></Tooltip>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                     {images.map(image => (
                       <div key={image.key} className="relative group">
-                        <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg" />
-                        <button onClick={() => removeImage(image.key)} className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X className="h-3 w-3" />
+                        <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg"/>
+                        <button onClick={() => removeImage(image.key)}
+                                className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X className="h-3 w-3"/>
                         </button>
                       </div>
                     ))}
                     <label className="w-full h-24 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                      <Image className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                      <Image className="h-8 w-8 text-gray-400 dark:text-gray-500"/>
                       <span className="text-xs mt-1">Add Images</span>
-                      <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                      <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden"/>
                     </label>
                   </div>
                 </div>
@@ -819,145 +902,174 @@ const ReceiptFormPage: React.FC = () => {
             </div>
           </Card>
 
-          <Card>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-1 rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 mb-6">
-                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
-                  <button onClick={() => handleFormatChange('itemised')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Items</button>
-                </Tooltip>
-                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
-                  <button onClick={() => handleFormatChange('item-less')} disabled={hasSettledDebts} className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter Total Only</button>
-                </Tooltip>
-              </div>
-
-              {receiptFormat === 'item-less' ? (
-                <div className="text-center py-4">
-                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Total Amount</label>
-                  <div className="relative inline-block">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-gray-400">€</span>
-                    <Input
-                      type="text"
-                      value={nonItemisedTotal === 0 ? '' : String(nonItemisedTotal)}
-                      onChange={(e) => setNonItemisedTotal(parseFloat(e.target.value) || 0)}
-                      error={errors.nonItemisedTotal}
-                      disabled={hasSettledDebts}
-                      className="text-4xl font-bold text-center w-48 h-16 pl-10 pr-4"
-                      placeholder="0.00"
-                    />
-                  </div>
+          <Card className="overflow-hidden">
+            <div className="relative p-6">
+              {hasSettledDebts && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                  <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                  <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
+                  <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
+                                                                        settled.<br/>To preserve data accuracy, some
+                                                                        configurations for this expense are now
+                                                                        locked.</p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {errors.lineItems && <p className="text-sm text-danger text-right -mb-2">{errors.lineItems}</p>}
-                  <NanoDataTable
-                    headers={[
-                      { label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]' },
-                      { label: 'Qty', className: 'w-[10%] text-center' },
-                      { label: 'Unit Price (€)', className: 'w-[10%] text-center' },
-                      { label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]' },
-                      ...(splitType === 'line_item' ? [{ label: 'Debtor', className: 'w-[15%]' }] : []),
-                      { label: '', className: 'w-auto' },
-                    ]}
-                    rows={lineItems.map(item => [
-                      <div className="flex items-center gap-2">
-                        {parseFloat(String(formData.discount)) > 0 && (
-                           <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
-                             <div className={cn("w-2 h-2 rounded-full flex-shrink-0", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
-                           </Tooltip>
-                        )}
-                        <div>
-                          <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                          <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+              )}
+              <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
+                <div className="grid grid-cols-2 gap-1 rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 mb-6">
+                  <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
+                    <button onClick={() => handleFormatChange('itemised')}
+                            disabled={hasSettledDebts}
+                            className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
+                                                                                                                                                                                                                                                                                                                                             Items
+                    </button>
+                  </Tooltip>
+                  <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
+                    <button onClick={() => handleFormatChange('item-less')}
+                            disabled={hasSettledDebts}
+                            className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
+                                                                                                                                                                                                                                                                                                                                              Total
+                                                                                                                                                                                                                                                                                                                                              Only
+                    </button>
+                  </Tooltip>
+                </div>
+
+                {receiptFormat === 'item-less' ? (
+                  <div className="text-center py-4">
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Total
+                                                                                                       Amount</label>
+                    <div className="relative inline-block">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-gray-400">€</span>
+                      <Input
+                        type="text"
+                        value={nonItemisedTotal === 0 ? '' : String(nonItemisedTotal)}
+                        onChange={(e) => setNonItemisedTotal(parseFloat(e.target.value) || 0)}
+                        error={errors.nonItemisedTotal}
+                        disabled={hasSettledDebts}
+                        className="text-4xl font-bold text-center w-48 h-16 pl-10 pr-4"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {errors.lineItems && <p className="text-sm text-danger text-right -mb-2">{errors.lineItems}</p>}
+                    <NanoDataTable
+                      headers={[
+                        {label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]'},
+                        {label: 'Qty', className: 'w-[10%] text-center'},
+                        {label: 'Unit Price (€)', className: 'w-[10%] text-center'},
+                        {label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]'},
+                        ...(splitType === 'line_item' ? [{label: 'Debtor', className: 'w-[15%]'}] : []),
+                        {label: '', className: 'w-auto'},
+                      ]}
+                      rows={lineItems.map(item => [
+                        <div className="flex items-center gap-2">
+                          {parseFloat(String(formData.discount)) > 0 && (
+                            <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
+                              <div className={cn("w-2 h-2 rounded-full flex-shrink-0", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                            </Tooltip>
+                          )}
+                          <div>
+                            <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                            <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                          </div>
+                        </div>,
+                        <StepperInput
+                          value={String(item.LineQuantity)}
+                          onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)}
+                          onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
+                          onIncrement={() => handleLineItemChange(item.key, 'LineQuantity', (Number(item.LineQuantity) || 0) + 1)}
+                          onDecrement={() => handleLineItemChange(item.key, 'LineQuantity', Math.max(0, (Number(item.LineQuantity) || 0) - 1))}
+                          min={0}
+                          max={1000000}
+                          className="w-full"
+                          inputClassName="text-center"
+                          error={errors[`qty_${item.key}`]}
+                          disabled={isDebtDisabled}
+                        />,
+                        <StepperInput
+                          value={String(item.LineUnitPrice)}
+                          onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)}
+                          onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
+                          onIncrement={() => handleLineItemChange(item.key, 'LineUnitPrice', (Number(item.LineUnitPrice) || 0) + 1)}
+                          onDecrement={() => handleLineItemChange(item.key, 'LineUnitPrice', Math.max(0, (Number(item.LineUnitPrice) || 0) - 1))}
+                          min={0}
+                          max={1000000}
+                          className="w-full"
+                          inputClassName="text-center"
+                          error={errors[`price_${item.key}`]}
+                          disabled={isDebtDisabled}
+                        />,
+                        <span className="font-medium text-right block">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</span>,
+                        ...(splitType === 'line_item' ? [
+                          <div className="text-right text-sm text-gray-600 dark:text-gray-400">{item.DebtorName || '-'}</div>] : []),
+                        <div className="text-right">
+                          {!isDebtDisabled && <Button variant="ghost"
+                                                      size="icon"
+                                                      onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-danger"/></Button>}
                         </div>
-                      </div>,
-                      <StepperInput
-                        value={String(item.LineQuantity)}
-                        onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)}
-                        onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
-                        onIncrement={() => handleLineItemChange(item.key, 'LineQuantity', (Number(item.LineQuantity) || 0) + 1)}
-                        onDecrement={() => handleLineItemChange(item.key, 'LineQuantity', Math.max(0, (Number(item.LineQuantity) || 0) - 1))}
-                        min={0}
-                        max={1000000}
-                        className="w-full"
-                        inputClassName="text-center"
-                        error={errors[`qty_${item.key}`]}
-                        disabled={isDebtDisabled}
-                      />,
-                      <StepperInput
-                        value={String(item.LineUnitPrice)}
-                        onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)}
-                        onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
-                        onIncrement={() => handleLineItemChange(item.key, 'LineUnitPrice', (Number(item.LineUnitPrice) || 0) + 1)}
-                        onDecrement={() => handleLineItemChange(item.key, 'LineUnitPrice', Math.max(0, (Number(item.LineUnitPrice) || 0) - 1))}
-                        min={0}
-                        max={1000000}
-                        className="w-full"
-                        inputClassName="text-center"
-                        error={errors[`price_${item.key}`]}
-                        disabled={isDebtDisabled}
-                      />,
-                      <span className="font-medium text-right block">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</span>,
-                      ...(splitType === 'line_item' ? [<div className="text-right text-sm text-gray-600 dark:text-gray-400">{item.DebtorName || '-'}</div>] : []),
-                      <div className="text-right">
-                        {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-danger" /></Button>}
+                      ])}
+                    />
+                    <div className="flex justify-center mt-4">
+                      <Button variant="secondary"
+                              size="lg"
+                              className="w-1/4"
+                              onClick={() => setIsProductSelectorOpen(true)}
+                              disabled={isDebtDisabled}><Plus className="h-5 w-5 mr-2"/>Add Item</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {receiptFormat === 'itemised' && (
+                <div className={cn("px-6 py-4", hasSettledDebts && "blur-sm select-none pointer-events-none")}>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
+                      <div className="w-24">
+                        <Input
+                          type="text"
+                          name="discount"
+                          value={String(formData.discount)}
+                          onChange={(e) => handleFormChange('discount', e.target.value)}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (isNaN(val) || val < 0) handleFormChange('discount', '0');
+                            else if (val > 100) handleFormChange('discount', '100');
+                          }}
+                          className="h-8 text-right"
+                          error={errors.discount}
+                          disabled={hasSettledDebts}
+                        />
                       </div>
-                    ])}
-                  />
-                  <div className="flex justify-center mt-4">
-                    <Button variant="secondary" size="lg" className="w-1/4" onClick={() => setIsProductSelectorOpen(true)} disabled={isDebtDisabled}><Plus className="h-5 w-5 mr-2" />Add Item</Button>
+                    </div>
+                    {parseFloat(String(formData.discount)) > 0 && (
+                      <>
+                        <div className="flex items-center gap-2 mb-1">
+                          <button
+                            onClick={() => setSelectionModal({isOpen: true, mode: 'discount'})}
+                            className={cn(
+                              "text-xs text-accent hover:underline flex items-center gap-1",
+                              hasSettledDebts && "opacity-50 cursor-not-allowed"
+                            )}
+                            disabled={hasSettledDebts}
+                          >
+                            {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-4 text-gray-500">
+                          <span className="text-sm">Subtotal</span>
+                          <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex items-center gap-4 text-lg font-bold">
+                      <span>Total</span>
+                      <span>€{calculateTotal().toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
-            {receiptFormat === 'itemised' && (
-              <div className="px-6 py-4">
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
-                    <div className="w-24">
-                      <Input
-                        type="text"
-                        name="discount"
-                        value={String(formData.discount)}
-                        onChange={(e) => handleFormChange('discount', e.target.value)}
-                        onBlur={(e) => {
-                          const val = parseFloat(e.target.value);
-                          if (isNaN(val) || val < 0) handleFormChange('discount', '0');
-                          else if (val > 100) handleFormChange('discount', '100');
-                        }}
-                        className="h-8 text-right"
-                        error={errors.discount}
-                        disabled={hasSettledDebts}
-                      />
-                    </div>
-                  </div>
-                  {parseFloat(String(formData.discount)) > 0 && (
-                    <>
-                      <div className="flex items-center gap-2 mb-1">
-                        <button
-                          onClick={() => setSelectionModal({ isOpen: true, mode: 'discount' })}
-                          className={cn(
-                            "text-xs text-accent hover:underline flex items-center gap-1",
-                            hasSettledDebts && "opacity-50 cursor-not-allowed"
-                          )}
-                          disabled={hasSettledDebts}
-                        >
-                          {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-4 text-gray-500">
-                        <span className="text-sm">Subtotal</span>
-                        <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
-                      </div>
-                    </>
-                  )}
-                  <div className="flex items-center gap-4 text-lg font-bold">
-                    <span>Total</span>
-                    <span>€{calculateTotal().toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </Card>
 
           {debtEnabled && (
@@ -967,7 +1079,10 @@ const ReceiptFormPage: React.FC = () => {
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
                     <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
                     <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
-                    <p className="mt-1 text-sm text-gray-500">One or more debts on this expense have been settled. Debt configuration is now locked.</p>
+                    <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
+                                                                          settled.<br/>To preserve data accuracy, some
+                                                                          configurations for this expense are now
+                                                                          locked.</p>
                   </div>
                 )}
                 <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
@@ -977,56 +1092,63 @@ const ReceiptFormPage: React.FC = () => {
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-2">
                             <h2 className="text-lg font-semibold">Debt Management</h2>
-                            <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400" /></Tooltip>
+                            <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
                           </div>
                           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                             <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">None</button>
-                            <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100">Split Total</button>
-                            {receiptFormat === 'itemised' && <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">Per Item</button>}
+                            <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100">Split
+                                                                                                                                                                                  Total
+                            </button>
+                            {receiptFormat === 'itemised' &&
+                              <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">Per
+                                                                                                                             Item</button>}
                           </div>
                         </div>
                         <div className="space-y-4">
-                            <NanoDataTable
-                                headers={[
-                                    { label: 'Name', className: 'w-1/2' },
-                                    { label: 'Shares', className: 'w-1/3 text-right' },
-                                    { label: '', className: 'w-auto text-right' },
-                                ]}
-                                rows={[
-                                    [
-                                        <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
-                                        <StepperInput
-                                            value="0"
-                                            disabled={true}
-                                            className="w-32 mx-auto"
-                                        />,
-                                        <div className="text-right text-gray-400">
-                                            <Tooltip content="You cannot remove yourself">
-                                                <Lock className="h-4 w-4" />
-                                            </Tooltip>
-                                        </div>
-                                    ]
-                                ]}
-                            />
-                            <div className="flex items-center justify-between pt-2">
-                                <div className="w-48">
-                                    <Combobox
-                                        value=""
-                                        options={[]}
-                                        onChange={() => {}}
-                                        placeholder="Add Person..."
-                                        className="bg-white dark:bg-gray-800"
-                                        disabled={true}
-                                    />
+                          <NanoDataTable
+                            headers={[
+                              {label: 'Name', className: 'w-1/2'},
+                              {label: 'Shares', className: 'w-1/3 text-right'},
+                              {label: '', className: 'w-auto text-right'},
+                            ]}
+                            rows={[
+                              [
+                                <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
+                                <StepperInput
+                                  value="0"
+                                  disabled={true}
+                                  className="w-32 mx-auto"
+                                />,
+                                <div className="text-right text-gray-400">
+                                  <Tooltip content="You cannot remove yourself">
+                                    <Lock className="h-4 w-4"/>
+                                  </Tooltip>
                                 </div>
-                                <div className="text-sm text-gray-500">Total Shares: 0</div>
+                              ]
+                            ]}
+                          />
+                          <div className="flex items-center justify-between pt-2">
+                            <div className="w-48">
+                              <Combobox
+                                value=""
+                                options={[]}
+                                onChange={() => {
+                                }}
+                                placeholder="Add Person..."
+                                className="bg-white dark:bg-gray-800"
+                                disabled={true}
+                              />
                             </div>
+                            <div className="text-sm text-gray-500">Total Shares: 0</div>
+                          </div>
                         </div>
                       </div>
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
                         <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                        <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debt Management Disabled</h3>
-                        <p className="mt-1 text-sm text-gray-500">Debt management is disabled when an expense isn't paid by you.</p>
+                        <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debt Management
+                                                                                                    Disabled</h3>
+                        <p className="mt-1 text-sm text-gray-500">Debt management is disabled when an expense isn't paid
+                                                                  by you.</p>
                       </div>
                     </div>
                   ) : (
@@ -1034,18 +1156,18 @@ const ReceiptFormPage: React.FC = () => {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <h2 className="text-lg font-semibold">Debt Management</h2>
-                          <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400" /></Tooltip>
+                          <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
                         </div>
-                        <SplitTypeSelector />
+                        <SplitTypeSelector/>
                       </div>
 
                       {splitType === 'total_split' && (
                         <div className="space-y-4 min-h-[400px]">
                           <NanoDataTable
                             headers={[
-                              { label: 'Name', className: 'w-[55%]' },
-                              { label: 'Shares', className: 'w-[15%] text-center' },
-                              { label: '', className: 'w-auto text-right' },
+                              {label: 'Name', className: 'w-[55%]'},
+                              {label: 'Shares', className: 'w-[15%] text-center'},
+                              {label: '', className: 'w-auto text-right'},
                             ]}
                             rows={[
                               [
@@ -1064,7 +1186,7 @@ const ReceiptFormPage: React.FC = () => {
                                 />,
                                 <div className="text-right text-gray-400">
                                   <Tooltip content="You cannot remove yourself">
-                                    <Lock className="h-4 w-4 ml-auto" />
+                                    <Lock className="h-4 w-4 ml-auto"/>
                                   </Tooltip>
                                 </div>
                               ],
@@ -1082,7 +1204,9 @@ const ReceiptFormPage: React.FC = () => {
                                   inputClassName="text-center"
                                 />,
                                 <div className="text-right">
-                                  {!isDebtDisabled && <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><X className="h-4 w-4 text-danger ml-auto" /></Button>}
+                                  {!isDebtDisabled &&
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><X
+                                      className="h-4 w-4 text-danger ml-auto"/></Button>}
                                 </div>
                               ]))
                             ]}
@@ -1093,7 +1217,10 @@ const ReceiptFormPage: React.FC = () => {
                               <div className="relative flex justify-center">
                                 <div className="relative w-full max-w-xs">
                                   <Combobox
-                                    options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({ value: String(d.DebtorID), label: d.DebtorName }))}
+                                    options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
+                                      value: String(d.DebtorID),
+                                      label: d.DebtorName
+                                    }))}
                                     value=""
                                     onChange={handleAddSplit}
                                     placeholder="Add Person"
@@ -1105,53 +1232,63 @@ const ReceiptFormPage: React.FC = () => {
                               </div>
                               <div className="text-sm text-gray-500 text-right">{totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0'}</div>
                             </div>
-                           </div>
+                          </div>
                         </div>
                       )}
 
                       {splitType === 'line_item' && receiptFormat === 'itemised' && (
                         <div className="flex justify-center items-center h-full min-h-[400px]">
-                            <div className="w-3/4 border border-gray-200 dark:border-gray-700 p-8 rounded-xl space-y-4 bg-transparent">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h4 className="text-base font-medium text-gray-900 dark:text-gray-100">Item Assignment</h4>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            {lineItems.filter(i => i.DebtorID).length} of {lineItems.length} items assigned
-                                        </p>
-                                    </div>
-                                    <Button size="lg" variant="secondary" onClick={() => setSelectionModal({ isOpen: true, mode: 'debtor' })} disabled={isDebtDisabled}>
-                                        {lineItems.some(i => i.DebtorID) ? 'Edit Assignments' : 'Assign Items'}
-                                    </Button>
-                                </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                                    <div 
-                                        className="bg-accent h-2 rounded-full transition-all duration-300" 
-                                        style={{ width: `${(lineItems.filter(i => i.DebtorID).length / Math.max(1, lineItems.length)) * 100}%` }}
-                                    ></div>
-                                </div>
+                          <div className="w-3/4 border border-gray-200 dark:border-gray-700 p-8 rounded-xl space-y-4 bg-transparent">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="text-base font-medium text-gray-900 dark:text-gray-100">Item
+                                                                                                       Assignment</h4>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {lineItems.filter(i => i.DebtorID).length} of {lineItems.length} items assigned
+                                </p>
+                              </div>
+                              <Button size="lg"
+                                      variant="secondary"
+                                      onClick={() => setSelectionModal({isOpen: true, mode: 'debtor'})}
+                                      disabled={isDebtDisabled}>
+                                {lineItems.some(i => i.DebtorID) ? 'Edit Assignments' : 'Assign Items'}
+                              </Button>
                             </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="bg-accent h-2 rounded-full transition-all duration-300"
+                                style={{width: `${(lineItems.filter(i => i.DebtorID).length / Math.max(1, lineItems.length)) * 100}%`}}
+                              ></div>
+                            </div>
+                          </div>
                         </div>
                       )}
 
                       {splitType === 'none' && (
                         <div className="flex flex-col items-center justify-center py-8 text-center min-h-[400px]">
-                          <Info className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />
+                          <Info className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2"/>
                           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Debt Splitting</h3>
-                          <p className="text-sm text-gray-500 max-w-sm">The full amount of this expense is assigned to you. Select a split type above to share the cost.</p>
+                          <p className="text-sm text-gray-500 max-w-sm">The full amount of this expense is assigned to
+                                                                        you. Select a split type above to share the
+                                                                        cost.</p>
                         </div>
                       )}
 
                       <div className={cn("mt-4 pt-4 border-t border-gray-200 dark:border-gray-700", splitType === 'none' && "invisible")}>
                         <div className="flex items-center gap-2 mb-4">
                           <h2 className="text-lg font-semibold">Estimated Debt</h2>
-                          <Tooltip content="This is an estimate of what each person owes based on the current split."><Info className="h-5 w-5 text-gray-400" /></Tooltip>
+                          <Tooltip content="This is an estimate of what each person owes based on the current split."><Info
+                            className="h-5 w-5 text-gray-400"/></Tooltip>
                         </div>
                         <DataGrid
                           itemKey="name"
                           disableMinHeight
                           data={[
-                            ...(debtSummary.self ? [{ name: `${settings.userName || 'User'} (Me)`, amount: `€${debtSummary.self.toFixed(2)}` }] : []),
-                            ...debtSummary.debtors.map(d => ({ name: d.name, amount: `€${d.amount.toFixed(2)}` }))
+                            ...(debtSummary.self ? [{
+                              name: `${settings.userName || 'User'} (Me)`,
+                              amount: `€${debtSummary.self.toFixed(2)}`
+                            }] : []),
+                            ...debtSummary.debtors.map(d => ({name: d.name, amount: `€${d.amount.toFixed(2)}`}))
                           ]}
                           renderItem={(item) => (
                             <div className="flex justify-between items-center">
@@ -1189,8 +1326,10 @@ const ReceiptFormPage: React.FC = () => {
             </Button>
           </div>
 
-          <ProductSelector isOpen={isProductSelectorOpen} onClose={() => setIsProductSelectorOpen(false)} onSelect={handleProductSelect} />
-          
+          <ProductSelector isOpen={isProductSelectorOpen}
+                           onClose={() => setIsProductSelectorOpen(false)}
+                           onSelect={handleProductSelect}/>
+
           <StoreModal
             isOpen={isStoreModalOpen}
             onClose={() => setIsStoreModalOpen(false)}
@@ -1214,7 +1353,10 @@ const ReceiptFormPage: React.FC = () => {
 
           <ConfirmModal
             isOpen={debtInfoModal.isOpen}
-            onClose={() => setDebtInfoModal({ isOpen: false, onConfirm: () => {} })}
+            onClose={() => setDebtInfoModal({
+              isOpen: false, onConfirm: () => {
+              }
+            })}
             onConfirm={debtInfoModal.onConfirm}
             title="Discard Debt Information?"
             message="Changing this setting will clear all existing debt splits and assignments for this expense. Are you sure?"
@@ -1231,7 +1373,7 @@ const ReceiptFormPage: React.FC = () => {
 
           <ConfirmModal
             isOpen={formatChangeModal.isOpen}
-            onClose={() => setFormatChangeModal({ isOpen: false, newFormat: null })}
+            onClose={() => setFormatChangeModal({isOpen: false, newFormat: null})}
             onConfirm={confirmFormatChange}
             title="Change Expense Format?"
             message="Are you sure you want to change the expense format? Some data will be cleared."
@@ -1239,7 +1381,7 @@ const ReceiptFormPage: React.FC = () => {
 
           <LineItemSelectionModal
             isOpen={selectionModal.isOpen}
-            onClose={() => setSelectionModal({ isOpen: false, mode: null })}
+            onClose={() => setSelectionModal({isOpen: false, mode: null})}
             lineItems={lineItems}
             onSave={selectionModal.mode === 'debtor' ? handleAssignDebtorSave : handleDiscountExclusionSave}
             selectionMode={selectionModal.mode!}

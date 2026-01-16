@@ -136,7 +136,7 @@ const ReceiptViewPage: React.FC = () => {
       .map(s => JSON.parse(s));
     
     if (items.some(i => i.DebtorID === null || i.DebtorID === undefined)) {
-      entities.unshift({ value: 'none', label: 'No Debtors' });
+      entities.unshift({ value: 'none', label: 'None' });
     }
 
     const hasExclusions = items.some(i => i.IsExcludedFromDiscount);
@@ -441,143 +441,22 @@ const ReceiptViewPage: React.FC = () => {
         }
       />
       <PageWrapper>
-        <div className="py-6 grid grid-cols-3 gap-6">
-          <div className="col-span-2 space-y-6">
-            {!!receipt.IsTentative && (
-              <InfoCard
-                variant="info"
-                title="Tentative Expense"
-                message="This is a draft expense. It won't affect analytics or debts until made permanent."
-              >
-                <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
-              </InfoCard>
-            )}
-
-            {!!receipt.ReceiptNote && (
-              <Card>
-                <div className="p-6">
-                  <h2 className="text-lg font-semibold mb-2">Note</h2>
-                  <p className="text-gray-600 dark:text-gray-300">{receipt.ReceiptNote}</p>
-                </div>
-              </Card>
-            )}
-
-            {images.length > 0 && (
-              <Card>
-                <div className="p-6">
-                  <Gallery images={images.map(i => i.src) as (string | Image)[]}/>
-                </div>
-              </Card>
-            )}
-
-            {receipt.IsNonItemised ? (
-              <Card className="overflow-hidden">
-                <div className="relative p-6">
-                  <div className="blur-sm">
-                    <NanoDataTable
-                      headers={[
-                        { label: 'Product' },
-                        { label: 'Qty', className: 'w-24 text-center' },
-                        { label: 'Unit Price (€)', className: 'w-32 text-right' },
-                        { label: 'Total (€)', className: 'w-32 text-right' },
-                      ]}
-                      rows={[]} // Empty rows to trigger "No results found" for non-itemised
-                    />
-                  </div>
-                  <div
-                    className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Expense</h3>
-                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this expense.</p>
-                  </div>
-                </div>
-              </Card>
-            ) : (
-              <>
-                <div className="flex justify-end gap-4 mb-4">
-                  <Combobox
-                    options={[{ value: 'all', label: 'All Categories' }, ...filterOptions.categories]}
-                    value={categoryFilter}
-                    onChange={setCategoryFilter}
-                    placeholder="Filter by Category"
-                    className="w-48"
-                  />
-                  {filterOptions.entities.length > 0 && (
-                    <Combobox
-                      options={[{ value: 'all', label: 'All Debtors' }, ...filterOptions.entities]}
-                      value={entityFilter}
-                      onChange={setEntityFilter}
-                      placeholder="Filter by Entity"
-                      className="w-48"
-                    />
-                  )}
-                  {filterOptions.hasExclusions && (
-                    <Combobox
-                      options={[
-                        { value: 'all', label: 'Included & Excluded' },
-                        { value: 'yes', label: 'Excluded Only' },
-                        { value: 'no', label: 'Included Only' }
-                      ]}
-                      value={excludedFilter}
-                      onChange={setExcludedFilter}
-                      placeholder="Filter by Exclusion"
-                      className="w-48"
-                    />
-                  )}
-                  <Tooltip content="Reset Filters">
-                    <Button variant="ghost" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
-                      <RotateCcw className="h-5 w-5" />
-                    </Button>
-                  </Tooltip>
-                </div>
-                <Card>
-                  <div className="p-6">
-                    <NanoDataTable
-                      headers={tableHeaders}
-                      rows={tableRows}
-                    />
-                  </div>
-                  <div className="px-6 py-4 rounded-b-xl">
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-center gap-4 text-gray-500">
-                        <span className="text-sm">Subtotal</span>
-                        <span className="font-medium">€{displaySubtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-gray-500">
-                        {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
-                          <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
-                            <div className="flex items-center gap-1 cursor-help">
-                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                              <span className="text-sm underline decoration-dotted">
-                                Discount ({receipt.Discount || 0}%)
-                              </span>
-                            </div>
-                          </Tooltip>
-                        ) : (
-                          <span className="text-sm">Discount ({receipt?.Discount || 0}%)</span>
-                        )}
-                        <span className="font-medium">-€{(displaySubtotal - displayTotalAmount).toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-lg font-bold">
-                        <span>Total</span>
-                        <span>€{displayTotalAmount.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </>
-            )}
-          </div>
-
-          <div className="col-span-1 space-y-6">
+        <div className="py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Summary Card - Moved before Items List for mobile order */}
+          <div className="col-span-1 space-y-6 lg:col-start-3">
             <Card>
               <div className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-6">
+                  
+                  {/* Total Amount */}
+                  <div className="sm:col-start-1 sm:row-start-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1">
                     <p className="text-sm text-gray-500">Total Amount</p>
                     <p className="text-2xl font-bold">€{displayTotalAmount.toFixed(2)}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
+
+                  {/* Badges */}
+                  <div className="flex flex-col items-start sm:items-end lg:items-start xl:items-end gap-2 sm:col-start-2 sm:row-start-1 lg:col-start-1 lg:row-start-2 xl:col-start-2 xl:row-start-1">
                     <Tooltip content={receipt?.Status === 'paid' ? 'This expense has been paid to the vendor.' : `Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
                       <span
                         className={cn(
@@ -605,48 +484,59 @@ const ReceiptViewPage: React.FC = () => {
                       </Tooltip>
                     )}
                   </div>
-                </div>
-                <div className="mt-6 flex flex-col gap-4">
-                  {receipt?.StoreName && (
-                    <Tooltip content="The vendor where this expense was incurred">
-                      <div className="flex items-center gap-3 cursor-help">
-                        <Store className="h-5 w-5 text-gray-400"/>
-                        <span className="text-sm">{receipt.StoreName}</span>
-                      </div>
-                    </Tooltip>
+
+                  {/* Note */}
+                  {receipt?.ReceiptNote && (
+                    <div className="sm:col-start-2 sm:row-start-2 lg:col-start-1 lg:row-start-3 xl:col-start-2 xl:row-start-2 sm:text-right lg:text-left xl:text-right">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Note</p>
+                      <p className="text-base text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">{receipt.ReceiptNote}</p>
+                    </div>
                   )}
-                  {receipt?.ReceiptDate && (
-                    <Tooltip content="The date this expense was incurred">
-                      <div className="flex items-center gap-3 cursor-help">
-                        <Calendar className="h-5 w-5 text-gray-400"/>
-                        <span className="text-sm">{format(parseISO(receipt.ReceiptDate), 'MMM d, yyyy')}</span>
-                      </div>
-                    </Tooltip>
-                  )}
-                  {paymentMethodsEnabled && (
-                    <Tooltip content="The payment method used for this expense">
-                      <div className="flex items-center gap-3 cursor-help">
-                        <CreditCard className="h-5 w-5 text-gray-400"/>
-                        <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
-                      </div>
-                    </Tooltip>
-                  )}
-                  {!receipt?.IsNonItemised && (
-                    <>
-                      <Tooltip content="Number of unique items in this receipt">
+
+                  {/* Rest (Attributes) */}
+                  <div className="flex flex-col gap-4 sm:col-start-1 sm:row-start-2 lg:col-start-1 lg:row-start-4 xl:col-start-1 xl:row-start-2">
+                    {receipt?.StoreName && (
+                      <Tooltip content="The vendor where this expense was incurred">
                         <div className="flex items-center gap-3 cursor-help">
-                          <Tag className="h-5 w-5 text-gray-400"/>
-                          <span className="text-sm">{displayTotalItems} Unique Items</span>
+                          <Store className="h-5 w-5 text-gray-400"/>
+                          <span className="text-sm">{receipt.StoreName}</span>
                         </div>
                       </Tooltip>
-                      <Tooltip content="Total quantity of all items purchased">
+                    )}
+                    {receipt?.ReceiptDate && (
+                      <Tooltip content="The date this expense was incurred">
                         <div className="flex items-center gap-3 cursor-help">
-                          <ShoppingCart className="h-5 w-5 text-gray-400"/>
-                          <span className="text-sm">{displayTotalQuantity} Total Quantity</span>
+                          <Calendar className="h-5 w-5 text-gray-400"/>
+                          <span className="text-sm">{format(parseISO(receipt.ReceiptDate), 'MMM d, yyyy')}</span>
                         </div>
                       </Tooltip>
-                    </>
-                  )}
+                    )}
+                    {paymentMethodsEnabled && (
+                      <Tooltip content="The payment method used for this expense">
+                        <div className="flex items-center gap-3 cursor-help">
+                          <CreditCard className="h-5 w-5 text-gray-400"/>
+                          <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
+                        </div>
+                      </Tooltip>
+                    )}
+                    {!receipt?.IsNonItemised && (
+                      <>
+                        <Tooltip content="Number of unique items in this receipt">
+                          <div className="flex items-center gap-3 cursor-help">
+                            <Tag className="h-5 w-5 text-gray-400"/>
+                            <span className="text-sm">{displayTotalItems} Unique Items</span>
+                          </div>
+                        </Tooltip>
+                        <Tooltip content="Total quantity of all items purchased">
+                          <div className="flex items-center gap-3 cursor-help">
+                            <ShoppingCart className="h-5 w-5 text-gray-400"/>
+                            <span className="text-sm">{displayTotalQuantity} Total Quantity</span>
+                          </div>
+                        </Tooltip>
+                      </>
+                    )}
+                  </div>
+
                 </div>
               </div>
             </Card>
@@ -757,6 +647,126 @@ const ReceiptViewPage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Items List - Moved after Summary Card for mobile order, but positioned correctly on desktop */}
+          <div className="lg:col-span-2 space-y-6 lg:col-start-1 lg:row-start-1">
+            {!!receipt.IsTentative && (
+              <InfoCard
+                variant="info"
+                title="Tentative Expense"
+                message="This is a draft expense. It won't affect analytics or debts until made permanent."
+              >
+                <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
+              </InfoCard>
+            )}
+
+            {images.length > 0 && (
+              <Card>
+                <div className="p-6">
+                  <Gallery images={images.map(i => i.src) as (string | Image)[]}/>
+                </div>
+              </Card>
+            )}
+
+            {receipt.IsNonItemised ? (
+              <Card className="overflow-hidden">
+                <div className="relative p-6">
+                  <div className="blur-sm">
+                    <NanoDataTable
+                      headers={[
+                        { label: 'Product' },
+                        { label: 'Qty', className: 'w-24 text-center' },
+                        { label: 'Unit Price (€)', className: 'w-32 text-right' },
+                        { label: 'Total (€)', className: 'w-32 text-right' },
+                      ]}
+                      rows={[]} // Empty rows to trigger "No results found" for non-itemised
+                    />
+                  </div>
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Expense</h3>
+                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this expense.</p>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <>
+                <div className="flex justify-end gap-4 mb-4 flex-wrap">
+                  <Combobox
+                    options={[{ value: 'all', label: 'All Categories' }, ...filterOptions.categories]}
+                    value={categoryFilter}
+                    onChange={setCategoryFilter}
+                    placeholder="Filter by Category"
+                    className="w-full sm:w-48 shrink min-w-[120px]"
+                  />
+                  {filterOptions.entities.length > 0 && (
+                    <Combobox
+                      options={[{ value: 'all', label: 'All Entities' }, ...filterOptions.entities]}
+                      value={entityFilter}
+                      onChange={setEntityFilter}
+                      placeholder="Filter by Entity"
+                      className="w-full sm:w-48 shrink min-w-[120px]"
+                    />
+                  )}
+                  {filterOptions.hasExclusions && (
+                    <Combobox
+                      options={[
+                        { value: 'all', label: 'Included & Excluded' },
+                        { value: 'yes', label: 'Excluded Only' },
+                        { value: 'no', label: 'Included Only' }
+                      ]}
+                      value={excludedFilter}
+                      onChange={setExcludedFilter}
+                      placeholder="Filter by Exclusion"
+                      className="w-full sm:w-48 shrink min-w-[120px]"
+                    />
+                  )}
+                  <Tooltip content="Reset Filters">
+                    <Button variant="ghost" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
+                      <RotateCcw className="h-5 w-5" />
+                    </Button>
+                  </Tooltip>
+                </div>
+                <Card>
+                  <div className="p-6">
+                    <NanoDataTable
+                      headers={tableHeaders}
+                      rows={tableRows}
+                    />
+                  </div>
+                  <div className="px-6 py-4 rounded-b-xl">
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-4 text-gray-500">
+                        <span className="text-sm">Subtotal</span>
+                        <span className="font-medium">€{displaySubtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-gray-500">
+                        {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
+                          <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
+                            <div className="flex items-center gap-1 cursor-help">
+                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              <span className="text-sm underline decoration-dotted">
+                                Discount ({receipt.Discount || 0}%)
+                              </span>
+                            </div>
+                          </Tooltip>
+                        ) : (
+                          <span className="text-sm">Discount ({receipt?.Discount || 0}%)</span>
+                        )}
+                        <span className="font-medium">-€{(displaySubtotal - displayTotalAmount).toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-lg font-bold">
+                        <span>Total</span>
+                        <span>€{displayTotalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+          </div>
+
         </div>
       </PageWrapper>
 
