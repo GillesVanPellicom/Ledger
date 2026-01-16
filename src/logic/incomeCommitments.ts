@@ -7,6 +7,7 @@ export interface IncomeSchedule {
   SourceName: string;
   Category: string | null;
   PaymentMethodID: number;
+  PaymentMethodName: string;
   ExpectedAmount: number | null;
   RecurrenceRule: string;
   DayOfMonth: number | null;
@@ -26,6 +27,8 @@ export interface PendingIncome {
   State: 'TO_CHECK';
   SourceName?: string;
   Category?: string;
+  PaymentMethodName?: string;
+  PaymentMethodID?: number;
 }
 
 /* ==================== Helpers ==================== */
@@ -50,10 +53,12 @@ export const incomeCommitments = {
       SELECT 
         s.*, 
         src.IncomeSourceName AS SourceName,
-        cat.IncomeCategoryName AS Category
+        cat.IncomeCategoryName AS Category,
+        pm.PaymentMethodName
       FROM IncomeSchedules s
       JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
       LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
+      LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
       WHERE s.IsActive = 1
     `);
 
@@ -73,11 +78,14 @@ export const incomeCommitments = {
       SELECT 
         p.*, 
         src.IncomeSourceName AS SourceName,
-        cat.IncomeCategoryName AS Category
+        cat.IncomeCategoryName AS Category,
+        pm.PaymentMethodName,
+        s.PaymentMethodID
       FROM PendingIncomes p
       JOIN IncomeSchedules s ON p.IncomeScheduleID = s.IncomeScheduleID
       JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
       LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
+      LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
       WHERE p.Status = 'pending'
       ORDER BY p.PlannedDate ASC
     `);

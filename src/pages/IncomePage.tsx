@@ -26,7 +26,7 @@ import Checkbox from '../components/ui/Checkbox';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
 import IncomeSourceModal from '../components/income/IncomeSourceModal';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isBefore, startOfToday, set } from 'date-fns';
 import { cn } from '../utils/cn';
 import { useErrorStore } from '../store/useErrorStore';
 import { db } from '../utils/db';
@@ -57,7 +57,7 @@ const IncomePage: React.FC = () => {
   const [isDismissModalOpen, setIsDismissModalOpen] = useState(false);
   const [isOneTimeModalOpen, setIsOneTimeModalOpen] = useState(false);
   const [selectedPending, setSelectedPending] = useState<any>(null);
-  const [confirmData, setConfirmData] = useState({ amount: 0, date: '' });
+  const [confirmData, setConfirmData] = useState({ amount: 0, date: '', paymentMethodId: '' });
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
@@ -80,6 +80,7 @@ const IncomePage: React.FC = () => {
     LookaheadDays: 7,
     IsActive: true
   });
+  const [createForPastPeriod, setCreateForPastPeriod] = useState(false);
 
   useEffect(() => {
     if (editingSchedule) {
@@ -97,15 +98,16 @@ const IncomePage: React.FC = () => {
         IsActive: !!editingSchedule.IsActive
       });
     } else {
+      const today = new Date();
       setNewSchedule({
         SourceName: '',
         Category: '',
         PaymentMethodID: paymentMethods[0]?.value || '',
         ExpectedAmount: '',
         RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-        DayOfMonth: '1',
-        DayOfWeek: '1',
-        MonthOfYear: '0',
+        DayOfMonth: String(today.getDate()),
+        DayOfWeek: String(today.getDay()),
+        MonthOfYear: String(today.getMonth()),
         RequiresConfirmation: true,
         LookaheadDays: 7,
         IsActive: true
@@ -209,7 +211,7 @@ const IncomePage: React.FC = () => {
 
   // Mutations
   const processSchedulesMutation = useMutation({
-    mutationFn: () => incomeLogic.processSchedules(),
+    mutationFn: (createForPastPeriod?: boolean) => incomeLogic.processSchedules(createForPastPeriod),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
       queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
@@ -218,8 +220,8 @@ const IncomePage: React.FC = () => {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: ({ pending, amount, date }: { pending: any, amount: number, date: string }) =>
-      incomeLogic.confirmPendingIncome(pending, amount, date),
+    mutationFn: ({ pending, amount, date, paymentMethodId }: { pending: any, amount: number, date: string, paymentMethodId: number }) =>
+      incomeLogic.confirmPendingIncome(pending, amount, date, paymentMethodId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
       queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
@@ -249,10 +251,10 @@ const IncomePage: React.FC = () => {
 
   const createScheduleMutation = useMutation({
     mutationFn: (data: any) => incomeCommitments.createSchedule(data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
       setIsScheduleModalOpen(false);
-      processSchedulesMutation.mutate();
+      processSchedulesMutation.mutate(variables.CreateForPastPeriod);
     },
     onError: (err) => showError(err)
   });
@@ -352,6 +354,7 @@ const IncomePage: React.FC = () => {
       DayOfMonth: Number(newSchedule.DayOfMonth) || null,
       DayOfWeek: Number(newSchedule.DayOfWeek) || null,
       MonthOfYear: Number(newSchedule.MonthOfYear) || null,
+      CreateForPastPeriod: createForPastPeriod,
     };
     if (editingSchedule) {
       updateScheduleMutation.mutate({ id: editingSchedule.IncomeScheduleID, data });
@@ -412,6 +415,41 @@ const IncomePage: React.FC = () => {
     }
   };
 
+  const showCreateForPastPeriodCheckbox = () => {
+    if (editingSchedule) return false;
+
+    const today = startOfToday();
+    const { type } = parseRecurrenceRule(newSchedule.RecurrenceRule);
+    let scheduledDateForCurrentPeriod: Date | null = null;
+
+    try {
+      switch (type) {
+        case 'WEEKLY': {
+          const dayOfWeek = parseInt(newSchedule.DayOfWeek, 10);
+          scheduledDateForCurrentPeriod = set(today, { day: dayOfWeek });
+          break;
+        }
+        case 'MONTHLY': {
+          const dayOfMonth = parseInt(newSchedule.DayOfMonth, 10);
+          scheduledDateForCurrentPeriod = set(today, { date: dayOfMonth });
+          break;
+        }
+        case 'YEARLY': {
+          const monthOfYear = parseInt(newSchedule.MonthOfYear, 10);
+          const dayOfMonth = parseInt(newSchedule.DayOfMonth, 10);
+          scheduledDateForCurrentPeriod = set(today, { month: monthOfYear, date: dayOfMonth });
+          break;
+        }
+        default:
+          return false;
+      }
+    } catch (e) {
+      return false; // Invalid date, e.g. day 31 in a 30-day month
+    }
+
+    return scheduledDateForCurrentPeriod && isBefore(scheduledDateForCurrentPeriod, today);
+  };
+
   return (
     <div>
       <Header
@@ -461,6 +499,7 @@ const IncomePage: React.FC = () => {
                     },
                     { header: 'Source', accessor: 'SourceName' },
                     { header: 'Category', accessor: 'Category' },
+                    { header: 'Payment Method', accessor: 'PaymentMethodName' },
                     {
                       header: 'Expected Amount',
                       accessor: 'Amount',
@@ -474,7 +513,7 @@ const IncomePage: React.FC = () => {
                             size="sm"
                             onClick={() => {
                               setSelectedPending(row);
-                              setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd') });
+                              setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: String(row.PaymentMethodID) });
                               setIsConfirmModalOpen(true);
                             }}
                           >
@@ -519,6 +558,7 @@ const IncomePage: React.FC = () => {
                   columns={[
                     { header: 'Source', accessor: 'SourceName' },
                     { header: 'Category', accessor: 'Category' },
+                    { header: 'Payment Method', accessor: 'PaymentMethodName' },
                     {
                       header: 'Expected Amount',
                       accessor: 'ExpectedAmount',
@@ -709,7 +749,8 @@ const IncomePage: React.FC = () => {
               onClick={() => confirmMutation.mutate({
                 pending: selectedPending,
                 amount: confirmData.amount,
-                date: confirmData.date
+                date: confirmData.date,
+                paymentMethodId: Number(confirmData.paymentMethodId)
               })}
               loading={confirmMutation.isPending}
             >
@@ -733,6 +774,12 @@ const IncomePage: React.FC = () => {
             type="date"
             value={confirmData.date}
             onChange={e => setConfirmData(prev => ({ ...prev, date: e.target.value }))}
+          />
+          <Combobox
+            label="Payment Method"
+            options={paymentMethods}
+            value={confirmData.paymentMethodId}
+            onChange={val => setConfirmData(prev => ({ ...prev, paymentMethodId: val }))}
           />
         </div>
       </Modal>
@@ -909,6 +956,21 @@ const IncomePage: React.FC = () => {
                 max={1000}
               />
             </div>
+          {showCreateForPastPeriodCheckbox() && (
+            <div className="flex items-start gap-3 pt-2">
+              <Checkbox
+                id="createForPastPeriod"
+                checked={createForPastPeriod}
+                onChange={e => setCreateForPastPeriod(e.target.checked)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label htmlFor="createForPastPeriod" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Create for current period
+                </label>
+                <p className="text-xs text-gray-500">The scheduled date for the current period is in the past. Check this to create a "To Check" item for it anyway.</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-start gap-3 pt-2">
             <Checkbox
               id="requiresConfirmation"

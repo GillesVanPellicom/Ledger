@@ -5,7 +5,8 @@ import {
   parseISO,
   isAfter,
   subMonths,
-  isBefore
+  isBefore,
+  startOfToday
 } from 'date-fns';
 
 import { incomeCommitments } from './incomeCommitments';
@@ -21,7 +22,7 @@ function normalizeDateString(date: string): string {
 /* ==================== Logic ==================== */
 
 export const incomeLogic = {
-  processSchedules: async () => {
+  processSchedules: async (createForPastPeriod?: boolean) => {
     const schedules = await incomeCommitments.getSchedules();
     const today = startOfDay(new Date());
 
@@ -59,6 +60,10 @@ export const incomeLogic = {
         );
         
         let rangeStartDate = subMonths(lastKnownDate, 3); // Look back 3 months
+        if (createForPastPeriod) {
+            rangeStartDate = subMonths(startOfToday(), 1);
+        }
+        
         if (isBefore(rangeStartDate, creationDate)) {
           rangeStartDate = creationDate;
         }
@@ -114,7 +119,8 @@ export const incomeLogic = {
   confirmPendingIncome: async (
     pending: any,
     actualAmount: number,
-    actualDate: string
+    actualDate: string,
+    paymentMethodId: number
   ) => {
     const schedule = await db.queryOne<any>(
       `
@@ -132,7 +138,7 @@ export const incomeLogic = {
     }
 
     await incomeCommitments.createTopUpFromIncome({
-      PaymentMethodID: schedule.PaymentMethodID,
+      PaymentMethodID: paymentMethodId,
       Amount: actualAmount,
       Date: normalizeDateString(actualDate),
       SourceName: schedule.IncomeSourceName,
