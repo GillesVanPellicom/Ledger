@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   TrendingUp,
   Calendar,
@@ -13,7 +13,8 @@ import {
   Check,
   X,
   FilePlus2,
-  CalendarPlus
+  CalendarPlus,
+  Link as LinkIcon
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
@@ -691,17 +692,35 @@ const IncomePage: React.FC = () => {
               <DataTable
                 loading={loadingRepayments}
                 data={paginatedData(debtRepayments)}
-                onRowClick={(row) => {
-                  if (row.PaymentMethodID) navigate(`/payment-methods/${row.PaymentMethodID}`);
-                }}
+                onRowClick={(row) => navigate(`/receipts/view/${row.ReceiptID}`)}
                 columns={[
                   {
                     header: 'Date',
                     accessor: 'PaidDate',
                     render: (row) => format(parseISO(row.PaidDate), 'MMM d, yyyy')
                   },
-                  { header: 'Debtor', accessor: 'DebtorName' },
-                  { header: 'Account', accessor: 'PaymentMethodName' },
+                  {
+                    header: 'Debtor',
+                    render: (row) => (
+                      <Link to={`/entities/${row.DebtorID}`}
+                            className="font-medium hover:underline flex items-center gap-1.5 group"
+                            onClick={(e) => e.stopPropagation()}>
+                        {row.DebtorName}
+                        <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                      </Link>
+                    )
+                  },
+                  {
+                    header: 'Account',
+                    render: (row) => (
+                      <Link to={`/payment-methods/${row.PaymentMethodID}`}
+                            className="font-medium hover:underline flex items-center gap-1.5 group"
+                            onClick={(e) => e.stopPropagation()}>
+                        {row.PaymentMethodName}
+                        <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                      </Link>
+                    )
+                  },
                   {
                     header: 'Amount',
                     accessor: 'TopUpAmount',

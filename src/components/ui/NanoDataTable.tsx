@@ -6,9 +6,17 @@ interface NanoDataTableProps {
   headers: { label: string; className?: string }[];
   rows: React.ReactNode[][];
   className?: string;
+  emptyStateIcon?: React.ReactNode;
+  emptyStateText?: string;
 }
 
-const NanoDataTable: React.FC<NanoDataTableProps> = ({ headers, rows, className }) => {
+const NanoDataTable: React.FC<NanoDataTableProps> = ({ 
+  headers, 
+  rows, 
+  className,
+  emptyStateIcon = <FileSearch className="h-10 w-10 opacity-50" />,
+  emptyStateText = "No results found."
+}) => {
   return (
     <div className={cn("overflow-x-auto", className)}>
       <table className="w-full text-sm">
@@ -26,8 +34,8 @@ const NanoDataTable: React.FC<NanoDataTableProps> = ({ headers, rows, className 
             <tr>
               <td colSpan={headers.length} className="p-4 py-8 text-center text-gray-500">
                 <div className="flex flex-col items-center gap-2 justify-center">
-                  <FileSearch className="h-10 w-10 opacity-50" />
-                  <span>No results found.</span>
+                  {emptyStateIcon}
+                  <span>{emptyStateText}</span>
                 </div>
               </td>
             </tr>

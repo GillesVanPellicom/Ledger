@@ -109,10 +109,12 @@ export const incomeCommitments = {
       db.query<any>(`
         SELECT 
           rdp.PaidDate,
+          d.DebtorID,
           d.DebtorName,
           pm.PaymentMethodName,
           t.TopUpAmount,
-          t.PaymentMethodID
+          t.PaymentMethodID,
+          rdp.ReceiptID
         FROM ReceiptDebtorPayments rdp
         JOIN Debtors d ON rdp.DebtorID = d.DebtorID
         JOIN TopUps t ON rdp.TopUpID = t.TopUpID
@@ -122,10 +124,12 @@ export const incomeCommitments = {
       db.query<any>(`
         SELECT
           r.ReceiptDate as PaidDate,
+          d.DebtorID,
           d.DebtorName,
           pm.PaymentMethodName,
           r.NonItemisedTotal as TopUpAmount,
-          r.PaymentMethodID
+          r.PaymentMethodID,
+          r.ReceiptID
         FROM Receipts r
         JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
         JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID

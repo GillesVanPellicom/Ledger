@@ -7,7 +7,7 @@ import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
-import {X, Plus, Image, RotateCw, Info, ArrowLeft, Lock} from 'lucide-react';
+import {X, Plus, Image, RotateCw, Info, ArrowLeft, Lock, ArrowDown} from 'lucide-react';
 import {nanoid} from 'nanoid';
 import {cn} from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
@@ -66,7 +66,7 @@ const ReceiptFormPage: React.FC = () => {
   const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [receiptFormat, setReceiptFormat] = useState<'itemised' | 'item-less'>('itemised');
+  const [receiptFormat, setReceiptFormat] = useState<'itemised' | 'item-less' | null>(null);
   const [formatChangeModal, setFormatChangeModal] = useState<{
     isOpen: boolean,
     newFormat: 'itemised' | 'item-less' | null
@@ -257,7 +257,7 @@ const ReceiptFormPage: React.FC = () => {
         if (concept) {
           try {
             const parsedConcept = JSON.parse(concept);
-            setReceiptFormat(parsedConcept.receiptFormat || 'itemised');
+            setReceiptFormat(parsedConcept.receiptFormat || null);
             setNonItemisedTotal(parsedConcept.nonItemisedTotal || 0);
             setPaidById(parsedConcept.paidById || 'me');
             setFormData({
@@ -321,7 +321,7 @@ const ReceiptFormPage: React.FC = () => {
     setExcludedLineItemKeys(new Set());
     setIsExclusionMode(false);
     setIsConcept(false);
-    setReceiptFormat('itemised');
+    setReceiptFormat(null);
     setNonItemisedTotal(0);
   };
 
@@ -762,9 +762,9 @@ const ReceiptFormPage: React.FC = () => {
           </Tooltip>
         }
         actions={
-          !isEditing && isConcept && (
+          !isEditing && (
             <Tooltip content="Clear Concept">
-              <Button variant="ghost" size="icon" onClick={clearConcept}>
+              <Button variant="ghost" size="icon" onClick={clearConcept} disabled={!isConcept}>
                 <RotateCw className="h-5 w-5"/>
               </Button>
             </Tooltip>
@@ -902,407 +902,415 @@ const ReceiptFormPage: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="overflow-hidden">
-            <div className="relative p-6">
-              {hasSettledDebts && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                  <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                  <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
-                  <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
-                                                                        settled.<br/>To preserve data accuracy, some
-                                                                        configurations for this expense are now
-                                                                        locked.</p>
-                </div>
-              )}
-              <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
-                <div className="grid grid-cols-2 gap-1 rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 mb-6">
-                  <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
-                    <button onClick={() => handleFormatChange('itemised')}
-                            disabled={hasSettledDebts}
-                            className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
-                                                                                                                                                                                                                                                                                                                                             Items
-                    </button>
-                  </Tooltip>
-                  <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
-                    <button onClick={() => handleFormatChange('item-less')}
-                            disabled={hasSettledDebts}
-                            className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
-                                                                                                                                                                                                                                                                                                                                              Total
-                                                                                                                                                                                                                                                                                                                                              Only
-                    </button>
-                  </Tooltip>
-                </div>
-
-                {receiptFormat === 'item-less' ? (
-                  <div className="text-center py-4">
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Total
-                                                                                                       Amount</label>
-                    <div className="relative inline-block">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-gray-400">€</span>
-                      <Input
-                        type="text"
-                        value={nonItemisedTotal === 0 ? '' : String(nonItemisedTotal)}
-                        onChange={(e) => setNonItemisedTotal(parseFloat(e.target.value) || 0)}
-                        error={errors.nonItemisedTotal}
-                        disabled={hasSettledDebts}
-                        className="text-4xl font-bold text-center w-48 h-16 pl-10 pr-4"
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {errors.lineItems && <p className="text-sm text-danger text-right -mb-2">{errors.lineItems}</p>}
-                    <NanoDataTable
-                      headers={[
-                        {label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]'},
-                        {label: 'Qty', className: 'w-[10%] text-center'},
-                        {label: 'Unit Price (€)', className: 'w-[10%] text-center'},
-                        {label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]'},
-                        ...(splitType === 'line_item' ? [{label: 'Debtor', className: 'w-[15%]'}] : []),
-                        {label: '', className: 'w-auto'},
-                      ]}
-                      rows={lineItems.map(item => [
-                        <div className="flex items-center gap-2">
-                          {parseFloat(String(formData.discount)) > 0 && (
-                            <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
-                              <div className={cn("w-2 h-2 rounded-full flex-shrink-0", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
-                            </Tooltip>
-                          )}
-                          <div>
-                            <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                            <p className="text-xs text-gray-500">{item.ProductBrand}</p>
-                          </div>
-                        </div>,
-                        <StepperInput
-                          value={String(item.LineQuantity)}
-                          onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)}
-                          onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
-                          onIncrement={() => handleLineItemChange(item.key, 'LineQuantity', (Number(item.LineQuantity) || 0) + 1)}
-                          onDecrement={() => handleLineItemChange(item.key, 'LineQuantity', Math.max(0, (Number(item.LineQuantity) || 0) - 1))}
-                          min={0}
-                          max={1000000}
-                          className="w-full"
-                          inputClassName="text-center"
-                          error={errors[`qty_${item.key}`]}
-                          disabled={isDebtDisabled}
-                        />,
-                        <StepperInput
-                          value={String(item.LineUnitPrice)}
-                          onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)}
-                          onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
-                          onIncrement={() => handleLineItemChange(item.key, 'LineUnitPrice', (Number(item.LineUnitPrice) || 0) + 1)}
-                          onDecrement={() => handleLineItemChange(item.key, 'LineUnitPrice', Math.max(0, (Number(item.LineUnitPrice) || 0) - 1))}
-                          min={0}
-                          max={1000000}
-                          className="w-full"
-                          inputClassName="text-center"
-                          error={errors[`price_${item.key}`]}
-                          disabled={isDebtDisabled}
-                        />,
-                        <span className="font-medium text-right block">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</span>,
-                        ...(splitType === 'line_item' ? [
-                          <div className="text-right text-sm text-gray-600 dark:text-gray-400">{item.DebtorName || '-'}</div>] : []),
-                        <div className="text-right">
-                          {!isDebtDisabled && <Button variant="ghost"
-                                                      size="icon"
-                                                      onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-danger"/></Button>}
-                        </div>
-                      ])}
-                    />
-                    <div className="flex justify-center mt-4">
-                      <Button variant="secondary"
-                              size="lg"
-                              className="w-1/4"
-                              onClick={() => setIsProductSelectorOpen(true)}
-                              disabled={isDebtDisabled}><Plus className="h-5 w-5 mr-2"/>Add Item</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              {receiptFormat === 'itemised' && (
-                <div className={cn("px-6 py-4", hasSettledDebts && "blur-sm select-none pointer-events-none")}>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
-                      <div className="w-24">
-                        <Input
-                          type="text"
-                          name="discount"
-                          value={String(formData.discount)}
-                          onChange={(e) => handleFormChange('discount', e.target.value)}
-                          onBlur={(e) => {
-                            const val = parseFloat(e.target.value);
-                            if (isNaN(val) || val < 0) handleFormChange('discount', '0');
-                            else if (val > 100) handleFormChange('discount', '100');
-                          }}
-                          className="h-8 text-right"
-                          error={errors.discount}
+          <Card>
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-1 rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
+                  <button onClick={() => handleFormatChange('itemised')}
                           disabled={hasSettledDebts}
-                        />
-                      </div>
-                    </div>
-                    {parseFloat(String(formData.discount)) > 0 && (
-                      <>
-                        <div className="flex items-center gap-2 mb-1">
-                          <button
-                            onClick={() => setSelectionModal({isOpen: true, mode: 'discount'})}
-                            className={cn(
-                              "text-xs text-accent hover:underline flex items-center gap-1",
-                              hasSettledDebts && "opacity-50 cursor-not-allowed"
-                            )}
-                            disabled={hasSettledDebts}
-                          >
-                            {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-4 text-gray-500">
-                          <span className="text-sm">Subtotal</span>
-                          <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="flex items-center gap-4 text-lg font-bold">
-                      <span>Total</span>
-                      <span>€{calculateTotal().toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+                          className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
+                                                                                                                                                                                                                                                                                                                                           Items
+                  </button>
+                </Tooltip>
+                <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
+                  <button onClick={() => handleFormatChange('item-less')}
+                          disabled={hasSettledDebts}
+                          className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
+                                                                                                                                                                                                                                                                                                                                            Total
+                                                                                                                                                                                                                                                                                                                                            Only
+                  </button>
+                </Tooltip>
+              </div>
             </div>
           </Card>
 
-          {debtEnabled && (
-            <Card className="overflow-hidden">
-              <div className="relative p-6 space-y-4 min-h-[300px]">
-                {hasSettledDebts && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
-                    <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
-                                                                          settled.<br/>To preserve data accuracy, some
-                                                                          configurations for this expense are now
-                                                                          locked.</p>
-                  </div>
-                )}
-                <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
-                  {isUnpaid ? (
-                    <div className="relative h-full">
-                      <div className="blur-sm select-none pointer-events-none opacity-50">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-semibold">Debt Management</h2>
-                            <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
-                          </div>
-                          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                            <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">None</button>
-                            <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100">Split
-                                                                                                                                                                                  Total
-                            </button>
-                            {receiptFormat === 'itemised' &&
-                              <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">Per
-                                                                                                                             Item</button>}
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          <NanoDataTable
-                            headers={[
-                              {label: 'Name', className: 'w-1/2'},
-                              {label: 'Shares', className: 'w-1/3 text-right'},
-                              {label: '', className: 'w-auto text-right'},
-                            ]}
-                            rows={[
-                              [
-                                <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
-                                <StepperInput
-                                  value="0"
-                                  disabled={true}
-                                  className="w-32 mx-auto"
-                                />,
-                                <div className="text-right text-gray-400">
-                                  <Tooltip content="You cannot remove yourself">
-                                    <Lock className="h-4 w-4"/>
-                                  </Tooltip>
-                                </div>
-                              ]
-                            ]}
-                          />
-                          <div className="flex items-center justify-between pt-2">
-                            <div className="w-48">
-                              <Combobox
-                                value=""
-                                options={[]}
-                                onChange={() => {
-                                }}
-                                placeholder="Add Person..."
-                                className="bg-white dark:bg-gray-800"
-                                disabled={true}
-                              />
-                            </div>
-                            <div className="text-sm text-gray-500">Total Shares: 0</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
-                        <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                        <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debt Management
-                                                                                                    Disabled</h3>
-                        <p className="mt-1 text-sm text-gray-500">Debt management is disabled when an expense isn't paid
-                                                                  by you.</p>
-                      </div>
+          {receiptFormat && (
+            <>
+              <Card className="overflow-hidden">
+                <div className="relative p-6">
+                  {hasSettledDebts && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                      <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                      <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
+                      <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
+                                                                            settled.<br/>To preserve data accuracy, some
+                                                                            configurations for this expense are now
+                                                                            locked.</p>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-lg font-semibold">Debt Management</h2>
-                          <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
-                        </div>
-                        <SplitTypeSelector/>
-                      </div>
-
-                      {splitType === 'total_split' && (
-                        <div className="space-y-4 min-h-[400px]">
-                          <NanoDataTable
-                            headers={[
-                              {label: 'Name', className: 'w-[55%]'},
-                              {label: 'Shares', className: 'w-[15%] text-center'},
-                              {label: '', className: 'w-auto text-right'},
-                            ]}
-                            rows={[
-                              [
-                                <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
-                                <StepperInput
-                                  value={String(formData.ownShares)}
-                                  onChange={(e) => handleFormChange('ownShares', e.target.value)}
-                                  name="ownShares"
-                                  onDecrement={() => handleFormChange('ownShares', String(Math.max(0, (Number(formData.ownShares) || 0) - 1)))}
-                                  onIncrement={() => handleFormChange('ownShares', String((Number(formData.ownShares) || 0) + 1))}
-                                  min={0}
-                                  max={1000}
-                                  disabled={isDebtDisabled}
-                                  className="w-full"
-                                  inputClassName="text-center"
-                                />,
-                                <div className="text-right text-gray-400">
-                                  <Tooltip content="You cannot remove yourself">
-                                    <Lock className="h-4 w-4 ml-auto"/>
-                                  </Tooltip>
-                                </div>
-                              ],
-                              ...receiptSplits.map(split => ([
-                                <span className="font-medium truncate">{split.DebtorName}</span>,
-                                <StepperInput
-                                  value={String(split.SplitPart)}
-                                  onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
-                                  onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(1, (Number(split.SplitPart) || 0) - 1)))}
-                                  onIncrement={() => handleUpdateSplitPart(split.key, String((Number(split.SplitPart) || 0) + 1))}
-                                  min={0}
-                                  max={1000}
-                                  disabled={isDebtDisabled}
-                                  className="w-full"
-                                  inputClassName="text-center"
-                                />,
-                                <div className="text-right">
-                                  {!isDebtDisabled &&
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><X
-                                      className="h-4 w-4 text-danger ml-auto"/></Button>}
-                                </div>
-                              ]))
-                            ]}
+                  )}
+                  <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
+                    {receiptFormat === 'item-less' ? (
+                      <div className="text-center py-4">
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Total
+                                                                                                           Amount</label>
+                        <div className="relative inline-block">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-gray-400">€</span>
+                          <StepperInput
+                            value={String(nonItemisedTotal)}
+                            onChange={(e) => setNonItemisedTotal(parseFloat(e.target.value) || 0)}
+                            onIncrement={() => setNonItemisedTotal(prev => (prev || 0) + 1)}
+                            onDecrement={() => setNonItemisedTotal(prev => Math.max(0, (prev || 0) - 1))}
+                            min={0}
+                            max={10000000}
+                            step={1}
+                            error={errors.nonItemisedTotal}
+                            disabled={hasSettledDebts}
+                            inputClassName="text-4xl font-bold text-center w-48 h-16 pl-10 pr-4"
+                            placeholder="0.00"
                           />
-                          <div className="flex flex-col items-center gap-4 pt-2">
-                            <div className="grid grid-cols-3 items-center w-full">
-                              <div></div>
-                              <div className="relative flex justify-center">
-                                <div className="relative w-full max-w-xs">
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {errors.lineItems && <p className="text-sm text-danger text-right -mb-2">{errors.lineItems}</p>}
+                        <NanoDataTable
+                          headers={[
+                            {label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]'},
+                            {label: 'Qty', className: 'w-[10%] text-center'},
+                            {label: 'Unit Price (€)', className: 'w-[10%] text-center'},
+                            {label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]'},
+                            ...(splitType === 'line_item' ? [{label: 'Debtor', className: 'w-[15%]'}] : []),
+                            {label: '', className: 'w-auto'},
+                          ]}
+                          rows={lineItems.map(item => [
+                            <div className="flex items-center gap-2">
+                              {parseFloat(String(formData.discount)) > 0 && (
+                                <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
+                                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                                </Tooltip>
+                              )}
+                              <div>
+                                <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                                <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                              </div>
+                            </div>,
+                            <StepperInput
+                              value={String(item.LineQuantity)}
+                              onChange={(e) => handleLineItemChange(item.key, 'LineQuantity', e.target.value)}
+                              onBlur={(e) => handleLineItemBlur(item.key, 'LineQuantity', e.target.value)}
+                              onIncrement={() => handleLineItemChange(item.key, 'LineQuantity', (Number(item.LineQuantity) || 0) + 1)}
+                              onDecrement={() => handleLineItemChange(item.key, 'LineQuantity', Math.max(0, (Number(item.LineQuantity) || 0) - 1))}
+                              min={0}
+                              max={1000000}
+                              className="w-full"
+                              inputClassName="text-center"
+                              error={errors[`qty_${item.key}`]}
+                              disabled={isDebtDisabled}
+                            />,
+                            <StepperInput
+                              value={String(item.LineUnitPrice)}
+                              onChange={(e) => handleLineItemChange(item.key, 'LineUnitPrice', e.target.value)}
+                              onBlur={(e) => handleLineItemBlur(item.key, 'LineUnitPrice', e.target.value)}
+                              onIncrement={() => handleLineItemChange(item.key, 'LineUnitPrice', (Number(item.LineUnitPrice) || 0) + 1)}
+                              onDecrement={() => handleLineItemChange(item.key, 'LineUnitPrice', Math.max(0, (Number(item.LineUnitPrice) || 0) - 1))}
+                              min={0}
+                              max={1000000}
+                              className="w-full"
+                              inputClassName="text-center"
+                              error={errors[`price_${item.key}`]}
+                              disabled={isDebtDisabled}
+                            />,
+                            <span className="font-medium text-right block">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</span>,
+                            ...(splitType === 'line_item' ? [
+                              <div className="text-right text-sm text-gray-600 dark:text-gray-400">{item.DebtorName || '-'}</div>] : []),
+                            <div className="text-right">
+                              {!isDebtDisabled && <Button variant="ghost"
+                                                          size="icon"
+                                                          onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-danger"/></Button>}
+                            </div>
+                          ])}
+                          emptyStateIcon={<ArrowDown className="h-10 w-10 opacity-50" />}
+                          emptyStateText="Press the button below to get started."
+                        />
+                        <div className="flex justify-between items-end mt-4">
+                          <Button variant="secondary"
+                                  size="lg"
+                                  className="w-1/4"
+                                  onClick={() => setIsProductSelectorOpen(true)}
+                                  disabled={isDebtDisabled}><Plus className="h-5 w-5 mr-2"/>Add Item</Button>
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-4">
+                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
+                              <div className="w-24">
+                                <StepperInput
+                                  value={String(formData.discount)}
+                                  onChange={(e) => handleFormChange('discount', e.target.value)}
+                                  onIncrement={() => handleFormChange('discount', String(Math.min(100, (Number(formData.discount) || 0) + 1)))}
+                                  onDecrement={() => handleFormChange('discount', String(Math.max(0, (Number(formData.discount) || 0) - 1)))}
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  className="h-8"
+                                  inputClassName="text-right"
+                                  error={errors.discount}
+                                  disabled={hasSettledDebts}
+                                />
+                              </div>
+                            </div>
+                            <div className={cn("flex items-center gap-2 mb-1", parseFloat(String(formData.discount)) > 0 ? 'flex' : 'invisible')}>
+                              <button
+                                onClick={() => setSelectionModal({isOpen: true, mode: 'discount'})}
+                                className={cn(
+                                  "text-xs text-accent hover:underline flex items-center gap-1",
+                                  hasSettledDebts && "opacity-50 cursor-not-allowed"
+                                )}
+                                disabled={hasSettledDebts}
+                              >
+                                {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-4 text-gray-500">
+                              <span className="text-sm">Subtotal</span>
+                              <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-lg font-bold">
+                              <span>Total</span>
+                              <span>€{calculateTotal().toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              {debtEnabled && (
+                <Card className="overflow-hidden">
+                  <div className="relative p-6 space-y-4 min-h-[300px]">
+                    {hasSettledDebts && (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                        <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                        <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
+                        <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
+                                                                              settled.<br/>To preserve data accuracy, some
+                                                                              configurations for this expense are now
+                                                                              locked.</p>
+                      </div>
+                    )}
+                    <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
+                      {isUnpaid ? (
+                        <div className="relative h-full">
+                          <div className="blur-sm select-none pointer-events-none opacity-50">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <h2 className="text-lg font-semibold">Debt Management</h2>
+                                <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
+                              </div>
+                              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                                <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">None</button>
+                                <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100">Split
+                                                                                                                                                                                      Total
+                                </button>
+                                {receiptFormat === 'itemised' &&
+                                  <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">Per
+                                                                                                                                 Item</button>}
+                              </div>
+                            </div>
+                            <div className="space-y-4">
+                              <NanoDataTable
+                                headers={[
+                                  {label: 'Name', className: 'w-1/2'},
+                                  {label: 'Shares', className: 'w-1/3 text-right'},
+                                  {label: '', className: 'w-auto text-right'},
+                                ]}
+                                rows={[
+                                  [
+                                    <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
+                                    <StepperInput
+                                      value="0"
+                                      disabled={true}
+                                      className="w-32 mx-auto"
+                                    />,
+                                    <div className="text-right text-gray-400">
+                                      <Tooltip content="You cannot remove yourself">
+                                        <Lock className="h-4 w-4"/>
+                                      </Tooltip>
+                                    </div>
+                                  ]
+                                ]}
+                              />
+                              <div className="flex items-center justify-between pt-2">
+                                <div className="w-48">
                                   <Combobox
-                                    options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
-                                      value: String(d.DebtorID),
-                                      label: d.DebtorName
-                                    }))}
                                     value=""
-                                    onChange={handleAddSplit}
-                                    placeholder="Add Person"
-                                    searchPlaceholder="Search person..."
-                                    noResultsText="No one found."
-                                    disabled={isDebtDisabled}
+                                    options={[]}
+                                    onChange={() => {
+                                    }}
+                                    placeholder="Add Person..."
+                                    className="bg-white dark:bg-gray-800"
+                                    disabled={true}
                                   />
                                 </div>
+                                <div className="text-sm text-gray-500">Total Shares: 0</div>
                               </div>
-                              <div className="text-sm text-gray-500 text-right">{totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0'}</div>
                             </div>
                           </div>
-                        </div>
-                      )}
-
-                      {splitType === 'line_item' && receiptFormat === 'itemised' && (
-                        <div className="flex justify-center items-center h-full min-h-[400px]">
-                          <div className="w-3/4 border border-gray-200 dark:border-gray-700 p-8 rounded-xl space-y-4 bg-transparent">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="text-base font-medium text-gray-900 dark:text-gray-100">Item
-                                                                                                       Assignment</h4>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  {lineItems.filter(i => i.DebtorID).length} of {lineItems.length} items assigned
-                                </p>
-                              </div>
-                              <Button size="lg"
-                                      variant="secondary"
-                                      onClick={() => setSelectionModal({isOpen: true, mode: 'debtor'})}
-                                      disabled={isDebtDisabled}>
-                                {lineItems.some(i => i.DebtorID) ? 'Edit Assignments' : 'Assign Items'}
-                              </Button>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-accent h-2 rounded-full transition-all duration-300"
-                                style={{width: `${(lineItems.filter(i => i.DebtorID).length / Math.max(1, lineItems.length)) * 100}%`}}
-                              ></div>
-                            </div>
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
+                            <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                            <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debt Management
+                                                                                                        Disabled</h3>
+                            <p className="mt-1 text-sm text-gray-500">Debt management is disabled when an expense isn't paid
+                                                                      by you.</p>
                           </div>
                         </div>
-                      )}
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <h2 className="text-lg font-semibold">Debt Management</h2>
+                              <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
+                            </div>
+                            <SplitTypeSelector/>
+                          </div>
 
-                      {splitType === 'none' && (
-                        <div className="flex flex-col items-center justify-center py-8 text-center min-h-[400px]">
-                          <Info className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2"/>
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Debt Splitting</h3>
-                          <p className="text-sm text-gray-500 max-w-sm">The full amount of this expense is assigned to
-                                                                        you. Select a split type above to share the
-                                                                        cost.</p>
-                        </div>
-                      )}
-
-                      <div className={cn("mt-4 pt-4 border-t border-gray-200 dark:border-gray-700", splitType === 'none' && "invisible")}>
-                        <div className="flex items-center gap-2 mb-4">
-                          <h2 className="text-lg font-semibold">Estimated Debt</h2>
-                          <Tooltip content="This is an estimate of what each person owes based on the current split."><Info
-                            className="h-5 w-5 text-gray-400"/></Tooltip>
-                        </div>
-                        <DataGrid
-                          itemKey="name"
-                          disableMinHeight
-                          data={[
-                            ...(debtSummary.self ? [{
-                              name: `${settings.userName || 'User'} (Me)`,
-                              amount: `€${debtSummary.self.toFixed(2)}`
-                            }] : []),
-                            ...debtSummary.debtors.map(d => ({name: d.name, amount: `€${d.amount.toFixed(2)}`}))
-                          ]}
-                          renderItem={(item) => (
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">{item.name}</span>
-                              <span className="text-lg font-semibold">{item.amount}</span>
+                          {splitType === 'total_split' && (
+                            <div className="space-y-4 min-h-[400px]">
+                              <NanoDataTable
+                                headers={[
+                                  {label: 'Name', className: 'w-[55%]'},
+                                  {label: 'Shares', className: 'w-[15%] text-center'},
+                                  {label: '', className: 'w-auto text-right'},
+                                ]}
+                                rows={[
+                                  [
+                                    <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
+                                    <StepperInput
+                                      value={String(formData.ownShares)}
+                                      onChange={(e) => handleFormChange('ownShares', e.target.value)}
+                                      name="ownShares"
+                                      onDecrement={() => handleFormChange('ownShares', String(Math.max(0, (Number(formData.ownShares) || 0) - 1)))}
+                                      onIncrement={() => handleFormChange('ownShares', String((Number(formData.ownShares) || 0) + 1))}
+                                      min={0}
+                                      max={1000}
+                                      disabled={isDebtDisabled}
+                                      className="w-full"
+                                      inputClassName="text-center"
+                                    />,
+                                    <div className="text-right">
+                                      <Tooltip content="You cannot remove yourself">
+                                        <Button variant="ghost" size="icon" disabled className="opacity-50">
+                                          <Lock className="h-4 w-4"/>
+                                        </Button>
+                                      </Tooltip>
+                                    </div>
+                                  ],
+                                  ...receiptSplits.map(split => ([
+                                    <span className="font-medium truncate">{split.DebtorName}</span>,
+                                    <StepperInput
+                                      value={String(split.SplitPart)}
+                                      onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
+                                      onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(1, (Number(split.SplitPart) || 0) - 1)))}
+                                      onIncrement={() => handleUpdateSplitPart(split.key, String((Number(split.SplitPart) || 0) + 1))}
+                                      min={1}
+                                      max={100}
+                                      step={1}
+                                      disabled={isDebtDisabled}
+                                      className="w-full"
+                                      inputClassName="text-center"
+                                    />,
+                                    <div className="text-right">
+                                      {!isDebtDisabled &&
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><X
+                                          className="h-4 w-4 text-danger"/></Button>}
+                                    </div>
+                                  ]))
+                                ]}
+                              />
+                              <div className="flex flex-col items-center gap-4 pt-2">
+                                <div className="grid grid-cols-3 items-center w-full">
+                                  <div></div>
+                                  <div className="relative flex justify-center">
+                                    <div className="relative w-full max-w-xs">
+                                      <Combobox
+                                        options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
+                                          value: String(d.DebtorID),
+                                          label: d.DebtorName
+                                        }))}
+                                        value=""
+                                        onChange={handleAddSplit}
+                                        placeholder="Add Person"
+                                        searchPlaceholder="Search person..."
+                                        noResultsText="No one found."
+                                        disabled={isDebtDisabled}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="text-sm text-gray-500 text-right">{totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0'}</div>
+                                </div>
+                              </div>
                             </div>
                           )}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Card>
+
+                          {splitType === 'line_item' && receiptFormat === 'itemised' && (
+                            <div className="flex justify-center items-center h-full min-h-[400px]">
+                              <div className="w-3/4 border border-gray-200 dark:border-gray-700 p-8 rounded-xl space-y-4 bg-transparent">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="text-base font-medium text-gray-900 dark:text-gray-100">Item
+                                                                                                           Assignment</h4>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                      {lineItems.filter(i => i.DebtorID).length} of {lineItems.length} items assigned
+                                    </p>
+                                  </div>
+                                  <Button size="lg"
+                                          variant="secondary"
+                                          onClick={() => setSelectionModal({isOpen: true, mode: 'debtor'})}
+                                          disabled={isDebtDisabled}>
+                                    {lineItems.some(i => i.DebtorID) ? 'Edit Assignments' : 'Assign Items'}
+                                  </Button>
+                                </div>
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-accent h-2 rounded-full transition-all duration-300"
+                                    style={{width: `${(lineItems.filter(i => i.DebtorID).length / Math.max(1, lineItems.length)) * 100}%`}}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {splitType === 'none' && (
+                            <div className="flex flex-col items-center justify-center py-8 text-center min-h-[400px]">
+                              <Info className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2"/>
+                              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Debt Splitting</h3>
+                              <p className="text-sm text-gray-500 max-w-sm">The full amount of this expense is assigned to
+                                                                            you. Select a split type above to share the
+                                                                            cost.</p>
+                            </div>
+                          )}
+
+                          <div className={cn("mt-4 pt-4 border-t border-gray-200 dark:border-gray-700", splitType === 'none' && "invisible")}>
+                            <div className="flex items-center gap-2 mb-4">
+                              <h2 className="text-lg font-semibold">Estimated Debt</h2>
+                              <Tooltip content="This is an estimate of what each person owes based on the current split."><Info
+                                className="h-5 w-5 text-gray-400"/></Tooltip>
+                            </div>
+                            <DataGrid
+                              itemKey="name"
+                              disableMinHeight
+                              data={[
+                                ...(debtSummary.self ? [{
+                                  name: `${settings.userName || 'User'} (Me)`,
+                                  amount: `€${debtSummary.self.toFixed(2)}`
+                                }] : []),
+                                ...debtSummary.debtors.map(d => ({name: d.name, amount: `€${d.amount.toFixed(2)}`}))
+                              ]}
+                              renderItem={(item) => (
+                                <div className="flex justify-between items-center">
+                                  <span className="font-medium">{item.name}</span>
+                                  <span className="text-lg font-semibold">{item.amount}</span>
+                                </div>
+                              )}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </>
           )}
 
           <div className="flex justify-end gap-4">

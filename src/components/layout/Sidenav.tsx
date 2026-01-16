@@ -52,7 +52,7 @@ const Sidenav: React.FC = () => {
           "flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0 transition-all duration-300",
           isSidenavCollapsed ? "justify-center px-2" : "justify-between px-4"
         )}
-        style={{ height: '85px' }}
+        style={{ height: '86px' }}
       >
         <span className={cn(
           "font-bold text-xl tracking-tight text-accent overflow-hidden whitespace-nowrap transition-all duration-300",
