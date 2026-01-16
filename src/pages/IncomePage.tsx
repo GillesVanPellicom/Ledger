@@ -9,7 +9,11 @@ import {
   Plus,
   Trash,
   Edit,
-  Info
+  Info,
+  Check,
+  X,
+  FilePlus2,
+  CalendarPlus
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
@@ -31,6 +35,7 @@ import { cn } from '../utils/cn';
 import { useErrorStore } from '../store/useErrorStore';
 import { db } from '../utils/db';
 import Tooltip from '../components/ui/Tooltip';
+import Divider from '../components/ui/Divider';
 
 const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
 const dayOfWeekOptions = [
@@ -452,7 +457,7 @@ const IncomePage: React.FC = () => {
     setter(prev => {
       const currentValue = parseFloat(prev[field]) || 0;
       const newValue = increment ? currentValue + step : currentValue - step;
-      return { ...prev, [field]: String(newValue.toFixed(2)) };
+      return { ...prev, [field]: String(newValue) };
     });
   };
 
@@ -460,12 +465,11 @@ const IncomePage: React.FC = () => {
     <div>
       <Header
         title="Income"
-        subtitle="Manage expected and confirmed income"
         variant="tabs"
         tabs={renderTabs()}
         actions={
           <div className="flex gap-2">
-            <Tooltip content="One-time Income">
+            <Tooltip content="Add One-Time Income">
               <Button variant="ghost" size="icon" onClick={() => {
                 setOneTimeIncome({
                   SourceName: '',
@@ -476,15 +480,15 @@ const IncomePage: React.FC = () => {
                 });
                 setIsOneTimeModalOpen(true);
               }}>
-                <CheckCircle className="h-5 w-5" />
+                <FilePlus2 className="h-5 w-5" />
               </Button>
             </Tooltip>
-            <Tooltip content="New Schedule">
+            <Tooltip content="Add New Income Schedule">
               <Button variant="ghost" size="icon" onClick={() => {
                 setEditingSchedule(null);
                 setIsScheduleModalOpen(true);
               }}>
-                <Plus className="h-5 w-5" />
+                <CalendarPlus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </div>
@@ -513,30 +517,38 @@ const IncomePage: React.FC = () => {
                       render: (row) => row.Amount ? `€${row.Amount.toFixed(2)}` : '-'
                     },
                     {
-                      header: 'Actions',
+                      header: '',
+                      width: '10%',
+                      className: 'text-center',
                       render: (row) => (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPending(row);
-                              setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: row.PaymentMethodID });
-                              setIsConfirmModalOpen(true);
-                            }}
-                          >
-                            Confirm
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-500 hover:bg-red-50"
-                            onClick={() => {
-                              setSelectedPending(row);
-                              setIsDismissModalOpen(true);
-                            }}
-                          >
-                            Dismiss
-                          </Button>
+                        <div className="flex gap-2 justify-center">
+                          <Tooltip content="Confirm">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-green-600 hover:bg-green-50 hover:text-green-700"
+                              onClick={() => {
+                                setSelectedPending(row);
+                                setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: row.PaymentMethodID });
+                                setIsConfirmModalOpen(true);
+                              }}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip content="Dismiss">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                              onClick={() => {
+                                setSelectedPending(row);
+                                setIsDismissModalOpen(true);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </Tooltip>
                         </div>
                       )
                     }
@@ -784,7 +796,7 @@ const IncomePage: React.FC = () => {
               })}
               loading={confirmMutation.isPending}
             >
-               Confirm & Deposit
+               Confirm
              </Button>
           </div>
         }
@@ -795,11 +807,11 @@ const IncomePage: React.FC = () => {
           </p>
           <StepperInput
             label="Amount"
-            step={0.01}
+            step={1}
             value={String(confirmData.amount)}
             onChange={e => setConfirmData(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
-            onIncrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) + 0.01 }))}
-            onDecrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) - 0.01 }))}
+            onIncrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) + 1 }))}
+            onDecrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) - 1 }))}
           />
           <Input
             label="Date"
@@ -832,7 +844,7 @@ const IncomePage: React.FC = () => {
               })}
               loading={createOneTimeMutation.isPending}
             >
-               Deposit
+               Confirm
              </Button>
           </div>
         }
@@ -848,49 +860,51 @@ const IncomePage: React.FC = () => {
               className="flex-1"
             />
             <Tooltip content="Add Source">
-              <Button variant="secondary" className="h-10 w-10 p-0 mb-0.5" onClick={() => setIsIncomeSourceModalOpen(true)}>
+              <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
                 <Plus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </div>
+          <div className="flex items-end gap-2">
+            <Combobox
+              label="Category (Optional)"
+              options={incomeCategories}
+              value={oneTimeIncome.Category}
+              onChange={val => setOneTimeIncome(prev => ({ ...prev, Category: val }))}
+              className="flex-1"
+            />
+            <Tooltip content="Add Category">
+              <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
+                <Plus className="h-5 w-5" />
+              </Button>
+            </Tooltip>
+          </div>
+          <Divider className="my-2" />
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-end gap-2">
-              <Combobox
-                label="Category (Optional)"
-                options={incomeCategories}
-                value={oneTimeIncome.Category}
-                onChange={val => setOneTimeIncome(prev => ({ ...prev, Category: val }))}
-                className="flex-1"
-              />
-              <Tooltip content="Add Category">
-                <Button variant="secondary" className="h-10 w-10 p-0 mb-0.5" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </Tooltip>
-            </div>
             <StepperInput
               label="Amount"
-              step={0.01}
+              step={1}
+              min={0}
+              max={10000000}
               value={oneTimeIncome.Amount}
               onChange={e => setOneTimeIncome(prev => ({ ...prev, Amount: e.target.value }))}
-              onIncrement={() => handleStepperChange(setOneTimeIncome, 'Amount', true, 0.01)}
-              onDecrement={() => handleStepperChange(setOneTimeIncome, 'Amount', false, 0.01)}
+              onIncrement={() => handleStepperChange(setOneTimeIncome, 'Amount', true, 1)}
+              onDecrement={() => handleStepperChange(setOneTimeIncome, 'Amount', false, 1)}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <Combobox
               label="Payment Method"
               options={paymentMethods}
               value={oneTimeIncome.PaymentMethodID}
               onChange={val => setOneTimeIncome(prev => ({ ...prev, PaymentMethodID: val }))}
             />
-            <Input
-              label="Date"
-              type="date"
-              value={oneTimeIncome.Date}
-              onChange={e => setOneTimeIncome(prev => ({ ...prev, Date: e.target.value }))}
-            />
           </div>
+          <Divider className="my-2" />
+          <Input
+            label="Date"
+            type="date"
+            value={oneTimeIncome.Date}
+            onChange={e => setOneTimeIncome(prev => ({ ...prev, Date: e.target.value }))}
+          />
         </div>
       </Modal>
 
@@ -905,7 +919,7 @@ const IncomePage: React.FC = () => {
               onClick={handleSaveSchedule}
               loading={createScheduleMutation.isPending || updateScheduleMutation.isPending}
             >
-               {editingSchedule ? "Save Changes" : "Save Schedule"}
+               {editingSchedule ? "Confirm" : "Confirm"}
              </Button>
           </div>
         }
@@ -921,42 +935,45 @@ const IncomePage: React.FC = () => {
               className="flex-1"
             />
             <Tooltip content="Add Source">
-              <Button variant="secondary" className="h-10 w-10 p-0 mb-0.5" onClick={() => setIsIncomeSourceModalOpen(true)}>
+              <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
                 <Plus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </div>
+          <div className="flex items-end gap-2">
+            <Combobox
+              label="Category (Optional)"
+              options={incomeCategories}
+              value={newSchedule.Category}
+              onChange={val => setNewSchedule(prev => ({ ...prev, Category: val }))}
+              className="flex-1"
+            />
+            <Tooltip content="Add Category">
+              <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
+                <Plus className="h-5 w-5" />
+              </Button>
+            </Tooltip>
+          </div>
+          <Divider className="my-2" />
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-end gap-2">
-              <Combobox
-                label="Category (Optional)"
-                options={incomeCategories}
-                value={newSchedule.Category}
-                onChange={val => setNewSchedule(prev => ({ ...prev, Category: val }))}
-                className="flex-1"
-              />
-              <Tooltip content="Add Category">
-                <Button variant="secondary" className="h-10 w-10 p-0 mb-0.5" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </Tooltip>
-            </div>
             <StepperInput
               label="Expected Amount"
-              step={0.01}
+              step={1}
+              min={0}
               max={10000000}
               value={newSchedule.ExpectedAmount}
               onChange={e => setNewSchedule(prev => ({ ...prev, ExpectedAmount: e.target.value }))}
-              onIncrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', true, 0.01)}
-              onDecrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', false, 0.01)}
+              onIncrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', true, 1)}
+              onDecrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', false, 1)}
+            />
+            <Combobox
+              label="Payment Method"
+              options={paymentMethods}
+              value={newSchedule.PaymentMethodID}
+              onChange={val => setNewSchedule(prev => ({ ...prev, PaymentMethodID: val }))}
             />
           </div>
-          <Combobox
-            label="Payment Method"
-            options={paymentMethods}
-            value={newSchedule.PaymentMethodID}
-            onChange={val => setNewSchedule(prev => ({ ...prev, PaymentMethodID: val }))}
-          />
+          <Divider className="my-2" />
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col">
               <div className="flex items-center gap-1 mb-1">
@@ -994,22 +1011,25 @@ const IncomePage: React.FC = () => {
                 max={1000}
               />
             </div>
-          {showCreateForPastPeriodCheckbox() && (
-            <div className="flex items-start gap-3 pt-2">
-              <Checkbox
-                id="createForPastPeriod"
-                checked={createForPastPeriod}
-                onChange={e => setCreateForPastPeriod(e.target.checked)}
-              />
-              <div className="grid gap-1.5 leading-none">
-                <label htmlFor="createForPastPeriod" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Create for current period
-                </label>
-                <p className="text-xs text-gray-500">The scheduled date for the current period is in the past. Check this to create a "To Check" item for it anyway.</p>
+          <div className="pt-2">
+            {showCreateForPastPeriodCheckbox() && (
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="createForPastPeriod"
+                  checked={createForPastPeriod}
+                  onChange={e => setCreateForPastPeriod(e.target.checked)}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label htmlFor="createForPastPeriod" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Create for current period
+                  </label>
+                  <p className="text-xs text-gray-500">The scheduled date for the current period is in the past. Check this to create a "To Check" item for it anyway.</p>
+                </div>
               </div>
-            </div>
-          )}
-          <div className="flex items-start gap-3 pt-2">
+            )}
+            <Divider className="my-4" />
+          </div>
+          <div className="flex items-start gap-3">
             <Checkbox
               id="requiresConfirmation"
               checked={newSchedule.RequiresConfirmation}
