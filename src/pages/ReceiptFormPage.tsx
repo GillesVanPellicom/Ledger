@@ -1022,14 +1022,17 @@ const ReceiptFormPage: React.FC = () => {
                           emptyStateIcon={<ArrowDown className="h-10 w-10 opacity-50" />}
                           emptyStateText="Press the button below to get started."
                         />
-                        <div className="flex justify-between items-end mt-4">
-                          <Button variant="secondary"
-                                  size="lg"
-                                  className="w-1/4"
-                                  onClick={() => setIsProductSelectorOpen(true)}
-                                  disabled={isDebtDisabled}><Plus className="h-5 w-5 mr-2"/>Add Item</Button>
+                        <div className="grid grid-cols-3 items-start mt-4">
+                          <div/>
+                          <div className="flex justify-center">
+                            <Button variant="secondary"
+                                    size="lg"
+                                    className="w-full"
+                                    onClick={() => setIsProductSelectorOpen(true)}
+                                    disabled={isDebtDisabled}><Plus className="h-5 w-5 mr-2"/>Add Item</Button>
+                          </div>
                           <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 mb-1">
                               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
                               <div className="w-24">
                                 <StepperInput
