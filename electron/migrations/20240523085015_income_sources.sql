@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS IncomeSources (
+    IncomeSourceID INTEGER PRIMARY KEY AUTOINCREMENT,
+    IncomeSourceName TEXT NOT NULL UNIQUE,
+    IncomeSourceIsActive INTEGER NOT NULL DEFAULT 1,
+    CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER IF NOT EXISTS trigger_incomesources_updated_at AFTER UPDATE ON IncomeSources
+BEGIN
+    UPDATE IncomeSources SET UpdatedAt = CURRENT_TIMESTAMP WHERE IncomeSourceID = NEW.IncomeSourceID;
+END;

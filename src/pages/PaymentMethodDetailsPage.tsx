@@ -36,7 +36,7 @@ interface PageTransaction {
   name: string;
   note: string;
   amount: number;
-  type: 'receipt' | 'deposit' | 'transfer_in' | 'transfer_out';
+  type: 'receipt' | 'deposit' | 'transfer_in' | 'transfer_out' | 'debt_repayment';
   creationTimestamp: string;
   // Receipt-specific fields
   Discount?: number | null;
@@ -49,6 +49,8 @@ interface PageTransaction {
     fromMethodName: string;
     toMethodName: string;
   };
+  // Debt repayment fields
+  debtorName?: string;
 }
 
 interface LineItem {
@@ -78,6 +80,15 @@ interface OutgoingTransferQueryResult {
   fromMethodId: number;
   toMethodId: number;
   toMethodName: string;
+}
+
+interface DebtRepaymentQueryResult {
+  id: number;
+  date: string;
+  note: string;
+  amount: number;
+  creationTimestamp: string;
+  debtorName: string;
 }
 
 const PaymentMethodDetailsPage: React.FC = () => {
@@ -161,7 +172,9 @@ const PaymentMethodDetailsPage: React.FC = () => {
           tu.TopUpAmount as amount,
           tu.CreationTimestamp as creationTimestamp
         FROM TopUps tu
-        WHERE tu.PaymentMethodID = ? AND tu.TransferID IS NULL
+        WHERE tu.PaymentMethodID = ? AND tu.TransferID IS NULL AND NOT EXISTS (
+          SELECT 1 FROM ReceiptDebtorPayments rdp WHERE rdp.TopUpID = tu.TopUpID
+        )
       `, [id]);
 
       const incomingTransfersData = await db.query<IncomingTransferQueryResult>(`
@@ -192,6 +205,20 @@ const PaymentMethodDetailsPage: React.FC = () => {
         FROM Transfers t
         JOIN PaymentMethods pm_to ON t.ToPaymentMethodID = pm_to.PaymentMethodID
         WHERE t.FromPaymentMethodID = ?
+      `, [id]);
+
+      const debtRepaymentsData = await db.query<DebtRepaymentQueryResult>(`
+        SELECT
+          rdp.PaymentID as id,
+          rdp.PaidDate as date,
+          tu.TopUpNote as note,
+          tu.TopUpAmount as amount,
+          rdp.CreationTimestamp as creationTimestamp,
+          d.DebtorName as debtorName
+        FROM ReceiptDebtorPayments rdp
+        JOIN TopUps tu ON rdp.TopUpID = tu.TopUpID
+        JOIN Debtors d ON rdp.DebtorID = d.DebtorID
+        WHERE tu.PaymentMethodID = ?
       `, [id]);
 
       const allTransactions: PageTransaction[] = [
@@ -241,6 +268,16 @@ const PaymentMethodDetailsPage: React.FC = () => {
                 fromMethodName: methodData.PaymentMethodName,
                 toMethodName: t.toMethodName
             }
+        })),
+        ...debtRepaymentsData.map((t): PageTransaction => ({
+          id: t.id,
+          date: t.date,
+          name: 'Debt Repayment',
+          note: t.note,
+          amount: t.amount,
+          type: 'debt_repayment',
+          creationTimestamp: t.creationTimestamp,
+          debtorName: t.debtorName,
         }))
       ].sort((a, b) => {
         const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -284,7 +321,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
     try {
       if (itemToDelete.type === 'receipt') {
         await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [itemToDelete.id]);
-      } else if (itemToDelete.type === 'deposit') {
+      } else if (itemToDelete.type === 'deposit' || itemToDelete.type === 'debt_repayment') {
         await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [itemToDelete.id]);
       } else if (itemToDelete.type === 'transfer_in' || itemToDelete.type === 'transfer_out') {
         await db.execute('DELETE FROM Transfers WHERE TransferID = ?', [itemToDelete.id]);
@@ -326,7 +363,8 @@ const PaymentMethodDetailsPage: React.FC = () => {
       const typeMatch = filter === 'all' 
         || (filter === 'receipt' && t.type === 'receipt') 
         || (filter === 'deposit' && t.type === 'deposit') 
-        || (filter === 'transfer' && (t.type === 'transfer_in' || t.type === 'transfer_out'));
+        || (filter === 'transfer' && (t.type === 'transfer_in' || t.type === 'transfer_out'))
+        || (filter === 'debt_repayment' && t.type === 'debt_repayment');
       if (!typeMatch) return false;
 
       const date = new Date(t.date);
@@ -380,6 +418,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const getTransactionTypeDisplayName = (type: PageTransaction['type']) => {
     if (type === 'transfer_in' || type === 'transfer_out') return 'transfer';
     if (type === 'receipt') return 'expense';
+    if (type === 'debt_repayment') return 'debt repayment';
     return type;
   }
 
@@ -399,6 +438,9 @@ const PaymentMethodDetailsPage: React.FC = () => {
           To: {row.transferInfo.toMethodName}
         </Link>
       );
+    }
+    if (row.type === 'debt_repayment' && row.debtorName) {
+      return `From: ${row.debtorName}`;
     }
     return '-';
   };
@@ -530,6 +572,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
                     { value: 'receipt', label: 'Expenses' },
                     { value: 'deposit', label: 'Deposits' },
                     { value: 'transfer', label: 'Transfers' },
+                    { value: 'debt_repayment', label: 'Debt Repayments' },
                   ]}
                 />
               </div>
