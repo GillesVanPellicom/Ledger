@@ -702,23 +702,27 @@ const IncomePage: React.FC = () => {
                   {
                     header: 'Debtor',
                     render: (row) => (
-                      <Link to={`/entities/${row.DebtorID}`}
-                            className="font-medium hover:underline flex items-center gap-1.5 group"
-                            onClick={(e) => e.stopPropagation()}>
-                        {row.DebtorName}
-                        <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"/>
-                      </Link>
+                      <span className="inline-block">
+                        <Link to={`/entities/${row.DebtorID}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-medium hover:underline flex items-center gap-1.5 group">
+                          {row.DebtorName}
+                          <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
+                        </Link>
+                      </span>
                     )
                   },
                   {
                     header: 'Account',
                     render: (row) => (
-                      <Link to={`/payment-methods/${row.PaymentMethodID}`}
-                            className="font-medium hover:underline flex items-center gap-1.5 group"
-                            onClick={(e) => e.stopPropagation()}>
-                        {row.PaymentMethodName}
-                        <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"/>
-                      </Link>
+                      <span className="inline-block">
+                        <Link to={`/payment-methods/${row.PaymentMethodID}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-medium hover:underline flex items-center gap-1.5 group">
+                          {row.PaymentMethodName}
+                          <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
+                        </Link>
+                      </span>
                     )
                   },
                   {
