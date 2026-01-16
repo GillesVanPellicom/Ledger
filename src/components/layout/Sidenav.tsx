@@ -47,7 +47,7 @@ const Sidenav: React.FC = () => {
         isSidenavCollapsed ? "w-14" : "w-64"
       )}
     >
-      <div 
+      <div
         className={cn(
           "flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0 transition-all duration-300",
           isSidenavCollapsed ? "justify-center px-2" : "justify-between px-4"

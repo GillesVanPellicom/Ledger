@@ -15,7 +15,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
 import { incomeCommitments } from '../logic/incomeCommitments';
 import { incomeLogic } from '../logic/incomeLogic';
-import { humanizeRecurrenceRule, parseRecurrenceRule } from '../logic/incomeScheduling';
+import { humanizeRecurrenceRule, parseRecurrenceRule, calculateOccurrences } from '../logic/incomeScheduling';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -26,7 +26,7 @@ import Checkbox from '../components/ui/Checkbox';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
 import IncomeSourceModal from '../components/income/IncomeSourceModal';
-import { format, parseISO, isBefore, startOfToday, set } from 'date-fns';
+import { format, parseISO, isBefore, startOfToday } from 'date-fns';
 import { cn } from '../utils/cn';
 import { useErrorStore } from '../store/useErrorStore';
 import { db } from '../utils/db';
@@ -49,6 +49,10 @@ const IncomePage: React.FC = () => {
   const { showError } = useErrorStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled' | 'confirmed' | 'repayments'>('to-check');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Modal states
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -98,16 +102,15 @@ const IncomePage: React.FC = () => {
         IsActive: !!editingSchedule.IsActive
       });
     } else {
-      const today = new Date();
       setNewSchedule({
         SourceName: '',
         Category: '',
         PaymentMethodID: paymentMethods[0]?.value || '',
         ExpectedAmount: '',
         RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-        DayOfMonth: String(today.getDate()),
-        DayOfWeek: String(today.getDay()),
-        MonthOfYear: String(today.getMonth()),
+        DayOfMonth: '1',
+        DayOfWeek: '1',
+        MonthOfYear: '0',
         RequiresConfirmation: true,
         LookaheadDays: 7,
         IsActive: true
@@ -206,7 +209,7 @@ const IncomePage: React.FC = () => {
 
   const { data: debtRepayments, isLoading: loadingRepayments } = useQuery({
     queryKey: ['debtRepayments'],
-    queryFn: () => (incomeCommitments as any).getDebtRepayments ? (incomeCommitments as any).getDebtRepayments() : Promise.resolve([])
+    queryFn: () => incomeCommitments.getDebtRepayments()
   });
 
   // Mutations
@@ -244,17 +247,17 @@ const IncomePage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
       setIsScheduleModalOpen(false);
       setEditingSchedule(null);
-      processSchedulesMutation.mutate();
+      processSchedulesMutation.mutate(createForPastPeriod);
     },
     onError: (err) => showError(err)
   });
 
   const createScheduleMutation = useMutation({
     mutationFn: (data: any) => incomeCommitments.createSchedule(data),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
       setIsScheduleModalOpen(false);
-      processSchedulesMutation.mutate(variables.CreateForPastPeriod);
+      processSchedulesMutation.mutate(createForPastPeriod);
     },
     onError: (err) => showError(err)
   });
@@ -309,7 +312,10 @@ const IncomePage: React.FC = () => {
         {tabItems.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setCurrentPage(1); // Reset page on tab change
+            }}
             className={cn(
               "flex items-center gap-2 whitespace-nowrap px-1 border-b-2 font-medium text-sm transition-colors -mb-px py-3",
               activeTab === tab.id
@@ -320,7 +326,10 @@ const IncomePage: React.FC = () => {
             <tab.icon className="h-4 w-4" />
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
-              <span className="flex items-center justify-center bg-accent text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full ml-1 tabular-nums">
+              <span className={cn(
+                "flex items-center justify-center text-white text-xs min-w-[20px] h-[20px] px-1.5 rounded-full ml-1 tabular-nums",
+                tab.id === 'to-check' ? 'bg-red-500' : 'bg-accent'
+              )}>
                 {tab.count}
               </span>
             )}
@@ -354,7 +363,6 @@ const IncomePage: React.FC = () => {
       DayOfMonth: Number(newSchedule.DayOfMonth) || null,
       DayOfWeek: Number(newSchedule.DayOfWeek) || null,
       MonthOfYear: Number(newSchedule.MonthOfYear) || null,
-      CreateForPastPeriod: createForPastPeriod,
     };
     if (editingSchedule) {
       updateScheduleMutation.mutate({ id: editingSchedule.IncomeScheduleID, data });
@@ -417,37 +425,15 @@ const IncomePage: React.FC = () => {
 
   const showCreateForPastPeriodCheckbox = () => {
     if (editingSchedule) return false;
+    const firstOccurrence = calculateOccurrences({ ...newSchedule, CreationTimestamp: new Date().toISOString() } as any, startOfToday(), startOfToday())[0];
+    return firstOccurrence && isBefore(firstOccurrence, startOfToday());
+  };
 
-    const today = startOfToday();
-    const { type } = parseRecurrenceRule(newSchedule.RecurrenceRule);
-    let scheduledDateForCurrentPeriod: Date | null = null;
-
-    try {
-      switch (type) {
-        case 'WEEKLY': {
-          const dayOfWeek = parseInt(newSchedule.DayOfWeek, 10);
-          scheduledDateForCurrentPeriod = set(today, { day: dayOfWeek });
-          break;
-        }
-        case 'MONTHLY': {
-          const dayOfMonth = parseInt(newSchedule.DayOfMonth, 10);
-          scheduledDateForCurrentPeriod = set(today, { date: dayOfMonth });
-          break;
-        }
-        case 'YEARLY': {
-          const monthOfYear = parseInt(newSchedule.MonthOfYear, 10);
-          const dayOfMonth = parseInt(newSchedule.DayOfMonth, 10);
-          scheduledDateForCurrentPeriod = set(today, { month: monthOfYear, date: dayOfMonth });
-          break;
-        }
-        default:
-          return false;
-      }
-    } catch (e) {
-      return false; // Invalid date, e.g. day 31 in a 30-day month
-    }
-
-    return scheduledDateForCurrentPeriod && isBefore(scheduledDateForCurrentPeriod, today);
+  const paginatedData = (data: any[] | undefined) => {
+    if (!data) return [];
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return data.slice(start, end);
   };
 
   return (
@@ -490,7 +476,7 @@ const IncomePage: React.FC = () => {
               <div className="space-y-4">
                 <DataTable
                   loading={loadingPending}
-                  data={pendingIncomes}
+                  data={paginatedData(pendingIncomes)}
                   columns={[
                     {
                       header: 'Planned Date',
@@ -513,7 +499,7 @@ const IncomePage: React.FC = () => {
                             size="sm"
                             onClick={() => {
                               setSelectedPending(row);
-                              setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: String(row.PaymentMethodID) });
+                              setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: row.PaymentMethodID });
                               setIsConfirmModalOpen(true);
                             }}
                           >
@@ -536,6 +522,11 @@ const IncomePage: React.FC = () => {
                   ]}
                   searchable
                   searchPlaceholder="Filter pending items..."
+                  totalCount={pendingIncomes?.length || 0}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
                 />
                 {(!pendingIncomes || pendingIncomes.length === 0) && !loadingPending && (
                   <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-zinc-900 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-800">
@@ -550,7 +541,7 @@ const IncomePage: React.FC = () => {
               <div className="space-y-4">
                 <DataTable
                   loading={loadingSchedules}
-                  data={schedules}
+                  data={paginatedData(schedules)}
                   onRowClick={(row) => {
                     setEditingSchedule(row);
                     setIsScheduleModalOpen(true);
@@ -574,7 +565,7 @@ const IncomePage: React.FC = () => {
                       render: (row) => (
                         <span className={cn(
                           "px-2 py-0.5 rounded-full text-xs font-medium",
-                          row.IsActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                          row.IsActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         )}>
                           {row.IsActive ? 'Active' : 'Inactive'}
                         </span>
@@ -603,7 +594,7 @@ const IncomePage: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               setScheduleToDelete(row.IncomeScheduleID);
-                              setCascadeDelete(true);
+                              setCascadeDelete(false);
                               setIsDeleteModalOpen(true);
                             }}
                           >
@@ -613,6 +604,11 @@ const IncomePage: React.FC = () => {
                       )
                     }
                   ]}
+                  totalCount={schedules?.length || 0}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
                 />
               </div>
             )}
@@ -620,7 +616,7 @@ const IncomePage: React.FC = () => {
             {activeTab === 'confirmed' && (
               <DataTable
                 loading={loadingConfirmed}
-                data={confirmedIncomes}
+                data={paginatedData(confirmedIncomes)}
                 onRowClick={(row) => {
                   navigate(`/payment-methods/${row.PaymentMethodID}`);
                 }}
@@ -650,21 +646,26 @@ const IncomePage: React.FC = () => {
                   }
                 ]}
                 searchable
+                totalCount={confirmedIncomes?.length || 0}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
               />
             )}
 
             {activeTab === 'repayments' && (
               <DataTable
                 loading={loadingRepayments}
-                data={debtRepayments}
+                data={paginatedData(debtRepayments)}
                 onRowClick={(row) => {
-                  navigate(`/payment-methods/${row.PaymentMethodID}`);
+                  if (row.PaymentMethodID) navigate(`/payment-methods/${row.PaymentMethodID}`);
                 }}
                 columns={[
                   {
                     header: 'Date',
-                    accessor: 'TopUpDate',
-                    render: (row) => format(parseISO(row.TopUpDate || row.PaidDate), 'MMM d, yyyy')
+                    accessor: 'PaidDate',
+                    render: (row) => format(parseISO(row.PaidDate), 'MMM d, yyyy')
                   },
                   { header: 'Debtor', accessor: 'DebtorName' },
                   { header: 'Account', accessor: 'PaymentMethodName' },
@@ -672,13 +673,21 @@ const IncomePage: React.FC = () => {
                     header: 'Amount',
                     accessor: 'TopUpAmount',
                     render: (row) => (
-                      <span className="text-green-600 font-semibold">
-                        +€{(row.TopUpAmount || 0).toFixed(2)}
+                      <span className={cn(
+                        "font-semibold",
+                        row.TopUpAmount > 0 ? "text-green-600" : "text-red-600"
+                      )}>
+                        {row.TopUpAmount > 0 ? '+' : ''}€{(row.TopUpAmount || 0).toFixed(2)}
                       </span>
                     )
                   }
                 ]}
                 searchable
+                totalCount={debtRepayments?.length || 0}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
               />
             )}
           </div>

@@ -17,11 +17,14 @@ import SettingsModal from './components/settings/SettingsModal';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useErrorStore } from './store/useErrorStore';
 import { useUIStore } from './store/useUIStore';
+import { incomeLogic } from './logic/incomeLogic';
+import { useQueryClient } from '@tanstack/react-query';
 
 function App() {
   const { showError } = useErrorStore();
   const { settings, loading } = useSettingsStore();
   const { isSettingsModalOpen, closeSettingsModal, settingsModalInitialTab } = useUIStore();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
@@ -40,6 +43,32 @@ function App() {
       window.removeEventListener('error', errorHandler);
     };
   }, [showError]);
+
+  useEffect(() => {
+    const processSchedules = async () => {
+      try {
+        await incomeLogic.processSchedules();
+        queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
+      } catch (error) {
+        showError(error as Error);
+      }
+    };
+
+    // Process on startup
+    processSchedules();
+
+    // Process every day at midnight
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    const msToMidnight = midnight.getTime() - now.getTime();
+
+    const dailyTimer = setTimeout(() => {
+      processSchedules(); // First run at midnight
+      setInterval(processSchedules, 24 * 60 * 60 * 1000); // Then every 24 hours
+    }, msToMidnight);
+
+    return () => clearTimeout(dailyTimer);
+  }, [queryClient, showError]);
 
   if (loading) {
     return null; // Or a loading spinner

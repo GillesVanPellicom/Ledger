@@ -59,7 +59,6 @@ export const incomeCommitments = {
       JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
       LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
       LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
-      WHERE s.IsActive = 1
     `);
 
     return rows.map(r => ({
@@ -101,6 +100,39 @@ export const incomeCommitments = {
       WHERE t.TopUpNote LIKE '[Income]%'
       ORDER BY t.TopUpDate DESC
     `);
+  },
+
+  getDebtRepayments: async (): Promise<any[]> => {
+    const [paidToMe, paidByMe] = await Promise.all([
+      db.query<any>(`
+        SELECT 
+          rdp.PaidDate,
+          d.DebtorName,
+          pm.PaymentMethodName,
+          t.TopUpAmount,
+          t.PaymentMethodID
+        FROM ReceiptDebtorPayments rdp
+        JOIN Debtors d ON rdp.DebtorID = d.DebtorID
+        JOIN TopUps t ON rdp.TopUpID = t.TopUpID
+        JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
+        ORDER BY rdp.PaidDate DESC
+      `),
+      db.query<any>(`
+        SELECT
+          r.ReceiptDate as PaidDate,
+          d.DebtorName,
+          pm.PaymentMethodName,
+          r.NonItemisedTotal as TopUpAmount,
+          r.PaymentMethodID
+        FROM Receipts r
+        JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
+        JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        WHERE r.Status = 'paid' AND r.OwedToDebtorID IS NOT NULL
+        ORDER BY r.ReceiptDate DESC
+      `)
+    ]);
+
+    return [...paidToMe, ...paidByMe].sort((a, b) => new Date(b.PaidDate).getTime() - new Date(a.PaidDate).getTime());
   },
 
   /**
@@ -276,8 +308,8 @@ export const incomeCommitments = {
 
   deleteSchedule: async (id: number, hardDelete: boolean) => {
     if (hardDelete) {
-      return await db.execute(
-        `DELETE FROM IncomeSchedules WHERE IncomeScheduleID = ?`,
+      await db.execute(
+        `DELETE FROM PendingIncomes WHERE IncomeScheduleID = ?`,
         [id]
       );
     }
