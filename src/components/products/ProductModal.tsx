@@ -11,6 +11,7 @@ import { Plus } from 'lucide-react';
 import Tooltip from '../ui/Tooltip';
 import CategoryModal from '../categories/CategoryModal';
 import StepperInput from '../ui/StepperInput';
+import Combobox from '../ui/Combobox';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -24,7 +25,7 @@ interface ProductModalProps {
 const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToEdit, onSave, showSaveAndSelect, onSaveAndSelect }) => {
   const [formData, setFormData] = useState({ ProductName: '', ProductBrand: '', ProductSize: '', ProductUnitID: '', CategoryID: '' });
   const [units, setUnits] = useState<{ value: number; label: string }[]>([]);
-  const [categories, setCategories] = useState<{ value: number; label: string }[]>([]);
+  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { settings } = useSettingsStore();
@@ -45,7 +46,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
 
   const loadCategories = async () => {
     const result = await db.query<{ CategoryID: number; CategoryName: string }[]>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
-    setCategories(result.map(c => ({ value: c.CategoryID, label: c.CategoryName })));
+    setCategories(result.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })));
   };
 
   useEffect(() => {
@@ -70,18 +71,24 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
     return str.replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    let { name, value } = e.target;
-    
+  const handleChange = (name: string, value: string) => {
+    let processedValue = value;
     if ((settings.modules as any).capitalizationProtection?.enabled) {
       if (name === 'ProductName') {
-        value = value.toLowerCase();
+        processedValue = value.toLowerCase();
       } else if (name === 'ProductBrand') {
-        value = capitalizeWords(value);
+        processedValue = capitalizeWords(value);
       }
     }
+    setFormData(prev => ({ ...prev, [name]: processedValue }));
+  };
 
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleChange(e.target.name, e.target.value);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleChange(e.target.name, e.target.value);
   };
 
   const handleSave = async (shouldSelect = false) => {
@@ -149,13 +156,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
             {showSaveAndSelect && !productToEdit && (
               <Button onClick={() => handleSave(true)} loading={loading}>Save & Select</Button>
             )}
-            <Button onClick={handleSubmit} loading={loading}>Save</Button>
+            <Button onClick={() => handleSave(false)} loading={loading}>Save</Button>
           </>
         }
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {errors.form && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{errors.form}</div>}
-          <Input label="Product Name" name="ProductName" value={formData.ProductName} onChange={handleChange} placeholder="e.g. gouda cheese" error={errors.ProductName} />
+          <Input label="Product Name" name="ProductName" value={formData.ProductName} onChange={handleInputChange} placeholder="e.g. gouda cheese" error={errors.ProductName} />
           
           <div className="relative py-2">
             <Separator />
@@ -164,11 +171,19 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
             </div>
           </div>
 
-          <Input label="Brand" name="ProductBrand" value={formData.ProductBrand} onChange={handleChange} placeholder="e.g. Old Amsterdam" error={errors.ProductBrand} />
+          <Input label="Brand" name="ProductBrand" value={formData.ProductBrand} onChange={handleInputChange} placeholder="e.g. Old Amsterdam" error={errors.ProductBrand} />
           
           <div className="flex items-end gap-2">
             <div className="flex-grow">
-              <Select label="Category" name="CategoryID" value={formData.CategoryID} onChange={handleChange} options={categories} placeholder="Select Category" />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+              <Combobox
+                options={categories}
+                value={formData.CategoryID}
+                onChange={(value) => handleChange('CategoryID', value)}
+                placeholder="Select Category"
+                searchPlaceholder="Search categories..."
+                noResultsText="No categories found."
+              />
             </div>
             <Tooltip content="Add Category">
               <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsCategoryModalOpen(true)}>
@@ -182,13 +197,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
               label="Size"
               name="ProductSize"
               value={formData.ProductSize}
-              onChange={handleChange}
-              onDecrement={() => setFormData(prev => ({ ...prev, ProductSize: String(Math.max(0, (parseFloat(prev.ProductSize) || 0) - 1)) }))}
-              onIncrement={() => setFormData(prev => ({ ...prev, ProductSize: String((parseFloat(prev.ProductSize) || 0) + 1) }))}
+              onChange={handleInputChange}
+              onDecrement={() => handleChange('ProductSize', String(Math.max(0, (parseFloat(formData.ProductSize) || 0) - 1)))}
+              onIncrement={() => handleChange('ProductSize', String((parseFloat(formData.ProductSize) || 0) + 1))}
               error={errors.ProductSize}
               className="col-span-1"
             />
-            <Select label="Unit" name="ProductUnitID" value={formData.ProductUnitID} onChange={handleChange} options={units} placeholder="Select Unit" error={errors.ProductUnitID} />
+            <Select label="Unit" name="ProductUnitID" value={formData.ProductUnitID} onChange={handleSelectChange} options={units} placeholder="Select Unit" error={errors.ProductUnitID} />
           </div>
         </form>
       </Modal>

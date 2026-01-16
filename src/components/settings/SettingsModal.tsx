@@ -11,6 +11,7 @@ import Switch from '../ui/Switch';
 import '../../electron.d';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useBackupStore } from '../../store/useBackupStore';
+import StepperInput from '../ui/StepperInput';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -81,8 +82,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     updateSettings({ pdf: newPdfSettings });
   };
 
-  const handleBackupSettingChange = (key: string, value: string) => {
-    const newBackupSettings = { ...backupSettings, [key]: parseInt(value, 10) };
+  const handleBackupSettingChange = (key: string, value: number) => {
+    const newBackupSettings = { ...backupSettings, [key]: value };
     setBackupSettings(newBackupSettings);
     updateSettings({ backup: newBackupSettings });
   };
@@ -274,20 +275,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       <p className="font-medium">Backups</p>
                       <p className="text-sm text-gray-500">{backupCount} / {backupSettings.maxBackups}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
-                          <Input id="max-backups" type="number" className="w-full mt-2" value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', e.target.value)} />
-                        </div>
-                        <div>
-                          <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
-                          <Input id="backup-interval" type="number" className="w-full mt-2" value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', e.target.value)} />
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                        <StepperInput id="max-backups" min={1} max={50} value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('maxBackups', Math.min(50, backupSettings.maxBackups + 1))} onDecrement={() => handleBackupSettingChange('maxBackups', Math.max(1, backupSettings.maxBackups - 1))} />
                       </div>
-                      <div className="text-right mt-2">
-                        <Button variant="ghost" size="sm" onClick={resetBackupSettings} className="h-8 px-2 text-xs"><RotateCw className="h-3 w-3 mr-1" />Reset to Defaults</Button>
+                      <div>
+                        <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                        <StepperInput id="backup-interval" min={1} max={50} value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('interval', Math.min(50, backupSettings.interval + 1))} onDecrement={() => handleBackupSettingChange('interval', Math.max(1, backupSettings.interval - 1))} />
                       </div>
+                    </div>
+                    <div className="text-right mt-2">
+                      <Button variant="ghost" size="sm" onClick={resetBackupSettings} className="h-8 px-2 text-xs"><RotateCw className="h-3 w-3 mr-1" />Reset to Defaults</Button>
                     </div>
                     <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp} className="w-full">Backup Now</Button>
                   </div>
