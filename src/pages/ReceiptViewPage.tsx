@@ -22,7 +22,8 @@ import {
   Info,
   Store,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import {cn} from '../utils/cn';
@@ -41,6 +42,7 @@ import {useSettingsStore} from '../store/useSettingsStore';
 import {useErrorStore} from '../store/useErrorStore';
 import {useReceipt, useDeleteReceipt} from '../hooks/useReceipts';
 import {useActivePaymentMethods} from '../hooks/usePaymentMethods';
+import Combobox from '../components/ui/Combobox';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -82,7 +84,7 @@ const ReceiptViewPage: React.FC = () => {
   const deleteReceiptMutation = useDeleteReceipt();
 
   const {data, isLoading, refetch} = useReceipt(id);
-  const {receipt, lineItems, images: rawImages, splits: receiptSplits, payments} = data || {};
+  const {receipt, lineItems: rawLineItems, images: rawImages, splits: receiptSplits, payments} = data || {};
 
   const {data: activePaymentMethods} = useActivePaymentMethods();
 
@@ -99,6 +101,40 @@ const ReceiptViewPage: React.FC = () => {
   const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState<boolean>(false);
   const [makePermanentModalOpen, setMakePermanentModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+
+  // Filters
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [entityFilter, setEntityFilter] = useState<string>('all');
+  const [excludedFilter, setExcludedFilter] = useState<string>('all');
+
+  const lineItems = useMemo(() => {
+    if (!rawLineItems) return [];
+    return (rawLineItems as (LineItem & { CategoryName?: string, CategoryID?: number })[]).filter(item => {
+      if (categoryFilter !== 'all' && item.CategoryID?.toString() !== categoryFilter) return false;
+      if (entityFilter !== 'all' && item.DebtorID?.toString() !== entityFilter) return false;
+      if (excludedFilter !== 'all') {
+        const isExcluded = !!item.IsExcludedFromDiscount;
+        if (excludedFilter === 'yes' && !isExcluded) return false;
+        if (excludedFilter === 'no' && isExcluded) return false;
+      }
+      return true;
+    });
+  }, [rawLineItems, categoryFilter, entityFilter, excludedFilter]);
+
+  const filterOptions = useMemo(() => {
+    if (!rawLineItems) return { categories: [], entities: [], hasExclusions: false };
+    const items = rawLineItems as (LineItem & { CategoryName?: string, CategoryID?: number })[];
+    
+    const categories = Array.from(new Set(items.filter(i => i.CategoryID).map(i => JSON.stringify({ value: i.CategoryID!.toString(), label: i.CategoryName }))))
+      .map(s => JSON.parse(s));
+    
+    const entities = Array.from(new Set(items.filter(i => i.DebtorID).map(i => JSON.stringify({ value: i.DebtorID!.toString(), label: i.DebtorName }))))
+      .map(s => JSON.parse(s));
+
+    const hasExclusions = items.some(i => i.IsExcludedFromDiscount);
+
+    return { categories, entities, hasExclusions };
+  }, [rawLineItems]);
 
   const images = useMemo(() => {
     if (window.electronAPI && settings.datastore.folderPath && rawImages) {
@@ -120,7 +156,7 @@ const ReceiptViewPage: React.FC = () => {
   }, [receipt, lineItems]);
 
   const debtSummary = useMemo(() => {
-    if (!debtEnabled || !receipt || !receiptSplits || !lineItems) return {debtors: [], ownShare: null};
+    if (!debtEnabled || !receipt || !receiptSplits || !rawLineItems) return {debtors: [], ownShare: null};
 
     const summary: Record<string, any> = {};
     let ownShare: any = null;
@@ -152,7 +188,7 @@ const ReceiptViewPage: React.FC = () => {
     } else if (receipt.SplitType === 'line_item' && !receipt.IsNonItemised) {
       const debtorItems: Record<string, { count: number, total: number }> = {};
 
-      lineItems.forEach(item => {
+      (rawLineItems as LineItem[]).forEach(item => {
         if (item.DebtorID) {
           const itemAmount = calculateLineItemTotalWithDiscount(item, receipt.Discount || 0);
 
@@ -167,13 +203,13 @@ const ReceiptViewPage: React.FC = () => {
             amount: debtorItems[String(item.DebtorID)].total,
             debtorId: item.DebtorID,
             itemCount: debtorItems[String(item.DebtorID)].count,
-            totalItems: lineItems.length,
+            totalItems: rawLineItems.length,
           };
         }
       });
     }
     return {debtors: Object.values(summary), ownShare};
-  }, [lineItems, receipt, receiptSplits, debtEnabled, totalAmount]);
+  }, [rawLineItems, receipt, receiptSplits, debtEnabled, totalAmount]);
 
   const debtStatus = useMemo(() => {
     if (!debtEnabled || !debtSummary.debtors.length) return null;
@@ -282,6 +318,14 @@ const ReceiptViewPage: React.FC = () => {
       setDeleteModalOpen(false);
     }
   };
+
+  const resetFilters = () => {
+    setCategoryFilter('all');
+    setEntityFilter('all');
+    setExcludedFilter('all');
+  };
+
+  const hasActiveFilters = categoryFilter !== 'all' || entityFilter !== 'all' || excludedFilter !== 'all';
 
   if (isLoading) {
     return (
@@ -402,83 +446,123 @@ const ReceiptViewPage: React.FC = () => {
                 </div>
               </Card>
             ) : (
-              <Card>
-                <div className="p-6">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm select-none border-collapse">
-                      <thead className="text-left text-gray-500">
-                      <tr>
-                        <th className="p-2">Product</th>
-                        <th className="p-2 w-24 text-center">Qty</th>
-                        <th className="p-2 w-32 text-right">Unit Price (€)</th>
-                        <th className="p-2 w-32 text-right">Total (€)</th>
-                        {debtEnabled && receipt.SplitType === 'line_item' &&
-                          <th className="p-2 w-40 text-right">Debtor</th>}
-                      </tr>
-                      </thead>
-                      <tbody className="divide-y dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800">
-                      {(lineItems || []).map((item) => {
-                        const isDebtorUnpaid = item.DebtorID && !(payments || []).some(p => p.DebtorID === item.DebtorID);
-                        return (
-                          <tr key={item.LineItemID}>
-                            <td className="p-2">
-                              <div className="flex items-center gap-2">
-                                {receipt.Discount > 0 && (
-                                  <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-                                    <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
-                                  </Tooltip>
-                                )}
-                                <div>
-                                  <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                                  <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+              <>
+                <div className="flex justify-end gap-4 mb-4">
+                  <Combobox
+                    options={[{ value: 'all', label: 'All Categories' }, ...filterOptions.categories]}
+                    value={categoryFilter}
+                    onChange={setCategoryFilter}
+                    placeholder="Filter by Category"
+                    className="w-48"
+                  />
+                  {filterOptions.entities.length > 0 && (
+                    <Combobox
+                      options={[{ value: 'all', label: 'All Entities' }, ...filterOptions.entities]}
+                      value={entityFilter}
+                      onChange={setEntityFilter}
+                      placeholder="Filter by Entity"
+                      className="w-48"
+                    />
+                  )}
+                  {filterOptions.hasExclusions && (
+                    <Combobox
+                      options={[
+                        { value: 'all', label: 'Included & Excluded' },
+                        { value: 'yes', label: 'Excluded Only' },
+                        { value: 'no', label: 'Included Only' }
+                      ]}
+                      value={excludedFilter}
+                      onChange={setExcludedFilter}
+                      placeholder="Filter by Exclusion"
+                      className="w-48"
+                    />
+                  )}
+                  <Tooltip content="Reset Filters">
+                    <Button variant="ghost" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
+                      <RotateCcw className="h-5 w-5" />
+                    </Button>
+                  </Tooltip>
+                </div>
+                <Card>
+                  <div className="p-6">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm select-none border-collapse">
+                        <thead className="text-left text-gray-500">
+                        <tr>
+                          <th className="p-2">Product</th>
+                          <th className="p-2 w-32">Category</th>
+                          <th className="p-2 w-24 text-center">Qty</th>
+                          <th className="p-2 w-32 text-right">Unit Price (€)</th>
+                          <th className="p-2 w-32 text-right">Total (€)</th>
+                          {debtEnabled && receipt.SplitType === 'line_item' &&
+                            <th className="p-2 w-40 text-right">Debtor</th>}
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800">
+                        {(lineItems || []).map((item) => {
+                          const isDebtorUnpaid = item.DebtorID && !(payments || []).some(p => p.DebtorID === item.DebtorID);
+                          return (
+                            <tr key={item.LineItemID}>
+                              <td className="p-2">
+                                <div className="flex items-center gap-2">
+                                  {receipt.Discount > 0 && filterOptions.hasExclusions && (
+                                    <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
+                                      <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+                                    </Tooltip>
+                                  )}
+                                  <div>
+                                    <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                                    <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="p-2 text-center">{item.LineQuantity}</td>
-                            <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
-                            <td className="p-2 text-right font-medium">
-                              {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
-                            </td>
-                            {debtEnabled && receipt.SplitType === 'line_item' && (
-                              <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red font-medium" : "text-gray-600 dark:text-gray-400")}>
-                                {item.DebtorName || '-'}
                               </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div className="px-6 py-4 rounded-b-xl">
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-4 text-gray-500">
-                      <span className="text-sm">Subtotal</span>
-                      <span className="font-medium">€{subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-gray-500">
-                      {receipt.Discount > 0 && lineItems?.some(i => i.IsExcludedFromDiscount) ? (
-                        <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
-                          <div className="flex items-center gap-1 cursor-help">
-                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                            <span className="text-sm underline decoration-dotted">
-                              Discount ({receipt.Discount || 0}%)
-                            </span>
-                          </div>
-                        </Tooltip>
-                      ) : (
-                        <span className="text-sm">Discount ({receipt.Discount || 0}%)</span>
-                      )}
-                      <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-lg font-bold">
-                      <span>Total</span>
-                      <span>€{totalAmount.toFixed(2)}</span>
+                              <td className="p-2 text-gray-500">{item.CategoryName || '-'}</td>
+                              <td className="p-2 text-center">{item.LineQuantity}</td>
+                              <td className="p-2 text-right">{(item.LineUnitPrice).toFixed(2)}</td>
+                              <td className="p-2 text-right font-medium">
+                                {(item.LineQuantity * item.LineUnitPrice).toFixed(2)}
+                              </td>
+                              {debtEnabled && receipt.SplitType === 'line_item' && (
+                                <td className={cn("p-2 text-right", isDebtorUnpaid ? "text-red font-medium" : "text-gray-600 dark:text-gray-400")}>
+                                  {item.DebtorName || '-'}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                </div>
-              </Card>
+                  <div className="px-6 py-4 rounded-b-xl">
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-4 text-gray-500">
+                        <span className="text-sm">Subtotal</span>
+                        <span className="font-medium">€{subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-gray-500">
+                        {receipt.Discount > 0 && filterOptions.hasExclusions ? (
+                          <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
+                            <div className="flex items-center gap-1 cursor-help">
+                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              <span className="text-sm underline decoration-dotted">
+                                Discount ({receipt.Discount || 0}%)
+                              </span>
+                            </div>
+                          </Tooltip>
+                        ) : (
+                          <span className="text-sm">Discount ({receipt.Discount || 0}%)</span>
+                        )}
+                        <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-lg font-bold">
+                        <span>Total</span>
+                        <span>€{totalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </>
             )}
           </div>
 
@@ -521,7 +605,7 @@ const ReceiptViewPage: React.FC = () => {
                 </div>
                 <div className="mt-6 flex flex-col gap-4">
                   {receipt.StoreName && (
-                    <Tooltip content="The store where this expense was incurred">
+                    <Tooltip content="The vendor where this expense was incurred">
                       <div className="flex items-center gap-3 cursor-help">
                         <Store className="h-5 w-5 text-gray-400"/>
                         <span className="text-sm">{receipt.StoreName}</span>

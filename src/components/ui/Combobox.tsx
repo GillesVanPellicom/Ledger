@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronsUpDown, Check, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
@@ -55,9 +55,11 @@ const Combobox: React.FC<ComboboxProps> = ({
     return searchIndex === search.length;
   };
 
-  const filteredOptions = searchTerm
-    ? options.filter((option) => fuzzySearch(searchTerm, option.label))
-    : options;
+  const filteredOptions = useMemo(() => {
+    return searchTerm
+      ? options.filter((option) => fuzzySearch(searchTerm, option.label))
+      : options;
+  }, [searchTerm, options]);
 
   const handleSelectOption = useCallback((selectedValue: string) => {
     onChange(selectedValue);
@@ -73,27 +75,38 @@ const Combobox: React.FC<ComboboxProps> = ({
         top: `${rect.bottom + window.scrollY + 4}px`,
         left: `${rect.left + window.scrollX}px`,
         width: `${rect.width}px`,
+        zIndex: 9999, // Ensure it's on top
       });
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen) {
       calculatePosition();
-      setActiveIndex(Math.max(0, filteredOptions.findIndex(opt => opt.value === value)));
-      setTimeout(() => inputRef.current?.focus(), 100);
-
       window.addEventListener('resize', calculatePosition);
       window.addEventListener('scroll', calculatePosition, true);
-    } else {
-      setSearchTerm('');
     }
-    
     return () => {
       window.removeEventListener('resize', calculatePosition);
       window.removeEventListener('scroll', calculatePosition, true);
     };
-  }, [isOpen, value, filteredOptions, calculatePosition]);
+  }, [isOpen, calculatePosition]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Reset active index when opening
+      const index = options.findIndex(opt => opt.value === value);
+      setActiveIndex(index >= 0 ? index : 0);
+      
+      // Focus input after a short delay to ensure rendering is complete
+      // Using requestAnimationFrame for better timing than setTimeout
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+    } else {
+      setSearchTerm('');
+    }
+  }, [isOpen, value, options]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -104,11 +117,15 @@ const Combobox: React.FC<ComboboxProps> = ({
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -118,6 +135,7 @@ const Combobox: React.FC<ComboboxProps> = ({
         case 'Escape':
           e.preventDefault();
           setIsOpen(false);
+          triggerRef.current?.focus();
           break;
         case 'ArrowDown':
           e.preventDefault();
@@ -154,17 +172,20 @@ const Combobox: React.FC<ComboboxProps> = ({
     }
   }, [activeIndex, isOpen]);
   
+  // Reset active index when search term changes
   useEffect(() => {
-    setActiveIndex(0);
-  }, [searchTerm]);
+    if (isOpen) {
+      setActiveIndex(0);
+    }
+  }, [searchTerm, isOpen]);
 
   const PopoverContent = (
     <div 
       ref={popoverRef}
       style={popoverStyle}
-      className="z-[99] rounded-xl bg-white dark:bg-zinc-950 shadow-xl border border-gray-200 dark:border-zinc-800 outline-none animate-in fade-in-0 zoom-in-95"
+      className="rounded-xl bg-white dark:bg-zinc-950 shadow-xl border border-gray-200 dark:border-zinc-800 outline-none animate-in fade-in-0 zoom-in-95 flex flex-col"
     >
-      <div className="p-2 relative">
+      <div className="p-2 relative shrink-0">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
         <Input
           ref={inputRef}
@@ -173,9 +194,10 @@ const Combobox: React.FC<ComboboxProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full h-9 pl-8"
+          autoComplete="off"
         />
       </div>
-      <Separator className="border-gray-200 dark:border-zinc-800" />
+      <Separator className="border-gray-200 dark:border-zinc-800 shrink-0" />
       <div ref={listRef} className="max-h-60 overflow-auto p-1">
         {filteredOptions.length > 0 ? (
           filteredOptions.map((option, index) => (
@@ -185,11 +207,12 @@ const Combobox: React.FC<ComboboxProps> = ({
               aria-selected={value === option.value}
               data-active={index === activeIndex}
               className={cn(
-                "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none",
+                "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none transition-colors",
                 "data-[active=true]:bg-gray-100 dark:data-[active=true]:bg-zinc-800",
                 "hover:bg-gray-100 dark:hover:bg-zinc-800"
               )}
               onClick={() => handleSelectOption(option.value)}
+              onMouseEnter={() => setActiveIndex(index)}
             >
               {value === option.value && (
                 <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
@@ -209,16 +232,17 @@ const Combobox: React.FC<ComboboxProps> = ({
   );
 
   return (
-    <div className="w-full">
+    <div className={cn("w-full", className)}>
       <button
         ref={triggerRef}
+        type="button"
         role="combobox"
         aria-expanded={isOpen}
+        aria-haspopup="listbox"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all",
-          className
         )}
       >
         <span className="truncate">

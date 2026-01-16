@@ -197,12 +197,13 @@ export const useReceipt = (id: string | undefined) => {
       if (!receiptData) return null;
 
       const lineItems = !receiptData.IsNonItemised
-        ? await db.query<LineItem>(`
-            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID
+        ? await db.query<LineItem & { CategoryName: string, CategoryID: number }>(`
+            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID, c.CategoryName, c.CategoryID
             FROM LineItems li
                      JOIN Products p ON li.ProductID = p.ProductID
                      LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
                      LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
+                     LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
             WHERE li.ReceiptID = ?
         `, [id])
         : [];

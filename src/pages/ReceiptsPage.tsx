@@ -109,6 +109,15 @@ const ReceiptsPage: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const hasActiveFilters = 
+    filters.debt !== 'all' || 
+    filters.type !== 'all' || 
+    filters.tentative !== 'all' || 
+    filters.attachment !== 'all' || 
+    dateRange[0] !== null || 
+    dateRange[1] !== null || 
+    searchTerm !== '';
+
   const handleDelete = async () => {
     const idsToDelete = receiptToDelete ? [receiptToDelete] : selectedReceiptIds;
     if (idsToDelete.length === 0) return;
@@ -359,7 +368,7 @@ const ReceiptsPage: React.FC = () => {
                   </div>
                 </Tooltip>
                 <Tooltip content="Reset Filters">
-                  <Button variant="ghost" size="icon" onClick={resetFilters}>
+                  <Button variant="ghost" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
                     <RotateCcw className="h-4 w-4" />
                   </Button>
                 </Tooltip>

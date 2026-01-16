@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import { FileSearch } from 'lucide-react';
 
 interface NanoDataTableProps {
   headers: { label: string; className?: string }[];
@@ -21,15 +22,26 @@ const NanoDataTable: React.FC<NanoDataTableProps> = ({ headers, rows, className 
           </tr>
         </thead>
         <tbody className="divide-y dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800">
-          {rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="p-2">
-                  {cell}
-                </td>
-              ))}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={headers.length} className="p-4 py-8 text-center text-gray-500">
+                <div className="flex flex-col items-center gap-2 justify-center">
+                  <FileSearch className="h-10 w-10 opacity-50" />
+                  <span>No results found.</span>
+                </div>
+              </td>
             </tr>
-          ))}
+          ) : (
+            rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <td key={cellIndex} className="p-2">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
