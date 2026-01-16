@@ -8,7 +8,8 @@ import {
   Settings,
   CreditCard,
   Users,
-  Database
+  Database,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -21,6 +22,7 @@ const Sidenav: React.FC = () => {
 
   const navItems = [
     { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts'] },
+    { path: '/income', label: 'Income', icon: TrendingUp, activePaths: ['/income'] },
     { path: '/reference-data', label: 'Reference Data', icon: Database, activePaths: ['/reference-data'] },
     { path: '/analytics', label: 'Analytics', icon: BarChart2, activePaths: ['/analytics'] },
   ];

@@ -12,9 +12,9 @@ The application is structured as a standard Electron app with two main processes
 
 *   **Runtime**: Electron
 *   **Frontend**: React 19, TypeScript, Vite
-*   **Styling**: Tailwind CSS, Headless UI, Heroicons
+*   **Styling**: Tailwind CSS, Headless UI, Heroicons, Lucide React
 *   **State Management**:
-    *   **Client State**: Zustand (`useSettingsStore`, `useErrorStore`)
+    *   **Client State**: Zustand (`useSettingsStore`, `useErrorStore`, `useUIStore`)
     *   **Server State**: TanStack Query (React Query)
 *   **Database**: SQLite3 (via `sqlite3` Node driver)
 *   **Persistence**: Custom JSON file-based store (`electron/store.cjs`) for user preferences. Settings are stored in `datastore/settings/settings.json` with a bootstrap pointer in `userData`.
@@ -35,7 +35,7 @@ The application is structured as a standard Electron app with two main processes
 ├── src/                    # Frontend (Renderer Process) code
 │   ├── components/         # Reusable UI components
 │   │   ├── layout/         # Layout wrappers (MainLayout, Sidenav)
-│   │   ├── ui/             # Generic UI elements (Button, Card, Modal)
+│   │   ├── ui/             # Generic UI elements (Button, Card, Modal, Combobox, NanoDataTable)
 │   │   └── ...             # Feature-specific components
 │   ├── pages/              # Route-level page components
 │   ├── store/              # Zustand stores
@@ -84,8 +84,10 @@ The SQLite database (`fin.db`) is relational and normalized. Key tables include:
 
 *   **`App.tsx`**: Handles initial onboarding (Welcome/User Setup) and defines the `HashRouter` routes.
 *   **`MainLayout.tsx`**: Provides the persistent Sidebar and Header structure.
+*   **`Sidenav.tsx`**: Responsive sidebar navigation with smooth transitions and square icon buttons when collapsed.
 *   **`ReceiptsPage.tsx`**: The dashboard view, showing recent receipts and summaries.
 *   **`ReceiptFormPage.tsx`**: Complex form for creating/editing receipts, handling line items, and splits.
+*   **`ReceiptViewPage.tsx`**: Detailed view of a receipt, featuring a responsive summary card, item list with filtering (via `Combobox`), and debt breakdown.
 *   **`PaymentMethodDetailsPage.tsx`**: Detailed view of an account, including a transaction history (DataTable) and transfer functionality.
 *   **`AnalyticsPage.tsx`**: Visualizations of spending habits using ECharts.
 
@@ -94,6 +96,7 @@ The SQLite database (`fin.db`) is relational and normalized. Key tables include:
 1.  **Zustand**: Used for global *client-side* state that doesn't come from the DB.
     *   `useSettingsStore`: Theme, user name, database path.
     *   `useErrorStore`: Global error modal state.
+    *   `useUIStore`: UI state like sidenav collapse status.
 2.  **TanStack Query**: Used for *server-side* (database) state.
     *   Handles caching, deduping, and refetching of SQL query results.
     *   Keys are typically structured like `['receipts', id]` or `['referenceData']`.
@@ -120,6 +123,16 @@ This is a highly reusable and feature-rich component (`src/components/ui/DataTab
 *   **Dynamic Layout**: Uses `useLayoutEffect` to measure content and switch between `table-layout: auto` and `fixed` to handle responsive sizing intelligently.
 *   **Features**: Built-in pagination, search (with debouncing), row selection (checkboxes), and custom slot injection (`topRowLeft`, etc.).
 *   **API**: Accepts a generic `data` array and a `columns` configuration array, making it adaptable to any data type.
+
+### `NanoDataTable.tsx`
+A lightweight version of `DataTable` (`src/components/ui/NanoDataTable.tsx`) used for simpler lists or nested tables (e.g., inside `ReceiptViewPage`).
+*   **Features**: Supports custom headers and row rendering.
+*   **Empty State**: Displays a "No results found" message with an icon when data is empty.
+
+### `Combobox.tsx`
+A robust, searchable dropdown component (`src/components/ui/Combobox.tsx`).
+*   **Features**: Fuzzy search, keyboard navigation, and portal-based rendering for z-index management.
+*   **Stability**: Uses `useLayoutEffect` and `requestAnimationFrame` for smooth positioning and focus management.
 
 ### `DataGrid.tsx`
 A responsive grid component (`src/components/ui/DataGrid.tsx`) for displaying card-like items.

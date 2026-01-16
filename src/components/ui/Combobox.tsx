@@ -19,6 +19,8 @@ interface ComboboxProps {
   noResultsText?: string;
   className?: string;
   disabled?: boolean;
+  label?: string;
+  error?: string;
 }
 
 const Combobox: React.FC<ComboboxProps> = ({
@@ -30,6 +32,8 @@ const Combobox: React.FC<ComboboxProps> = ({
   noResultsText = "No results found.",
   className,
   disabled = false,
+  label,
+  error,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -233,6 +237,11 @@ const Combobox: React.FC<ComboboxProps> = ({
 
   return (
     <div className={cn("w-full", className)}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {label}
+        </label>
+      )}
       <button
         ref={triggerRef}
         type="button"
@@ -243,6 +252,7 @@ const Combobox: React.FC<ComboboxProps> = ({
         disabled={disabled}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+          error && "border-danger focus:ring-danger"
         )}
       >
         <span className="truncate">
@@ -250,6 +260,9 @@ const Combobox: React.FC<ComboboxProps> = ({
         </span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </button>
+      {error && (
+        <p className="mt-1 text-xs text-danger">{error}</p>
+      )}
       {isOpen && createPortal(PopoverContent, document.body)}
     </div>
   );

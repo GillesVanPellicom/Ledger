@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { task, info, success, done } from './styling.js';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -85,6 +85,20 @@ const categories = [
     'Insurance', 'Education', 'Gifts', 'Other'
 ];
 
+const incomeCategories = [
+    'Work', 'Investment', 'Gift', 'Tax Return', 'Other'
+];
+
+const incomeSources = [
+    'Salary', 'Freelance Project', 'Rental Income', 'Dividends', 'Interest', 'Birthday'
+];
+
+const incomeSchedules = [
+    { SourceName: 'Salary', Category: 'Work', ExpectedAmount: 2500, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 1, LookaheadDays: 5, IsActive: 1 },
+    { SourceName: 'Freelance Project', Category: 'Work', ExpectedAmount: 500, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 1, LookaheadDays: 7, IsActive: 1 },
+    { SourceName: 'Rental Income', Category: 'Investment', ExpectedAmount: 800, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 0, LookaheadDays: 3, IsActive: 1 },
+];
+
 // --- Helper Functions ---
 function runQuery(db, sql, params = []) {
     return new Promise((resolve, reject) => db.run(sql, params, function (err) {
@@ -138,10 +152,99 @@ async function seed() {
         for (const cat of categories) await runQuery(db, insert, [cat]);
     });
 
+    await task('Seeding Income Categories', async () => {
+        const insert = 'INSERT OR IGNORE INTO IncomeCategories (IncomeCategoryName) VALUES (?)';
+        for (const cat of incomeCategories) await runQuery(db, insert, [cat]);
+    });
+
+    await task('Seeding Income Sources', async () => {
+        const insert = 'INSERT OR IGNORE INTO IncomeSources (IncomeSourceName) VALUES (?)';
+        for (const source of incomeSources) await runQuery(db, insert, [source]);
+    });
+
     await task('Seeding Payment Methods', async () => {
         const paymentMethods = ['KBC', 'Knab', 'Paypal', 'Argenta'];
         for (const name of paymentMethods) {
             await runQuery(db, 'INSERT OR IGNORE INTO PaymentMethods (PaymentMethodName, PaymentMethodFunds) VALUES (?, ?)', [name, 0]);
+        }
+    });
+
+    await task('Seeding Income Schedules', async () => {
+        const paymentMethods = await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods');
+        if (paymentMethods.length === 0) return;
+
+        const incomeSources = await getQuery(db, 'SELECT IncomeSourceName FROM IncomeSources');
+        const incomeCats = await getQuery(db, 'SELECT IncomeCategoryName FROM IncomeCategories');
+
+        const insertSchedule = 'INSERT OR IGNORE INTO IncomeSchedules (SourceName, Category, PaymentMethodID, ExpectedAmount, RecurrenceRule, RequiresConfirmation, LookaheadDays, IsActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+        const insertPending = 'INSERT INTO PendingIncome (IncomeScheduleID, PlannedDate, Amount, State) VALUES (?, ?, ?, ?)';
+        
+        const myIncomeSchedules = [
+            { SourceName: 'Monthly Salary', Category: 'Work', ExpectedAmount: 3200, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 0, LookaheadDays: 5, IsActive: 1 },
+            { SourceName: 'Freelance Design', Category: 'Work', ExpectedAmount: 450, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 1, LookaheadDays: 14, IsActive: 1 },
+            { SourceName: 'Apartment Rent', Category: 'Investment', ExpectedAmount: 1200, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 0, LookaheadDays: 3, IsActive: 1 },
+            { SourceName: 'Dividend Payment', Category: 'Investment', ExpectedAmount: 125.50, RecurrenceRule: 'FREQ=YEARLY;INTERVAL=1', RequiresConfirmation: 1, LookaheadDays: 30, IsActive: 1 },
+        ];
+
+        for (const schedule of myIncomeSchedules) {
+            const pmId = getRandomElement(paymentMethods).PaymentMethodID;
+            
+            // Ensure source and category exist in reference tables if they are used here
+            if (!incomeSources.find(s => s.IncomeSourceName === schedule.SourceName)) {
+                await runQuery(db, 'INSERT OR IGNORE INTO IncomeSources (IncomeSourceName) VALUES (?)', [schedule.SourceName]);
+            }
+            if (schedule.Category && !incomeCats.find(c => c.IncomeCategoryName === schedule.Category)) {
+                await runQuery(db, 'INSERT OR IGNORE INTO IncomeCategories (IncomeCategoryName) VALUES (?)', [schedule.Category]);
+            }
+
+            await runQuery(db, insertSchedule, [
+                schedule.SourceName,
+                schedule.Category,
+                pmId,
+                schedule.ExpectedAmount,
+                schedule.RecurrenceRule,
+                schedule.RequiresConfirmation,
+                schedule.LookaheadDays,
+                schedule.IsActive
+            ]);
+            
+            const scheduleIdResult = await getQuery(db, 'SELECT last_insert_rowid() as id');
+            const scheduleId = scheduleIdResult[0].id;
+            
+            // Seed some pending income for the near future
+            if (schedule.RequiresConfirmation) {
+                const today = new Date();
+                // One item for tomorrow
+                const plannedDate1 = format(addDays(today, 1), 'yyyy-MM-dd');
+                await runQuery(db, insertPending, [
+                    scheduleId,
+                    plannedDate1,
+                    schedule.ExpectedAmount,
+                    'TO_CHECK'
+                ]);
+
+                // One item in 10 days
+                const plannedDate2 = format(addDays(today, 10), 'yyyy-MM-dd');
+                await runQuery(db, insertPending, [
+                    scheduleId,
+                    plannedDate2,
+                    schedule.ExpectedAmount,
+                    'TO_CHECK'
+                ]);
+            }
+
+            // Seed some historical confirmed income (TopUps)
+            const numHistorical = 12;
+            for (let i = 1; i <= numHistorical; i++) {
+                const pastDate = format(addDays(new Date(), -i * 30), 'yyyy-MM-dd');
+                const note = `[Income] ${schedule.SourceName}${schedule.Category ? ` (${schedule.Category})` : ''}`;
+                await runQuery(db, 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)', [
+                    pmId,
+                    schedule.ExpectedAmount,
+                    pastDate,
+                    note
+                ]);
+            }
         }
     });
 

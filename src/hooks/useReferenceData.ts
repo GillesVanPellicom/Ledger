@@ -156,6 +156,68 @@ export const useActiveCategories = () => {
   });
 };
 
+// --- Income Categories ---
+
+export const useIncomeCategories = (params: FetchCategoriesParams) => {
+  return useQuery({
+    queryKey: ['incomeCategories', params],
+    queryFn: async () => {
+      const offset = (params.page - 1) * params.pageSize;
+      let query = `SELECT * FROM IncomeCategories`;
+      const queryParams: any[] = [];
+      
+      if (params.searchTerm) {
+        query += ` WHERE IncomeCategoryName LIKE ?`;
+        queryParams.push(`%${params.searchTerm}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT IncomeCategoryID')})`;
+      const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
+      const totalCount = countResult ? countResult.count : 0;
+      
+      query += ` ORDER BY IncomeCategoryName ASC LIMIT ? OFFSET ?`;
+      queryParams.push(params.pageSize, offset);
+      
+      const categories = await db.query<any>(query, queryParams);
+      return { categories, totalCount };
+    },
+    staleTime: 0,
+    gcTime: 0,
+    enabled: params.enabled !== false,
+  });
+};
+
+// --- Income Sources ---
+
+export const useIncomeSources = (params: FetchCategoriesParams) => {
+  return useQuery({
+    queryKey: ['incomeSources', params],
+    queryFn: async () => {
+      const offset = (params.page - 1) * params.pageSize;
+      let query = `SELECT * FROM IncomeSources`;
+      const queryParams: any[] = [];
+      
+      if (params.searchTerm) {
+        query += ` WHERE IncomeSourceName LIKE ?`;
+        queryParams.push(`%${params.searchTerm}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT IncomeSourceID')})`;
+      const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
+      const totalCount = countResult ? countResult.count : 0;
+      
+      query += ` ORDER BY IncomeSourceName ASC LIMIT ? OFFSET ?`;
+      queryParams.push(params.pageSize, offset);
+      
+      const sources = await db.query<any>(query, queryParams);
+      return { sources, totalCount };
+    },
+    staleTime: 0,
+    gcTime: 0,
+    enabled: params.enabled !== false,
+  });
+};
+
 // --- Mutations ---
 
 export const useInvalidateReferenceData = () => {
@@ -164,5 +226,7 @@ export const useInvalidateReferenceData = () => {
     queryClient.invalidateQueries({ queryKey: ['products'] });
     queryClient.invalidateQueries({ queryKey: ['stores'] });
     queryClient.invalidateQueries({ queryKey: ['categories'] });
+    queryClient.invalidateQueries({ queryKey: ['incomeCategories'] });
+    queryClient.invalidateQueries({ queryKey: ['incomeSources'] });
   };
 };
