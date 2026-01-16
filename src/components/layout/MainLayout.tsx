@@ -18,7 +18,8 @@ const MainLayout: React.FC = () => {
       <Sidenav />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300">
-        <div className="flex-1 overflow-auto">
+        <div className="absolute top-0 bottom-0 right-0 w-[9px] border-l border-gray-200 dark:border-zinc-800 z-[60] pointer-events-none" />
+        <div className="flex-1 overflow-y-scroll scrollbar-gutter-stable relative">
           <Outlet />
         </div>
 

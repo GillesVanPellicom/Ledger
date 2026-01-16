@@ -20,7 +20,7 @@
   }
 
   html {
-    overflow-y: scroll;
+    overflow: hidden;
   }
 
   body {
@@ -31,6 +31,10 @@
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
+  }
+
+  .scrollbar-gutter-stable {
+    scrollbar-gutter: stable;
   }
 
   ::-webkit-scrollbar-track {
