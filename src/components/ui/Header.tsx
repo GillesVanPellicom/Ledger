@@ -54,16 +54,17 @@ export const Header: React.FC<HeaderProps> = ({
         }}
       >
         <div 
-          className="absolute left-0 right-0 overflow-hidden opacity-90"
+          className="absolute left-0 right-0 overflow-hidden"
           style={{ height: `${minHeight}px`, top: '0px' }}
         >
+          <div className="absolute inset-0 bg-white dark:bg-black" />
           <BackgroundGradientAnimation
             gradientBackgroundStart={isDarkMode ? '#000000' : '#FFFFFF'}
             gradientBackgroundEnd={isDarkMode ? '#000000' : '#FFFFFF'}
             color="135, 94, 242"
             pointerColor="135, 94, 242"
             interactive={false}
-            containerClassName="absolute inset-0"
+            containerClassName="absolute inset-0 opacity-90"
           />
         </div>
       </div>
