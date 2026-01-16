@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp,
   Calendar,
@@ -8,19 +9,15 @@ import {
   Plus,
   Trash,
   Edit,
-  ChevronRight,
-  ChevronDown,
-  AlertCircle,
   Info
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
-import { incomeCommitments, PendingIncome } from '../logic/incomeCommitments';
+import { incomeCommitments } from '../logic/incomeCommitments';
 import { incomeLogic } from '../logic/incomeLogic';
 import { humanizeRecurrenceRule } from '../logic/incomeScheduling';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Combobox from '../components/ui/Combobox';
@@ -38,6 +35,7 @@ import Tooltip from '../components/ui/Tooltip';
 const IncomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showError } = useErrorStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled' | 'confirmed' | 'repayments'>('to-check');
 
   // Modal states
@@ -113,19 +111,21 @@ const IncomePage: React.FC = () => {
           value: String(r.PaymentMethodID),
           label: r.PaymentMethodName
         })));
-      });
+      }).catch(err => showError(err));
+
       db.query("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName").then(rows => {
         setIncomeCategories(rows.map((r: any) => ({
           value: r.IncomeCategoryName,
           label: r.IncomeCategoryName
         })));
-      });
+      }).catch(err => showError(err));
+
       db.query("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName").then(rows => {
         setIncomeSources(rows.map((r: any) => ({
           value: r.IncomeSourceName,
           label: r.IncomeSourceName
         })));
-      });
+      }).catch(err => showError(err));
     };
 
     loadReferenceData();
@@ -138,14 +138,14 @@ const IncomePage: React.FC = () => {
         label: r.IncomeCategoryName
       })));
       if (newId) {
-        db.queryOne("SELECT IncomeCategoryName FROM IncomeCategories WHERE IncomeCategoryID = ?", [newId]).then(cat => {
+        db.queryOne<{ IncomeCategoryName: string }>("SELECT IncomeCategoryName FROM IncomeCategories WHERE IncomeCategoryID = ?", [newId]).then(cat => {
           if (cat) {
             if (isOneTimeModalOpen) setOneTimeIncome(prev => ({ ...prev, Category: cat.IncomeCategoryName }));
             if (isScheduleModalOpen) setNewSchedule(prev => ({ ...prev, Category: cat.IncomeCategoryName }));
           }
-        });
+        }).catch(err => showError(err));
       }
-    });
+    }).catch(err => showError(err));
   };
 
   const handleIncomeSourceSave = (newId?: number) => {
@@ -155,14 +155,14 @@ const IncomePage: React.FC = () => {
         label: r.IncomeSourceName
       })));
       if (newId) {
-        db.queryOne("SELECT IncomeSourceName FROM IncomeSources WHERE IncomeSourceID = ?", [newId]).then(src => {
+        db.queryOne<{ IncomeSourceName: string }>("SELECT IncomeSourceName FROM IncomeSources WHERE IncomeSourceID = ?", [newId]).then(src => {
           if (src) {
             if (isOneTimeModalOpen) setOneTimeIncome(prev => ({ ...prev, SourceName: src.IncomeSourceName }));
             if (isScheduleModalOpen) setNewSchedule(prev => ({ ...prev, SourceName: src.IncomeSourceName }));
           }
-        });
+        }).catch(err => showError(err));
       }
-    });
+    }).catch(err => showError(err));
   };
 
   // Queries
@@ -183,7 +183,7 @@ const IncomePage: React.FC = () => {
 
   const { data: debtRepayments, isLoading: loadingRepayments } = useQuery({
     queryKey: ['debtRepayments'],
-    queryFn: () => incomeCommitments.getDebtRepayments()
+    queryFn: () => (incomeCommitments as any).getDebtRepayments ? (incomeCommitments as any).getDebtRepayments() : Promise.resolve([])
   });
 
   // Mutations
@@ -241,6 +241,8 @@ const IncomePage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
       processSchedulesMutation.mutate();
+      setIsDeleteModalOpen(false);
+      setCascadeDelete(false);
     },
     onError: (err) => showError(err)
   });
@@ -266,13 +268,18 @@ const IncomePage: React.FC = () => {
     processSchedulesMutation.mutate();
   }, []);
 
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setCascadeDelete(false);
+  };
+
   const renderTabs = () => {
-    const tabItems = [
+    const tabItems: { id: 'to-check' | 'scheduled' | 'confirmed' | 'repayments'; label: string; icon: any; count?: number }[] = [
       { id: 'to-check', label: 'To Check', icon: Clock, count: pendingIncomes?.length },
       { id: 'scheduled', label: 'Scheduled', icon: Calendar },
       { id: 'confirmed', label: 'Confirmed', icon: CheckCircle },
       { id: 'repayments', label: 'Debt Repayments', icon: TrendingUp },
-    ] as const;
+    ];
 
     return (
       <nav className="flex space-x-8 border-b border-gray-200 dark:border-gray-800" aria-label="Tabs">
@@ -314,7 +321,8 @@ const IncomePage: React.FC = () => {
     const data = {
       ...newSchedule,
       ExpectedAmount: parseFloat(String(newSchedule.ExpectedAmount)) || null,
-      LookaheadDays: parseInt(String(newSchedule.LookaheadDays)) || 0
+      LookaheadDays: parseInt(String(newSchedule.LookaheadDays)) || 0,
+      PaymentMethodID: Number(newSchedule.PaymentMethodID) || null
     };
     if (editingSchedule) {
       updateScheduleMutation.mutate({ id: editingSchedule.IncomeScheduleID, data });
@@ -474,6 +482,7 @@ const IncomePage: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               setScheduleToDelete(row.IncomeScheduleID);
+                              setCascadeDelete(true);
                               setIsDeleteModalOpen(true);
                             }}
                           >
@@ -556,27 +565,43 @@ const IncomePage: React.FC = () => {
       </PageWrapper>
 
       {/* Modals */}
-      <ConfirmModal
+      <Modal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={() => {
-          if (scheduleToDelete) {
-            deleteScheduleMutation.mutate({ id: scheduleToDelete, cascade: cascadeDelete });
-            setIsDeleteModalOpen(false);
-          }
-        }}
+        onClose={handleCloseDeleteModal}
         title="Delete Schedule"
-        message="Are you sure you want to delete this income schedule? This will deactivate it, but not remove historical records."
+        className="max-w-lg"
+        footer={
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={handleCloseDeleteModal}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (scheduleToDelete) {
+                  deleteScheduleMutation.mutate({ id: scheduleToDelete, cascade: cascadeDelete });
+                }
+              }}
+              loading={deleteScheduleMutation.isPending}
+            >
+              Delete
+            </Button>
+          </div>
+        }
       >
-        <div className="pt-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to delete this income schedule? This will deactivate it, but not remove historical records.</p>
+        <div className="flex items-start gap-3 pt-4">
           <Checkbox
             id="cascadeDelete"
             checked={cascadeDelete}
             onChange={(e) => setCascadeDelete(e.target.checked)}
-            label="Also delete all pending 'To Check' items from this schedule."
           />
+          <div className="grid gap-1.5 leading-none">
+            <label htmlFor="cascadeDelete" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Also delete all pending 'To Check' items from this schedule.
+            </label>
+            <p className="text-xs text-gray-500">This action cannot be undone.</p>
+          </div>
         </div>
-      </ConfirmModal>
+      </Modal>
 
       <ConfirmModal
         isOpen={isDismissModalOpen}
@@ -607,8 +632,8 @@ const IncomePage: React.FC = () => {
               })}
               loading={confirmMutation.isPending}
             >
-              Confirm & Deposit
-            </Button>
+               Confirm & Deposit
+             </Button>
           </div>
         }
       >
@@ -641,12 +666,14 @@ const IncomePage: React.FC = () => {
             <Button
               onClick={() => createOneTimeMutation.mutate({
                 ...oneTimeIncome,
-                Amount: parseFloat(oneTimeIncome.Amount) || 0
+                Amount: parseFloat(oneTimeIncome.Amount) || 0,
+                PaymentMethodID: Number(oneTimeIncome.PaymentMethodID) || null,
+                Category: oneTimeIncome.Category || null
               })}
               loading={createOneTimeMutation.isPending}
             >
-              Deposit
-            </Button>
+               Deposit
+             </Button>
           </div>
         }
       >
@@ -716,8 +743,8 @@ const IncomePage: React.FC = () => {
               onClick={handleSaveSchedule}
               loading={createScheduleMutation.isPending || updateScheduleMutation.isPending}
             >
-              {editingSchedule ? "Save Changes" : "Save Schedule"}
-            </Button>
+               {editingSchedule ? "Save Changes" : "Save Schedule"}
+             </Button>
           </div>
         }
       >

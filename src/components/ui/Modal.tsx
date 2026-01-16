@@ -142,6 +142,7 @@ interface ConfirmModalProps {
   loading?: boolean;
   secondaryText?: string;
   onSecondaryAction?: () => void;
+  children?: React.ReactNode;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({ 
@@ -155,7 +156,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   variant = "danger",
   loading = false,
   secondaryText,
-  onSecondaryAction
+  onSecondaryAction,
+  children
 }) => (
   <Modal
     isOpen={isOpen}
@@ -170,7 +172,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       </>
     }
   >
-    <p className="text-gray-600 dark:text-gray-300">{message}</p>
+    {children ? children : <p className="text-gray-600 dark:text-gray-300">{message}</p>}
   </Modal>
 );
 
