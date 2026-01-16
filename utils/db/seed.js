@@ -163,33 +163,6 @@ async function seed() {
         for (const source of incomeSources) await runQuery(db, insert, [source]);
     });
 
-    await task('Creating Income Schedules Table', async () => {
-        await runQuery(db, `
-            CREATE TABLE IF NOT EXISTS IncomeSchedules (
-                IncomeScheduleID INTEGER PRIMARY KEY AUTOINCREMENT,
-                IncomeSourceID INTEGER NOT NULL,
-                IncomeCategoryID INTEGER,
-                PaymentMethodID INTEGER,
-                ExpectedAmount REAL,
-                RecurrenceRule TEXT NOT NULL,
-                RequiresConfirmation INTEGER NOT NULL DEFAULT 1,
-                LookaheadDays INTEGER NOT NULL DEFAULT 7,
-                IsActive INTEGER NOT NULL DEFAULT 1,
-                CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (IncomeSourceID) REFERENCES IncomeSources (IncomeSourceID),
-                FOREIGN KEY (IncomeCategoryID) REFERENCES IncomeCategories (IncomeCategoryID),
-                FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID)
-            );
-        `);
-        await runQuery(db, `
-            CREATE TRIGGER IF NOT EXISTS trigger_incomeschedules_updated_at AFTER UPDATE ON IncomeSchedules
-            BEGIN
-                UPDATE IncomeSchedules SET UpdatedAt = CURRENT_TIMESTAMP WHERE IncomeScheduleID = NEW.IncomeScheduleID;
-            END;
-        `);
-    });
-
     await task('Seeding Income Schedules', async () => {
         const paymentMethods = await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods');
         const incomeSources = await getQuery(db, 'SELECT * FROM IncomeSources');
@@ -222,27 +195,6 @@ async function seed() {
         }
     });
 
-    await task('Creating Pending Incomes Table', async () => {
-        await runQuery(db, `
-            CREATE TABLE IF NOT EXISTS PendingIncomes (
-                PendingIncomeID INTEGER PRIMARY KEY AUTOINCREMENT,
-                IncomeScheduleID INTEGER NOT NULL,
-                PlannedDate TEXT NOT NULL,
-                Amount REAL,
-                Status TEXT NOT NULL DEFAULT 'pending', -- pending, confirmed, rejected
-                CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (IncomeScheduleID) REFERENCES IncomeSchedules (IncomeScheduleID) ON DELETE CASCADE
-            );
-        `);
-        await runQuery(db, `
-            CREATE TRIGGER IF NOT EXISTS trigger_pendingincomes_updated_at AFTER UPDATE ON PendingIncomes
-            BEGIN
-                UPDATE PendingIncomes SET UpdatedAt = CURRENT_TIMESTAMP WHERE PendingIncomeID = NEW.PendingIncomeID;
-            END;
-        `);
-    });
-
     await task('Seeding Pending Incomes', async () => {
         const incomeSchedules = await getQuery(db, 'SELECT * FROM IncomeSchedules WHERE IsActive = 1');
         if (incomeSchedules.length === 0) return;
@@ -263,14 +215,6 @@ async function seed() {
                     'pending'
                 ]);
             }
-        }
-    });
-
-    await task('Updating Products Schema', async () => {
-        try {
-            await runQuery(db, 'ALTER TABLE Products ADD COLUMN CategoryID INTEGER REFERENCES Categories(CategoryID)');
-        } catch (e) {
-            // Ignore if column already exists
         }
     });
 
