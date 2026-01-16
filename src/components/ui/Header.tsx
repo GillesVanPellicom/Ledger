@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Sticky Border Element */}
       <div 
-        className="sticky z-[51] border-b border-gray-200 dark:border-gray-800 pointer-events-none"
+        className="sticky z-40 border-b border-gray-200 dark:border-gray-800 pointer-events-none"
         style={{ 
           top: `${rowHeight * 2}px`, 
           height: '0px',
