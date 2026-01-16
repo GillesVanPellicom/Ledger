@@ -47,19 +47,20 @@ const Sidenav: React.FC = () => {
     >
       <div 
         className={cn(
-          "flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0",
+          "flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0 transition-all duration-300",
           isSidenavCollapsed ? "justify-center px-2" : "justify-between px-4"
         )}
-        style={{ height: '86px' }}
+        style={{ height: '85px' }}
       >
-        {!isSidenavCollapsed && (
-          <span className="font-bold text-xl tracking-tight text-accent">
-            Ledger
-          </span>
-        )}
+        <span className={cn(
+          "font-bold text-xl tracking-tight text-accent overflow-hidden whitespace-nowrap transition-all duration-300",
+          isSidenavCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+        )}>
+          Ledger
+        </span>
         <button
           onClick={toggleSidenav}
-          className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+          className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 transition-colors shrink-0"
         >
           {isSidenavCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>
@@ -73,22 +74,20 @@ const Sidenav: React.FC = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center gap-3 rounded-lg transition-all duration-200 group",
+                "flex items-center h-10 px-2.5 rounded-lg transition-all duration-300 group overflow-hidden",
                 isActive
                   ? "bg-accent text-white shadow-md"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100",
-                isSidenavCollapsed 
-                  ? "aspect-square justify-center" 
-                  : "px-3 py-2.5"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
               )}
               title={isSidenavCollapsed ? item.label : undefined}
             >
-              <item.icon className={cn("h-5 w-5 shrink-0")} />
-              {!isSidenavCollapsed && (
-                <span className="font-medium truncate">
-                  {item.label}
-                </span>
-              )}
+              <item.icon className="h-5 w-5 shrink-0" />
+              <span className={cn(
+                "font-medium truncate transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+                isSidenavCollapsed ? "w-0 opacity-0 ml-0" : "w-40 opacity-100 ml-3"
+              )}>
+                {item.label}
+              </span>
             </NavLink>
           )
         })}
@@ -98,19 +97,17 @@ const Sidenav: React.FC = () => {
         <button
           onClick={() => openSettingsModal()}
           className={cn(
-            "flex items-center gap-3 w-full rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800",
-            isSidenavCollapsed 
-              ? "aspect-square justify-center" 
-              : "px-3 py-2.5"
+            "flex items-center h-10 px-2.5 w-full rounded-lg transition-all duration-300 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 overflow-hidden"
           )}
           title="Settings"
         >
-          <Settings className="h-5 w-5" />
-          {!isSidenavCollapsed && (
-            <span className="font-medium">
-              Settings
-            </span>
-          )}
+          <Settings className="h-5 w-5 shrink-0" />
+          <span className={cn(
+            "font-medium truncate transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+            isSidenavCollapsed ? "w-0 opacity-0 ml-0" : "w-40 opacity-100 ml-3"
+          )}>
+            Settings
+          </span>
         </button>
       </div>
     </aside>
