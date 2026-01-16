@@ -26,7 +26,7 @@ import Checkbox from '../components/ui/Checkbox';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
 import IncomeSourceModal from '../components/income/IncomeSourceModal';
-import { format, parseISO, isBefore, startOfToday } from 'date-fns';
+import { format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths } from 'date-fns';
 import { cn } from '../utils/cn';
 import { useErrorStore } from '../store/useErrorStore';
 import { db } from '../utils/db';
@@ -75,11 +75,11 @@ const IncomePage: React.FC = () => {
     SourceName: '',
     Category: '',
     PaymentMethodID: '',
-    ExpectedAmount: '',
+    ExpectedAmount: '0',
     RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-    DayOfMonth: '1',
-    DayOfWeek: '1',
-    MonthOfYear: '0',
+    DayOfMonth: String(getDate(new Date())),
+    DayOfWeek: String(getDay(new Date())),
+    MonthOfYear: String(getMonth(new Date())),
     RequiresConfirmation: true,
     LookaheadDays: 7,
     IsActive: true
@@ -92,11 +92,11 @@ const IncomePage: React.FC = () => {
         SourceName: editingSchedule.SourceName || '',
         Category: editingSchedule.Category || '',
         PaymentMethodID: String(editingSchedule.PaymentMethodID),
-        ExpectedAmount: String(editingSchedule.ExpectedAmount || ''),
+        ExpectedAmount: String(editingSchedule.ExpectedAmount || '0'),
         RecurrenceRule: editingSchedule.RecurrenceRule || 'FREQ=MONTHLY;INTERVAL=1',
-        DayOfMonth: String(editingSchedule.DayOfMonth || '1'),
-        DayOfWeek: String(editingSchedule.DayOfWeek || '1'),
-        MonthOfYear: String(editingSchedule.MonthOfYear || '0'),
+        DayOfMonth: String(editingSchedule.DayOfMonth || getDate(new Date())),
+        DayOfWeek: String(editingSchedule.DayOfWeek || getDay(new Date())),
+        MonthOfYear: String(editingSchedule.MonthOfYear || getMonth(new Date())),
         RequiresConfirmation: !!editingSchedule.RequiresConfirmation,
         LookaheadDays: editingSchedule.LookaheadDays || 7,
         IsActive: !!editingSchedule.IsActive
@@ -106,11 +106,11 @@ const IncomePage: React.FC = () => {
         SourceName: '',
         Category: '',
         PaymentMethodID: paymentMethods[0]?.value || '',
-        ExpectedAmount: '',
+        ExpectedAmount: '0',
         RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-        DayOfMonth: '1',
-        DayOfWeek: '1',
-        MonthOfYear: '0',
+        DayOfMonth: String(getDate(new Date())),
+        DayOfWeek: String(getDay(new Date())),
+        MonthOfYear: String(getMonth(new Date())),
         RequiresConfirmation: true,
         LookaheadDays: 7,
         IsActive: true
@@ -122,7 +122,7 @@ const IncomePage: React.FC = () => {
     SourceName: '',
     Category: '',
     PaymentMethodID: '',
-    Amount: '',
+    Amount: '0',
     Date: format(new Date(), 'yyyy-MM-dd')
   });
 
@@ -214,7 +214,7 @@ const IncomePage: React.FC = () => {
 
   // Mutations
   const processSchedulesMutation = useMutation({
-    mutationFn: (createForPastPeriod?: boolean) => incomeLogic.processSchedules(createForPastPeriod),
+    mutationFn: () => incomeLogic.processSchedules(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
       queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
@@ -247,7 +247,7 @@ const IncomePage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
       setIsScheduleModalOpen(false);
       setEditingSchedule(null);
-      processSchedulesMutation.mutate(createForPastPeriod);
+      processSchedulesMutation.mutate();
     },
     onError: (err) => showError(err)
   });
@@ -256,8 +256,9 @@ const IncomePage: React.FC = () => {
     mutationFn: (data: any) => incomeCommitments.createSchedule(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
       setIsScheduleModalOpen(false);
-      processSchedulesMutation.mutate(createForPastPeriod);
+      processSchedulesMutation.mutate();
     },
     onError: (err) => showError(err)
   });
@@ -282,7 +283,7 @@ const IncomePage: React.FC = () => {
         SourceName: '',
         Category: '',
         PaymentMethodID: '',
-        Amount: '',
+        Amount: '0',
         Date: format(new Date(), 'yyyy-MM-dd')
       });
     },
@@ -308,7 +309,7 @@ const IncomePage: React.FC = () => {
     ];
 
     return (
-      <nav className="flex space-x-8 border-b border-gray-200 dark:border-gray-800" aria-label="Tabs">
+      <div className="flex space-x-8" aria-label="Tabs">
         {tabItems.map((tab) => (
           <button
             key={tab.id}
@@ -317,7 +318,7 @@ const IncomePage: React.FC = () => {
               setCurrentPage(1); // Reset page on tab change
             }}
             className={cn(
-              "flex items-center gap-2 whitespace-nowrap px-1 border-b-2 font-medium text-sm transition-colors -mb-px py-3",
+              "flex items-center gap-2 whitespace-nowrap px-1 border-b-2 font-medium text-sm transition-colors py-3",
               activeTab === tab.id
                 ? "border-accent text-accent"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
@@ -335,7 +336,7 @@ const IncomePage: React.FC = () => {
             )}
           </button>
         ))}
-      </nav>
+      </div>
     );
   };
 
@@ -363,6 +364,7 @@ const IncomePage: React.FC = () => {
       DayOfMonth: Number(newSchedule.DayOfMonth) || null,
       DayOfWeek: Number(newSchedule.DayOfWeek) || null,
       MonthOfYear: Number(newSchedule.MonthOfYear) || null,
+      CreateForPastPeriod: createForPastPeriod,
     };
     if (editingSchedule) {
       updateScheduleMutation.mutate({ id: editingSchedule.IncomeScheduleID, data });
@@ -425,8 +427,18 @@ const IncomePage: React.FC = () => {
 
   const showCreateForPastPeriodCheckbox = () => {
     if (editingSchedule) return false;
-    const firstOccurrence = calculateOccurrences({ ...newSchedule, CreationTimestamp: new Date().toISOString() } as any, startOfToday(), startOfToday())[0];
-    return firstOccurrence && isBefore(firstOccurrence, startOfToday());
+    try {
+      const today = startOfToday();
+      const oneMonthAgo = subMonths(today, 1);
+      const occurrences = calculateOccurrences(
+        { ...newSchedule, CreationTimestamp: new Date().toISOString() } as any,
+        oneMonthAgo,
+        today
+      );
+      return occurrences.some(occ => isBefore(occ, today));
+    } catch (e) {
+      return false;
+    }
   };
 
   const paginatedData = (data: any[] | undefined) => {
@@ -436,11 +448,21 @@ const IncomePage: React.FC = () => {
     return data.slice(start, end);
   };
 
+  const handleStepperChange = (setter: React.Dispatch<React.SetStateAction<any>>, field: string, increment: boolean, step: number) => {
+    setter(prev => {
+      const currentValue = parseFloat(prev[field]) || 0;
+      const newValue = increment ? currentValue + step : currentValue - step;
+      return { ...prev, [field]: String(newValue.toFixed(2)) };
+    });
+  };
+
   return (
     <div>
       <Header
         title="Income"
         subtitle="Manage expected and confirmed income"
+        variant="tabs"
+        tabs={renderTabs()}
         actions={
           <div className="flex gap-2">
             <Tooltip content="One-time Income">
@@ -449,7 +471,7 @@ const IncomePage: React.FC = () => {
                   SourceName: '',
                   Category: '',
                   PaymentMethodID: paymentMethods[0]?.value || '',
-                  Amount: '',
+                  Amount: '0',
                   Date: format(new Date(), 'yyyy-MM-dd')
                 });
                 setIsOneTimeModalOpen(true);
@@ -469,8 +491,7 @@ const IncomePage: React.FC = () => {
         }
       />
       <PageWrapper>
-        <div className="flex flex-col gap-6 py-6 px-[100px]">
-          {renderTabs()}
+        <div className="flex flex-col gap-6 pt-6 px-[100px]">
           <div className="flex-1">
             {activeTab === 'to-check' && (
               <div className="space-y-4">
@@ -777,6 +798,8 @@ const IncomePage: React.FC = () => {
             step={0.01}
             value={String(confirmData.amount)}
             onChange={e => setConfirmData(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
+            onIncrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) + 0.01 }))}
+            onDecrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) - 0.01 }))}
           />
           <Input
             label="Date"
@@ -850,6 +873,8 @@ const IncomePage: React.FC = () => {
               step={0.01}
               value={oneTimeIncome.Amount}
               onChange={e => setOneTimeIncome(prev => ({ ...prev, Amount: e.target.value }))}
+              onIncrement={() => handleStepperChange(setOneTimeIncome, 'Amount', true, 0.01)}
+              onDecrement={() => handleStepperChange(setOneTimeIncome, 'Amount', false, 0.01)}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -922,6 +947,8 @@ const IncomePage: React.FC = () => {
               max={10000000}
               value={newSchedule.ExpectedAmount}
               onChange={e => setNewSchedule(prev => ({ ...prev, ExpectedAmount: e.target.value }))}
+              onIncrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', true, 0.01)}
+              onDecrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', false, 0.01)}
             />
           </div>
           <Combobox
@@ -961,6 +988,8 @@ const IncomePage: React.FC = () => {
               <StepperInput
                 value={String(newSchedule.LookaheadDays)}
                 onChange={e => setNewSchedule(prev => ({ ...prev, LookaheadDays: parseInt(e.target.value) || 0 }))}
+                onIncrement={() => setNewSchedule(prev => ({ ...prev, LookaheadDays: (prev.LookaheadDays || 0) + 1 }))}
+                onDecrement={() => setNewSchedule(prev => ({ ...prev, LookaheadDays: Math.max(1, (prev.LookaheadDays || 0) - 1) }))}
                 min={1}
                 max={1000}
               />

@@ -22,7 +22,7 @@ function normalizeDateString(date: string): string {
 /* ==================== Logic ==================== */
 
 export const incomeLogic = {
-  processSchedules: async (createForPastPeriod?: boolean) => {
+  processSchedules: async () => {
     const schedules = await incomeCommitments.getSchedules();
     const today = startOfDay(new Date());
 
@@ -60,9 +60,6 @@ export const incomeLogic = {
         );
         
         let rangeStartDate = subMonths(lastKnownDate, 3); // Look back 3 months
-        if (createForPastPeriod) {
-            rangeStartDate = subMonths(startOfToday(), 1);
-        }
         
         if (isBefore(rangeStartDate, creationDate)) {
           rangeStartDate = creationDate;

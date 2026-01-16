@@ -1,4 +1,6 @@
 import { db } from '../utils/db';
+import { calculateOccurrences } from './incomeScheduling';
+import { format, startOfToday, subMonths } from 'date-fns';
 
 /* ==================== Types ==================== */
 
@@ -228,7 +230,7 @@ export const incomeCommitments = {
         )
       : null;
 
-    return await db.execute(
+    const result = await db.execute(
       `
       INSERT INTO IncomeSchedules (
         IncomeSourceID,
@@ -257,6 +259,27 @@ export const incomeCommitments = {
         data.LookaheadDays
       ]
     );
+
+    const newScheduleId = result.lastInsertId;
+
+    if (data.CreateForPastPeriod) {
+      const schedule = await db.queryOne<IncomeSchedule>(
+        `SELECT * FROM IncomeSchedules WHERE IncomeScheduleID = ?`,
+        [newScheduleId]
+      );
+      if (schedule) {
+        const occurrences = calculateOccurrences(schedule, subMonths(startOfToday(), 1), startOfToday());
+        if (occurrences.length > 0) {
+          await incomeCommitments.createPendingIncome({
+            IncomeScheduleID: newScheduleId,
+            PlannedDate: format(occurrences[0], 'yyyy-MM-dd'),
+            Amount: schedule.ExpectedAmount
+          });
+        }
+      }
+    }
+
+    return result;
   },
 
   updateSchedule: async (id: number, data: any) => {
