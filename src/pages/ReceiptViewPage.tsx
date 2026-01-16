@@ -19,7 +19,10 @@ import {
   Link as LinkIcon,
   Trash2,
   ArrowLeft,
-  Info
+  Info,
+  Store,
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import {generateReceiptsPdf} from '../utils/pdfGenerator';
 import {cn} from '../utils/cn';
@@ -171,6 +174,18 @@ const ReceiptViewPage: React.FC = () => {
     }
     return {debtors: Object.values(summary), ownShare};
   }, [lineItems, receipt, receiptSplits, debtEnabled, totalAmount]);
+
+  const debtStatus = useMemo(() => {
+    if (!debtEnabled || !debtSummary.debtors.length) return null;
+    const totalDebtors = debtSummary.debtors.length;
+    const paidDebtors = debtSummary.debtors.filter(d =>
+      (payments || []).some(p => p.DebtorID === d.debtorId)
+    ).length;
+
+    if (paidDebtors === 0) return { label: 'Not Paid to You', color: 'red' };
+    if (paidDebtors === totalDebtors) return { label: 'Fully Paid to You', color: 'green' };
+    return { label: `${paidDebtors}/${totalDebtors} Paid to You`, color: 'yellow' };
+  }, [debtSummary, payments, debtEnabled]);
 
   const totalItems = lineItems?.length || 0;
   const totalQuantity = (lineItems || []).reduce((total, item) => total + item.LineQuantity, 0);
@@ -390,7 +405,7 @@ const ReceiptViewPage: React.FC = () => {
               <Card>
                 <div className="p-6">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm select-none">
+                    <table className="w-full text-sm select-none border-collapse">
                       <thead className="text-left text-gray-500">
                       <tr>
                         <th className="p-2">Product</th>
@@ -401,7 +416,7 @@ const ReceiptViewPage: React.FC = () => {
                           <th className="p-2 w-40 text-right">Debtor</th>}
                       </tr>
                       </thead>
-                      <tbody className="divide-y dark:divide-gray-800">
+                      <tbody className="divide-y dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800">
                       {(lineItems || []).map((item) => {
                         const isDebtorUnpaid = item.DebtorID && !(payments || []).some(p => p.DebtorID === item.DebtorID);
                         return (
@@ -436,14 +451,25 @@ const ReceiptViewPage: React.FC = () => {
                     </table>
                   </div>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 rounded-b-xl">
+                <div className="px-6 py-4 rounded-b-xl">
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-4 text-gray-500">
                       <span className="text-sm">Subtotal</span>
                       <span className="font-medium">€{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center gap-4 text-gray-500">
-                      <span className="text-sm">Discount ({receipt.Discount || 0}%)</span>
+                      {receipt.Discount > 0 && lineItems?.some(i => i.IsExcludedFromDiscount) ? (
+                        <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
+                          <div className="flex items-center gap-1 cursor-help">
+                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            <span className="text-sm underline decoration-dotted">
+                              Discount ({receipt.Discount || 0}%)
+                            </span>
+                          </div>
+                        </Tooltip>
+                      ) : (
+                        <span className="text-sm">Discount ({receipt.Discount || 0}%)</span>
+                      )}
                       <span className="font-medium">-€{(subtotal - totalAmount).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center gap-4 text-lg font-bold">
@@ -464,105 +490,178 @@ const ReceiptViewPage: React.FC = () => {
                     <p className="text-sm text-gray-500">Total Amount</p>
                     <p className="text-2xl font-bold">€{totalAmount.toFixed(2)}</p>
                   </div>
-                  <Tooltip content={receipt.Status === 'paid' ? 'This expense has been paid for.' : `Total amount is owed to ${receipt.OwedToDebtorName}.`}>
-                    <span
-                      className={cn(
-                        'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
-                        receipt.Status === 'paid'
-                          ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700'
-                          : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
-                      )}
-                    >
-                      {receipt.Status === 'paid' ? 'Paid' : 'Unpaid'}
-                    </span>
-                  </Tooltip>
+                  <div className="flex flex-col items-end gap-2">
+                    <Tooltip content={receipt.Status === 'paid' ? 'This expense has been paid to the vendor.' : `Total amount is owed to ${receipt.OwedToDebtorName}.`}>
+                      <span
+                        className={cn(
+                          'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
+                          receipt.Status === 'paid'
+                            ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700'
+                            : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
+                        )}
+                      >
+                        {receipt.Status === 'paid' ? 'Paid to Vendor' : 'Unpaid'}
+                      </span>
+                    </Tooltip>
+                    {debtStatus && (
+                      <Tooltip content="This indicates the status of debts owed to you by others for this receipt.">
+                        <span
+                          className={cn(
+                            'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border cursor-help',
+                            debtStatus.color === 'green' && 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700',
+                            debtStatus.color === 'yellow' && 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-100 dark:border-yellow-700',
+                            debtStatus.color === 'red' && 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
+                          )}
+                        >
+                          {debtStatus.label}
+                        </span>
+                      </Tooltip>
+                    )}
+                  </div>
                 </div>
-                <div className="mt-6 space-y-4">
+                <div className="mt-6 flex flex-col gap-4">
+                  {receipt.StoreName && (
+                    <Tooltip content="The store where this expense was incurred">
+                      <div className="flex items-center gap-3 cursor-help">
+                        <Store className="h-5 w-5 text-gray-400"/>
+                        <span className="text-sm">{receipt.StoreName}</span>
+                      </div>
+                    </Tooltip>
+                  )}
+                  {receipt.ReceiptDate && (
+                    <Tooltip content="The date this expense was incurred">
+                      <div className="flex items-center gap-3 cursor-help">
+                        <Calendar className="h-5 w-5 text-gray-400"/>
+                        <span className="text-sm">{format(parseISO(receipt.ReceiptDate), 'MMM d, yyyy')}</span>
+                      </div>
+                    </Tooltip>
+                  )}
                   {paymentMethodsEnabled && (
-                    <div className="flex items-center gap-3">
-                      <CreditCard className="h-5 w-5 text-gray-400"/>
-                      <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
-                    </div>
+                    <Tooltip content="The payment method used for this expense">
+                      <div className="flex items-center gap-3 cursor-help">
+                        <CreditCard className="h-5 w-5 text-gray-400"/>
+                        <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
+                      </div>
+                    </Tooltip>
                   )}
                   {!receipt.IsNonItemised && (
                     <>
-                      <div className="flex items-center gap-3">
-                        <Tag className="h-5 w-5 text-gray-400"/>
-                        <span className="text-sm">{totalItems} Unique Items</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <ShoppingCart className="h-5 w-5 text-gray-400"/>
-                        <span className="text-sm">{totalQuantity} Total Quantity</span>
-                      </div>
+                      <Tooltip content="Number of unique items in this receipt">
+                        <div className="flex items-center gap-3 cursor-help">
+                          <Tag className="h-5 w-5 text-gray-400"/>
+                          <span className="text-sm">{totalItems} Unique Items</span>
+                        </div>
+                      </Tooltip>
+                      <Tooltip content="Total quantity of all items purchased">
+                        <div className="flex items-center gap-3 cursor-help">
+                          <ShoppingCart className="h-5 w-5 text-gray-400"/>
+                          <span className="text-sm">{totalQuantity} Total Quantity</span>
+                        </div>
+                      </Tooltip>
                     </>
                   )}
                 </div>
               </div>
             </Card>
 
-            {debtEnabled && receipt.SplitType !== 'none' && (debtSummary.debtors.length > 0 || debtSummary.ownShare) && (
+            {debtEnabled && (
               <div>
                 <Divider text="Debt Breakdown"/>
                 <div className="space-y-2 mt-4">
-                  {debtSummary.debtors.map((debtor) => {
-                    const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
-                    const isPaid = !!payment;
+                  {(debtSummary.debtors.length > 0 || debtSummary.ownShare) ? (
+                    <>
+                      {debtSummary.debtors.map((debtor) => {
+                        const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
+                        const isPaid = !!payment;
 
-                    return (
-                      <Card
-                        key={debtor.debtorId}
-                        className="p-4 cursor-pointer transition-all duration-200"
-                        onClick={() => handleSettleClick(debtor)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <Link to={`/entities/${debtor.debtorId}`}
-                                className="font-medium hover:underline flex items-center gap-1.5 group"
-                                onClick={(e) => e.stopPropagation()}>
-                            <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
-                            <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
-                          </Link>
-                          <div className="flex items-center">
-                            {isPaid ? (
-                              <Tooltip content={`Paid on ${payment.PaidDate}`}>
-                                <CheckCircle className="h-5 w-5 text-green"/>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip content="Unpaid">
-                                <AlertCircle className="h-5 w-5 text-red"/>
-                              </Tooltip>
-                            )}
+                        return (
+                          <Card
+                            key={debtor.debtorId}
+                            className="p-4 cursor-pointer transition-all duration-200"
+                            onClick={() => handleSettleClick(debtor)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <Link to={`/entities/${debtor.debtorId}`}
+                                    className="font-medium hover:underline flex items-center gap-1.5 group"
+                                    onClick={(e) => e.stopPropagation()}>
+                                <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
+                                <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
+                              </Link>
+                              <div className="flex items-center">
+                                {isPaid ? (
+                                  <Tooltip content={`Paid on ${payment.PaidDate}`}>
+                                    <CheckCircle className="h-5 w-5 text-green"/>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip content="Unpaid">
+                                    <AlertCircle className="h-5 w-5 text-red"/>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-baseline mt-1">
+                              <p className={cn("font-bold truncate", isPaid ? "text-green" : "text-red")}
+                                 style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                                €{debtor.amount.toFixed(2)}
+                              </p>
+                              <div className="text-right flex-shrink-0 pl-2">
+                                {receipt.SplitType === 'total_split' &&
+                                  <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
+                                {receipt.SplitType === 'line_item' && !receipt.IsNonItemised &&
+                                  <p className="text-sm text-gray-500">{debtor.itemCount} / {totalItems} items</p>}
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                      {!!debtSummary.ownShare && (
+                        <Card className="p-4">
+                          <div className="flex justify-between items-start">
+                            <p className="font-medium text-gray-900 dark:text-gray-100">Own Share</p>
+                            <User className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
+                          </div>
+                          <div className="flex justify-between items-baseline mt-1">
+                            <p className="font-bold text-blue-700 dark:text-blue-300 truncate"
+                               style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                              €{debtSummary.ownShare.amount.toFixed(2)}
+                            </p>
+                            <div className="text-right flex-shrink-0 pl-2">
+                              <p className="text-sm text-gray-500">
+                                {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      )}
+                    </>
+                  ) : (
+                    <Card className="overflow-hidden">
+                      <div className="relative p-6">
+                        <div className="blur-sm space-y-3">
+                          <div className="h-24 bg-gray-100 dark:bg-gray-900 rounded-xl w-full border border-gray-200 dark:border-gray-800 flex flex-col p-4 justify-between">
+                            <div className="flex justify-between items-start">
+                              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-800 rounded-full"></div>
+                            </div>
+                            <div className="flex justify-between items-baseline">
+                              <div className="h-8 w-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                              <div className="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                            </div>
+                          </div>
+                          <div className="h-24 bg-gray-100 dark:bg-gray-900 rounded-xl w-full border border-gray-200 dark:border-gray-800 flex flex-col p-4 justify-between">
+                            <div className="flex justify-between items-start">
+                              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-800 rounded-full"></div>
+                            </div>
+                            <div className="flex justify-between items-baseline">
+                              <div className="h-8 w-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                              <div className="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex justify-between items-baseline mt-1">
-                          <p className={cn("font-bold truncate", isPaid ? "text-green" : "text-red")}
-                             style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
-                            €{debtor.amount.toFixed(2)}
-                          </p>
-                          <div className="text-right flex-shrink-0 pl-2">
-                            {receipt.SplitType === 'total_split' &&
-                              <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
-                            {receipt.SplitType === 'line_item' && !receipt.IsNonItemised &&
-                              <p className="text-sm text-gray-500">{debtor.itemCount} / {totalItems} items</p>}
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                  {!!debtSummary.ownShare && (
-                    <Card className="p-4">
-                      <div className="flex justify-between items-start">
-                        <p className="font-medium text-gray-900 dark:text-gray-100">Own Share</p>
-                        <User className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
-                      </div>
-                      <div className="flex justify-between items-baseline mt-1">
-                        <p className="font-bold text-blue-700 dark:text-blue-300 truncate"
-                           style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
-                          €{debtSummary.ownShare.amount.toFixed(2)}
-                        </p>
-                        <div className="text-right flex-shrink-0 pl-2">
-                          <p className="text-sm text-gray-500">
-                            {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
-                          </p>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-black/40 backdrop-blur-sm">
+                          <Info className="h-8 w-8 text-gray-400 dark:text-gray-500"/>
+                          <p className="mt-2 text-sm text-gray-500 font-medium">No debts owed to you for this receipt.</p>
                         </div>
                       </div>
                     </Card>
