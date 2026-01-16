@@ -9,6 +9,9 @@ export interface IncomeSchedule {
   PaymentMethodID: number;
   ExpectedAmount: number | null;
   RecurrenceRule: string;
+  DayOfMonth: number | null;
+  DayOfWeek: number | null;
+  MonthOfYear: number | null;
   RequiresConfirmation: boolean;
   LookaheadDays: number | null;
   IsActive: boolean;
@@ -193,10 +196,13 @@ export const incomeCommitments = {
         PaymentMethodID,
         ExpectedAmount,
         RecurrenceRule,
+        DayOfMonth,
+        DayOfWeek,
+        MonthOfYear,
         RequiresConfirmation,
         LookaheadDays,
         IsActive
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
     `,
       [
         assertDefined(source?.IncomeSourceID, 'Income source not found'),
@@ -204,6 +210,9 @@ export const incomeCommitments = {
         data.PaymentMethodID,
         data.ExpectedAmount,
         data.RecurrenceRule,
+        data.DayOfMonth,
+        data.DayOfWeek,
+        data.MonthOfYear,
         data.RequiresConfirmation ? 1 : 0,
         data.LookaheadDays
       ]
@@ -232,6 +241,9 @@ export const incomeCommitments = {
         PaymentMethodID = ?,
         ExpectedAmount = ?,
         RecurrenceRule = ?,
+        DayOfMonth = ?,
+        DayOfWeek = ?,
+        MonthOfYear = ?,
         RequiresConfirmation = ?,
         LookaheadDays = ?,
         IsActive = ?
@@ -243,6 +255,9 @@ export const incomeCommitments = {
         data.PaymentMethodID,
         data.ExpectedAmount,
         data.RecurrenceRule,
+        data.DayOfMonth,
+        data.DayOfWeek,
+        data.MonthOfYear,
         data.RequiresConfirmation ? 1 : 0,
         data.LookaheadDays,
         data.IsActive ? 1 : 0,

@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS IncomeSchedules (
     IsActive INTEGER NOT NULL DEFAULT 1,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    DayOfMonth INTEGER,
+    DayOfWeek INTEGER,
+    MonthOfYear INTEGER,
     FOREIGN KEY (IncomeSourceID) REFERENCES IncomeSources (IncomeSourceID),
     FOREIGN KEY (IncomeCategoryID) REFERENCES IncomeCategories (IncomeCategoryID),
     FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID)

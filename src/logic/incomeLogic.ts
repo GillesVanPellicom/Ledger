@@ -4,7 +4,8 @@ import {
   startOfDay,
   parseISO,
   isAfter,
-  subMonths
+  subMonths,
+  isBefore
 } from 'date-fns';
 
 import { incomeCommitments } from './incomeCommitments';
@@ -15,15 +16,6 @@ import { db } from '../utils/db';
 
 function normalizeDateString(date: string): string {
   return format(startOfDay(parseISO(date)), 'yyyy-MM-dd');
-}
-
-function lookbackMonthsForRule(rule: string): number {
-  if (rule.includes('FREQ=DAILY')) return 1;
-  if (rule.includes('FREQ=WEEKLY')) return 2;
-  if (rule.includes('FREQ=MONTHLY')) return 3;
-  if (rule.includes('FREQ=QUARTERLY')) return 6;
-  if (rule.includes('FREQ=YEARLY')) return 13;
-  return 3; // safe default
 }
 
 /* ==================== Logic ==================== */
@@ -65,12 +57,11 @@ export const incomeLogic = {
           },
           creationDate
         );
-
-        const lookbackMonths = lookbackMonthsForRule(
-          schedule.RecurrenceRule
-        );
-
-        const rangeStartDate = subMonths(lastKnownDate, lookbackMonths);
+        
+        let rangeStartDate = subMonths(lastKnownDate, 3); // Look back 3 months
+        if (isBefore(rangeStartDate, creationDate)) {
+          rangeStartDate = creationDate;
+        }
 
         const lookaheadDate = addDays(
           today,
@@ -80,8 +71,7 @@ export const incomeLogic = {
         /* -------- 3. Calculate occurrences -------- */
 
         const occurrences = calculateOccurrences(
-          creationDate,
-          schedule.RecurrenceRule,
+          schedule,
           rangeStartDate,
           lookaheadDate
         ).slice(0, 500); // hard cap per schedule

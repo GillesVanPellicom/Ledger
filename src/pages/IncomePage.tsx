@@ -15,7 +15,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
 import { incomeCommitments } from '../logic/incomeCommitments';
 import { incomeLogic } from '../logic/incomeLogic';
-import { humanizeRecurrenceRule } from '../logic/incomeScheduling';
+import { humanizeRecurrenceRule, parseRecurrenceRule } from '../logic/incomeScheduling';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -31,6 +31,18 @@ import { cn } from '../utils/cn';
 import { useErrorStore } from '../store/useErrorStore';
 import { db } from '../utils/db';
 import Tooltip from '../components/ui/Tooltip';
+
+const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+const dayOfWeekOptions = [
+  { value: '1', label: 'Monday' }, { value: '2', label: 'Tuesday' }, { value: '3', label: 'Wednesday' },
+  { value: '4', label: 'Thursday' }, { value: '5', label: 'Friday' }, { value: '6', label: 'Saturday' }, { value: '0', label: 'Sunday' }
+];
+const monthOfYearOptions = [
+  { value: '0', label: 'January' }, { value: '1', label: 'February' }, { value: '2', label: 'March' },
+  { value: '3', label: 'April' }, { value: '4', label: 'May' }, { value: '5', label: 'June' },
+  { value: '6', label: 'July' }, { value: '7', label: 'August' }, { value: '8', label: 'September' },
+  { value: '9', label: 'October' }, { value: '10', label: 'November' }, { value: '11', label: 'December' }
+];
 
 const IncomePage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -61,6 +73,9 @@ const IncomePage: React.FC = () => {
     PaymentMethodID: '',
     ExpectedAmount: '',
     RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
+    DayOfMonth: '1',
+    DayOfWeek: '1',
+    MonthOfYear: '0',
     RequiresConfirmation: true,
     LookaheadDays: 7,
     IsActive: true
@@ -74,6 +89,9 @@ const IncomePage: React.FC = () => {
         PaymentMethodID: String(editingSchedule.PaymentMethodID),
         ExpectedAmount: String(editingSchedule.ExpectedAmount || ''),
         RecurrenceRule: editingSchedule.RecurrenceRule || 'FREQ=MONTHLY;INTERVAL=1',
+        DayOfMonth: String(editingSchedule.DayOfMonth || '1'),
+        DayOfWeek: String(editingSchedule.DayOfWeek || '1'),
+        MonthOfYear: String(editingSchedule.MonthOfYear || '0'),
         RequiresConfirmation: !!editingSchedule.RequiresConfirmation,
         LookaheadDays: editingSchedule.LookaheadDays || 7,
         IsActive: !!editingSchedule.IsActive
@@ -85,6 +103,9 @@ const IncomePage: React.FC = () => {
         PaymentMethodID: paymentMethods[0]?.value || '',
         ExpectedAmount: '',
         RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
+        DayOfMonth: '1',
+        DayOfWeek: '1',
+        MonthOfYear: '0',
         RequiresConfirmation: true,
         LookaheadDays: 7,
         IsActive: true
@@ -318,16 +339,76 @@ const IncomePage: React.FC = () => {
   };
 
   const handleSaveSchedule = () => {
+    if (newSchedule.MonthOfYear === '1' && parseInt(newSchedule.DayOfMonth) > 28) {
+      showError(new Error("February cannot have more than 28 days."));
+      return;
+    }
+
     const data = {
       ...newSchedule,
       ExpectedAmount: parseFloat(String(newSchedule.ExpectedAmount)) || null,
       LookaheadDays: parseInt(String(newSchedule.LookaheadDays)) || 0,
-      PaymentMethodID: Number(newSchedule.PaymentMethodID) || null
+      PaymentMethodID: Number(newSchedule.PaymentMethodID) || null,
+      DayOfMonth: Number(newSchedule.DayOfMonth) || null,
+      DayOfWeek: Number(newSchedule.DayOfWeek) || null,
+      MonthOfYear: Number(newSchedule.MonthOfYear) || null,
     };
     if (editingSchedule) {
       updateScheduleMutation.mutate({ id: editingSchedule.IncomeScheduleID, data });
     } else {
       createScheduleMutation.mutate(data);
+    }
+  };
+
+  const renderRecurrenceDetails = () => {
+    const { type } = parseRecurrenceRule(newSchedule.RecurrenceRule);
+
+    switch (type) {
+      case 'MONTHLY':
+        return (
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Month</label>
+            <Select
+              options={dayOfMonthOptions}
+              value={newSchedule.DayOfMonth}
+              onChange={e => setNewSchedule(prev => ({ ...prev, DayOfMonth: e.target.value }))}
+            />
+          </div>
+        );
+      case 'WEEKLY':
+        return (
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Week</label>
+            <Select
+              options={dayOfWeekOptions}
+              value={newSchedule.DayOfWeek}
+              onChange={e => setNewSchedule(prev => ({ ...prev, DayOfWeek: e.target.value }))}
+            />
+          </div>
+        );
+      case 'YEARLY':
+        return (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
+              <Select
+                options={monthOfYearOptions}
+                value={newSchedule.MonthOfYear}
+                onChange={e => setNewSchedule(prev => ({ ...prev, MonthOfYear: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day</label>
+              <Select
+                options={dayOfMonthOptions.slice(0, newSchedule.MonthOfYear === '1' ? 28 : 31)}
+                value={newSchedule.DayOfMonth}
+                onChange={e => setNewSchedule(prev => ({ ...prev, DayOfMonth: e.target.value }))}
+              />
+            </div>
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -393,7 +474,7 @@ const IncomePage: React.FC = () => {
                             size="sm"
                             onClick={() => {
                               setSelectedPending(row);
-                              setConfirmData({ amount: row.Amount || 0, date: row.PlannedDate });
+                              setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd') });
                               setIsConfirmModalOpen(true);
                             }}
                           >
@@ -446,7 +527,7 @@ const IncomePage: React.FC = () => {
                     {
                       header: 'Recurrence',
                       accessor: 'RecurrenceRule',
-                      render: (row) => humanizeRecurrenceRule(row.RecurrenceRule)
+                      render: (row) => humanizeRecurrenceRule(row)
                     },
                     {
                       header: 'Status',
@@ -812,7 +893,9 @@ const IncomePage: React.FC = () => {
                 onChange={e => setNewSchedule(prev => ({ ...prev, RecurrenceRule: e.target.value }))}
               />
             </div>
-            <div className="flex flex-col">
+            {renderRecurrenceDetails()}
+          </div>
+           <div className="flex flex-col">
               <div className="flex items-center gap-1 mb-1">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lookahead Days</label>
                 <Tooltip content="How many days in advance to generate a 'To Check' item.">
@@ -826,7 +909,6 @@ const IncomePage: React.FC = () => {
                 max={1000}
               />
             </div>
-          </div>
           <div className="flex items-start gap-3 pt-2">
             <Checkbox
               id="requiresConfirmation"

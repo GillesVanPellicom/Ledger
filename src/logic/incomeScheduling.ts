@@ -5,21 +5,17 @@ import {
   addYears,
   startOfDay,
   isBefore,
-  isAfter,
-  parseISO,
   isSameDay,
+  parseISO,
+  set,
+  getDay,
   getDaysInMonth,
-  set
 } from 'date-fns';
+import { IncomeSchedule } from './incomeCommitments';
 
 /* ==================== Types ==================== */
 
-export type RecurrenceType =
-  | 'DAILY'
-  | 'WEEKLY'
-  | 'MONTHLY'
-  | 'QUARTERLY'
-  | 'YEARLY';
+export type RecurrenceType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
 export interface RecurrenceRule {
   type: RecurrenceType;
@@ -28,13 +24,7 @@ export interface RecurrenceRule {
 
 /* ==================== Rule parsing ==================== */
 
-const VALID_TYPES: RecurrenceType[] = [
-  'DAILY',
-  'WEEKLY',
-  'MONTHLY',
-  'QUARTERLY',
-  'YEARLY'
-];
+const VALID_TYPES: RecurrenceType[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'];
 
 export function parseRecurrenceRule(ruleStr: string): RecurrenceRule {
   const parts = ruleStr.split(';');
@@ -46,119 +36,111 @@ export function parseRecurrenceRule(ruleStr: string): RecurrenceRule {
     throw new Error(`Invalid recurrence type: ${freq}`);
   }
 
-  const interval = Math.max(1, parseInt(intervalRaw ?? '1', 10));
+  const interval = Math.max(1, parseInt(intervalRaw ?? '1', 10) || 1);
 
-  return {
-    type: freq as RecurrenceType,
-    interval
-  };
+  return { type: freq as RecurrenceType, interval };
 }
 
 export function formatRecurrenceRule(rule: RecurrenceRule): string {
   return `FREQ=${rule.type};INTERVAL=${rule.interval}`;
 }
 
-export function humanizeRecurrenceRule(ruleStr: string): string {
-  const { type, interval } = parseRecurrenceRule(ruleStr);
+/* ==================== Humanization ==================== */
 
-  if (interval === 1) {
-    return type.charAt(0) + type.slice(1).toLowerCase();
-  }
+const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  return `Every ${interval} ${type.toLowerCase()}${interval > 1 ? 's' : ''}`;
-}
+const plural = (n: number) => (n > 1 ? 's' : '');
+const nth = (d: number) => (d > 3 && d < 21 ? `${d}th` : `${d % 10 === 1 ? d + 'st' : d % 10 === 2 ? d + 'nd' : d % 10 === 3 ? d + 'rd' : d + 'th'}`);
 
-/* ==================== Date helpers ==================== */
+export function humanizeRecurrenceRule(schedule: IncomeSchedule): string {
+  const { type, interval } = parseRecurrenceRule(schedule.RecurrenceRule);
 
-/**
- * Clamp a date to the anchor day inside the target month.
- * Prevents overflow like Feb 31 → Mar 3.
- */
-function applyAnchorDay(base: Date, anchorDay: number): Date {
-  const daysInMonth = getDaysInMonth(base);
-  return set(base, { date: Math.min(anchorDay, daysInMonth) });
-}
-
-function monthsForRule(rule: RecurrenceRule): number | null {
-  switch (rule.type) {
-    case 'MONTHLY':
-      return rule.interval;
-    case 'QUARTERLY':
-      return rule.interval * 3;
-    default:
-      return null;
-  }
-}
-
-/* ==================== Recurrence stepping ==================== */
-
-function nextOccurrence(
-  current: Date,
-  anchor: Date,
-  rule: RecurrenceRule
-): Date {
-  const anchorDay = anchor.getDate();
-  const anchorMonth = anchor.getMonth();
-
-  // Month-based rules (MONTHLY / QUARTERLY)
-  const monthStep = monthsForRule(rule);
-  if (monthStep !== null) {
-    const base = addMonths(current, monthStep);
-    return startOfDay(applyAnchorDay(base, anchorDay));
-  }
-
-  switch (rule.type) {
+  switch (type) {
     case 'DAILY':
-      return startOfDay(addDays(current, rule.interval));
-
-    case 'WEEKLY':
-      return startOfDay(addWeeks(current, rule.interval));
-
+      return interval === 1 ? 'Daily' : `Every ${interval} day${plural(interval)}`;
+    case 'WEEKLY': {
+      const dayName = dayOfWeekNames[schedule.DayOfWeek ?? 0];
+      return interval === 1 ? `Weekly on ${dayName}` : `Every ${interval} week${plural(interval)} on ${dayName}`;
+    }
+    case 'MONTHLY': {
+      const day = schedule.DayOfMonth ?? 1;
+      return interval === 1 ? `Monthly on the ${nth(day)}` : `Every ${interval} month${plural(interval)} on the ${nth(day)}`;
+    }
+    case 'QUARTERLY':
+      return interval === 1 ? 'Quarterly' : `Every ${interval} quarter${plural(interval)}`;
     case 'YEARLY': {
-      const base = addYears(current, rule.interval);
-      const monthAligned = set(base, { month: anchorMonth });
-      return startOfDay(applyAnchorDay(monthAligned, anchorDay));
+      const day = schedule.DayOfMonth ?? 1;
+      const month = monthNames[schedule.MonthOfYear ?? 0];
+      return interval === 1 ? `Annually on ${month} ${nth(day)}` : `Every ${interval} year${plural(interval)} on ${month} ${nth(day)}`;
     }
-
-    default: {
-      // Exhaustiveness guard
-      const _never: never = rule.type;
-      throw new Error(`Unsupported recurrence type: ${_never}`);
-    }
+    default:
+      return 'Invalid recurrence';
   }
 }
 
 /* ==================== Occurrence calculation ==================== */
 
-/**
- * Calculates all occurrences of a schedule between a start and end date.
- */
+/** Safely set day of month */
+function safeSetDay(date: Date, day: number) {
+  return set(date, { date: Math.min(day, getDaysInMonth(date)) });
+}
+
+/** Advance a date according to the rule */
+function advanceIterator(iterator: Date, rule: RecurrenceRule, schedule: IncomeSchedule): Date {
+  switch (rule.type) {
+    case 'DAILY':
+      return startOfDay(addDays(iterator, rule.interval));
+    case 'WEEKLY':
+      return startOfDay(addWeeks(iterator, rule.interval));
+    case 'MONTHLY':
+      return safeSetDay(addMonths(iterator, rule.interval), schedule.DayOfMonth ?? 1);
+    case 'QUARTERLY':
+      return safeSetDay(addMonths(iterator, rule.interval * 3), schedule.DayOfMonth ?? 1);
+    case 'YEARLY':
+      const yMonth = schedule.MonthOfYear ?? 0;
+      return safeSetDay(set(addYears(iterator, rule.interval), { month: yMonth }), schedule.DayOfMonth ?? 1);
+  }
+}
+
+/** Calculate all occurrences in a range */
 export function calculateOccurrences(
-  scheduleStartDate: Date | string,
-  ruleStr: string,
+  schedule: IncomeSchedule,
   rangeStartDate: Date,
   rangeEndDate: Date
 ): Date[] {
-  const rule = parseRecurrenceRule(ruleStr);
-
-  const anchor = startOfDay(
-    typeof scheduleStartDate === 'string'
-      ? parseISO(scheduleStartDate)
-      : scheduleStartDate
-  );
-
+  const rule = parseRecurrenceRule(schedule.RecurrenceRule);
   const occurrences: Date[] = [];
-  let current = anchor;
 
-  // Fast-forward to first occurrence >= rangeStartDate
-  while (isBefore(current, rangeStartDate)) {
-    current = nextOccurrence(current, anchor, rule);
+  let iterator = startOfDay(parseISO(schedule.CreationTimestamp));
+
+  // Adjust first occurrence based on rule type
+  switch (rule.type) {
+    case 'YEARLY':
+      iterator = safeSetDay(set(iterator, { month: schedule.MonthOfYear ?? 0 }), schedule.DayOfMonth ?? 1);
+      break;
+    case 'MONTHLY':
+    case 'QUARTERLY':
+      iterator = safeSetDay(iterator, schedule.DayOfMonth ?? 1);
+      break;
+    case 'WEEKLY': {
+      const targetDay = schedule.DayOfWeek ?? 0;
+      const currentDay = getDay(iterator);
+      const offset = (targetDay - currentDay + 7) % 7;
+      iterator = addDays(iterator, offset);
+      break;
+    }
   }
 
-  // Collect occurrences in range
-  while (!isAfter(current, rangeEndDate)) {
-    occurrences.push(current);
-    current = nextOccurrence(current, anchor, rule);
+  // Fast-forward to rangeStartDate
+  while (isBefore(iterator, rangeStartDate)) {
+    iterator = advanceIterator(iterator, rule, schedule);
+  }
+
+  // Collect occurrences within the range
+  while (isBefore(iterator, rangeEndDate) || isSameDay(iterator, rangeEndDate)) {
+    occurrences.push(iterator);
+    iterator = advanceIterator(iterator, rule, schedule);
   }
 
   return occurrences;
