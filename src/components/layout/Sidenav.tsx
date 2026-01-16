@@ -75,6 +75,7 @@ const Sidenav: React.FC = () => {
               to={item.path}
               className={cn(
                 "flex items-center h-10 px-2.5 rounded-lg transition-all duration-300 group overflow-hidden",
+                isSidenavCollapsed ? "justify-center gap-0" : "justify-start gap-3",
                 isActive
                   ? "bg-accent text-white shadow-md"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
@@ -84,7 +85,7 @@ const Sidenav: React.FC = () => {
               <item.icon className="h-5 w-5 shrink-0" />
               <span className={cn(
                 "font-medium truncate transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
-                isSidenavCollapsed ? "w-0 opacity-0 ml-0" : "w-40 opacity-100 ml-3"
+                isSidenavCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
               )}>
                 {item.label}
               </span>
@@ -97,14 +98,15 @@ const Sidenav: React.FC = () => {
         <button
           onClick={() => openSettingsModal()}
           className={cn(
-            "flex items-center h-10 px-2.5 w-full rounded-lg transition-all duration-300 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 overflow-hidden"
+            "flex items-center h-10 px-2.5 w-full rounded-lg transition-all duration-300 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 overflow-hidden",
+            isSidenavCollapsed ? "justify-center gap-0" : "justify-start gap-3"
           )}
           title="Settings"
         >
           <Settings className="h-5 w-5 shrink-0" />
           <span className={cn(
             "font-medium truncate transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
-            isSidenavCollapsed ? "w-0 opacity-0 ml-0" : "w-40 opacity-100 ml-3"
+            isSidenavCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
           )}>
             Settings
           </span>
