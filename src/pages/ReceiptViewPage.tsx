@@ -441,22 +441,22 @@ const ReceiptViewPage: React.FC = () => {
         }
       />
       <PageWrapper>
-        <div className="py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="py-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
           
           {/* Summary Card - Moved before Items List for mobile order */}
-          <div className="col-span-1 space-y-6 lg:col-start-3">
+          <div className="col-span-1 space-y-6 xl:col-start-3">
             <Card>
               <div className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-6">
                   
                   {/* Total Amount */}
-                  <div className="sm:col-start-1 sm:row-start-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1">
+                  <div className="sm:col-start-1 sm:row-start-1 xl:col-start-1 xl:row-start-1 2xl:col-start-1 2xl:row-start-1">
                     <p className="text-sm text-gray-500">Total Amount</p>
                     <p className="text-2xl font-bold">€{displayTotalAmount.toFixed(2)}</p>
                   </div>
 
                   {/* Badges */}
-                  <div className="flex flex-col items-start sm:items-end lg:items-start xl:items-end gap-2 sm:col-start-2 sm:row-start-1 lg:col-start-1 lg:row-start-2 xl:col-start-2 xl:row-start-1">
+                  <div className="flex flex-col items-start sm:items-end xl:items-start 2xl:items-end gap-2 sm:col-start-2 sm:row-start-1 xl:col-start-1 xl:row-start-2 2xl:col-start-2 2xl:row-start-1">
                     <Tooltip content={receipt?.Status === 'paid' ? 'This expense has been paid to the vendor.' : `Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
                       <span
                         className={cn(
@@ -487,14 +487,14 @@ const ReceiptViewPage: React.FC = () => {
 
                   {/* Note */}
                   {receipt?.ReceiptNote && (
-                    <div className="sm:col-start-2 sm:row-start-2 lg:col-start-1 lg:row-start-3 xl:col-start-2 xl:row-start-2 sm:text-right lg:text-left xl:text-right">
+                    <div className="sm:col-start-2 sm:row-start-2 xl:col-start-1 xl:row-start-3 2xl:col-start-2 2xl:row-start-2 sm:text-right xl:text-left 2xl:text-right">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Note</p>
                       <p className="text-base text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">{receipt.ReceiptNote}</p>
                     </div>
                   )}
 
                   {/* Rest (Attributes) */}
-                  <div className="flex flex-col gap-4 sm:col-start-1 sm:row-start-2 lg:col-start-1 lg:row-start-4 xl:col-start-1 xl:row-start-2">
+                  <div className="flex flex-col gap-4 sm:col-start-1 sm:row-start-2 xl:col-start-1 xl:row-start-4 2xl:col-start-1 2xl:row-start-2">
                     {receipt?.StoreName && (
                       <Tooltip content="The vendor where this expense was incurred">
                         <div className="flex items-center gap-3 cursor-help">
@@ -649,7 +649,7 @@ const ReceiptViewPage: React.FC = () => {
           </div>
 
           {/* Items List - Moved after Summary Card for mobile order, but positioned correctly on desktop */}
-          <div className="lg:col-span-2 space-y-6 lg:col-start-1 lg:row-start-1">
+          <div className="xl:col-span-2 space-y-6 xl:col-start-1 xl:row-start-1">
             {!!receipt.IsTentative && (
               <InfoCard
                 variant="info"
