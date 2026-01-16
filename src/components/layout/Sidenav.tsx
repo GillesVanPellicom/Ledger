@@ -42,10 +42,16 @@ const Sidenav: React.FC = () => {
     <aside
       className={cn(
         "h-full bg-gray-50 dark:bg-zinc-950 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out z-20",
-        isSidenavCollapsed ? "w-16" : "w-64"
+        isSidenavCollapsed ? "w-14" : "w-64"
       )}
     >
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-800">
+      <div 
+        className={cn(
+          "flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0",
+          isSidenavCollapsed ? "justify-center px-2" : "justify-between px-4"
+        )}
+        style={{ height: '86px' }}
+      >
         {!isSidenavCollapsed && (
           <span className="font-bold text-xl tracking-tight text-accent">
             Ledger
@@ -53,7 +59,7 @@ const Sidenav: React.FC = () => {
         )}
         <button
           onClick={toggleSidenav}
-          className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 transition-colors ml-auto"
+          className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 transition-colors"
         >
           {isSidenavCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>
@@ -67,14 +73,17 @@ const Sidenav: React.FC = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group",
+                "flex items-center gap-3 rounded-lg transition-all duration-200 group",
                 isActive
                   ? "bg-accent text-white shadow-md"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100",
+                isSidenavCollapsed 
+                  ? "aspect-square justify-center" 
+                  : "px-3 py-2.5"
               )}
               title={isSidenavCollapsed ? item.label : undefined}
             >
-              <item.icon className={cn("h-5 w-5 shrink-0", isSidenavCollapsed && "mx-auto")} />
+              <item.icon className={cn("h-5 w-5 shrink-0")} />
               {!isSidenavCollapsed && (
                 <span className="font-medium truncate">
                   {item.label}
@@ -85,12 +94,14 @@ const Sidenav: React.FC = () => {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+      <div className="p-2 border-t border-gray-200 dark:border-gray-800">
         <button
           onClick={() => openSettingsModal()}
           className={cn(
-            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800",
-            isSidenavCollapsed && "justify-center px-0"
+            "flex items-center gap-3 w-full rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800",
+            isSidenavCollapsed 
+              ? "aspect-square justify-center" 
+              : "px-3 py-2.5"
           )}
           title="Settings"
         >
