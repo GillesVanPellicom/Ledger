@@ -1,4 +1,4 @@
-import { LineItem } from '../types';
+import { LineItem } from '../../types';
 
 /**
  * Calculates the total discount for a given set of line items and a discount percentage.

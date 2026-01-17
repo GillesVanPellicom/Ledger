@@ -128,7 +128,7 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
         let totalOwedByMe = 0;
         const netBalances: { name: string, value: number, id: number }[] = [];
 
-        const { calculateDebts } = await import('../utils/debtCalculator');
+        const { calculateDebts } = await import('../logic/debt/debtLogic');
 
         for (const debtor of debtors) {
           const { debtToMe, debtToEntity } = await calculateDebts(debtor.DebtorID);

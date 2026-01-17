@@ -22,7 +22,7 @@ import { useDebtCalculation } from '../hooks/useDebtCalculation';
 import { Header } from '../components/ui/Header';
 import Tooltip from '../components/ui/Tooltip';
 import PageWrapper from '../components/layout/PageWrapper';
-import { calculateTotalWithDiscount } from '../utils/discountCalculator';
+import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
 

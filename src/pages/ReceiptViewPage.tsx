@@ -36,7 +36,7 @@ import InfoCard from '../components/ui/InfoCard';
 import {Header} from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
 import PageWrapper from '../components/layout/PageWrapper';
-import {calculateTotalWithDiscount} from '../utils/discountCalculator';
+import {calculateTotalWithDiscount} from '../logic/expense/discountLogic';
 import {Image} from 'jspdf';
 import {useSettingsStore} from '../store/useSettingsStore';
 import {useErrorStore} from '../store/useErrorStore';

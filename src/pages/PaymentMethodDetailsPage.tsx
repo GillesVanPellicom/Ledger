@@ -18,7 +18,7 @@ import Input from '../components/ui/Input';
 import { PaymentMethod, TopUp } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import { calculateTotalWithDiscount } from '../utils/discountCalculator';
+import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useQueryClient } from '@tanstack/react-query';
 
 const tryParseJson = (str: string) => {

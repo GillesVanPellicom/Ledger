@@ -11,6 +11,7 @@ import Combobox from "../ui/Combobox";
 import StepperInput from "../ui/StepperInput";
 import {useSettingsStore} from '../../store/useSettingsStore';
 import Tooltip from '../ui/Tooltip';
+import {calculateTotalShares} from '../../logic/debt/debtLogic';
 
 interface BulkDebtModalProps {
   isOpen: boolean;
@@ -42,8 +43,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
   }, [isOpen]);
 
   const totalShares = useMemo(() => {
-    const debtorShares = receiptSplits.reduce((acc, curr) => acc + Number(curr.SplitPart || 0), 0);
-    return debtorShares + ownShares;
+    return calculateTotalShares(ownShares, receiptSplits);
   }, [receiptSplits, ownShares]);
 
   const handleAddSplit = (debtorId: string) => {

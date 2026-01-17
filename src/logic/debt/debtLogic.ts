@@ -1,6 +1,6 @@
-import { db } from '../../utils/db.ts';
-import { Receipt, LineItem, ReceiptSplit, ReceiptDebtorPayment } from '../../types';
-import { calculateTotalWithDiscount, calculateLineItemTotalWithDiscount } from '../../utils/discountCalculator';
+import { db } from '../../utils/db';
+import {Debtor, LineItem, Receipt, ReceiptDebtorPayment, ReceiptSplit} from '../../types';
+import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../expense/discountLogic';
 
 interface DebtReceipt extends Receipt {
   StoreName: string;
@@ -32,6 +32,82 @@ export interface DebtSummary {
     shares: number;
     totalShares: number;
   } | null;
+}
+
+export interface FormDebtSummary {
+  debtors: {
+    name: string;
+    amount: number;
+    debtorId?: number;
+  }[];
+  self: number | null;
+}
+
+/**
+ * Calculates the total shares for a receipt based on own shares and debtor splits.
+ * @param ownShares - The number of shares belonging to the user.
+ * @param splits - An array of receipt splits with each debtor's share part.
+ * @returns The total number of shares.
+ */
+export function calculateTotalShares(ownShares: number, splits: { SplitPart: number }[]): number {
+  const debtorShares = splits.reduce((acc, curr) => acc + Number(curr.SplitPart || 0), 0);
+  return debtorShares + (Number(ownShares) || 0);
+}
+
+/**
+ * Calculates the debt summary for the receipt form.
+ * This is a synchronous version for UI calculations.
+ */
+export function calculateDebtSummaryForForm(
+  totalAmount: number,
+  splitType: 'none' | 'total_split' | 'line_item',
+  ownShares: number,
+  receiptSplits: (ReceiptSplit & { DebtorName: string })[],
+  lineItems: (LineItem & { DebtorName?: string })[],
+  discount: number,
+  debtors: Debtor[],
+  totalShares?: number,
+): FormDebtSummary {
+  const summary: Record<string, any> = {};
+  let selfAmount: number | null = null;
+
+  if (splitType === 'total_split') {
+    const totalSharesValue = totalShares ?? calculateTotalShares(ownShares, receiptSplits);
+    if (totalSharesValue > 0) {
+      receiptSplits.forEach(split => {
+        const amount = (totalAmount * Number(split.SplitPart || 0)) / totalSharesValue;
+        summary[split.DebtorName] = {
+          name: split.DebtorName,
+          amount: (summary[split.DebtorName]?.amount || 0) + amount,
+          debtorId: split.DebtorID,
+        };
+      });
+      if (ownShares > 0) {
+        selfAmount = (totalAmount * Number(ownShares)) / totalSharesValue;
+      }
+    }
+  } else if (splitType === 'line_item') {
+    lineItems.forEach(item => {
+      if (item.DebtorID) {
+        const debtor = debtors.find(d => d.DebtorID === item.DebtorID);
+        const debtorName = (item as any).DebtorName || debtor?.DebtorName;
+
+        if (debtorName) {
+          const itemAmount = calculateLineItemTotalWithDiscount(item, discount);
+          summary[debtorName] = {
+            name: debtorName,
+            amount: (summary[debtorName]?.amount || 0) + itemAmount,
+            debtorId: item.DebtorID
+          };
+        }
+      }
+    });
+  }
+
+  return {
+    debtors: Object.values(summary),
+    self: selfAmount
+  };
 }
 
 /**
@@ -94,7 +170,7 @@ async function calculateDebts(entityId: string | number) {
         const splits = allSplits.filter(rs => rs.ReceiptID === r.ReceiptID);
         const debtorSplit = splits.find(rs => rs.DebtorID === Number(entityId));
         if (debtorSplit) {
-          totalShares = r.TotalShares > 0 ? r.TotalShares : (splits.reduce((sum, s) => sum + s.SplitPart, 0) + (r.OwnShares || 0));
+          totalShares = r.TotalShares > 0 ? r.TotalShares : calculateTotalShares(r.OwnShares || 0, splits);
           splitPart = debtorSplit.SplitPart;
           if (totalShares > 0) {
             amount = (totalAmount * debtorSplit.SplitPart) / totalShares;
@@ -142,7 +218,7 @@ export async function calculateDebtsForReceipt(receiptId: string | number, recei
   if (receipt.SplitType === 'total_split' && (receiptSplits.length > 0 || (receipt.OwnShares && receipt.OwnShares > 0))) {
     const totalShares = receipt.TotalShares > 0
       ? receipt.TotalShares
-      : receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0) + (receipt.OwnShares || 0);
+      : calculateTotalShares(receipt.OwnShares || 0, receiptSplits);
 
     receiptSplits.forEach(split => {
       const amount = (totalAmount * split.SplitPart) / totalShares;

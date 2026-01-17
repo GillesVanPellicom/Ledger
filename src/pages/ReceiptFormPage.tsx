@@ -23,7 +23,7 @@ import '../electron.d';
 import Spinner from '../components/ui/Spinner';
 import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import {calculateLineItemTotalWithDiscount, calculateTotalWithDiscount} from '../utils/discountCalculator';
+import {calculateLineItemTotalWithDiscount, calculateTotalWithDiscount} from '../logic/expense/discountLogic';
 import {useSettingsStore} from '../store/useSettingsStore';
 import {useBackupStore} from '../store/useBackupStore';
 import {useQueryClient} from '@tanstack/react-query';
@@ -31,6 +31,7 @@ import Divider from '../components/ui/Divider';
 import NanoDataTable from '../components/ui/NanoDataTable';
 import DataGrid from '../components/ui/DataGrid';
 import Combobox from '../components/ui/Combobox';
+import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/debtLogic';
 
 const ReceiptFormPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -326,9 +327,7 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const totalShares = useMemo(() => {
-    const debtorShares = receiptSplits.reduce((acc, curr) => acc + Number(curr.SplitPart || 0), 0);
-    const ownShares = Number(formData.ownShares) || 0;
-    return debtorShares + ownShares;
+    return calculateTotalShares(formData.ownShares, receiptSplits);
   }, [receiptSplits, formData.ownShares]);
 
   const calculateSubtotal = () => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
@@ -344,42 +343,30 @@ const ReceiptFormPage: React.FC = () => {
   const debtSummary = useMemo(() => {
     if (!debtEnabled) return {debtors: [], self: null};
 
-    const summary: Record<string, any> = {};
-    const totalAmount = calculateTotal();
-    let selfAmount: number | null = null;
-
-    if (splitType === 'total_split' && totalShares > 0) {
-      receiptSplits.forEach(split => {
-        const amount = (totalAmount * Number(split.SplitPart || 0)) / totalShares;
-        summary[split.DebtorName] = {
-          name: split.DebtorName,
-          amount: (summary[split.DebtorName]?.amount || 0) + amount
-        };
-      });
-      if (formData.ownShares > 0) {
-        selfAmount = (totalAmount * Number(formData.ownShares)) / totalShares;
-      }
-    } else if (splitType === 'line_item' && receiptFormat === 'itemised') {
-      lineItems.forEach(item => {
-        if (item.DebtorID) {
-          const debtorName = item.DebtorName || debtors.find(d => d.DebtorID === Number(item.DebtorID))?.DebtorName;
-          if (debtorName) {
-            const itemAmount = calculateLineItemTotalWithDiscount(item, formData.discount);
-            summary[debtorName] = {
-              name: debtorName,
-              amount: (summary[debtorName]?.amount || 0) + itemAmount,
-              debtorId: item.DebtorID
-            };
-          }
-        }
-      });
-    }
-
-    return {
-      debtors: Object.values(summary),
-      self: selfAmount
-    };
-  }, [lineItems, receiptSplits, splitType, debtEnabled, debtors, totalShares, formData.ownShares, formData.discount, isExclusionMode, excludedLineItemKeys, receiptFormat, nonItemisedTotal]);
+    return calculateDebtSummaryForForm(
+      calculateTotal(),
+      splitType,
+      formData.ownShares,
+      receiptSplits as any,
+      lineItems as any,
+      formData.discount,
+      debtors,
+      totalShares
+    );
+  }, [
+    debtEnabled,
+    splitType,
+    formData.ownShares,
+    receiptSplits,
+    lineItems,
+    formData.discount,
+    debtors,
+    totalShares,
+    receiptFormat,
+    nonItemisedTotal,
+    isExclusionMode,
+    excludedLineItemKeys
+  ]);
 
   const handleFormChange = (name: string, value: string) => {
     setFormData(prev => ({...prev, [name]: value}));

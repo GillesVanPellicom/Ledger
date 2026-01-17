@@ -116,6 +116,11 @@ function generateRandomDate(start, end) {
     return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
 
+function calculateTotalShares(ownShares, splits) {
+    const debtorShares = splits.reduce((acc, curr) => acc + Number(curr.part || 0), 0);
+    return debtorShares + (Number(ownShares) || 0);
+}
+
 // --- Main Seeder ---
 async function seed() {
     info('Starting seeding process...');
@@ -337,16 +342,17 @@ async function seed() {
                                     if (!selectedDebtors.includes(d)) selectedDebtors.push(d);
                                 }
                                 
-                                let currentTotalShares = 0;
                                 const ownSharePart = Math.random() > 0.3 ? getRandomInt(1, 3) : 0;
-                                if(ownSharePart > 0) currentTotalShares += ownSharePart;
+                                const splits = [];
 
                                 selectedDebtors.forEach(debtorId => {
                                     const part = getRandomInt(1, 3);
-                                    currentTotalShares += part;
+                                    splits.push({ part });
                                     db.run(insertReceiptSplit, [receiptId, debtorId, part]);
                                     receiptDebtors.add(debtorId);
                                 });
+                                
+                                const currentTotalShares = calculateTotalShares(ownSharePart, splits);
                                 db.run('UPDATE Receipts SET OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?', [ownSharePart, currentTotalShares, receiptId]);
                             }
 
