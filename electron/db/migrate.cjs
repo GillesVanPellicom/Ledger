@@ -1,6 +1,6 @@
-const fs = require('fs/promises');
-const path = require('path');
-const crypto = require('crypto');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const crypto = require('node:crypto');
 
 const MIGRATIONS_DIR = path.join(__dirname, '../migrations');
 
@@ -20,7 +20,8 @@ async function runMigrations(db) {
 
     if (applied) {
       if (applied.checksum !== checksum) {
-        throw new Error(`Checksum mismatch for migration ${version}. Expected ${applied.checksum} but got ${checksum}.`);
+        throw new Error(
+          `Checksum mismatch for migration ${version}. Expected ${applied.checksum} but got ${checksum}.`);
       }
     } else {
       console.log(`Applying migration ${version}...`);
@@ -32,11 +33,12 @@ async function runMigrations(db) {
 function createMigrationsTable(db) {
   return new Promise((resolve, reject) => {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS migrations (
-        version TEXT PRIMARY KEY,
-        checksum TEXT NOT NULL,
-        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+        CREATE TABLE IF NOT EXISTS migrations
+        (
+            version    TEXT PRIMARY KEY,
+            checksum   TEXT NOT NULL,
+            applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
     `, (err) => {
       if (err) reject(err);
       else resolve();
@@ -48,7 +50,8 @@ function getAppliedMigrations(db) {
   return new Promise((resolve, reject) => {
     db.all('SELECT version, checksum FROM migrations', (err, rows) => {
       if (err) return reject(err);
-      const applied = new Map(rows.map(row => [row.version, { checksum: row.checksum }]));
+      const applied = new Map(
+        rows.map(row => [row.version, {checksum: row.checksum}]));
       resolve(applied);
     });
   });
@@ -67,31 +70,30 @@ async function getAllMigrationFiles() {
   }
 }
 
-function applyMigration(db, version, sql, checksum) {
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.run('BEGIN TRANSACTION', (err) => {
-        if (err) return reject(err);
+const {promisify} = require('util');
 
-        db.exec(sql, (execErr) => {
-          if (execErr) {
-            return db.run('ROLLBACK', () => reject(execErr));
-          }
+async function applyMigration(db, version, sql, checksum) {
+  const run = promisify(db.run.bind(db));
+  const exec = promisify(db.exec.bind(db));
 
-          db.run('INSERT INTO migrations (version, checksum) VALUES (?, ?)', [version, checksum], (insertErr) => {
-            if (insertErr) {
-              return db.run('ROLLBACK', () => reject(insertErr));
-            }
+  try {
+    await run('BEGIN TRANSACTION');
 
-            db.run('COMMIT', (commitErr) => {
-              if (commitErr) return reject(commitErr);
-              resolve();
-            });
-          });
-        });
-      });
-    });
-  });
+    await exec(sql);
+
+    await run('INSERT INTO migrations (version, checksum) VALUES (?, ?)',
+      [version, checksum]);
+
+    await run('COMMIT');
+  } catch (err) {
+    try {
+      await run('ROLLBACK');
+    } catch (rollbackErr) {
+      // optional: log rollback error, but original error is more important
+      console.error('Rollback failed:', rollbackErr);
+    }
+    throw err; // propagate original error
+  }
 }
 
-module.exports = { runMigrations };
+module.exports = {runMigrations};

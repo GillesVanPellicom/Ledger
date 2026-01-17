@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, net, shell } = require('electron');
-const path = require('path');
+const {app, BrowserWindow, ipcMain, dialog, protocol, net, shell} = require(
+  'electron');
+const path = require('node:path');
 const sqlite3 = require('sqlite3');
-const fs = require('fs');
-const { runMigrations } = require('./db/migrate.cjs');
+const fs = require('node:fs');
+const {runMigrations} = require('./db/migrate.cjs');
 const Store = require('./store.cjs');
 
 let mainWindow;
@@ -40,7 +41,7 @@ function initializeStore() {
         datastore: {
           folderPath: '',
         },
-      }
+      },
     });
     console.log('Store initialized successfully.');
   } catch (error) {
@@ -59,44 +60,47 @@ function connectDatabase(dbPath) {
 
     if (!dbPath) {
       console.log('No database path provided. DB is disconnected.');
-      return resolve({ success: true, disconnected: true });
+      return resolve({success: true, disconnected: true});
     }
 
     const dbDir = path.dirname(dbPath);
-    
+
     try {
       if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+        fs.mkdirSync(dbDir, {recursive: true});
       }
     } catch (error) {
       console.error('Failed to create database directory:', error);
-      return reject({ success: false, error: `Failed to create directory: ${error.message}` });
+      return reject({
+        success: false,
+        error: `Failed to create directory: ${error.message}`,
+      });
     }
 
     db = new sqlite3.Database(dbPath, (err) => {
       if (err) {
         console.error('Database connection failed:', err);
-        return reject({ success: false, error: err.message });
+        return reject({success: false, error: err.message});
       }
-      
+
       db.run('PRAGMA foreign_keys = ON;', (fkErr) => {
         if (fkErr) console.error('Failed to enable foreign keys:', fkErr);
       });
 
       db.run('PRAGMA journal_mode = WAL;', async (walErr) => {
         if (walErr) {
-           console.error('Failed to set WAL mode:', walErr);
-           return reject({ success: false, error: walErr.message });
+          console.error('Failed to set WAL mode:', walErr);
+          return reject({success: false, error: walErr.message});
         }
 
         try {
           await runMigrations(db);
           console.log('Migrations run successfully');
           console.log(`Connected to database: ${dbPath}`);
-          resolve({ success: true });
+          resolve({success: true});
         } catch (migrationError) {
           console.error('Failed to run migrations:', migrationError);
-          return reject({ success: false, error: migrationError.message });
+          return reject({success: false, error: migrationError.message});
         }
       });
     });
@@ -104,14 +108,15 @@ function connectDatabase(dbPath) {
 }
 
 function installDevTools() {
-  const { default: install, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = require('electron-devtools-installer');
-  
+  const {default: install, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS} = require(
+    'electron-devtools-installer');
+
   const extensions = [REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS];
   const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
 
-  return Promise.all(extensions.map(ext => install(ext, forceDownload)))
-    .then((names) => console.log(`Added Extension: ${names.join(', ')}`))
-    .catch((err) => console.log('An error occurred: ', err));
+  return Promise.all(extensions.map(ext => install(ext, forceDownload))).
+    then((names) => console.log(`Added Extension: ${names.join(', ')}`)).
+    catch((err) => console.log('An error occurred: ', err));
 }
 
 function createWindow() {
@@ -131,7 +136,7 @@ function createWindow() {
   }
 
   const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:5173';
-  
+
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL(startUrl);
     mainWindow.webContents.on('did-finish-load', () => {
@@ -168,9 +173,9 @@ app.on('ready', async () => {
         mainWindow.webContents.send('database-error', error.message);
       } else {
         // Fallback if window isn't ready yet, though unlikely with current flow
-         dialog.showErrorBox(
+        dialog.showErrorBox(
           'Database Connection Error',
-          `Failed to connect to the database at "${datastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`
+          `Failed to connect to the database at "${datastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`,
         );
       }
     }
@@ -208,12 +213,12 @@ ipcMain.handle('query-db', (event, sql, params = []) => {
     }
 
     const isSelect = sql.trim().toLowerCase().startsWith('select');
-    
+
     if (isSelect) {
       db.all(sql, params, (err, rows) => {
         if (err) {
           console.error('[IPC query-db] Query failed:', err);
-          return reject({ error: err.message });
+          return reject({error: err.message});
         }
         resolve(rows);
       });
@@ -221,85 +226,94 @@ ipcMain.handle('query-db', (event, sql, params = []) => {
       db.run(sql, params, function(err) {
         if (err) {
           console.error('[IPC query-db] Query failed:', err);
-          return reject({ error: err.message });
+          return reject({error: err.message});
         }
-        resolve({ changes: this.changes, lastID: this.lastID });
+        resolve({changes: this.changes, lastID: this.lastID});
       });
     }
   });
 });
 
-ipcMain.handle('create-transaction', async (event, { type, from, to, amount, date, note }) => {
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.run('BEGIN TRANSACTION');
+const {promisify} = require('node:util');
+
+ipcMain.handle('create-transaction',
+  async (event, {type, from, to, amount, date, note}) => {
+    const run = promisify(db.run.bind(db));
+
+    try {
+      await run('BEGIN TRANSACTION');
 
       if (type === 'deposit') {
-        db.run('INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)', [from, amount, date, note], function(err) {
-          if (err) {
-            db.run('ROLLBACK');
-            return reject(err);
-          }
-          db.run('COMMIT', (err) => err ? reject(err) : resolve({ success: true }));
-        });
+        await run(
+          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
+          [from, amount, date, note],
+        );
       } else if (type === 'transfer') {
-        db.run('INSERT INTO Transfers (FromPaymentMethodID, ToPaymentMethodID, Amount, TransferDate, Note) VALUES (?, ?, ?, ?, ?)', [from, to, amount, date, note], function(err) {
-          if (err) {
-            db.run('ROLLBACK');
-            return reject(err);
-          }
-          const transferId = this.lastID;
-          const fromNote = `Transfer to method ${to}`;
-          const toNote = `Transfer from method ${from}`;
+        // Insert transfer record
+        const transferResult = await run(
+          'INSERT INTO Transfers (FromPaymentMethodID, ToPaymentMethodID, Amount, TransferDate, Note) VALUES (?, ?, ?, ?, ?)',
+          [from, to, amount, date, note],
+        );
+        const transferId = transferResult.lastID; // lastID is returned by sqlite3 in callback context, we'll handle it below
 
-          db.run('INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)', [from, -amount, date, fromNote, transferId], (err) => {
-            if (err) {
-              db.run('ROLLBACK');
-              return reject(err);
-            }
-            db.run('INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)', [to, amount, date, toNote, transferId], (err) => {
-              if (err) {
-                db.run('ROLLBACK');
-                return reject(err);
-              }
-              db.run('COMMIT', (err) => err ? reject(err) : resolve({ success: true }));
-            });
-          });
-        });
+        const fromNote = `Transfer to method ${to}`;
+        const toNote = `Transfer from method ${from}`;
+
+        // Insert the corresponding TopUps
+        await run(
+          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)',
+          [from, -amount, date, fromNote, transferId],
+        );
+        await run(
+          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)',
+          [to, amount, date, toNote, transferId],
+        );
       }
-    });
+
+      await run('COMMIT');
+      return {success: true};
+    } catch (err) {
+      try {
+        await run('ROLLBACK');
+      } catch (error_) {
+        console.error('Rollback failed:', error_);
+      }
+      throw err;
+    }
   });
-});
 
-ipcMain.handle('delete-transaction', async (event, { topUpId }) => {
+ipcMain.handle('delete-transaction', async (event, {topUpId}) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT TransferID FROM TopUps WHERE TopUpID = ?', [topUpId], (err, row) => {
-      if (err) return reject(err);
+    db.get('SELECT TransferID FROM TopUps WHERE TopUpID = ?', [topUpId],
+      (err, row) => {
+        if (err) return reject(err);
 
-      if (row && row.TransferID) {
-        // It's a transfer, delete the whole transfer record
-        db.run('DELETE FROM Transfers WHERE TransferID = ?', [row.TransferID], function(err) {
-          if (err) return reject(err);
-          resolve({ success: true, changes: this.changes });
-        });
-      } else {
-        // It's a simple deposit or other top-up, delete just this one
-        db.run('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId], function(err) {
-          if (err) return reject(err);
-          resolve({ success: true, changes: this.changes });
-        });
-      }
-    });
+        if (row && row.TransferID) {
+          // It's a transfer, delete the whole transfer record
+          db.run('DELETE FROM Transfers WHERE TransferID = ?', [row.TransferID],
+            function(err) {
+              if (err) return reject(err);
+              resolve({success: true, changes: this.changes});
+            });
+        } else {
+          // It's a simple deposit or other top-up, delete just this one
+          db.run('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId],
+            function(err) {
+              if (err) return reject(err);
+              resolve({success: true, changes: this.changes});
+            });
+        }
+      });
   });
 });
 
 ipcMain.handle('save-pdf', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
-  
-  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+
+  const {canceled, filePath} = await dialog.showSaveDialog(win, {
     title: 'Save Receipt as PDF',
     defaultPath: 'receipt.pdf',
-    filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+    filters: [{name: 'PDF Files', extensions: ['pdf']}],
   });
 
   if (canceled || !filePath) return;
@@ -309,9 +323,9 @@ ipcMain.handle('save-pdf', async (event) => {
       printBackground: true,
       landscape: false,
       pageSize: 'A4',
-      margins: { top: 0, bottom: 0, left: 0, right: 0 }
+      margins: {top: 0, bottom: 0, left: 0, right: 0},
     });
-    
+
     fs.writeFileSync(filePath, data);
     console.log('PDF saved successfully:', filePath);
   } catch (error) {
@@ -331,42 +345,43 @@ ipcMain.handle('get-settings', async () => {
 ipcMain.handle('save-settings', async (event, settings) => {
   if (!store) {
     console.error('Store not initialized');
-    return { success: false, error: 'Store not initialized' };
+    return {success: false, error: 'Store not initialized'};
   }
-  
+
   const oldDatastorePath = store.get('datastore.folderPath');
   const newDatastorePath = settings.datastore?.folderPath;
 
-  if (oldDatastorePath !== newDatastorePath) {
+  if (oldDatastorePath === newDatastorePath) {
+    store.set(settings);
+  } else {
     try {
       console.log('Datastore path changed. Reconnecting database...');
-      await connectDatabase(newDatastorePath ? path.join(newDatastorePath, 'fin.db') : null);
+      await connectDatabase(
+        newDatastorePath ? path.join(newDatastorePath, 'fin.db') : null);
       store.set(settings);
     } catch (error) {
       // Send error to renderer instead of showing dialog
       // Revert to old settings
       mainWindow.webContents.send('settings-reverted', store.store);
-      return { success: false, error: error.message };
+      return {success: false, error: error.message};
     }
-  } else {
-    store.set(settings);
   }
 
-  return { success: true };
+  return {success: true};
 });
 
 ipcMain.handle('reset-settings', async () => {
   if (!store) {
     console.error('Store not initialized');
-    return { success: false, error: 'Store not initialized' };
+    return {success: false, error: 'Store not initialized'};
   }
   store.clear();
-  return { success: true };
+  return {success: true};
 });
 
 ipcMain.handle('select-directory', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openDirectory']
+  const {canceled, filePaths} = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
   });
   if (canceled) {
     return '';
@@ -376,10 +391,10 @@ ipcMain.handle('select-directory', async () => {
 });
 
 ipcMain.handle('save-image', async (event, datastorePath, imagePath) => {
-  const { nanoid } = await import('nanoid');
+  const {nanoid} = await import('nanoid');
   const imageDir = path.join(datastorePath, 'receipt_images');
   if (!fs.existsSync(imageDir)) {
-    fs.mkdirSync(imageDir, { recursive: true });
+    fs.mkdirSync(imageDir, {recursive: true});
   }
   const newFileName = `${nanoid()}${path.extname(imagePath)}`;
   const newPath = path.join(imageDir, newFileName);
@@ -412,24 +427,28 @@ ipcMain.handle('trigger-backup', async () => {
 
   const backupDir = path.join(datastorePath, 'backups');
   if (!fs.existsSync(backupDir)) {
-    fs.mkdirSync(backupDir, { recursive: true });
+    fs.mkdirSync(backupDir, {recursive: true});
   }
 
   const dbPath = path.join(datastorePath, 'fin.db');
   if (!fs.existsSync(dbPath)) throw new Error('Database file not found.');
 
   const now = new Date();
-  const timestamp = `${now.getSeconds()}-${now.getMinutes()}-${now.getHours()}-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+  const timestamp = `${now.getSeconds()}-${now.getMinutes()}-${now.getHours()}-${now.getDate()}-${now.getMonth() +
+  1}-${now.getFullYear()}`;
   const backupPath = path.join(backupDir, `${timestamp}.db.bak`);
 
   fs.copyFileSync(dbPath, backupPath);
 
   // Manage backup rotation
   const maxBackups = store.get('backup.maxBackups', 5);
-  const backups = fs.readdirSync(backupDir)
-    .filter(f => f.endsWith('.bak'))
-    .map(f => ({ name: f, time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
-    .sort((a, b) => b.time - a.time);
+  const backups = fs.readdirSync(backupDir).
+    filter(f => f.endsWith('.bak')).
+    map(f => ({
+      name: f,
+      time: fs.statSync(path.join(backupDir, f)).mtime.getTime(),
+    })).
+    sort((a, b) => b.time - a.time);
 
   if (backups.length > maxBackups) {
     for (let i = maxBackups; i < backups.length; i++) {
@@ -444,7 +463,7 @@ ipcMain.handle('open-backup-folder', async () => {
   if (!datastorePath) return;
   const backupDir = path.join(datastorePath, 'backups');
   if (!fs.existsSync(backupDir)) {
-    fs.mkdirSync(backupDir, { recursive: true });
+    fs.mkdirSync(backupDir, {recursive: true});
   }
   shell.openPath(backupDir);
 });
