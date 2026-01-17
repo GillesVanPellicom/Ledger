@@ -1,6 +1,6 @@
 import { db } from '../../utils/db';
 import {Debtor, LineItem, Receipt, ReceiptDebtorPayment, ReceiptSplit} from '../../types';
-import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../expense/discountLogic';
+import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../expense';
 
 interface DebtReceipt extends Receipt {
   StoreName: string;

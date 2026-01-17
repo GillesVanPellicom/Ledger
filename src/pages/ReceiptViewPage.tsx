@@ -25,7 +25,6 @@ import {
   AlertTriangle,
   RotateCcw
 } from 'lucide-react';
-import {generateReceiptsPdf} from '../logic/pdf/receiptPdf';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import Tooltip from '../components/ui/Tooltip';
@@ -36,7 +35,12 @@ import InfoCard from '../components/ui/InfoCard';
 import {Header} from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
 import PageWrapper from '../components/layout/PageWrapper';
-import {calculateTotalWithDiscount} from '../logic/expense/discountLogic';
+import {
+  calculateSubtotal,
+  calculateTotalItems,
+  calculateTotalQuantity,
+  calculateTotalWithDiscount
+} from '../logic/expense';
 import {Image} from 'jspdf';
 import {useSettingsStore} from '../store/useSettingsStore';
 import {useErrorStore} from '../store/useErrorStore';
@@ -45,6 +49,7 @@ import {useActivePaymentMethods} from '../hooks/usePaymentMethods';
 import Combobox from '../components/ui/Combobox';
 import NanoDataTable from '../components/ui/NanoDataTable';
 import { useReceiptDebtCalculation } from '../hooks/useDebtCalculation';
+import { usePdfGenerator } from '../hooks/usePdfGenerator';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -84,6 +89,7 @@ const ReceiptViewPage: React.FC = () => {
   const {settings} = useSettingsStore();
   const {showError} = useErrorStore();
   const deleteReceiptMutation = useDeleteReceipt();
+  const { generatePdf } = usePdfGenerator();
 
   const {data, isLoading, refetch} = useReceipt(id);
   const {receipt, lineItems: rawLineItems, images: rawImages, splits: receiptSplits, payments} = data || {};
@@ -159,15 +165,15 @@ const ReceiptViewPage: React.FC = () => {
   }, [rawImages, settings.datastore.folderPath]);
 
   // Calculations for the static "Total Amount" box
-  const displaySubtotal = useMemo(() => (rawLineItems || []).reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0), [rawLineItems]);
+  const displaySubtotal = useMemo(() => calculateSubtotal(rawLineItems || []), [rawLineItems]);
   const displayTotalAmount = useMemo(() => {
     if (receipt?.IsNonItemised) {
       return receipt.NonItemisedTotal || 0;
     }
     return calculateTotalWithDiscount(rawLineItems || [], receipt?.Discount || 0);
   }, [receipt, rawLineItems]);
-  const displayTotalItems = rawLineItems?.length || 0;
-  const displayTotalQuantity = (rawLineItems || []).reduce((total, item) => total + item.LineQuantity, 0);
+  const displayTotalItems = useMemo(() => calculateTotalItems(rawLineItems || []), [rawLineItems]);
+  const displayTotalQuantity = useMemo(() => calculateTotalQuantity(rawLineItems || []), [rawLineItems]);
 
   const debtStatus = useMemo(() => {
     if (!debtEnabled || !debtSummary || !debtSummary.debtors.length) return null;
@@ -189,7 +195,7 @@ const ReceiptViewPage: React.FC = () => {
       totalAmount: displayTotalAmount // Use displayTotalAmount
     };
 
-    await generateReceiptsPdf([fullReceipt], settings.pdf);
+    await generatePdf([fullReceipt], settings.pdf);
   };
 
   const handleSettleClick = (debtor: any) => {

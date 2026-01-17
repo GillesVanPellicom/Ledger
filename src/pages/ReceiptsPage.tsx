@@ -19,7 +19,6 @@ import {
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
-import {generateReceiptsPdf} from '../logic/pdf/receiptPdf';
 import ProgressModal from '../components/ui/ProgressModal';
 import Tooltip from '../components/ui/Tooltip';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
@@ -31,6 +30,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
 import Select from '../components/ui/Select';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
+import { calculateTotalWithDiscount } from '../logic/expense';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -158,9 +158,7 @@ const ReceiptsPage: React.FC = () => {
 
     const fullReceipts: FullReceipt[] = receiptsData.map(receipt => {
       const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
-      const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-      const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
-      const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : Math.max(0, subtotal - discountAmount);
+      const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : calculateTotalWithDiscount(items, receipt.Discount || 0);
       return {...receipt, lineItems: items, totalAmount: total || 0, images: []};
     });
 

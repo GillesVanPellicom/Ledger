@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../utils/db';
-import { Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment } from '../types';
+import { Receipt } from '../types';
 import { format } from 'date-fns';
+import { getReceipt, deleteReceipts as deleteReceiptsFromDb } from '../logic/expense';
 
 // --- Queries ---
 
@@ -182,47 +183,7 @@ export const useReceipts = (params: FetchReceiptsParams) => {
 export const useReceipt = (id: string | undefined) => {
   return useQuery({
     queryKey: ['receipt', id],
-    queryFn: async () => {
-      if (!id) return null;
-
-      const receiptData = await db.queryOne<Receipt>(`
-        SELECT r.*, s.StoreName, pm.PaymentMethodName, d.DebtorName as OwedToDebtorName
-        FROM Receipts r
-                 JOIN Stores s ON r.StoreID = s.StoreID
-                 LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-                 LEFT JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
-        WHERE r.ReceiptID = ?
-      `, [id]);
-
-      if (!receiptData) return null;
-
-      const lineItems = !receiptData.IsNonItemised
-        ? await db.query<LineItem & { CategoryName: string, CategoryID: number }>(`
-            SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID, c.CategoryName, c.CategoryID
-            FROM LineItems li
-                     JOIN Products p ON li.ProductID = p.ProductID
-                     LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-                     LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-                     LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
-            WHERE li.ReceiptID = ?
-        `, [id])
-        : [];
-      
-      const images = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
-      
-      const splits = receiptData.SplitType === 'total_split'
-        ? await db.query<ReceiptSplit>(`
-            SELECT rs.*, d.DebtorName
-            FROM ReceiptSplits rs
-                     JOIN Debtors d ON rs.DebtorID = d.DebtorID
-            WHERE rs.ReceiptID = ?
-        `, [id])
-        : [];
-
-      const payments = await db.query<ReceiptDebtorPayment>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
-
-      return { receipt: receiptData, lineItems, images, splits, payments };
-    },
+    queryFn: () => id ? getReceipt(id) : null,
     enabled: !!id,
     staleTime: 0,
     gcTime: 0,
@@ -235,10 +196,7 @@ export const useReceipt = (id: string | undefined) => {
 export const useDeleteReceipt = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (ids: number[]) => {
-      const placeholders = ids.map(() => '?').join(',');
-      await db.execute(`DELETE FROM Receipts WHERE ReceiptID IN (${placeholders})`, ids);
-    },
+    mutationFn: (ids: number[]) => deleteReceiptsFromDb(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receipts'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });

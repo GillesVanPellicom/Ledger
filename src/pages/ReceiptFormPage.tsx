@@ -23,7 +23,7 @@ import '../electron.d';
 import Spinner from '../components/ui/Spinner';
 import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import {calculateLineItemTotalWithDiscount, calculateTotalWithDiscount} from '../logic/expense/discountLogic';
+import {calculateSubtotal, calculateTotalWithDiscount} from '../logic/expense';
 import {useSettingsStore} from '../store/useSettingsStore';
 import {useBackupStore} from '../store/useBackupStore';
 import {useQueryClient} from '@tanstack/react-query';
@@ -330,21 +330,21 @@ const ReceiptFormPage: React.FC = () => {
     return calculateTotalShares(formData.ownShares, receiptSplits);
   }, [receiptSplits, formData.ownShares]);
 
-  const calculateSubtotal = () => lineItems.reduce((total, item) => total + (item.LineQuantity * item.LineUnitPrice), 0);
+  const subtotal = useMemo(() => calculateSubtotal(lineItems), [lineItems]);
 
-  const calculateTotal = () => {
+  const total = useMemo(() => {
     if (receiptFormat === 'item-less') {
       return nonItemisedTotal;
     }
     const itemsToDiscount = isExclusionMode ? lineItems.filter(item => !excludedLineItemKeys.has(item.key)) : lineItems;
     return calculateTotalWithDiscount(itemsToDiscount, formData.discount);
-  };
+  }, [lineItems, receiptFormat, nonItemisedTotal, isExclusionMode, excludedLineItemKeys, formData.discount]);
 
   const debtSummary = useMemo(() => {
     if (!debtEnabled) return {debtors: [], self: null};
 
     return calculateDebtSummaryForForm(
-      calculateTotal(),
+      total,
       splitType,
       formData.ownShares,
       receiptSplits as any,
@@ -362,10 +362,7 @@ const ReceiptFormPage: React.FC = () => {
     formData.discount,
     debtors,
     totalShares,
-    receiptFormat,
-    nonItemisedTotal,
-    isExclusionMode,
-    excludedLineItemKeys
+    total,
   ]);
 
   const handleFormChange = (name: string, value: string) => {
@@ -1051,11 +1048,11 @@ const ReceiptFormPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-4 text-gray-500">
                               <span className="text-sm">Subtotal</span>
-                              <span className="font-medium">€{calculateSubtotal().toFixed(2)}</span>
+                              <span className="font-medium">€{subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex items-center gap-4 text-lg font-bold">
                               <span>Total</span>
-                              <span>€{calculateTotal().toFixed(2)}</span>
+                              <span>€{total.toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
