@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -14,7 +14,8 @@ import {
   X,
   FilePlus2,
   CalendarPlus,
-  Link as LinkIcon
+  Link as LinkIcon,
+  History
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
@@ -54,7 +55,7 @@ const IncomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showError } = useErrorStore();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled' | 'confirmed' | 'repayments'>('to-check');
+  const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled' | 'history'>('to-check');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -218,6 +219,14 @@ const IncomePage: React.FC = () => {
     queryFn: () => incomeCommitments.getDebtRepayments()
   });
 
+  const historyData = useMemo(() => {
+    const confirmed = (confirmedIncomes || []).map((item: any) => ({ ...item, type: 'Income' }));
+    const repayments = (debtRepayments || []).map((item: any) => ({ ...item, type: 'Repayment' }));
+    return [...confirmed, ...repayments].sort((a, b) =>
+      isBefore(parseISO(a.TopUpDate || a.PaidDate), parseISO(b.TopUpDate || b.PaidDate)) ? 1 : -1
+    );
+  }, [confirmedIncomes, debtRepayments]);
+
   // Mutations
   const processSchedulesMutation = useMutation({
     mutationFn: () => incomeLogic.processSchedules(),
@@ -307,11 +316,10 @@ const IncomePage: React.FC = () => {
   };
 
   const renderTabs = () => {
-    const tabItems: { id: 'to-check' | 'scheduled' | 'confirmed' | 'repayments'; label: string; icon: any; count?: number }[] = [
+    const tabItems: { id: 'to-check' | 'scheduled' | 'history'; label: string; icon: any; count?: number }[] = [
       { id: 'to-check', label: 'To Check', icon: Clock, count: pendingIncomes?.length },
       { id: 'scheduled', label: 'Scheduled', icon: Calendar },
-      { id: 'confirmed', label: 'Confirmed', icon: CheckCircle },
-      { id: 'repayments', label: 'Debt Repayments', icon: TrendingUp },
+      { id: 'history', label: 'History', icon: History },
     ];
 
     return (
@@ -496,7 +504,7 @@ const IncomePage: React.FC = () => {
         }
       />
       <PageWrapper>
-        <div className="flex flex-col gap-6 pt-6 px-[100px]">
+        <div className="flex flex-col gap-6 pt-6">
           <div className="flex-1">
             {activeTab === 'to-check' && (
               <div className="space-y-4">
@@ -647,70 +655,42 @@ const IncomePage: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'confirmed' && (
+            {activeTab === 'history' && (
               <DataTable
-                loading={loadingConfirmed}
-                data={paginatedData(confirmedIncomes)}
+                loading={loadingConfirmed || loadingRepayments}
+                data={paginatedData(historyData)}
                 onRowClick={(row) => {
-                  navigate(`/payment-methods/${row.PaymentMethodID}`);
+                  if (row.type === 'Repayment') {
+                    navigate(`/receipts/view/${row.ReceiptID}`);
+                  } else {
+                    navigate(`/payment-methods/${row.PaymentMethodID}`);
+                  }
                 }}
                 columns={[
                   {
                     header: 'Date',
-                    accessor: 'TopUpDate',
-                    render: (row) => format(parseISO(row.TopUpDate), 'MMM d, yyyy')
+                    render: (row) => format(parseISO(row.TopUpDate || row.PaidDate), 'MMM d, yyyy')
                   },
                   {
-                    header: 'Source',
-                    render: (row) => splitTopUpNote(row.TopUpNote).source
-                  },
-                  {
-                    header: 'Category',
-                    render: (row) => splitTopUpNote(row.TopUpNote).category
-                  },
-                  { header: 'Account', accessor: 'PaymentMethodName' },
-                  {
-                    header: 'Amount',
-                    accessor: 'TopUpAmount',
+                    header: 'Type',
                     render: (row) => (
-                      <span className="text-green-600 font-semibold">
-                        +€{row.TopUpAmount.toFixed(2)}
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-xs font-medium",
+                        row.type === 'Income' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                      )}>
+                        {row.type}
                       </span>
                     )
-                  }
-                ]}
-                searchable
-                totalCount={confirmedIncomes?.length || 0}
-                currentPage={currentPage}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={setPageSize}
-              />
-            )}
-
-            {activeTab === 'repayments' && (
-              <DataTable
-                loading={loadingRepayments}
-                data={paginatedData(debtRepayments)}
-                onRowClick={(row) => navigate(`/receipts/view/${row.ReceiptID}`)}
-                columns={[
-                  {
-                    header: 'Date',
-                    accessor: 'PaidDate',
-                    render: (row) => format(parseISO(row.PaidDate), 'MMM d, yyyy')
                   },
                   {
-                    header: 'Debtor',
-                    render: (row) => (
-                      <span className="inline-block">
-                        <Link to={`/entities/${row.DebtorID}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-medium hover:underline flex items-center gap-1.5 group">
-                          {row.DebtorName}
-                          <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
-                        </Link>
-                      </span>
-                    )
+                    header: 'Description',
+                    render: (row) => {
+                      if (row.type === 'Income') {
+                        const { source, category } = splitTopUpNote(row.TopUpNote);
+                        return `${source}${category ? ` (${category})` : ''}`;
+                      }
+                      return `Repayment from ${row.DebtorName}`;
+                    }
                   },
                   {
                     header: 'Account',
@@ -727,7 +707,6 @@ const IncomePage: React.FC = () => {
                   },
                   {
                     header: 'Amount',
-                    accessor: 'TopUpAmount',
                     render: (row) => (
                       <span className={cn(
                         "font-semibold",
@@ -739,7 +718,7 @@ const IncomePage: React.FC = () => {
                   }
                 ]}
                 searchable
-                totalCount={debtRepayments?.length || 0}
+                totalCount={historyData.length}
                 currentPage={currentPage}
                 pageSize={pageSize}
                 onPageChange={setCurrentPage}
