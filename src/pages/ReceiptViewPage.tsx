@@ -36,7 +36,7 @@ import InfoCard from '../components/ui/InfoCard';
 import {Header} from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
 import PageWrapper from '../components/layout/PageWrapper';
-import {calculateLineItemTotalWithDiscount, calculateTotalWithDiscount} from '../utils/discountCalculator';
+import {calculateTotalWithDiscount} from '../utils/discountCalculator';
 import {Image} from 'jspdf';
 import {useSettingsStore} from '../store/useSettingsStore';
 import {useErrorStore} from '../store/useErrorStore';
@@ -44,6 +44,7 @@ import {useReceipt, useDeleteReceipt} from '../hooks/useReceipts';
 import {useActivePaymentMethods} from '../hooks/usePaymentMethods';
 import Combobox from '../components/ui/Combobox';
 import NanoDataTable from '../components/ui/NanoDataTable';
+import { useReceiptDebtCalculation } from '../hooks/useDebtCalculation';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -91,6 +92,8 @@ const ReceiptViewPage: React.FC = () => {
 
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
+
+  const { debtSummary, loading: debtLoading } = useReceiptDebtCalculation(id, receipt, rawLineItems, receiptSplits, payments);
 
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState<boolean>(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState<any>(null);
@@ -166,74 +169,15 @@ const ReceiptViewPage: React.FC = () => {
   const displayTotalItems = rawLineItems?.length || 0;
   const displayTotalQuantity = (rawLineItems || []).reduce((total, item) => total + item.LineQuantity, 0);
 
-
-  const debtSummary = useMemo(() => {
-    if (!debtEnabled || !receipt || !receiptSplits || !rawLineItems) return {debtors: [], ownShare: null};
-
-    const summary: Record<string, any> = {};
-    let ownShare: any = null;
-
-    if (receipt.SplitType === 'total_split' && (receiptSplits.length > 0 || (receipt.OwnShares && receipt.OwnShares > 0))) {
-      const totalShares = receipt.TotalShares && receipt.TotalShares > 0
-        ? receipt.TotalShares
-        : receiptSplits.reduce((acc, curr) => acc + curr.SplitPart, 0) + (receipt.OwnShares || 0);
-
-      receiptSplits.forEach(split => {
-        const amount = (displayTotalAmount * split.SplitPart) / totalShares;
-        summary[split.DebtorID] = {
-          name: split.DebtorName,
-          amount: (summary[split.DebtorID]?.amount || 0) + amount,
-          debtorId: split.DebtorID,
-          shares: split.SplitPart,
-          totalShares: totalShares,
-        };
-      });
-
-      if (receipt.OwnShares && receipt.OwnShares > 0) {
-        const ownAmount = (displayTotalAmount * receipt.OwnShares) / totalShares;
-        ownShare = {
-          amount: ownAmount,
-          shares: receipt.OwnShares,
-          totalShares: totalShares,
-        };
-      }
-    } else if (receipt.SplitType === 'line_item' && !receipt.IsNonItemised) {
-      const debtorItems: Record<string, { count: number, total: number }> = {};
-
-      (rawLineItems as LineItem[]).forEach(item => {
-        if (item.DebtorID) {
-          const itemAmount = calculateLineItemTotalWithDiscount(item, receipt.Discount || 0);
-
-          if (!debtorItems[String(item.DebtorID)]) {
-            debtorItems[String(item.DebtorID)] = {count: 0, total: 0};
-          }
-          debtorItems[String(item.DebtorID)].count += 1;
-          debtorItems[String(item.DebtorID)].total += itemAmount;
-
-          summary[String(item.DebtorID)] = {
-            name: item.DebtorName,
-            amount: debtorItems[String(item.DebtorID)].total,
-            debtorId: item.DebtorID,
-            itemCount: debtorItems[String(item.DebtorID)].count,
-            totalItems: rawLineItems.length,
-          };
-        }
-      });
-    }
-    return {debtors: Object.values(summary), ownShare};
-  }, [rawLineItems, receipt, receiptSplits, debtEnabled, displayTotalAmount]);
-
   const debtStatus = useMemo(() => {
-    if (!debtEnabled || !debtSummary.debtors.length) return null;
+    if (!debtEnabled || !debtSummary || !debtSummary.debtors.length) return null;
     const totalDebtors = debtSummary.debtors.length;
-    const paidDebtors = debtSummary.debtors.filter(d =>
-      (payments || []).some(p => p.DebtorID === d.debtorId)
-    ).length;
+    const paidDebtors = debtSummary.debtors.filter(d => d.isPaid).length;
 
     if (paidDebtors === 0) return { label: 'Not Paid to You', color: 'red' };
     if (paidDebtors === totalDebtors) return { label: 'Fully Paid to You', color: 'green' };
     return { label: `${paidDebtors}/${totalDebtors} Paid to You`, color: 'yellow' };
-  }, [debtSummary, payments, debtEnabled]);
+  }, [debtSummary, debtEnabled]);
 
   const handleSavePdf = async () => {
     if (!receipt) return;
@@ -545,13 +489,9 @@ const ReceiptViewPage: React.FC = () => {
               <div>
                 <Divider text="Debt Breakdown"/>
                 <div className="space-y-2 mt-4">
-                  {(debtSummary.debtors.length > 0 || debtSummary.ownShare) ? (
+                  {(debtSummary && (debtSummary.debtors.length > 0 || debtSummary.ownShare)) ? (
                     <>
-                      {debtSummary.debtors.map((debtor) => {
-                        const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
-                        const isPaid = !!payment;
-
-                        return (
+                      {debtSummary.debtors.map((debtor) => (
                           <Card
                             key={debtor.debtorId}
                             className="p-4 cursor-pointer transition-all duration-200"
@@ -565,8 +505,8 @@ const ReceiptViewPage: React.FC = () => {
                                 <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
                               </Link>
                               <div className="flex items-center">
-                                {isPaid ? (
-                                  <Tooltip content={`Paid on ${payment.PaidDate}`}>
+                                {debtor.isPaid ? (
+                                  <Tooltip content={`Paid on ${payments.find(p => p.DebtorID === debtor.debtorId)?.PaidDate}`}>
                                     <CheckCircle className="h-5 w-5 text-green"/>
                                   </Tooltip>
                                 ) : (
@@ -577,7 +517,7 @@ const ReceiptViewPage: React.FC = () => {
                               </div>
                             </div>
                             <div className="flex justify-between items-baseline mt-1">
-                              <p className={cn("font-bold truncate", isPaid ? "text-green" : "text-red")}
+                              <p className={cn("font-bold truncate", debtor.isPaid ? "text-green" : "text-red")}
                                  style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                                 €{debtor.amount.toFixed(2)}
                               </p>
@@ -589,8 +529,7 @@ const ReceiptViewPage: React.FC = () => {
                               </div>
                             </div>
                           </Card>
-                        );
-                      })}
+                        ))}
                       {!!debtSummary.ownShare && (
                         <Card className="p-4">
                           <div className="flex justify-between items-start">
