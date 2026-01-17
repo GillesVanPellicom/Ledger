@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { generateReceiptsPdf } from '../utils/pdfGenerator';
-import { useError } from '../context/ErrorContext';
+import { generateReceiptsPdf } from '../logic/pdf/receiptPdf';
+import { useErrorStore } from '../store/useErrorStore';
 import { Receipt, LineItem, ReceiptImage } from '../types';
 
 interface FullReceipt extends Receipt {
@@ -21,7 +21,7 @@ interface UsePdfGeneratorResult {
 export const usePdfGenerator = (): UsePdfGeneratorResult => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
-  const { showError } = useError();
+  const { showError } = useErrorStore();
 
   const generatePdf = async (receipts: FullReceipt[], options: any = {}) => {
     setIsGenerating(true);

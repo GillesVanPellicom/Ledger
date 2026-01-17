@@ -19,7 +19,7 @@ import {
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
-import {generateReceiptsPdf} from '../utils/pdfGenerator';
+import {generateReceiptsPdf} from '../logic/pdf/receiptPdf';
 import ProgressModal from '../components/ui/ProgressModal';
 import Tooltip from '../components/ui/Tooltip';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
@@ -30,6 +30,7 @@ import { useReceipts, useDeleteReceipt } from '../hooks/useReceipts';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
 import Select from '../components/ui/Select';
+import { usePdfGenerator } from '../hooks/usePdfGenerator';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -59,8 +60,7 @@ const ReceiptsPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [receiptToDelete, setReceiptToDelete] = useState<number | null>(null);
 
-  const [pdfProgress, setPdfProgress] = useState<number>(0);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
+  const { generatePdf, isGenerating: isGeneratingPdf, progress: pdfProgress } = usePdfGenerator();
   const [isBulkDebtModalOpen, setIsBulkDebtModalOpen] = useState<boolean>(false);
 
   const {showError} = useErrorStore();
@@ -138,41 +138,33 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const handleMassPdfSave = async () => {
-    setIsGeneratingPdf(true);
-    setPdfProgress(0);
-    try {
-      const placeholders = selectedReceiptIds.map(() => '?').join(',');
-      const receiptsData: (Receipt & { lineItems: LineItem[], totalAmount: number })[] = await db.query(`
-          SELECT r.*, s.StoreName, pm.PaymentMethodName
-          FROM Receipts r
-                   JOIN Stores s ON r.StoreID = s.StoreID
-                   LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-          WHERE r.ReceiptID IN (${placeholders})
-          ORDER BY r.ReceiptDate DESC
-      `, selectedReceiptIds);
+    const placeholders = selectedReceiptIds.map(() => '?').join(',');
+    const receiptsData: (Receipt & { lineItems: LineItem[], totalAmount: number })[] = await db.query(`
+        SELECT r.*, s.StoreName, pm.PaymentMethodName
+        FROM Receipts r
+                 JOIN Stores s ON r.StoreID = s.StoreID
+                 LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        WHERE r.ReceiptID IN (${placeholders})
+        ORDER BY r.ReceiptDate DESC
+    `, selectedReceiptIds);
 
-      const lineItemsData: LineItem[] = await db.query(`
-          SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
-          FROM LineItems li
-                   JOIN Products p ON li.ProductID = p.ProductID
-                   LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-          WHERE li.ReceiptID IN (${placeholders})
-      `, selectedReceiptIds);
+    const lineItemsData: LineItem[] = await db.query(`
+        SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
+        FROM LineItems li
+                 JOIN Products p ON li.ProductID = p.ProductID
+                 LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
+        WHERE li.ReceiptID IN (${placeholders})
+    `, selectedReceiptIds);
 
-      const fullReceipts: FullReceipt[] = receiptsData.map(receipt => {
-        const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
-        const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
-        const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
-        const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : Math.max(0, subtotal - discountAmount);
-        return {...receipt, lineItems: items, totalAmount: total || 0, images: []};
-      });
+    const fullReceipts: FullReceipt[] = receiptsData.map(receipt => {
+      const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
+      const subtotal = items.reduce((sum, item) => sum + (item.LineQuantity * item.LineUnitPrice), 0);
+      const discountAmount = (subtotal * (receipt.Discount || 0)) / 100;
+      const total = receipt.IsNonItemised ? receipt.NonItemisedTotal : Math.max(0, subtotal - discountAmount);
+      return {...receipt, lineItems: items, totalAmount: total || 0, images: []};
+    });
 
-      await generateReceiptsPdf(fullReceipts, settings.pdf, (progress: number) => setPdfProgress(progress));
-    } catch (error) {
-      showError(error as Error);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
+    await generatePdf(fullReceipts, settings.pdf);
   };
 
   const columns: any[] = [

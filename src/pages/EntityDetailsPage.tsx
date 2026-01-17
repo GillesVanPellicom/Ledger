@@ -12,7 +12,7 @@ import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
 import { FileDown, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowLeft } from 'lucide-react';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
-import { generateReceiptsPdf } from '../utils/pdfGenerator';
+import { generateReceiptsPdf } from '../logic/pdf/receiptPdf';
 import ProgressModal from '../components/ui/ProgressModal';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
@@ -25,6 +25,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
+import { usePdfGenerator } from '../hooks/usePdfGenerator';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -88,8 +89,9 @@ const EntityDetailsPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
 
   const [isPdfOptionsModalOpen, setIsPdfOptionsModalOpen] = useState<boolean>(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
-  const [pdfProgress, setPdfProgress] = useState(0);
+  
+  const { generatePdf, isGenerating: isGeneratingPdf, progress: pdfProgress } = usePdfGenerator();
+
 
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState<boolean>(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState<any>(null);
@@ -136,74 +138,63 @@ const EntityDetailsPage: React.FC = () => {
 
   const handleGeneratePdf = async (direction: 'all' | 'to_me' | 'to_entity', status: 'all' | 'settled' | 'unsettled') => {
     setIsPdfOptionsModalOpen(false);
-    setIsGeneratingPdf(true);
-    setPdfProgress(0);
+    
+    let receiptsToProcess = filteredReceipts;
 
-    try {
-      let receiptsToProcess = filteredReceipts;
-
-      if (direction !== 'all') {
-        receiptsToProcess = receiptsToProcess.filter(r => r.type === direction);
-      }
-      if (status !== 'all') {
-        receiptsToProcess = receiptsToProcess.filter(r => (status === 'settled' ? r.isSettled : !r.isSettled));
-      }
-
-      if (receiptsToProcess.length === 0) {
-        showError(new Error("No expenses match the selected criteria."));
-        return;
-      }
-
-      const fullReceiptsData: any[] = [];
-      for (let i = 0; i < receiptsToProcess.length; i++) {
-        const r = receiptsToProcess[i];
-        const receiptDetails = await db.queryOne<any>(`
-          SELECT r.*, s.StoreName, pm.PaymentMethodName
-          FROM Receipts r
-          JOIN Stores s ON r.StoreID = s.StoreID
-          LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-          WHERE r.ReceiptID = ?
-        `, [r.ReceiptID]);
-
-        const lineItems = await db.query<any[]>(`
-          SELECT li.*, p.ProductName, p.ProductBrand
-          FROM LineItems li
-          JOIN Products p ON li.ProductID = p.ProductID
-          WHERE li.ReceiptID = ?
-        `, [r.ReceiptID]);
-        
-        const images = await db.query<any[]>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [r.ReceiptID]);
-
-        let totalAmount = r.amount;
-        if (r.type === 'to_me') {
-          if (r.IsNonItemised) {
-            totalAmount = r.NonItemisedTotal;
-          } else {
-            totalAmount = calculateTotalWithDiscount(lineItems, receiptDetails.Discount || 0);
-          }
-        }
-
-        fullReceiptsData.push({
-          ...receiptDetails,
-          lineItems,
-          images,
-          totalAmount,
-          debtInfo: {
-            entityName: entity!.DebtorName,
-            direction: r.type === 'to_me' ? `Owed to ${settings.userName || 'you'}` : `Owed to ${entity!.DebtorName}`,
-          }
-        });
-        
-        setPdfProgress(Math.round(((i + 1) / receiptsToProcess.length) * 50));
-      }
-
-      await generateReceiptsPdf(fullReceiptsData, settings.pdf, (progress: number) => setPdfProgress(50 + progress / 2));
-
-    } catch (error) {
-      showError(error as Error);
-    } finally {
-      setIsGeneratingPdf(false);
+    if (direction !== 'all') {
+      receiptsToProcess = receiptsToProcess.filter(r => r.type === direction);
     }
+    if (status !== 'all') {
+      receiptsToProcess = receiptsToProcess.filter(r => (status === 'settled' ? r.isSettled : !r.isSettled));
+    }
+
+    if (receiptsToProcess.length === 0) {
+      showError(new Error("No expenses match the selected criteria."));
+      return;
+    }
+
+    const fullReceiptsData: any[] = [];
+    for (let i = 0; i < receiptsToProcess.length; i++) {
+      const r = receiptsToProcess[i];
+      const receiptDetails = await db.queryOne<any>(`
+        SELECT r.*, s.StoreName, pm.PaymentMethodName
+        FROM Receipts r
+        JOIN Stores s ON r.StoreID = s.StoreID
+        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        WHERE r.ReceiptID = ?
+      `, [r.ReceiptID]);
+
+      const lineItems = await db.query<any[]>(`
+        SELECT li.*, p.ProductName, p.ProductBrand
+        FROM LineItems li
+        JOIN Products p ON li.ProductID = p.ProductID
+        WHERE li.ReceiptID = ?
+      `, [r.ReceiptID]);
+      
+      const images = await db.query<any[]>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [r.ReceiptID]);
+
+      let totalAmount = r.amount;
+      if (r.type === 'to_me') {
+        if (r.IsNonItemised) {
+          totalAmount = r.NonItemisedTotal;
+        } else {
+          totalAmount = calculateTotalWithDiscount(lineItems, receiptDetails.Discount || 0);
+        }
+      }
+
+      fullReceiptsData.push({
+        ...receiptDetails,
+        lineItems,
+        images,
+        totalAmount,
+        debtInfo: {
+          entityName: entity!.DebtorName,
+          direction: r.type === 'to_me' ? `Owed to ${settings.userName || 'you'}` : `Owed to ${entity!.DebtorName}`,
+        }
+      });
+    }
+
+    await generatePdf(fullReceiptsData, settings.pdf);
   };
 
   const handleRowClick = (row: Receipt, event: React.MouseEvent) => {

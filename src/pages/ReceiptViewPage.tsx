@@ -25,7 +25,7 @@ import {
   AlertTriangle,
   RotateCcw
 } from 'lucide-react';
-import {generateReceiptsPdf} from '../utils/pdfGenerator';
+import {generateReceiptsPdf} from '../logic/pdf/receiptPdf';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import Tooltip from '../components/ui/Tooltip';
