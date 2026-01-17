@@ -2,6 +2,10 @@ import React from 'react';
 import { cn } from '../../utils/cn';
 import { BackgroundGradientAnimation } from './background-gradient-animation';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import Button from './Button';
+import Tooltip from './Tooltip';
 
 interface HeaderProps {
   title: string;
@@ -35,6 +39,20 @@ export const Header: React.FC<HeaderProps> = ({
   const theme = useSettingsStore((state) => state.settings.theme);
   const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const rowHeight = minHeight / 4;
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Define main routes that should not have a back button
+  const mainRoutes = ['/', '/income', '/reference-data', '/analytics', '/payment-methods', '/entities'];
+  const isMainRoute = mainRoutes.includes(location.pathname);
+
+  const defaultBackButton = !isMainRoute ? (
+    <Tooltip content="Go Back">
+      <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <ArrowLeft className="h-5 w-5" />
+      </Button>
+    </Tooltip>
+  ) : null;
 
   return (
     <div
@@ -116,11 +134,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="relative w-full h-full flex items-center justify-between px-[100px]">
             <div className="relative flex items-baseline gap-8">
-              {backButton && (
-                <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2">
-                  {backButton}
-                </div>
-              )}
+              <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2">
+                {backButton !== undefined ? backButton : defaultBackButton}
+              </div>
               <div className="flex items-baseline gap-8">
                 <div className="relative">
                   <h1 className="text-2xl font-bold">{title}</h1>

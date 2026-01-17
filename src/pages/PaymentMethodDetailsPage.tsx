@@ -498,13 +498,6 @@ const PaymentMethodDetailsPage: React.FC = () => {
     <div>
       <Header
         title={method.PaymentMethodName}
-        backButton={
-          <Tooltip content="Go Back">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Tooltip>
-        }
         actions={
           <>
             <Tooltip content="Edit">
