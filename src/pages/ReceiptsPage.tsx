@@ -15,7 +15,8 @@ import {
   Clipboard,
   HelpCircle,
   RotateCcw,
-  Filter
+  Filter,
+  Paperclip
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -81,6 +82,7 @@ const ReceiptsPage: React.FC = () => {
   const { settings } = useSettingsStore();
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
+  const indicatorSettings = settings.receipts?.indicators;
 
   // Sync URL with applied filters
   useEffect(() => {
@@ -229,35 +231,49 @@ const ReceiptsPage: React.FC = () => {
       width: '10%',
       render: (row: Receipt) => (
         <div className="flex items-center justify-center gap-3">
-          {row.IsNonItemised ? (
-            <Tooltip content="Total-only expense">
-              <Clipboard className="h-5 w-5 text-gray-400"/>
-            </Tooltip>
-          ) : (
-            <Tooltip content="Detailed Expense">
-              <ClipboardList className="h-5 w-5 text-gray-400"/>
-            </Tooltip>
+          {indicatorSettings?.type && (
+            row.IsNonItemised ? (
+              <Tooltip content="Total-only expense">
+                <Clipboard className="h-5 w-5 text-gray-400"/>
+              </Tooltip>
+            ) : (
+              <Tooltip content="Detailed Expense">
+                <ClipboardList className="h-5 w-5 text-gray-400"/>
+              </Tooltip>
+            )
           )}
 
-          {row.Status === 'unpaid' ? (
-            <Tooltip content="This is an unpaid expense, meaning it is owed to the person who paid it by you.">
-              <AlertTriangle className="h-5 w-5 text-yellow-500"/>
-            </Tooltip>
-          ) : debtEnabled && (row.UnpaidDebtorCount || 0) > 0 ? (
-            <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-              <AlertCircle className="h-5 w-5 text-red"/>
-            </Tooltip>
-          ) : debtEnabled && (row.TotalDebtorCount || 0) > 0 ? (
-            <Tooltip content="All debts settled">
-              <CheckCircle className="h-5 w-5 text-green"/>
-            </Tooltip>
-          ) : <div className="w-5"/>}
+          {indicatorSettings?.debt && debtEnabled && (
+            row.Status === 'unpaid' ? (
+              <Tooltip content="This is an unpaid expense, meaning it is owed to the person who paid it by you.">
+                <AlertTriangle className="h-5 w-5 text-yellow-500"/>
+              </Tooltip>
+            ) : (row.UnpaidDebtorCount || 0) > 0 ? (
+              <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
+                <AlertCircle className="h-5 w-5 text-red-500"/>
+              </Tooltip>
+            ) : (row.TotalDebtorCount || 0) > 0 ? (
+              <Tooltip content="All debts settled">
+                <CheckCircle className="h-5 w-5 text-green-500"/>
+              </Tooltip>
+            ) : <div className="w-5"/>
+          )}
 
-          {row.IsTentative ? (
-            <Tooltip content="Tentative Expense">
-              <HelpCircle className="h-5 w-5 text-gray-400"/>
-            </Tooltip>
-          ) : <div className="w-5"/>}
+          {indicatorSettings?.tentative && (
+            row.IsTentative ? (
+              <Tooltip content="Tentative Expense">
+                <HelpCircle className="h-5 w-5 text-gray-400"/>
+              </Tooltip>
+            ) : <div className="w-5"/>
+          )}
+
+          {indicatorSettings?.attachments && (
+            (row.AttachmentCount || 0) > 0 ? (
+              <Tooltip content={`${row.AttachmentCount} attachment(s)`}>
+                <Paperclip className="h-5 w-5 text-gray-400"/>
+              </Tooltip>
+            ) : <div className="w-5"/>
+          )}
         </div>
       )
     },

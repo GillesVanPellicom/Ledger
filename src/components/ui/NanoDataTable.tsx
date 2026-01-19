@@ -3,7 +3,7 @@ import { cn } from '../../utils/cn';
 import { FileSearch } from 'lucide-react';
 
 interface NanoDataTableProps {
-  headers: { label: string; className?: string }[];
+  headers: { label: React.ReactNode; className?: string }[];
   rows: React.ReactNode[][];
   className?: string;
   emptyStateIcon?: React.ReactNode;

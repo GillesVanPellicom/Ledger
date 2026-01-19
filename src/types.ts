@@ -24,6 +24,14 @@ export interface Settings {
   debtorStyles?: Record<string, DebtorStyle>;
   theme?: string;
   uiScale?: number;
+  receipts?: {
+    indicators: {
+      debt: boolean;
+      tentative: boolean;
+      type: boolean;
+      attachments: boolean;
+    }
+  }
 }
 
 export interface Debtor {
@@ -100,6 +108,7 @@ export interface Receipt {
   IsNonItemised?: number;
   NonItemisedTotal?: number;
   splitPart?: number;
+  AttachmentCount?: number;
 }
 
 export interface LineItem {

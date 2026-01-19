@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Moon, Sun, RotateCw, Bug, CreditCard, FileText, Folder, Trash2, Info, Users, Server, Pencil } from 'lucide-react';
+import { Moon, Sun, RotateCw, Bug, CreditCard, Trash2, Info, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -12,6 +12,7 @@ import '../../electron.d';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useBackupStore } from '../../store/useBackupStore';
 import StepperInput from '../ui/StepperInput';
+import NanoDataTable from '../ui/NanoDataTable';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -75,6 +76,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const handleModuleToggle = (key: string) => {
     const newModules = { ...settings.modules, [key]: { ...(settings.modules as any)[key], enabled: !(settings.modules as any)[key].enabled } };
     updateSettings({ modules: newModules });
+  };
+
+  const handleIndicatorToggle = (key: 'debt' | 'tentative' | 'type' | 'attachments') => {
+    const defaults = { debt: false, tentative: false, type: false, attachments: false };
+    const currentIndicators = { ...defaults, ...(settings.receipts?.indicators || {}) };
+    const newIndicators = { ...currentIndicators, [key]: !currentIndicators[key] };
+    // cast to expected shape to satisfy TS
+    const typedIndicators = newIndicators as unknown as import('../../types').Settings['receipts']['indicators'];
+    updateSettings({ receipts: { ...settings.receipts, indicators: typedIndicators } });
   };
 
   const handlePdfToggle = (key: string) => {
@@ -147,8 +157,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     { id: 'modules', label: 'Modules' },
     { id: 'pdf', label: 'PDF' },
     { id: 'data', label: 'Data' },
-    { id: 'backup', label: 'Backup' },
     { id: 'formatting', label: 'Formatting' },
+    { id: 'receipts', label: 'Expenses' },
   ];
 
   if (isDev) tabs.push({ id: 'development', label: 'Development' });
@@ -160,6 +170,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
       {tooltip && <Tooltip content={tooltip}><Info className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>}
     </div>
   );
+
+  // Compact indicator definitions used by the receipts UI. Keep headers' icon colors identical to the table headers.
+  const indicatorDefs = [
+    {
+      key: 'debt',
+      header: <div className="flex flex-col items-center gap-1"><AlertTriangle className="h-5 w-5 text-yellow-500" /><AlertCircleIcon className="h-5 w-5 text-red-500" /><CheckCircle className="h-5 w-5 text-green-500" /></div>,
+      title: 'Debt',
+      desc: 'Marks items that are part of a split or debt.',
+      enabled: settings.receipts?.indicators.debt ?? false,
+      hidden: !settings.modules.debt?.enabled,
+    },
+    {
+      key: 'tentative',
+      header: <HelpCircle className="h-5 w-5 text-gray-400" />,
+      title: 'Tentative',
+      desc: 'Marks expenses or items as drafts/tentative.',
+      enabled: settings.receipts?.indicators.tentative ?? false,
+    },
+    {
+      key: 'type',
+      header: <div className="flex flex-col items-center gap-1"><ClipboardList className="h-5 w-5 text-gray-400" /><Clipboard className="h-5 w-5 text-gray-400" /></div>,
+      title: 'Receipt Type',
+      desc: 'Indicates if an expense is total-only or detailed.',
+      enabled: settings.receipts?.indicators.type ?? false,
+    },
+    {
+      key: 'attachments',
+      header: <Paperclip className="h-5 w-5 text-gray-400" />,
+      title: 'Attachments',
+      desc: 'Indicates the presence of attached images or receipt files.',
+      enabled: settings.receipts?.indicators.attachments ?? false,
+    },
+  ].filter(d => !d.hidden);
+
+  // fix TypeScript inference for indicator toggles
+  const indicatorToggleHandlers = {
+    debt: () => handleIndicatorToggle('debt'),
+    tentative: () => handleIndicatorToggle('tentative'),
+    type: () => handleIndicatorToggle('type'),
+    attachments: () => handleIndicatorToggle('attachments'),
+  } as const;
 
   return (
     <>
@@ -200,7 +251,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <Switch 
                       label="Debt Tracking" 
                       description="Track debts and shared expenses." 
-                      isEnabled={settings.modules.debt?.enabled} 
+                      isEnabled={settings.modules.debt?.enabled ?? false} 
                       onToggle={() => handleModuleToggle('debt')}
                       icon={Users}
                     />
@@ -208,6 +259,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 </div>
               </div>
             )}
+            {activeTab === 'receipts' && (
+              <div className="space-y-3 max-w-md">
+                 <SectionTitle title="Expense Indicators" tooltip="Toggle visibility of indicator icons on the expense list." />
+
+                 <Card>
+                  <div className="p-2">
+                    <p className="text-sm text-gray-500 mb-2">Use the toggles to enable indicator groups used in the expense list.</p>
+
+                    <div className="space-y-2">
+                      {indicatorDefs.map((d) => (
+                        <div key={d.key} className="grid grid-cols-[40px_1fr_auto] items-center gap-3 py-2">
+                          <div className="flex items-center justify-center">{d.header}</div>
+                          <div>
+                            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{d.title}</div>
+                            <div className="text-xs text-gray-500">{d.desc}</div>
+                          </div>
+                          <div className="flex items-center justify-end">
+                            <Switch isEnabled={d.enabled} onToggle={() => handleIndicatorToggle(d.key as any)} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+               </div>
+             )}
             {activeTab === 'formatting' && (
               <div className="space-y-6">
                 <div>
@@ -216,7 +293,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <Switch 
                       label="Capitalization Protection" 
                       description="Enforce capitalization rules for product names and brands." 
-                      isEnabled={(settings.modules as any).capitalizationProtection?.enabled} 
+                      isEnabled={settings.modules.capitalizationProtection?.enabled ?? false}
                       onToggle={() => handleModuleToggle('capitalizationProtection')}
                     />
                   </div>
@@ -261,36 +338,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     </div>
                   </div>
                 </Card>
-              </div>
-            )}
-            {activeTab === 'backup' && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <SectionTitle title="Database Backup" tooltip="Automatically back up your database." />
-                    <button onClick={() => window.electronAPI.openBackupFolder()} className="text-xs text-blue-500 hover:underline">Open Backup Folder</button>
-                  </div>
-                  <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">Backups</p>
-                      <p className="text-sm text-gray-500">{backupCount} / {backupSettings.maxBackups}</p>
+
+                {/* Backup card moved into Data tab. Title uses the tab name and includes the info tooltip. */}
+                <Card>
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <SectionTitle title="Backup" tooltip="Automatically back up your database." />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
-                        <StepperInput id="max-backups" min={1} max={50} value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('maxBackups', Math.min(50, backupSettings.maxBackups + 1))} onDecrement={() => handleBackupSettingChange('maxBackups', Math.max(1, backupSettings.maxBackups - 1))} />
+                    <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">Backups</p>
+                        <p className="text-sm text-gray-500">{backupCount} / {backupSettings.maxBackups}</p>
                       </div>
-                      <div>
-                        <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
-                        <StepperInput id="backup-interval" min={1} max={50} value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('interval', Math.min(50, backupSettings.interval + 1))} onDecrement={() => handleBackupSettingChange('interval', Math.max(1, backupSettings.interval - 1))} />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                          <StepperInput id="max-backups" min={1} max={50} value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('maxBackups', Math.min(50, backupSettings.maxBackups + 1))} onDecrement={() => handleBackupSettingChange('maxBackups', Math.max(1, backupSettings.maxBackups - 1))} />
+                        </div>
+                        <div>
+                          <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                          <StepperInput id="backup-interval" min={1} max={50} value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('interval', Math.min(50, backupSettings.interval + 1))} onDecrement={() => handleBackupSettingChange('interval', Math.max(1, backupSettings.interval - 1))} />
+                        </div>
                       </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <button onClick={() => window.electronAPI?.openBackupFolder()} className="text-xs text-blue-500 hover:underline">Open Backup Folder</button>
+                        <div className="text-right">
+                          <Button variant="ghost" size="sm" onClick={resetBackupSettings} className="h-8 px-2 text-xs"><RotateCw className="h-3 w-3 mr-1" />Reset to Defaults</Button>
+                        </div>
+                      </div>
+                      <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp} className="w-full">Backup Now</Button>
                     </div>
-                    <div className="text-right mt-2">
-                      <Button variant="ghost" size="sm" onClick={resetBackupSettings} className="h-8 px-2 text-xs"><RotateCw className="h-3 w-3 mr-1" />Reset to Defaults</Button>
-                    </div>
-                    <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp} className="w-full">Backup Now</Button>
                   </div>
-                </div>
+                </Card>
               </div>
             )}
             {activeTab === 'development' && isDev && (

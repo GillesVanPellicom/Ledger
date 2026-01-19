@@ -28,5 +28,13 @@
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
   "userName": "Gilles",
-  "uiScale": 100
+  "uiScale": 100,
+  "receipts": {
+    "indicators": {
+      "debt": true,
+      "tentative": true,
+      "type": true,
+      "attachments": true
+    }
+  }
 }

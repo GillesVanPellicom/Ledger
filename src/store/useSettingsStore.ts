@@ -39,6 +39,14 @@ const initialSettings: Settings = {
   datastore: {
     folderPath: '',
   },
+  receipts: {
+    indicators: {
+      debt: true,
+      tentative: true,
+      type: false,
+      attachments: false,
+    }
+  }
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -87,6 +95,7 @@ export const useSettingsStore = create<SettingsState>()(
               backup: {...state.settings.backup, ...loadedSettings.backup},
               paymentMethodStyles: {...state.settings.paymentMethodStyles, ...loadedSettings.paymentMethodStyles},
               datastore: {...state.settings.datastore, ...loadedSettings.datastore},
+              receipts: {...state.settings.receipts, ...loadedSettings.receipts},
             },
             loading: false,
           }), false, 'loadSettings/success');
