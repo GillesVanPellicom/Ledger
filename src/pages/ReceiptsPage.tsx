@@ -14,7 +14,8 @@ import {
   ClipboardList,
   Clipboard,
   HelpCircle,
-  RotateCcw
+  RotateCcw,
+  Filter
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -31,6 +32,7 @@ import { useErrorStore } from '../store/useErrorStore';
 import Select from '../components/ui/Select';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
 import { calculateTotalWithDiscount } from '../logic/expense';
+import FilterModal, { FilterOption } from '../components/ui/FilterModal';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -59,6 +61,7 @@ const ReceiptsPage: React.FC = () => {
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<number[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [receiptToDelete, setReceiptToDelete] = useState<number | null>(null);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   const { generatePdf, isGenerating: isGeneratingPdf, progress: pdfProgress } = usePdfGenerator();
   const [isBulkDebtModalOpen, setIsBulkDebtModalOpen] = useState<boolean>(false);
@@ -117,6 +120,14 @@ const ReceiptsPage: React.FC = () => {
     dateRange[0] !== null || 
     dateRange[1] !== null || 
     searchTerm !== '';
+
+  const activeFilterCount = [
+    filters.debt !== 'all',
+    filters.type !== 'all',
+    filters.tentative !== 'all',
+    filters.attachment !== 'all',
+    dateRange[0] !== null || dateRange[1] !== null
+  ].filter(Boolean).length;
 
   const handleDelete = async () => {
     const idsToDelete = receiptToDelete ? [receiptToDelete] : selectedReceiptIds;
@@ -242,7 +253,7 @@ const ReceiptsPage: React.FC = () => {
   });
 
   const debtFilterOptions = [
-    { value: 'all', label: 'Debt: All' },
+    { value: 'all', label: 'All' },
     { value: 'none', label: 'No Debt' },
     { value: 'unpaid', label: 'Unpaid Debt' },
     { value: 'own_debt', label: 'Own Debt' },
@@ -250,19 +261,19 @@ const ReceiptsPage: React.FC = () => {
   ];
 
   const typeFilterOptions = [
-    { value: 'all', label: 'Type: All' },
+    { value: 'all', label: 'All' },
     { value: 'detailed', label: 'Detailed' },
     { value: 'total-only', label: 'Total-only' },
   ];
 
   const tentativeFilterOptions = [
-    { value: 'all', label: 'Status: All' },
+    { value: 'all', label: 'All' },
     { value: 'finished', label: 'Finished' },
     { value: 'tentative', label: 'Tentative' },
   ];
 
   const attachmentFilterOptions = [
-    { value: 'all', label: 'Attachments: All' },
+    { value: 'all', label: 'All' },
     { value: 'none', label: 'No Attachments' },
     { value: 'yes', label: 'Has Attachments' },
   ];
@@ -320,42 +331,12 @@ const ReceiptsPage: React.FC = () => {
             onSelectionChange={setSelectedReceiptIds}
             selectedIds={selectedReceiptIds}
             itemKey="ReceiptID"
-            middleRowLeft={
-              <div className="w-1/3">
-                <DatePicker
-                  selectsRange
-                  startDate={dateRange[0]}
-                  endDate={dateRange[1]}
-                  onChange={(update: any) => {
-                    setDateRange(update);
-                    setCurrentPage(1);
-                  }}
-                  isClearable={true}
-                  placeholderText="Filter by date range"
-                />
-              </div>
-            }
-            middleRowRight={
+            actions={
               <div className="flex items-center gap-2">
-                <Tooltip content="Filter by debt status">
-                  <div className="w-40">
-                    {debtEnabled && <Select options={debtFilterOptions} value={filters.debt} onChange={e => handleFilterChange('debt', e.target.value)} />}
-                  </div>
-                </Tooltip>
-                <Tooltip content="Filter by expense type">
-                  <div className="w-40">
-                    <Select options={typeFilterOptions} value={filters.type} onChange={e => handleFilterChange('type', e.target.value)} />
-                  </div>
-                </Tooltip>
-                <Tooltip content="Filter by tentative status">
-                  <div className="w-40">
-                    <Select options={tentativeFilterOptions} value={filters.tentative} onChange={e => handleFilterChange('tentative', e.target.value)} />
-                  </div>
-                </Tooltip>
-                <Tooltip content="Filter by attachments">
-                  <div className="w-40">
-                    <Select options={attachmentFilterOptions} value={filters.attachment} onChange={e => handleFilterChange('attachment', e.target.value)} />
-                  </div>
+                <Tooltip content="Filters">
+                  <Button variant="ghost" size="icon" onClick={() => setIsFilterModalOpen(true)}>
+                    <Filter className="h-4 w-4" />
+                  </Button>
                 </Tooltip>
                 <Tooltip content="Reset Filters">
                   <Button variant="ghost" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
@@ -365,6 +346,81 @@ const ReceiptsPage: React.FC = () => {
               </div>
             }
           />
+
+          <FilterModal
+            isOpen={isFilterModalOpen}
+            onClose={() => setIsFilterModalOpen(false)}
+            onApply={() => setIsFilterModalOpen(false)}
+            onResetAll={resetFilters}
+            filterCount={activeFilterCount}
+            hasActiveFilters={hasActiveFilters}
+          >
+            <FilterOption 
+              title="Date Range" 
+              onReset={() => {
+                setDateRange([null, null]);
+                setCurrentPage(1);
+              }}
+            >
+              <DatePicker
+                selectsRange
+                startDate={dateRange[0]}
+                endDate={dateRange[1]}
+                onChange={(update: any) => {
+                  setDateRange(update);
+                  setCurrentPage(1);
+                }}
+                isClearable={true}
+                placeholderText="Filter by date range"
+              />
+            </FilterOption>
+
+            {debtEnabled && (
+              <FilterOption 
+                title="Debt Status" 
+                onReset={() => handleFilterChange('debt', 'all')}
+              >
+                <Select 
+                  options={debtFilterOptions} 
+                  value={filters.debt} 
+                  onChange={e => handleFilterChange('debt', e.target.value)} 
+                />
+              </FilterOption>
+            )}
+
+            <FilterOption 
+              title="Expense Type" 
+              onReset={() => handleFilterChange('type', 'all')}
+            >
+              <Select 
+                options={typeFilterOptions} 
+                value={filters.type} 
+                onChange={e => handleFilterChange('type', e.target.value)} 
+              />
+            </FilterOption>
+
+            <FilterOption 
+              title="Status" 
+              onReset={() => handleFilterChange('tentative', 'all')}
+            >
+              <Select 
+                options={tentativeFilterOptions} 
+                value={filters.tentative} 
+                onChange={e => handleFilterChange('tentative', e.target.value)} 
+              />
+            </FilterOption>
+
+            <FilterOption 
+              title="Attachments" 
+              onReset={() => handleFilterChange('attachment', 'all')}
+            >
+              <Select 
+                options={attachmentFilterOptions} 
+                value={filters.attachment} 
+                onChange={e => handleFilterChange('attachment', e.target.value)} 
+              />
+            </FilterOption>
+          </FilterModal>
 
           <ConfirmModal
             isOpen={deleteModalOpen}
