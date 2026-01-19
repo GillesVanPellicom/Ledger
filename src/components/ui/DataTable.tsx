@@ -287,17 +287,17 @@ const DataTable: React.FC<DataTableProps> = ({
           <div className="flex-1 flex justify-end">{middleRowRight}</div>
         </div>
       )}
-      <div className="flex justify-between items-center">
-        <div className="flex-1 flex items-center gap-4">
+      <div className="flex justify-between items-center gap-2">
+        <div className="flex-1 flex items-center gap-2">
           {searchable && (
-            <div className="relative w-90 mr-4">
+            <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder={searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-zinc-700" disabled={disabled} />
             </div>
           )}
           {actions}
         </div>
-        <div className="flex-1 flex justify-end items-center gap-4">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="relative flex items-center shadow-sm rounded-lg">
               <button

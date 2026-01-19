@@ -33,6 +33,7 @@ import Select from '../components/ui/Select';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
 import { calculateTotalWithDiscount } from '../logic/expense';
 import FilterModal, { FilterOption } from '../components/ui/FilterModal';
+import ButtonGroup from '../components/ui/ButtonGroup';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -46,17 +47,27 @@ const ReceiptsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(Number(searchParams.get('page')) || 1);
   const [searchTerm, setSearchTerm] = useState<string>(searchParams.get('search') || '');
   const [pageSize, setPageSize] = useState<number>(Number(searchParams.get('pageSize')) || 10);
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
+  
+  // Initial state from URL params
+  const initialDateRange: [Date | null, Date | null] = [
     searchParams.get('startDate') ? parseISO(searchParams.get('startDate')!) : null,
     searchParams.get('endDate') ? parseISO(searchParams.get('endDate')!) : null,
-  ]);
-
-  const [filters, setFilters] = useState({
+  ];
+  
+  const initialFilters = {
     debt: searchParams.get('debt') || 'all',
     type: searchParams.get('type') || 'all',
     tentative: searchParams.get('tentative') || 'all',
     attachment: searchParams.get('attachment') || 'all',
-  });
+  };
+
+  // Applied filters (what is shown in the table)
+  const [appliedDateRange, setAppliedDateRange] = useState<[Date | null, Date | null]>(initialDateRange);
+  const [appliedFilters, setAppliedFilters] = useState(initialFilters);
+
+  // Pending filters (what is shown in the modal)
+  const [pendingDateRange, setPendingDateRange] = useState<[Date | null, Date | null]>(initialDateRange);
+  const [pendingFilters, setPendingFilters] = useState(initialFilters);
 
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<number[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -71,62 +82,98 @@ const ReceiptsPage: React.FC = () => {
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
+  // Sync URL with applied filters
   useEffect(() => {
     const params = new URLSearchParams();
     if (currentPage !== 1) params.set('page', String(currentPage));
     if (pageSize !== 10) params.set('pageSize', String(pageSize));
     if (searchTerm) params.set('search', searchTerm);
-    if (dateRange[0]) params.set('startDate', dateRange[0].toISOString());
-    if (dateRange[1]) params.set('endDate', dateRange[1].toISOString());
-    if (filters.debt !== 'all') params.set('debt', filters.debt);
-    if (filters.type !== 'all') params.set('type', filters.type);
-    if (filters.tentative !== 'all') params.set('tentative', filters.tentative);
-    if (filters.attachment !== 'all') params.set('attachment', filters.attachment);
+    if (appliedDateRange[0]) params.set('startDate', appliedDateRange[0].toISOString());
+    if (appliedDateRange[1]) params.set('endDate', appliedDateRange[1].toISOString());
+    if (appliedFilters.debt !== 'all') params.set('debt', appliedFilters.debt);
+    if (appliedFilters.type !== 'all') params.set('type', appliedFilters.type);
+    if (appliedFilters.tentative !== 'all') params.set('tentative', appliedFilters.tentative);
+    if (appliedFilters.attachment !== 'all') params.set('attachment', appliedFilters.attachment);
     setSearchParams(params, { replace: true });
-  }, [currentPage, pageSize, searchTerm, dateRange, filters, setSearchParams]);
+  }, [currentPage, pageSize, searchTerm, appliedDateRange, appliedFilters, setSearchParams]);
+
+  // Sync pending filters when modal opens
+  useEffect(() => {
+    if (isFilterModalOpen) {
+      setPendingDateRange(appliedDateRange);
+      setPendingFilters(appliedFilters);
+    }
+  }, [isFilterModalOpen, appliedDateRange, appliedFilters]);
 
   const { data, isLoading, refetch } = useReceipts({
     page: currentPage,
     pageSize,
     searchTerm,
-    startDate: dateRange[0],
-    endDate: dateRange[1],
-    debtFilter: filters.debt,
-    typeFilter: filters.type,
-    tentativeFilter: filters.tentative,
-    attachmentFilter: filters.attachment,
+    startDate: appliedDateRange[0],
+    endDate: appliedDateRange[1],
+    debtFilter: appliedFilters.debt,
+    typeFilter: appliedFilters.type,
+    tentativeFilter: appliedFilters.tentative,
+    attachmentFilter: appliedFilters.attachment,
     debtEnabled
   });
 
-  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
-    setCurrentPage(1);
+  const handlePendingFilterChange = (filterName: keyof typeof pendingFilters, value: string) => {
+    setPendingFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
   const deleteReceiptMutation = useDeleteReceipt();
 
+  const applyFilters = () => {
+    setAppliedFilters(pendingFilters);
+    setAppliedDateRange(pendingDateRange);
+    setCurrentPage(1);
+    setIsFilterModalOpen(false);
+  };
+
   const resetFilters = () => {
-    setFilters({ debt: 'all', type: 'all', tentative: 'all', attachment: 'all' });
-    setDateRange([null, null]);
+    const defaultFilters = { debt: 'all', type: 'all', tentative: 'all', attachment: 'all' };
+    const defaultDateRange: [Date | null, Date | null] = [null, null];
+    
+    setAppliedFilters(defaultFilters);
+    setAppliedDateRange(defaultDateRange);
+    setPendingFilters(defaultFilters);
+    setPendingDateRange(defaultDateRange);
     setSearchTerm('');
     setCurrentPage(1);
   };
 
+  const resetPendingFilters = () => {
+    const defaultFilters = { debt: 'all', type: 'all', tentative: 'all', attachment: 'all' };
+    const defaultDateRange: [Date | null, Date | null] = [null, null];
+    
+    setPendingFilters(defaultFilters);
+    setPendingDateRange(defaultDateRange);
+  };
+
   const hasActiveFilters = 
-    filters.debt !== 'all' || 
-    filters.type !== 'all' || 
-    filters.tentative !== 'all' || 
-    filters.attachment !== 'all' || 
-    dateRange[0] !== null || 
-    dateRange[1] !== null || 
+    appliedFilters.debt !== 'all' || 
+    appliedFilters.type !== 'all' || 
+    appliedFilters.tentative !== 'all' || 
+    appliedFilters.attachment !== 'all' || 
+    appliedDateRange[0] !== null || 
+    appliedDateRange[1] !== null || 
     searchTerm !== '';
 
+  const hasPendingFilters = 
+    pendingFilters.debt !== 'all' || 
+    pendingFilters.type !== 'all' || 
+    pendingFilters.tentative !== 'all' || 
+    pendingFilters.attachment !== 'all' || 
+    pendingDateRange[0] !== null || 
+    pendingDateRange[1] !== null;
+
   const activeFilterCount = [
-    filters.debt !== 'all',
-    filters.type !== 'all',
-    filters.tentative !== 'all',
-    filters.attachment !== 'all',
-    dateRange[0] !== null || dateRange[1] !== null
+    pendingFilters.debt !== 'all',
+    pendingFilters.type !== 'all',
+    pendingFilters.tentative !== 'all',
+    pendingFilters.attachment !== 'all',
+    pendingDateRange[0] !== null || pendingDateRange[1] !== null
   ].filter(Boolean).length;
 
   const handleDelete = async () => {
@@ -332,44 +379,39 @@ const ReceiptsPage: React.FC = () => {
             selectedIds={selectedReceiptIds}
             itemKey="ReceiptID"
             actions={
-              <div className="flex items-center gap-2">
+              <ButtonGroup>
                 <Tooltip content="Filters">
-                  <Button variant="ghost" size="icon" onClick={() => setIsFilterModalOpen(true)}>
+                  <Button variant="secondary" size="icon" onClick={() => setIsFilterModalOpen(true)}>
                     <Filter className="h-4 w-4" />
                   </Button>
                 </Tooltip>
                 <Tooltip content="Reset Filters">
-                  <Button variant="ghost" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
+                  <Button variant="secondary" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
                     <RotateCcw className="h-4 w-4" />
                   </Button>
                 </Tooltip>
-              </div>
+              </ButtonGroup>
             }
           />
 
           <FilterModal
             isOpen={isFilterModalOpen}
             onClose={() => setIsFilterModalOpen(false)}
-            onApply={() => setIsFilterModalOpen(false)}
-            onResetAll={resetFilters}
+            onApply={applyFilters}
+            onResetAll={resetPendingFilters}
             filterCount={activeFilterCount}
-            hasActiveFilters={hasActiveFilters}
+            hasActiveFilters={hasPendingFilters}
           >
             <FilterOption 
               title="Date Range" 
-              onReset={() => {
-                setDateRange([null, null]);
-                setCurrentPage(1);
-              }}
+              onReset={() => setPendingDateRange([null, null])}
+              isModified={pendingDateRange[0] !== null || pendingDateRange[1] !== null}
             >
               <DatePicker
                 selectsRange
-                startDate={dateRange[0]}
-                endDate={dateRange[1]}
-                onChange={(update: any) => {
-                  setDateRange(update);
-                  setCurrentPage(1);
-                }}
+                startDate={pendingDateRange[0]}
+                endDate={pendingDateRange[1]}
+                onChange={(update: any) => setPendingDateRange(update)}
                 isClearable={true}
                 placeholderText="Filter by date range"
               />
@@ -378,46 +420,50 @@ const ReceiptsPage: React.FC = () => {
             {debtEnabled && (
               <FilterOption 
                 title="Debt Status" 
-                onReset={() => handleFilterChange('debt', 'all')}
+                onReset={() => handlePendingFilterChange('debt', 'all')}
+                isModified={pendingFilters.debt !== 'all'}
               >
                 <Select 
                   options={debtFilterOptions} 
-                  value={filters.debt} 
-                  onChange={e => handleFilterChange('debt', e.target.value)} 
+                  value={pendingFilters.debt} 
+                  onChange={e => handlePendingFilterChange('debt', e.target.value)} 
                 />
               </FilterOption>
             )}
 
             <FilterOption 
               title="Expense Type" 
-              onReset={() => handleFilterChange('type', 'all')}
+              onReset={() => handlePendingFilterChange('type', 'all')}
+              isModified={pendingFilters.type !== 'all'}
             >
               <Select 
                 options={typeFilterOptions} 
-                value={filters.type} 
-                onChange={e => handleFilterChange('type', e.target.value)} 
+                value={pendingFilters.type} 
+                onChange={e => handlePendingFilterChange('type', e.target.value)} 
               />
             </FilterOption>
 
             <FilterOption 
               title="Status" 
-              onReset={() => handleFilterChange('tentative', 'all')}
+              onReset={() => handlePendingFilterChange('tentative', 'all')}
+              isModified={pendingFilters.tentative !== 'all'}
             >
               <Select 
                 options={tentativeFilterOptions} 
-                value={filters.tentative} 
-                onChange={e => handleFilterChange('tentative', e.target.value)} 
+                value={pendingFilters.tentative} 
+                onChange={e => handlePendingFilterChange('tentative', e.target.value)} 
               />
             </FilterOption>
 
             <FilterOption 
               title="Attachments" 
-              onReset={() => handleFilterChange('attachment', 'all')}
+              onReset={() => handlePendingFilterChange('attachment', 'all')}
+              isModified={pendingFilters.attachment !== 'all'}
             >
               <Select 
                 options={attachmentFilterOptions} 
-                value={filters.attachment} 
-                onChange={e => handleFilterChange('attachment', e.target.value)} 
+                value={pendingFilters.attachment} 
+                onChange={e => handlePendingFilterChange('attachment', e.target.value)}
               />
             </FilterOption>
           </FilterModal>
