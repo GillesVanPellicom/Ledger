@@ -36,7 +36,17 @@ const EntityStyleModal: React.FC<EntityStyleModalProps> = ({ isOpen, onClose, on
   }, [isOpen, currentStyle]);
 
   const filteredIcons = useMemo(() => {
-    const otherIcons = Object.keys(SolidIcons).filter(iconName => !iconOrder.includes(iconName));
+    const otherIcons = Object.keys(SolidIcons)
+      .filter(key => key !== 'createLucideIcon' && key !== 'default' && key !== 'Icon' && key !== 'LucideIcon' && key !== 'icons')
+      .filter(key => {
+        const item = (SolidIcons as any)[key];
+        return (
+          typeof item === 'object' && 
+          item !== null && 
+          (item as any).displayName === key
+        );
+      })
+      .filter(iconName => !iconOrder.includes(iconName));
     let sortedIcons = [...iconOrder, ...otherIcons];
     if (iconSearchTerm) {
       sortedIcons = sortedIcons.filter(iconName =>
@@ -77,6 +87,7 @@ const EntityStyleModal: React.FC<EntityStyleModalProps> = ({ isOpen, onClose, on
             <div className="h-56 overflow-y-auto grid grid-cols-8 gap-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
               {filteredIcons.map(iconName => {
                 const Icon = (SolidIcons as any)[iconName];
+                if (!Icon) return null;
                 return <button key={iconName} onClick={() => setSelectedSymbol(iconName)} className={cn("flex items-center justify-center p-2 rounded-lg transition-colors", selectedSymbol === iconName ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700')} title={iconName}><Icon className="h-6 w-6" /></button>;
               })}
             </div>

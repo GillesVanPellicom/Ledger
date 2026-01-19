@@ -25,7 +25,10 @@ interface PaymentMethodItemProps {
 const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleClick, onEditClick }) => {
     const { settings } = useSettingsStore();
     const style = settings.paymentMethodStyles?.[method.PaymentMethodID];
-    const IconComponent = style?.type === 'icon' && style.symbol && (LucideIcons as any)[style.symbol];
+    
+    const SymbolComponent = style?.type === 'icon' && style.symbol && (LucideIcons as any)[style.symbol];
+    // Ensure the component is a valid Lucide icon (has displayName) to avoid crashing with internal exports
+    const IconComponent = SymbolComponent && typeof SymbolComponent === 'object' && 'displayName' in SymbolComponent ? SymbolComponent : null;
     
     const { data: balance, isLoading } = usePaymentMethodBalance(method.PaymentMethodID, method.PaymentMethodFunds);
 

@@ -22,7 +22,9 @@ const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, o
   const { stats, loading } = useDebtCalculation(entity.DebtorID);
   
   const style = settings.debtorStyles?.[entity.DebtorID];
-  const IconComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
+  const SymbolComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
+  // Ensure the component is a valid Lucide icon (has displayName) to avoid crashing with internal exports
+  const IconComponent = SymbolComponent && typeof SymbolComponent === 'object' && 'displayName' in SymbolComponent ? SymbolComponent : null;
 
   return (
     <div className={cn("flex flex-col justify-between h-full relative group", !entity.DebtorIsActive && "opacity-60")}>
