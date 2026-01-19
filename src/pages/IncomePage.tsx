@@ -18,7 +18,8 @@ import {
   History,
   MoreHorizontal,
   CreditCard,
-  FileText
+  FileText,
+  User
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
@@ -734,12 +735,7 @@ const IncomePage: React.FC = () => {
                     header: 'Account',
                     render: (row) => (
                       <span className="inline-block">
-                        <Link to={`/payment-methods/${row.PaymentMethodID}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-medium hover:underline flex items-center gap-1.5 group">
-                          {row.PaymentMethodName}
-                          <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
-                        </Link>
+                        {row.PaymentMethodName}
                       </span>
                     )
                   },
@@ -792,13 +788,22 @@ const IncomePage: React.FC = () => {
                             Go to Payment Method
                           </DropdownMenuItem>
                           {row.type === 'Repayment' && (
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/receipts/view/${row.ReceiptID}`);
-                            }}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Go to Receipt
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/receipts/view/${row.ReceiptID}`);
+                              }}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Go to Receipt
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/entities/${row.DebtorID}`);
+                              }}>
+                                <User className="mr-2 h-4 w-4" />
+                                Go to Entity
+                              </DropdownMenuItem>
+                            </>
                           )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
