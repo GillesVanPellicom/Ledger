@@ -133,18 +133,22 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           <div className="relative w-full h-full flex items-center justify-between px-[100px]">
-            <div className="relative flex items-baseline gap-8">
+            <div className="relative flex items-center gap-8">
               <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2">
                 {backButton !== undefined ? backButton : defaultBackButton}
               </div>
-              <div className="flex items-baseline gap-8">
+              <div className="flex items-center gap-8">
                 <div className="relative">
                   <h1 className="text-2xl font-bold">{title}</h1>
                   {subtitle && (
                     <p className="absolute top-full left-0 text-sm text-gray-500 whitespace-nowrap">{subtitle}</p>
                   )}
                 </div>
-                {variant === 'tabs' ? tabs : children}
+                {variant === 'tabs' ? (
+                  <div className="flex items-center h-full">
+                    {tabs}
+                  </div>
+                ) : children}
               </div>
             </div>
 

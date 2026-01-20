@@ -53,6 +53,7 @@ import {
 } from "../components/ui/DropdownMenu"
 import TransferModal from '../components/payment/TransferModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 
 const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
 const dayOfWeekOptions = [
@@ -363,42 +364,27 @@ const IncomePage: React.FC = () => {
   };
 
   const renderTabs = () => {
-    const tabItems: { id: 'to-check' | 'scheduled' | 'history'; label: string; icon: any; count?: number }[] = [
-      { id: 'to-check', label: 'To Check', icon: Clock, count: pendingIncomes?.length },
-      { id: 'scheduled', label: 'Scheduled', icon: Calendar },
-      { id: 'history', label: 'History', icon: History },
-    ];
-
     return (
-      <div className="flex space-x-8" aria-label="Tabs">
-        {tabItems.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id);
-              setCurrentPage(1); // Reset page on tab change
-              navigate('.', { state: { activeTab: tab.id }, replace: true });
-            }}
-            className={cn(
-              "flex items-center gap-2 whitespace-nowrap px-1 border-b-2 font-medium text-sm transition-colors py-3",
-              activeTab === tab.id
-                ? "border-accent text-accent"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
-            )}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-            {tab.count !== undefined && tab.count > 0 && (
-              <span className={cn(
-                "flex items-center justify-center text-white text-xs min-w-[20px] h-[20px] px-1.5 rounded-full ml-1 tabular-nums",
-                tab.id === 'to-check' ? 'bg-red-500' : 'bg-accent'
-              )}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(val: any) => {
+        setActiveTab(val);
+        setCurrentPage(1);
+        navigate('.', { state: { activeTab: val }, replace: true });
+      }}>
+        <TabsList>
+          <TabsTrigger value="to-check" badge={pendingIncomes?.length} badgeColor="bg-red-500">
+            <Clock className="h-4 w-4" />
+            To Check
+          </TabsTrigger>
+          <TabsTrigger value="scheduled">
+            <Calendar className="h-4 w-4" />
+            Scheduled
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <History className="h-4 w-4" />
+            History
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     );
   };
 
