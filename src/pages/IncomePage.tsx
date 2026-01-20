@@ -602,7 +602,7 @@ const IncomePage: React.FC = () => {
                       className: 'text-right',
                       render: (row) => (
                         <div className="flex items-center justify-end gap-2">
-                          <ButtonGroup>
+                          <ButtonGroup variant="ghost-bordered">
                             <Tooltip content="Confirm">
                               <Button
                                 variant="ghost"

@@ -4,63 +4,61 @@ import { cn } from '../../utils/cn';
 interface ButtonGroupProps {
   children: ReactNode;
   className?: string;
+  variant?: 'default' | 'ghost-bordered';
 }
 
-export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className }) => {
-  const count = React.Children.count(children);
+/**
+ * ButtonGroup component that ensures only the outer corners of the group are rounded.
+ * Supports a 'ghost-bordered' variant for transparent buttons with a shared border.
+ */
+export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, variant = 'default' }) => {
+  const childrenArray = React.Children.toArray(children).filter(React.isValidElement);
+  const count = childrenArray.length;
 
   return (
     <div className={cn("inline-flex shadow-sm isolate", className)}>
-      {React.Children.map(children, (child, index) => {
-        if (!React.isValidElement(child)) return child;
-
+      {childrenArray.map((child, index) => {
         const isFirst = index === 0;
         const isLast = index === count - 1;
-        const isMiddle = !isFirst && !isLast;
 
-        // Helper function to strip rounded classes from any string
-        const stripRounded = (str: string | undefined) => {
-          if (!str) return '';
-          return str
-            .split(' ')
-            .filter(cls => !cls.startsWith('rounded'))
-            .join(' ');
-        };
+        // Determine rounding classes with !important to override component defaults
+        let roundingClasses = '!rounded-none';
+        if (count === 1) {
+          roundingClasses = '!rounded-lg';
+        } else if (isFirst) {
+          roundingClasses = '!rounded-l-lg !rounded-r-none';
+        } else if (isLast) {
+          roundingClasses = '!rounded-r-lg !rounded-l-none';
+        }
 
-        // Recursively apply styles through wrapper components
+        const variantClasses = variant === 'ghost-bordered' 
+          ? 'border border-gray-200 dark:border-gray-700 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50' 
+          : '';
+
         const applyStyles = (element: React.ReactElement<any>): React.ReactElement<any> => {
           const props = element.props as Record<string, any>;
+          const type = element.type as any;
+          const name = typeof type === 'string' ? type : (type.displayName || type.name || '');
 
-          // Check if this element has a single valid element child (wrapper pattern)
-          if (
-            props.children &&
-            React.isValidElement(props.children) &&
-            !props.className?.includes('px') && // Not a button-like element
-            props.children.type !== 'button' // Explicitly not a button
-          ) {
-            // This is a wrapper, recurse into the child
+          if (name === 'Tooltip' && React.isValidElement(props.children)) {
             return React.cloneElement(element, {
               children: applyStyles(props.children as React.ReactElement<any>)
             });
           }
 
-          // This is the actual button element, apply the styles
           return React.cloneElement(element, {
             className: cn(
-              stripRounded(props.className),
-              'shadow-none',
+              props.className,
+              roundingClasses,
+              variantClasses,
               'relative focus:z-10',
               !isFirst && '-ml-px',
-              isFirst && 'rounded-l-lg rounded-r-none',
-              isLast && 'rounded-r-lg rounded-l-none',
-              isMiddle && 'rounded-none',
-              // Ensure borders are visible between buttons
-              !isLast && 'border-r-gray-200 dark:border-r-gray-700'
+              'shadow-none'
             )
           });
         };
 
-        return applyStyles(child);
+        return <React.Fragment key={index}>{applyStyles(child as React.ReactElement)}</React.Fragment>;
       })}
     </div>
   );
