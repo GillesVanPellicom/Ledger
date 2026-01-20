@@ -1,11 +1,11 @@
 {
-  "theme": "light",
+  "theme": "dark",
   "modules": {
     "paymentMethods": {
-      "enabled": false
+      "enabled": true
     },
     "debt": {
-      "enabled": false
+      "enabled": true
     },
     "capitalizationProtection": {
       "enabled": true
@@ -23,7 +23,16 @@
     "interval": 5,
     "editsSinceLastBackup": 0
   },
-  "paymentMethodStyles": {},
+  "paymentMethodStyles": {
+    "1": {
+      "symbol": "AlarmClockCheck",
+      "type": "icon"
+    },
+    "3": {
+      "symbol": "Piano",
+      "type": "icon"
+    }
+  },
   "datastore": {
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
@@ -31,9 +40,15 @@
     "indicators": {
       "debt": true,
       "tentative": true,
-      "type": false,
-      "attachments": false
+      "type": true,
+      "attachments": true
     }
   },
-  "userName": "Gilles"
+  "userName": "Gilles",
+  "debtorStyles": {
+    "1": {
+      "symbol": "🍔",
+      "type": "emoji"
+    }
+  }
 }
