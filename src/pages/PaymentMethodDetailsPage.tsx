@@ -20,6 +20,7 @@ import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useQueryClient } from '@tanstack/react-query';
+import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 const tryParseJson = (str: string) => {
   try {
@@ -468,9 +469,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
     {
       header: 'Amount',
       render: (row: PageTransaction) => (
-        <span className={cn(row.amount > 0 ? 'text-green' : 'text-red')}>
-          {row.amount > 0 ? '+' : ''} €{Math.abs(row.amount).toFixed(2)}
-        </span>
+        <MoneyDisplay amount={row.amount} />
       )
     },
     {
@@ -516,9 +515,11 @@ const PaymentMethodDetailsPage: React.FC = () => {
         centeredContent={
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
-            <p className={cn("text-3xl font-bold", balance < 0 ? 'text-red' : 'text-green')}>
-              €{balance.toFixed(2)}
-            </p>
+            <MoneyDisplay 
+              amount={balance} 
+              showSign={false}
+              className="text-3xl font-bold"
+            />
           </div>
         }
       />
