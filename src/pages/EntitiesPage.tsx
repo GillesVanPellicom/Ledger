@@ -16,6 +16,7 @@ import PageSpinner from '../components/ui/PageSpinner';
 import Spinner from '../components/ui/Spinner';
 import { useEntities, useInvalidateEntities } from '../hooks/useEntities';
 import { useSettingsStore } from '../store/useSettingsStore';
+import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, onStyle: (entity: Debtor) => void }> = ({ entity, onEdit, onStyle }) => {
   const { settings } = useSettingsStore();
@@ -43,9 +44,11 @@ const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, o
             <Spinner className="h-5 w-5 text-gray-400" />
           </div>
         ) : (
-          <p className={cn("text-2xl font-semibold", stats.netBalance >= 0 ? 'text-green' : 'text-red')}>
-            € {Math.abs(stats.netBalance).toFixed(2)}
-          </p>
+          <MoneyDisplay 
+            amount={stats.netBalance} 
+            showSign={false} 
+            className="text-2xl font-semibold" 
+          />
         )}
       </div>
       <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

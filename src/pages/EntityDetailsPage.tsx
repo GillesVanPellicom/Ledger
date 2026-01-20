@@ -26,6 +26,7 @@ import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
+import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -352,7 +353,12 @@ const EntityDetailsPage: React.FC = () => {
   const columns = [
     { header: 'Date', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy') },
     { header: 'Store', accessor: 'StoreName' },
-    { header: 'Amount', render: (row: Receipt) => `€${(row.amount || 0).toFixed(2)}` },
+    { 
+      header: 'Amount', 
+      render: (row: Receipt) => (
+        <MoneyDisplay amount={row.amount || 0} showSign={false} colorPositive={false} colorNegative={false} />
+      ) 
+    },
     {
       header: 'Direction',
       render: (row: Receipt) => (
@@ -423,7 +429,7 @@ const EntityDetailsPage: React.FC = () => {
         leftBoxContent={
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
-            <p className="text-2xl font-bold text-green">€{stats.debtToMe.toFixed(2)}</p>
+            <MoneyDisplay amount={stats.debtToMe} showSign={false} className="text-2xl font-bold" />
           </div>
         }
         centeredContent={
@@ -437,16 +443,14 @@ const EntityDetailsPage: React.FC = () => {
                   <ArrowDownCircle className="h-6 w-6 text-red" />
                 )}
               </Tooltip>
-              <p className={cn("text-2xl font-bold", stats.netBalance >= 0 ? "text-green" : "text-red")}>
-                €{Math.abs(stats.netBalance).toFixed(2)}
-              </p>
+              <MoneyDisplay amount={stats.netBalance} showSign={false} className="text-2xl font-bold" />
             </div>
           </div>
         }
         rightBoxContent={
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
-            <p className="text-2xl font-bold text-red">€{stats.debtToEntity.toFixed(2)}</p>
+            <MoneyDisplay amount={-stats.debtToEntity} showSign={false} className="text-2xl font-bold" />
           </div>
         }
       />

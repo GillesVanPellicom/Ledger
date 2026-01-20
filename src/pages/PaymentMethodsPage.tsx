@@ -15,6 +15,7 @@ import Spinner from '../components/ui/Spinner';
 import { usePaymentMethods, usePaymentMethodBalance, useInvalidatePaymentMethods } from '../hooks/usePaymentMethods';
 import { useSettingsStore } from '../store/useSettingsStore';
 import * as LucideIcons from 'lucide-react';
+import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 interface PaymentMethodItemProps {
   method: PaymentMethod;
@@ -49,9 +50,11 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
                     <Spinner className="h-5 w-5 text-gray-400" />
                   </div>
                 ) : (
-                  <p className={cn("text-2xl font-semibold", balance < 0 ? 'text-red' : 'text-gray-900 dark:text-gray-100')}>
-                      € {balance.toFixed(2)}
-                  </p>
+                  <MoneyDisplay 
+                    amount={balance} 
+                    showSign={false} 
+                    className="text-2xl font-semibold" 
+                  />
                 )}
             </div>
             <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
