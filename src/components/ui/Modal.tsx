@@ -13,7 +13,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'viewport';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xlh' | 'full' | 'viewport';
   className?: string;
 }
 
@@ -84,7 +84,8 @@ const Modal: React.FC<ModalProps> = ({
     sm: 'max-w-md', 
     md: 'max-w-lg', 
     lg: 'max-w-2xl', 
-    xl: 'max-w-4xl', 
+    xl: 'max-w-4xl',
+    xlh: 'max-w-4xl h-[80vh]',
     full: 'max-w-[95vw] h-[90vh]',
     viewport: 'max-w-[80vw] w-[80vw] h-[80vh] max-h-[80vh]',
   };

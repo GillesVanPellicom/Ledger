@@ -72,7 +72,26 @@ const DataTable: React.FC<DataTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [pageInput, setPageInput] = useState(String(currentPage));
   const [selectedRows, setSelectedRows] = useState(new Set());
-  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  const [prevTotalCount, setPrevTotalCount] = useState(totalCount);
+  const [previousData, setPreviousData] = useState<any[]>([]);
+
+  // Only update totalPages/totalPagesDigits when totalCount genuinely changes
+  useEffect(() => {
+    if (totalCount !== prevTotalCount) {
+      setPrevTotalCount(totalCount);
+    }
+  }, [totalCount, prevTotalCount]);
+
+  // Update previousData when data is not loading
+  useEffect(() => {
+    if (!loading && data.length > 0) {
+      setPreviousData(data);
+    }
+  }, [data, loading]);
+
+  const totalPages = useMemo(() => Math.ceil(prevTotalCount / pageSize) || 1, [prevTotalCount, pageSize]);
+  const totalPagesDigits = useMemo(() => (totalPages || 1).toString().length, [totalPages]);
+  const inputWidth = useMemo(() => `${1.5 + (totalPagesDigits * 0.6)}rem`, [totalPagesDigits]);
   const inputRef = useRef<HTMLInputElement>(null);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -206,28 +225,32 @@ const DataTable: React.FC<DataTableProps> = ({
   const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endItem = Math.min(currentPage * pageSize, totalCount);
 
-  const totalPagesDigits = (totalPages || 1).toString().length;
-  const inputWidth = `${1.5 + (totalPagesDigits * 0.6)}rem`;
+  // Skeleton placeholder component for individual cells
+  const SkeletonCell = ({ width = 'w-full' }: { width?: string }) => (
+    <div className={cn("h-5 bg-gray-200 dark:bg-gray-800 rounded-md animate-pulse", width)}></div>
+  );
 
   const tableContent = useMemo(() => {
-    if (loading && data.length === 0) {
-      return Array.from({ length: pageSize }).map((_, i) => (
-        <tr key={`skeleton-${i}`} className="animate-pulse">
+    // If loading, show previousData with skeleton placeholders on new rows
+    if (loading && previousData.length > 0) {
+      return previousData.map((row, rowIdx) => (
+        <tr key={row[itemKey] || rowIdx} className={cn("transition-colors opacity-50", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900")}>
           {selectable && (
             <td className="px-4 py-3 align-middle">
-              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-800 rounded-md"></div>
+              <SkeletonCell width="w-5" />
             </td>
           )}
           {columns.map((col, colIdx) => (
             <td key={colIdx} className={cn("px-4 py-3 align-middle", col.className)}>
-              <div className="h-5 bg-gray-200 dark:bg-gray-800 rounded-md w-full"></div>
+              <SkeletonCell />
             </td>
           ))}
         </tr>
       ));
     }
 
-    if (data.length === 0) {
+    // No data at all (not loading and no previous data)
+    if (data.length === 0 && previousData.length === 0) {
       return (
         <tr>
           <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
@@ -240,7 +263,9 @@ const DataTable: React.FC<DataTableProps> = ({
       );
     }
 
-    return data.map((row, rowIdx) => (
+    // Show current data (either newly loaded or during loading with previousData)
+    const displayData = data.length > 0 ? data : previousData;
+    return displayData.map((row, rowIdx) => (
       <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-blue-50 dark:bg-blue-900/20": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900")}>
         {selectable && (
           <td className="px-4 py-3 align-middle">
@@ -271,7 +296,7 @@ const DataTable: React.FC<DataTableProps> = ({
         })}
       </tr>
     ));
-  }, [loading, pageSize, data, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow]);
+  }, [loading, pageSize, data, previousData, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow]);
 
   return (
     <div className={cn("flex flex-col gap-4", className, disabled && "opacity-50 cursor-not-allowed")}>
@@ -380,7 +405,7 @@ const DataTable: React.FC<DataTableProps> = ({
         ref={tableContainerRef}
         className="rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-950 shadow-sm relative"
       >
-        <div className={cn("overflow-x-auto", (loading && data.length > 0) && "blur-sm pointer-events-none", disabled && "pointer-events-none")}>
+        <div className={cn("overflow-x-auto", disabled && "pointer-events-none")}>
           <table
             className="text-left text-sm w-full"
             style={{
