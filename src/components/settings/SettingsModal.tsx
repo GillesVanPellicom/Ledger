@@ -38,9 +38,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   }, [isOpen, initialTab]);
 
   useEffect(() => {
-    const meta = import.meta as ImportMeta & { env: { DEV?: boolean, MODE?: string } };
-    const isDevEnv = meta.env?.DEV || meta.env?.MODE === 'development';
-    setIsDev(!!isDevEnv);
+    setIsDev(process.env.NODE_ENV === 'development');
   }, []);
 
   useEffect(() => {
@@ -141,7 +139,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const handleResetAllSettings = async () => {
     if (window.electronAPI) {
       await window.electronAPI.resetSettings();
-      await window.electronAPI.quitApp();
+      if (window.electronAPI.quitApp) {
+        await window.electronAPI.quitApp();
+      }
     }
   };
 
@@ -367,6 +367,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         <Tooltip content="Automatically back up your database."><Info className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>
                         <span className="text-sm text-gray-500 ml-2">({backupCount}/{backupSettings.maxBackups})</span>
                     </div>
+                    <button onClick={resetBackupSettings} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">reset</button>
                   </div>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -381,9 +382,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <button onClick={() => window.electronAPI?.openBackupFolder()} className="text-xs text-blue-500 hover:underline">Open Backup Folder</button>
-                      <div className="text-right">
-                        <button onClick={resetBackupSettings} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">reset</button>
-                      </div>
                     </div>
                     <div className="flex justify-end">
                         <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp}>Backup Now</Button>

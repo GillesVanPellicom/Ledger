@@ -45,6 +45,11 @@ function App() {
   }, [showError]);
 
   useEffect(() => {
+    // Only process schedules if we have a datastore path
+    if (!settings.datastore?.folderPath) {
+      return;
+    }
+
     const processSchedules = async () => {
       try {
         await incomeLogic.processSchedules();
@@ -68,7 +73,7 @@ function App() {
     }, msToMidnight);
 
     return () => clearTimeout(dailyTimer);
-  }, [queryClient, showError]);
+  }, [queryClient, showError, settings.datastore?.folderPath]);
 
   if (loading) {
     return null; // Or a loading spinner

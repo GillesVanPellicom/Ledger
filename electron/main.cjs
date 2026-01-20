@@ -379,6 +379,10 @@ ipcMain.handle('reset-settings', async () => {
   return {success: true};
 });
 
+ipcMain.handle('quit-app', () => {
+  app.quit();
+});
+
 ipcMain.handle('select-directory', async () => {
   const {canceled, filePaths} = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],

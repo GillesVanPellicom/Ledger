@@ -20,7 +20,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Error"
-      size={isExpanded ? 'lg' : 'sm'}
+      size='lg'
       footer={
         <Button variant="primary" onClick={onClose}>
           Close

@@ -12,29 +12,28 @@
     }
   },
   "pdf": {
-    "showUniqueItems": true,
-    "showTotalQuantity": true,
-    "showPaymentMethod": true,
-    "addSummaryPage": true,
-    "addReceiptImages": true
+    "showUniqueItems": false,
+    "showTotalQuantity": false,
+    "showPaymentMethod": false,
+    "addSummaryPage": false,
+    "addReceiptImages": false
   },
   "backup": {
     "maxBackups": 5,
     "interval": 5,
-    "editsSinceLastBackup": 3
+    "editsSinceLastBackup": 0
   },
   "paymentMethodStyles": {},
   "datastore": {
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
-  "userName": "Gilles",
-  "uiScale": 100,
   "receipts": {
     "indicators": {
       "debt": true,
       "tentative": true,
-      "type": true,
-      "attachments": true
+      "type": false,
+      "attachments": false
     }
-  }
+  },
+  "userName": "Gilles"
 }

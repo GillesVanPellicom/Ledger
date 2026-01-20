@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
+  quitApp: () => ipcRenderer.invoke('quit-app'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   saveImage: (datastorePath, imagePath) => ipcRenderer.invoke('save-image', datastorePath, imagePath),
   readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-base64', filePath),
