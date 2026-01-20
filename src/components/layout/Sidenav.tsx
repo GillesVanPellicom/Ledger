@@ -20,14 +20,22 @@ const Sidenav: React.FC = () => {
   const { settings } = useSettingsStore();
   const { isSidenavCollapsed, toggleSidenav, openSettingsModal } = useUIStore();
 
+  const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
+
   const navItems = [
     { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts'] },
-    { path: '/income', label: 'Income', icon: TrendingUp, activePaths: ['/income'] },
-    { path: '/reference-data', label: 'Reference Data', icon: Database, activePaths: ['/reference-data'] },
-    { path: '/analytics', label: 'Analytics', icon: BarChart2, activePaths: ['/analytics'] },
   ];
 
-  if (settings.modules.paymentMethods?.enabled) {
+  if (paymentMethodsEnabled) {
+    navItems.push({ path: '/income', label: 'Income', icon: TrendingUp, activePaths: ['/income'] });
+  }
+
+  navItems.push(
+    { path: '/reference-data', label: 'Reference Data', icon: Database, activePaths: ['/reference-data'] },
+    { path: '/analytics', label: 'Analytics', icon: BarChart2, activePaths: ['/analytics'] }
+  );
+
+  if (paymentMethodsEnabled) {
     navItems.push({
       path: '/payment-methods',
       label: 'Payment Methods',

@@ -51,6 +51,7 @@ export const useReceipts = (params: FetchReceiptsParams) => {
                r.IsNonItemised,
                r.IsTentative,
                r.NonItemisedTotal,
+               r.PaymentMethodID,
                s.StoreName,
                pm.PaymentMethodName,
                (SELECT COUNT(*) FROM ReceiptImages ri WHERE ri.ReceiptID = r.ReceiptID) as AttachmentCount,

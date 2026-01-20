@@ -16,7 +16,13 @@ import {
   HelpCircle,
   RotateCcw,
   Filter,
-  Paperclip
+  Paperclip,
+  MoreHorizontal,
+  Eye,
+  CreditCard,
+  User,
+  FileText,
+  Edit
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -35,6 +41,15 @@ import { usePdfGenerator } from '../hooks/usePdfGenerator';
 import { calculateTotalWithDiscount } from '../logic/expense';
 import FilterModal, { FilterOption } from '../components/ui/FilterModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/DropdownMenu"
+import { cn } from '../utils/cn';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -226,59 +241,8 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const columns: any[] = [
-    {
-      header: 'Indicators',
-      width: '10%',
-      render: (row: Receipt) => (
-        <div className="flex items-center justify-center gap-3">
-          {indicatorSettings?.type && (
-            row.IsNonItemised ? (
-              <Tooltip content="Total-only expense">
-                <Clipboard className="h-5 w-5 text-gray-400"/>
-              </Tooltip>
-            ) : (
-              <Tooltip content="Detailed Expense">
-                <ClipboardList className="h-5 w-5 text-gray-400"/>
-              </Tooltip>
-            )
-          )}
-
-          {indicatorSettings?.debt && debtEnabled && (
-            row.Status === 'unpaid' ? (
-              <Tooltip content="This is an unpaid expense, meaning it is owed to the person who paid it by you.">
-                <AlertTriangle className="h-5 w-5 text-yellow-500"/>
-              </Tooltip>
-            ) : (row.UnpaidDebtorCount || 0) > 0 ? (
-              <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-                <AlertCircle className="h-5 w-5 text-red-500"/>
-              </Tooltip>
-            ) : (row.TotalDebtorCount || 0) > 0 ? (
-              <Tooltip content="All debts settled">
-                <CheckCircle className="h-5 w-5 text-green-500"/>
-              </Tooltip>
-            ) : <div className="w-5"/>
-          )}
-
-          {indicatorSettings?.tentative && (
-            row.IsTentative ? (
-              <Tooltip content="Tentative Expense">
-                <HelpCircle className="h-5 w-5 text-gray-400"/>
-              </Tooltip>
-            ) : <div className="w-5"/>
-          )}
-
-          {indicatorSettings?.attachments && (
-            (row.AttachmentCount || 0) > 0 ? (
-              <Tooltip content={`${row.AttachmentCount} attachment(s)`}>
-                <Paperclip className="h-5 w-5 text-gray-400"/>
-              </Tooltip>
-            ) : <div className="w-5"/>
-          )}
-        </div>
-      )
-    },
-    {header: 'Date', width: '20%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy')},
-    {header: 'Store', accessor: 'StoreName', width: '30%'},
+    {header: 'Date', width: '15%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy')},
+    {header: 'Store', accessor: 'StoreName', width: '25%'},
     {header: 'Note', accessor: 'ReceiptNote', width: '25%'},
   ];
 
@@ -288,9 +252,91 @@ const ReceiptsPage: React.FC = () => {
 
   columns.push({
     header: 'Total',
-    width: '15%',
+    width: '10%',
     className: 'text-right',
     render: (row: Receipt) => `€${(row.Total || 0).toFixed(2)}`
+  });
+
+  // Indicators Column (moved to the left of ellipsis)
+  columns.push({
+    header: '',
+    width: '10%',
+    className: 'text-right',
+    render: (row: Receipt) => {
+      const visibleIndicators = [];
+      
+      if (indicatorSettings?.type) {
+        visibleIndicators.push(
+          row.IsNonItemised ? (
+            <Tooltip key="type" content="Total-only expense">
+              <Clipboard className="h-4 w-4 text-gray-400"/>
+            </Tooltip>
+          ) : (
+            <Tooltip key="type" content="Detailed Expense">
+              <ClipboardList className="h-4 w-4 text-gray-400"/>
+            </Tooltip>
+          )
+        );
+      }
+
+      if (indicatorSettings?.debt && debtEnabled) {
+        if (row.Status === 'unpaid') {
+          visibleIndicators.push(
+            <Tooltip key="debt" content="Unpaid expense">
+              <AlertTriangle className="h-4 w-4 text-yellow-500"/>
+            </Tooltip>
+          );
+        } else if ((row.UnpaidDebtorCount || 0) > 0) {
+          visibleIndicators.push(
+            <Tooltip key="debt" content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
+              <AlertCircle className="h-4 w-4 text-red-500"/>
+            </Tooltip>
+          );
+        } else if ((row.TotalDebtorCount || 0) > 0) {
+          visibleIndicators.push(
+            <Tooltip key="debt" content="All debts settled">
+              <CheckCircle className="h-4 w-4 text-green-500"/>
+            </Tooltip>
+          );
+        }
+      }
+
+      if (indicatorSettings?.tentative && row.IsTentative) {
+        visibleIndicators.push(
+          <Tooltip key="tentative" content="Tentative Expense">
+            <HelpCircle className="h-4 w-4 text-gray-400"/>
+          </Tooltip>
+        );
+      }
+
+      if (indicatorSettings?.attachments && (row.AttachmentCount || 0) > 0) {
+        visibleIndicators.push(
+          <Tooltip key="attachments" content={`${row.AttachmentCount} attachment(s)`}>
+            <Paperclip className="h-4 w-4 text-gray-400"/>
+          </Tooltip>
+        );
+      }
+
+      const enabledCount = [
+        indicatorSettings?.type,
+        indicatorSettings?.debt && debtEnabled,
+        indicatorSettings?.tentative,
+        indicatorSettings?.attachments
+      ].filter(Boolean).length;
+
+      if (enabledCount === 0) return null;
+
+      return (
+        <div className="flex justify-end">
+          <div 
+            className="border border-gray-200 dark:border-gray-700 rounded-lg p-1 flex items-center justify-center gap-2 h-8"
+            style={{ minWidth: `${enabledCount * 28}px` }}
+          >
+            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-gray-500 dark:text-gray-600">-</span>}
+          </div>
+        </div>
+      );
+    }
   });
 
   columns.push({
@@ -299,18 +345,105 @@ const ReceiptsPage: React.FC = () => {
     className: 'text-right',
     render: (row: Receipt) => (
       <div className="flex justify-end items-center">
-          <Tooltip content="Delete Expense">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e: React.MouseEvent) => {
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Indicators</DropdownMenuLabel>
+            <div className="flex items-center gap-2 px-2 py-1.5 pointer-events-none">
+              {row.IsNonItemised ? (
+                <Tooltip content="Total-only expense">
+                  <Clipboard className="h-4 w-4 text-gray-400"/>
+                </Tooltip>
+              ) : (
+                <Tooltip content="Detailed Expense">
+                  <ClipboardList className="h-4 w-4 text-gray-400"/>
+                </Tooltip>
+              )}
+              {debtEnabled && (
+                row.Status === 'unpaid' ? (
+                  <Tooltip content="Unpaid expense">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500"/>
+                  </Tooltip>
+                ) : (row.UnpaidDebtorCount || 0) > 0 ? (
+                  <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
+                    <AlertCircle className="h-4 w-4 text-red-500"/>
+                  </Tooltip>
+                ) : (row.TotalDebtorCount || 0) > 0 ? (
+                  <Tooltip content="All debts settled">
+                    <CheckCircle className="h-4 w-4 text-green-500"/>
+                  </Tooltip>
+                ) : (
+                  <Tooltip content="No debts">
+                    <AlertCircle className="h-4 w-4 text-gray-300"/>
+                  </Tooltip>
+                )
+              )}
+              {row.IsTentative ? (
+                <Tooltip content="Tentative Expense">
+                  <HelpCircle className="h-4 w-4 text-gray-400"/>
+                </Tooltip>
+              ) : (
+                <Tooltip content="Finished Expense">
+                  <CheckCircle className="h-4 w-4 text-gray-300"/>
+                </Tooltip>
+              )}
+              {(row.AttachmentCount || 0) > 0 ? (
+                <Tooltip content={`${row.AttachmentCount} attachment(s)`}>
+                  <Paperclip className="h-4 w-4 text-gray-400"/>
+                </Tooltip>
+              ) : (
+                <Tooltip content="No attachments">
+                  <Paperclip className="h-4 w-4 text-gray-300"/>
+                </Tooltip>
+              )}
+            </div>
+            <div className={cn(!paymentMethodsEnabled && "hidden")}>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Go To</DropdownMenuLabel>
+              <DropdownMenuItem 
+                disabled={!row.PaymentMethodID}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (row.PaymentMethodID) navigate(`/payment-methods/${row.PaymentMethodID}`);
+                }}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Payment Method
+              </DropdownMenuItem>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/receipts/view/${row.ReceiptID}`);
+            }}>
+              <Eye className="mr-2 h-4 w-4" />
+              View
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/receipts/edit/${row.ReceiptID}`);
+            }}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={(e) => {
                 e.stopPropagation();
                 openDeleteModal(row.ReceiptID);
               }}
             >
-              <Trash className="h-4 w-4"/>
-            </Button>
-          </Tooltip>
+              <Trash className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     )
   });

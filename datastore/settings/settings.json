@@ -40,8 +40,8 @@
     "indicators": {
       "debt": true,
       "tentative": true,
-      "type": true,
-      "attachments": true
+      "type": false,
+      "attachments": false
     }
   },
   "userName": "Gilles",
