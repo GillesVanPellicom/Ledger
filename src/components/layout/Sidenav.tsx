@@ -9,11 +9,16 @@ import {
   CreditCard,
   Users,
   Database,
-  TrendingUp
+  TrendingUp,
+  Clock,
+  Calendar,
+  History
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useUIStore } from '../../store/useUIStore';
+import { useQuery } from '@tanstack/react-query';
+import { incomeCommitments } from '../../logic/incomeCommitments';
 
 const Sidenav: React.FC = () => {
   const location = useLocation();
@@ -22,12 +27,24 @@ const Sidenav: React.FC = () => {
 
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
+  const { data: pendingIncomes } = useQuery({
+    queryKey: ['pendingIncome'],
+    queryFn: () => incomeCommitments.getPendingIncomes(),
+    enabled: paymentMethodsEnabled
+  });
+
   const navItems = [
     { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts'] },
   ];
 
   if (paymentMethodsEnabled) {
-    navItems.push({ path: '/income', label: 'Income', icon: TrendingUp, activePaths: ['/income'] });
+    navItems.push({ 
+      path: '/income', 
+      label: 'Income', 
+      icon: TrendingUp, 
+      activePaths: ['/income'],
+      badge: pendingIncomes?.length && pendingIncomes.length > 0 ? pendingIncomes.length : undefined
+    });
   }
 
   navItems.push(
@@ -84,7 +101,7 @@ const Sidenav: React.FC = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center h-10 px-2.5 rounded-lg transition-all duration-300 group overflow-hidden",
+                "flex items-center h-10 px-2.5 rounded-lg transition-all duration-300 group relative",
                 isSidenavCollapsed ? "justify-center gap-0" : "justify-start gap-3",
                 isActive
                   ? "bg-accent text-white shadow-md"
@@ -99,6 +116,11 @@ const Sidenav: React.FC = () => {
               )}>
                 {item.label}
               </span>
+              {item.badge !== undefined && (
+                <span className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full tabular-nums shadow-md pointer-events-none z-10">
+                  {item.badge}
+                </span>
+              )}
             </NavLink>
           )
         })}
