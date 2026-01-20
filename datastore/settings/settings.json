@@ -1,11 +1,11 @@
 {
-  "theme": "dark",
+  "theme": "light",
   "modules": {
     "paymentMethods": {
-      "enabled": true
+      "enabled": false
     },
     "debt": {
-      "enabled": true
+      "enabled": false
     },
     "capitalizationProtection": {
       "enabled": true

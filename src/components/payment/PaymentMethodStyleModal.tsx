@@ -74,6 +74,7 @@ const PaymentMethodStyleModal: React.FC<PaymentMethodStyleModalProps> = ({ isOpe
       isOpen={isOpen}
       onClose={onClose}
       title={`Style: ${method?.PaymentMethodName}`}
+      onEnter={handleSave}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={handleSave}>Save Style</Button></>}
       size="lg"
     >

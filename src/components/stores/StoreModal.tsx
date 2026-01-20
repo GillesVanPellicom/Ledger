@@ -32,8 +32,7 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
     }
   }, [isOpen, storeToEdit]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Store name is required.');
       return;
@@ -73,9 +72,10 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
       isOpen={isOpen}
       onClose={onClose}
       title={storeToEdit ? 'Edit Store' : 'Add New Store'}
+      onEnter={handleSubmit}
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
         <Input
           label="Store Name"
@@ -88,7 +88,7 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
           onToggle={() => setIsActive(!isActive)}
           entityName="store"
         />
-      </form>
+      </div>
     </Modal>
   );
 };

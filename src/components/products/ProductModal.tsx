@@ -150,6 +150,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
         isOpen={isOpen}
         onClose={onClose}
         title={productToEdit ? "Edit Product" : "Add New Product"}
+        onEnter={() => handleSave(false)}
         footer={
           <>
             <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
@@ -160,7 +161,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
           </>
         }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           {errors.form && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{errors.form}</div>}
           <Input label="Product Name" name="ProductName" value={formData.ProductName} onChange={handleInputChange} placeholder="e.g. gouda cheese" error={errors.ProductName} />
           
@@ -205,7 +206,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
             />
             <Select label="Unit" name="ProductUnitID" value={formData.ProductUnitID} onChange={handleSelectChange} options={units} placeholder="Select Unit" error={errors.ProductUnitID} />
           </div>
-        </form>
+        </div>
       </Modal>
       <CategoryModal
         isOpen={isCategoryModalOpen}

@@ -32,8 +32,7 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
     }
   }, [isOpen, entityToEdit]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Name is required.');
       return;
@@ -72,12 +71,13 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
       isOpen={isOpen}
       onClose={onClose}
       title={entityToEdit ? 'Edit Entity' : 'Add New Entity'}
+      onEnter={handleSubmit}
       footer={<><Button variant="secondary"
                         onClick={onClose}
                         disabled={loading}>Cancel</Button><Button onClick={handleSubmit}
                                                                   loading={loading}>Save</Button></>}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {error &&
           <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red text-sm rounded-lg">{error}</div>}
         <Input
@@ -91,7 +91,7 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
           onToggle={() => setIsActive(!isActive)}
           entityName="entity"
         />
-      </form>
+      </div>
     </Modal>
   );
 };

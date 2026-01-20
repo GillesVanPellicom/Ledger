@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
@@ -15,6 +15,17 @@ const UserNameSetup: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && name.trim()) {
+        handleContinue();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [name]);
+
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
       <Card className="w-full max-w-md p-8 space-y-6">
@@ -30,6 +41,7 @@ const UserNameSetup: React.FC = () => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="w-full"
+          autoFocus
         />
         <Button onClick={handleContinue} disabled={!name.trim()} className="w-full">
           Continue

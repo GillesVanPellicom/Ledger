@@ -55,6 +55,7 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onCo
       isOpen={isOpen}
       onClose={onClose}
       title="Mark as Paid"
+      onEnter={() => onConfirm(paymentMethodId)}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>

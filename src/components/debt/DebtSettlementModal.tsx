@@ -98,6 +98,7 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
       isOpen={isOpen}
       onClose={onClose}
       title={`Settle Debt for ${debtInfo.debtorName}`}
+      onEnter={handleSubmit}
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Settle</Button></>}
     >
       <div className="space-y-4">

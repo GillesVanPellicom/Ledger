@@ -135,6 +135,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
         isOpen={isOpen && !isProcessing}
         onClose={onClose}
         title={`Bulk Assign Debt (${receiptIds.length} items effected)`}
+        onEnter={startBulkUpdate}
         footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={startBulkUpdate}
                                                                                        disabled={totalShares === 0}>Apply</Button></>}
       >

@@ -31,8 +31,7 @@ const IncomeSourceModal: React.FC<IncomeSourceModalProps> = ({ isOpen, onClose, 
     }
   }, [isOpen, sourceToEdit]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Source name is required.');
       return;
@@ -72,9 +71,10 @@ const IncomeSourceModal: React.FC<IncomeSourceModalProps> = ({ isOpen, onClose, 
       isOpen={isOpen}
       onClose={onClose}
       title={sourceToEdit ? 'Edit Income Source' : 'Add New Income Source'}
+      onEnter={handleSubmit}
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
         <Input
           label="Source Name"
@@ -87,7 +87,7 @@ const IncomeSourceModal: React.FC<IncomeSourceModalProps> = ({ isOpen, onClose, 
           onToggle={() => setIsActive(!isActive)}
           entityName="source"
         />
-      </form>
+      </div>
     </Modal>
   );
 };

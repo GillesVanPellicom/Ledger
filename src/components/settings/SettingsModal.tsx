@@ -212,7 +212,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xlh">
+      <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xlh" onEnter={onClose}>
         <div className="flex h-full">
           <div className="w-48 border-r border-gray-200 dark:border-gray-800 pr-4">
             <nav className="space-y-1">{tabs.map((tab) => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors", activeTab === tab.id ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50")}>{tab.label}</button>)}</nav>

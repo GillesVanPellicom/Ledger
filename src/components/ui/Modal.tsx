@@ -3,9 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from './Button';
-
-// Global stack to track open modals
-const modalStack: string[] = [];
+import { focusStack } from '../../utils/focusStack';
 
 interface ModalProps {
   isOpen: boolean;
@@ -15,6 +13,7 @@ interface ModalProps {
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'xlh' | 'full' | 'viewport';
   className?: string;
+  onEnter?: () => void;
 }
 
 const Modal: React.FC<ModalProps> = ({ 
@@ -24,7 +23,8 @@ const Modal: React.FC<ModalProps> = ({
   children, 
   footer, 
   size = 'md',
-  className 
+  className,
+  onEnter
 }) => {
   const [isRendered, setIsRendered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -33,44 +33,49 @@ const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
-      modalStack.push(modalId.current);
+      focusStack.push({ id: modalId.current, onEnter });
       const timer = setTimeout(() => setIsAnimating(true), 10);
       return () => clearTimeout(timer);
     } else {
       setIsAnimating(false);
-      // Remove from stack immediately on close trigger
-      const index = modalStack.indexOf(modalId.current);
-      if (index > -1) {
-        modalStack.splice(index, 1);
-      }
+      focusStack.remove(modalId.current);
     }
-  }, [isOpen]);
+  }, [isOpen, onEnter]);
 
   useEffect(() => {
     if (!isRendered) return;
 
-    const handleEscape = (e: KeyboardEvent) => {
-      // Only close if this modal is the top one in the stack
-      if (e.key === 'Escape' && modalStack[modalStack.length - 1] === modalId.current) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle events if this modal is the top one in the stack
+      if (!focusStack.isTop(modalId.current)) return;
+
+      if (e.key === 'Escape') {
         onClose();
+      } else if (e.key === 'Enter' && onEnter) {
+        // Check if the active element is not a button or input that handles enter
+        const target = document.activeElement as HTMLElement;
+        const activeTag = target?.tagName.toLowerCase();
+        if (activeTag !== 'button' && activeTag !== 'textarea' && activeTag !== 'select' && !target?.isContentEditable) {
+           e.preventDefault();
+           e.stopPropagation();
+           onEnter();
+        }
       }
     };
     
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyDown);
     
-    // Only hide overflow if this is the first modal
-    if (modalStack.length === 1) {
-      document.body.style.overflow = 'hidden';
-    }
+    // Only hide overflow if this is the first modal (conceptually, though we check stack size in a real app, here we just do it when open)
+    document.body.style.overflow = 'hidden';
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      // Only restore overflow if no modals are left
-      if (modalStack.length === 0) {
+      document.removeEventListener('keydown', handleKeyDown);
+      // Restore overflow if no modals are left - simplified check
+      if (!focusStack.getTop()) {
         document.body.style.overflow = 'unset';
       }
     };
-  }, [isRendered, onClose]);
+  }, [isRendered, onClose, onEnter]);
 
   const handleTransitionEnd = () => {
     if (!isAnimating) {
@@ -95,8 +100,7 @@ const Modal: React.FC<ModalProps> = ({
       <div 
         className={cn("fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300", isAnimating ? 'opacity-100' : 'opacity-0')}
         onClick={() => {
-          // Only close on backdrop click if top of stack
-          if (modalStack[modalStack.length - 1] === modalId.current) {
+          if (focusStack.isTop(modalId.current)) {
             onClose();
           }
         }}
@@ -165,6 +169,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     onClose={onClose}
     title={title}
     size="sm"
+    onEnter={onConfirm}
     footer={
       <>
         <Button variant="secondary" onClick={onClose} disabled={loading}>{cancelText}</Button>

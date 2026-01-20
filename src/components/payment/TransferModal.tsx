@@ -66,8 +66,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
     }
   }, [isOpen, topUpToEdit]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!validate()) return;
 
     setLoading(true);
@@ -108,9 +107,10 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
       isOpen={isOpen}
       onClose={onClose}
       title={topUpToEdit ? "Edit Transaction" : "New Transaction"}
+      onEnter={handleSubmit}
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {errors.form && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red text-sm rounded-lg">{errors.form}</div>}
         
         {!topUpToEdit && (
@@ -142,7 +142,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
         </div>
 
         <Input label="Notes (Optional)" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly savings" />
-      </form>
+      </div>
     </Modal>
   );
 };

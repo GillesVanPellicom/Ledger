@@ -22,6 +22,7 @@ const DebtPdfOptionsModal: React.FC<DebtPdfOptionsModalProps> = ({isOpen, onClos
       isOpen={isOpen}
       onClose={onClose}
       title="Generate Debt Report PDF"
+      onEnter={handleConfirm}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>

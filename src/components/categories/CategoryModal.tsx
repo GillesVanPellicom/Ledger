@@ -32,8 +32,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, 
     }
   }, [isOpen, categoryToEdit]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Category name is required.');
       return;
@@ -73,9 +72,10 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, 
       isOpen={isOpen}
       onClose={onClose}
       title={categoryToEdit ? 'Edit Category' : 'Add New Category'}
+      onEnter={handleSubmit}
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
         <Input
           label="Category Name"
@@ -88,7 +88,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, 
           onToggle={() => setIsActive(!isActive)}
           entityName="category"
         />
-      </form>
+      </div>
     </Modal>
   );
 };

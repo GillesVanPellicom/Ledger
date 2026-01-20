@@ -589,7 +589,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
             message={`Are you sure you want to permanently delete this ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}? This action cannot be undone.`}
           />
 
-          <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Payment Method">
+          <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Payment Method" onEnter={handleUpdateMethodName}>
             <div className="space-y-4">
               <Input
                 label="Method Name"

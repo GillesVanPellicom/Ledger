@@ -516,6 +516,24 @@ const IncomePage: React.FC = () => {
     setTransferToEdit(null);
   };
 
+  const handleConfirmIncome = () => {
+    confirmMutation.mutate({
+      pending: selectedPending,
+      amount: confirmData.amount,
+      date: confirmData.date,
+      paymentMethodId: Number(confirmData.paymentMethodId)
+    });
+  };
+
+  const handleCreateOneTimeIncome = () => {
+    createOneTimeMutation.mutate({
+      ...oneTimeIncome,
+      Amount: parseFloat(oneTimeIncome.Amount) || 0,
+      PaymentMethodID: Number(oneTimeIncome.PaymentMethodID) || null,
+      Category: oneTimeIncome.Category || null
+    });
+  };
+
   return (
     <div>
       <Header
@@ -890,16 +908,12 @@ const IncomePage: React.FC = () => {
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         title="Confirm Income"
+        onEnter={handleConfirmIncome}
         footer={
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>
             <Button
-              onClick={() => confirmMutation.mutate({
-                pending: selectedPending,
-                amount: confirmData.amount,
-                date: confirmData.date,
-                paymentMethodId: Number(confirmData.paymentMethodId)
-              })}
+              onClick={handleConfirmIncome}
               loading={confirmMutation.isPending}
             >
                Confirm
@@ -938,16 +952,12 @@ const IncomePage: React.FC = () => {
         isOpen={isOneTimeModalOpen}
         onClose={() => setIsOneTimeModalOpen(false)}
         title="Add One-time Income"
+        onEnter={handleCreateOneTimeIncome}
         footer={
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setIsOneTimeModalOpen(false)}>Cancel</Button>
             <Button
-              onClick={() => createOneTimeMutation.mutate({
-                ...oneTimeIncome,
-                Amount: parseFloat(oneTimeIncome.Amount) || 0,
-                PaymentMethodID: Number(oneTimeIncome.PaymentMethodID) || null,
-                Category: oneTimeIncome.Category || null
-              })}
+              onClick={handleCreateOneTimeIncome}
               loading={createOneTimeMutation.isPending}
             >
                Confirm
@@ -1018,6 +1028,7 @@ const IncomePage: React.FC = () => {
         isOpen={isScheduleModalOpen}
         onClose={() => setIsScheduleModalOpen(false)}
         title={editingSchedule ? "Edit Income Schedule" : "Add Income Schedule"}
+        onEnter={handleSaveSchedule}
         footer={
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setIsScheduleModalOpen(false)}>Cancel</Button>
