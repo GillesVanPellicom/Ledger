@@ -19,7 +19,8 @@ import {
   MoreHorizontal,
   CreditCard,
   FileText,
-  User
+  User,
+  Repeat
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { Header } from '../components/ui/Header';
@@ -51,6 +52,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/DropdownMenu"
 import TransferModal from '../components/payment/TransferModal';
+import ButtonGroup from '../components/ui/ButtonGroup';
 
 const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
 const dayOfWeekOptions = [
@@ -87,6 +89,9 @@ const IncomePage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
   const [cascadeDelete, setCascadeDelete] = useState(false);
+
+  const [isDeleteHistoryModalOpen, setIsDeleteHistoryModalOpen] = useState(false);
+  const [historyItemToDelete, setHistoryItemToDelete] = useState<any>(null);
 
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
@@ -341,6 +346,8 @@ const IncomePage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
       queryClient.invalidateQueries({ queryKey: ['debtRepayments'] });
+      setIsDeleteHistoryModalOpen(false);
+      setHistoryItemToDelete(null);
     },
     onError: (err) => showError(err)
   });
@@ -592,36 +599,71 @@ const IncomePage: React.FC = () => {
                     {
                       header: '',
                       width: '10%',
-                      className: 'text-center',
+                      className: 'text-right',
                       render: (row) => (
-                        <div className="flex gap-2 justify-center">
-                          <Tooltip content="Confirm">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-green-600 hover:bg-green-50 hover:text-green-700"
-                              onClick={() => {
-                                setSelectedPending(row);
-                                setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: row.PaymentMethodID });
-                                setIsConfirmModalOpen(true);
-                              }}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip content="Dismiss">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-500 hover:bg-red-50 hover:text-red-600"
-                              onClick={() => {
-                                setSelectedPending(row);
-                                setIsDismissModalOpen(true);
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </Tooltip>
+                        <div className="flex items-center justify-end gap-2">
+                          <ButtonGroup>
+                            <Tooltip content="Confirm">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-green-600 hover:bg-green-50 hover:text-green-700"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPending(row);
+                                  setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: row.PaymentMethodID });
+                                  setIsConfirmModalOpen(true);
+                                }}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip content="Dismiss">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPending(row);
+                                  setIsDismissModalOpen(true);
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </Tooltip>
+                          </ButtonGroup>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Go To</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/payment-methods/${row.PaymentMethodID}`);
+                              }}>
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Payment Method
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                const schedule = schedules?.find(s => s.IncomeScheduleID === row.IncomeScheduleID);
+                                if (schedule) {
+                                  setEditingSchedule(schedule);
+                                  setIsScheduleModalOpen(true);
+                                }
+                              }}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       )
                     }
@@ -678,35 +720,50 @@ const IncomePage: React.FC = () => {
                       )
                     },
                     {
-                      header: 'Actions',
+                      header: '',
+                      width: '5%',
                       className: 'text-right',
                       render: (row) => (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Go To</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/payment-methods/${row.PaymentMethodID}`);
+                            }}>
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              Payment Method
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               setEditingSchedule(row);
                               setIsScheduleModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setScheduleToDelete(row.IncomeScheduleID);
-                              setCascadeDelete(false);
-                              setIsDeleteModalOpen(true);
-                            }}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
+                            }}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setScheduleToDelete(row.IncomeScheduleID);
+                                setCascadeDelete(false);
+                                setIsDeleteModalOpen(true);
+                              }}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )
                     }
                   ]}
@@ -781,6 +838,33 @@ const IncomePage: React.FC = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Go To</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/payment-methods/${row.PaymentMethodID}`);
+                          }}>
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Payment Method
+                          </DropdownMenuItem>
+                          {row.type === 'Repayment' && (
+                            <>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/receipts/view/${row.ReceiptID}`);
+                              }}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Receipt
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/entities/${row.DebtorID}`);
+                              }}>
+                                <User className="mr-2 h-4 w-4" />
+                                Entity
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           {row.type === 'Income' && (
                             <DropdownMenuItem onClick={(e) => {
@@ -798,37 +882,12 @@ const IncomePage: React.FC = () => {
                               Edit
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/payment-methods/${row.PaymentMethodID}`);
-                          }}>
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            Go to Payment Method
-                          </DropdownMenuItem>
-                          {row.type === 'Repayment' && (
-                            <>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/receipts/view/${row.ReceiptID}`);
-                              }}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Go to Receipt
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/entities/${row.DebtorID}`);
-                              }}>
-                                <User className="mr-2 h-4 w-4" />
-                                Go to Entity
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteHistoryItemMutation.mutate(row);
+                              setHistoryItemToDelete(row);
+                              setIsDeleteHistoryModalOpen(true);
                             }}
                           >
                             <Trash className="mr-2 h-4 w-4" />
@@ -889,6 +948,20 @@ const IncomePage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={isDeleteHistoryModalOpen}
+        onClose={() => setIsDeleteHistoryModalOpen(false)}
+        onConfirm={() => {
+          if (historyItemToDelete) {
+            deleteHistoryItemMutation.mutate(historyItemToDelete);
+          }
+        }}
+        title="Delete History Item"
+        message="Are you sure you want to delete this record? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+      />
 
       <ConfirmModal
         isOpen={isDismissModalOpen}

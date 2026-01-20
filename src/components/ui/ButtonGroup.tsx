@@ -10,7 +10,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className })
   const count = React.Children.count(children);
 
   return (
-    <div className={cn("inline-flex shadow-sm", className)}>
+    <div className={cn("inline-flex shadow-sm isolate", className)}>
       {React.Children.map(children, (child, index) => {
         if (!React.isValidElement(child)) return child;
 
@@ -48,13 +48,14 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className })
           return React.cloneElement(element, {
             className: cn(
               stripRounded(props.className),
-              'h-10',
               'shadow-none',
               'relative focus:z-10',
               !isFirst && '-ml-px',
-              isFirst && 'rounded-l-lg',
-              isLast && 'rounded-r-lg',
-              isMiddle && 'rounded-none'
+              isFirst && 'rounded-l-lg rounded-r-none',
+              isLast && 'rounded-r-lg rounded-l-none',
+              isMiddle && 'rounded-none',
+              // Ensure borders are visible between buttons
+              !isLast && 'border-r-gray-200 dark:border-r-gray-700'
             )
           });
         };
