@@ -117,7 +117,7 @@ const Sidenav: React.FC = () => {
                 {item.label}
               </span>
               {item.badge !== undefined && (
-                <span className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full tabular-nums shadow-md pointer-events-none z-10">
+                <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full tabular-nums shadow-md pointer-events-none z-10">
                   {item.badge}
                 </span>
               )}
