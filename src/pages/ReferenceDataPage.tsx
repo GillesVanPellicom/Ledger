@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { Plus, Pencil, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Eye, EyeOff, Package, Store as StoreIcon, Tag, Wallet, Landmark } from 'lucide-react';
 import ProductModal from '../components/products/ProductModal';
 import StoreModal from '../components/stores/StoreModal';
 import CategoryModal from '../components/categories/CategoryModal';
@@ -11,8 +11,8 @@ import Tooltip from '../components/ui/Tooltip';
 import { Product, Store, Category } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import { cn } from '../utils/cn';
 import { useProducts, useStores, useCategories, useIncomeCategories, useIncomeSources, useInvalidateReferenceData } from '../hooks/useReferenceData';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 
 const ReferenceDataPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'stores' | 'categories' | 'income-categories' | 'income-sources'>('products');
@@ -350,31 +350,31 @@ const ReferenceDataPage: React.FC = () => {
   };
   
   const renderTabs = () => {
-    const tabs = [
-      { id: 'products', label: 'Products' },
-      { id: 'stores', label: 'Stores' },
-      { id: 'categories', label: 'Expense Categories' },
-      { id: 'income-categories', label: 'Income Categories' },
-      { id: 'income-sources', label: 'Income Sources' },
-    ];
-
     return (
-      <nav className="flex space-x-8" aria-label="Tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={cn(
-              tab.id === activeTab
-                ? 'border-accent text-accent'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600',
-              'whitespace-nowrap px-1 border-b-2 font-medium text-sm'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
+        <TabsList>
+          <TabsTrigger value="products">
+            <Package className="h-4 w-4" />
+            Products
+          </TabsTrigger>
+          <TabsTrigger value="stores">
+            <StoreIcon className="h-4 w-4" />
+            Stores
+          </TabsTrigger>
+          <TabsTrigger value="categories">
+            <Tag className="h-4 w-4" />
+            Expense Categories
+          </TabsTrigger>
+          <TabsTrigger value="income-categories">
+            <Wallet className="h-4 w-4" />
+            Income Categories
+          </TabsTrigger>
+          <TabsTrigger value="income-sources">
+            <Landmark className="h-4 w-4" />
+            Income Sources
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     );
   };
 
