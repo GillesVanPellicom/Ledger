@@ -12,6 +12,8 @@ interface SettingsState {
 
 const initialSettings: Settings = {
   theme: 'system',
+  themeColor: '#007AFF', // Default macOS Blue
+  headerColor: '#8b5cf6', // Default Violet
   modules: {
     paymentMethods: {
       enabled: false,
@@ -94,6 +96,12 @@ export const useSettingsStore = create<SettingsState>()(
             }
           }
 
+          // Apply accent color immediately
+          const accentColor = loadedSettings.themeColor || initialSettings.themeColor;
+          if (accentColor) {
+            document.documentElement.style.setProperty('--color-accent', accentColor);
+          }
+
           // Deep merge to ensure new settings are not lost
           set((state) => ({
             settings: {
@@ -135,6 +143,11 @@ export const useSettingsStore = create<SettingsState>()(
               document.documentElement.classList.remove('dark');
             }
           }
+        }
+
+        // Apply accent color if changed
+        if (newSettings.themeColor) {
+          document.documentElement.style.setProperty('--color-accent', newSettings.themeColor);
         }
 
         try {

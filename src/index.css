@@ -17,6 +17,7 @@
       rgba(0, 0, 0, 0.39) 59%,
       rgba(255, 255, 255, 0.27) 100%
     );
+    --color-accent: #007AFF; /* Default macOS Blue */
   }
 
   html {
@@ -146,11 +147,11 @@
     min-height: 21px !important;
   }
   .checkbox-wrapper-13 input[type=checkbox] {
-    --active: #007AFF; /* macOS Blue */
+    --active: var(--color-accent); /* Use CSS variable for accent color */
     --active-inner: #fff;
     --focus: 2px rgba(0, 122, 255, .3);
     --border: #BBC1E1;
-    --border-hover: #007AFF;
+    --border-hover: var(--color-accent);
     --background: transparent; /* Transparent background */
     --disabled: #F6F8FF;
     --disabled-inner: #E1E6F9;

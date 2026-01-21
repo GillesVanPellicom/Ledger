@@ -45,5 +45,7 @@
   },
   "formatting": {
     "decimalSeparator": "comma"
-  }
+  },
+  "themeColor": "#007AFF",
+  "headerColor": "#8b5cf6"
 }
