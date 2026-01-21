@@ -24,7 +24,6 @@ import {
   Calendar,
   AlertTriangle,
   RotateCcw,
-  StickyNote,
   Filter
 } from 'lucide-react';
 import {cn} from '../utils/cn';
@@ -32,7 +31,7 @@ import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import Tooltip from '../components/ui/Tooltip';
 import Modal, {ConfirmModal} from '../components/ui/Modal';
 import Select from '../components/ui/Select';
-import {Receipt, LineItem, ReceiptImage, ReceiptSplit, ReceiptDebtorPayment} from '../types';
+import {LineItem} from '../types';
 import InfoCard from '../components/ui/InfoCard';
 import {Header} from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
@@ -48,11 +47,10 @@ import {useSettingsStore} from '../store/useSettingsStore';
 import {useErrorStore} from '../store/useErrorStore';
 import {useReceipt, useDeleteReceipt} from '../hooks/useReceipts';
 import {useActivePaymentMethods} from '../hooks/usePaymentMethods';
-import Combobox from '../components/ui/Combobox';
 import NanoDataTable from '../components/ui/NanoDataTable';
-import { useReceiptDebtCalculation } from '../hooks/useDebtCalculation';
-import { usePdfGenerator } from '../hooks/usePdfGenerator';
-import FilterModal, { FilterOption } from '../components/ui/FilterModal';
+import {useReceiptDebtCalculation} from '../hooks/useDebtCalculation';
+import {usePdfGenerator} from '../hooks/usePdfGenerator';
+import FilterModal, {FilterOption} from '../components/ui/FilterModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
 
 interface MarkAsPaidModalProps {
@@ -94,7 +92,7 @@ const ReceiptViewPage: React.FC = () => {
   const {settings} = useSettingsStore();
   const {showError} = useErrorStore();
   const deleteReceiptMutation = useDeleteReceipt();
-  const { generatePdf } = usePdfGenerator();
+  const {generatePdf} = usePdfGenerator();
 
   const {data, isLoading, refetch} = useReceipt(id);
   const {receipt, lineItems: rawLineItems, images: rawImages, splits: receiptSplits, payments} = data || {};
@@ -104,7 +102,7 @@ const ReceiptViewPage: React.FC = () => {
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
-  const { debtSummary, loading: debtLoading } = useReceiptDebtCalculation(id, receipt, rawLineItems, receiptSplits, payments);
+  const {debtSummary} = useReceiptDebtCalculation(id, receipt, rawLineItems, receiptSplits, payments);
 
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState<boolean>(false);
   const [selectedDebtForSettlement, setSelectedDebtForSettlement] = useState<any>(null);
@@ -140,41 +138,45 @@ const ReceiptViewPage: React.FC = () => {
   const filteredLineItems = useMemo(() => {
     if (!rawLineItems) return [];
     return (rawLineItems as (LineItem & { CategoryName?: string, CategoryID?: number })[]).filter(item => {
-      if (categoryFilter !== 'all' && item.CategoryID?.toString() !== categoryFilter) return false;
-      if (entityFilter !== 'all') {
-        if (entityFilter === 'none' && (item.DebtorID !== null && item.DebtorID !== undefined)) return false;
-        if (entityFilter !== 'none' && item.DebtorID?.toString() !== entityFilter) return false;
-      }
-      if (excludedFilter !== 'all') {
-        const isExcluded = !!item.IsExcludedFromDiscount;
-        if (excludedFilter === 'yes' && !isExcluded) return false;
-        if (excludedFilter === 'no' && isExcluded) return false;
-      }
-      return true;
+      const matchesCategory = categoryFilter === 'all' || item.CategoryID?.toString() === categoryFilter;
+      const matchesEntity = entityFilter === 'all' || 
+        (entityFilter === 'none' && (item.DebtorID === null || item.DebtorID === undefined)) ||
+        (entityFilter !== 'none' && item.DebtorID?.toString() === entityFilter);
+      const matchesExclusion = excludedFilter === 'all' ||
+        (excludedFilter === 'yes' && !!item.IsExcludedFromDiscount) ||
+        (excludedFilter === 'no' && !item.IsExcludedFromDiscount);
+      
+      return matchesCategory && matchesEntity && matchesExclusion;
     });
   }, [rawLineItems, categoryFilter, entityFilter, excludedFilter]);
 
   const filterOptions = useMemo(() => {
-    if (!rawLineItems) return { categories: [], entities: [], hasExclusions: false };
+    if (!rawLineItems) return {categories: [], entities: [], hasExclusions: false};
     const items = rawLineItems as (LineItem & { CategoryName?: string, CategoryID?: number })[];
-    
-    const categories = Array.from(new Set(items.filter(i => i.CategoryID).map(i => JSON.stringify({ value: i.CategoryID!.toString(), label: i.CategoryName }))))
+
+    const categories = Array.from(new Set(items.filter(i => i.CategoryID).map(i => JSON.stringify({
+      value: i.CategoryID!.toString(),
+      label: i.CategoryName
+    }))))
       .map(s => JSON.parse(s));
-    
-    const entities = Array.from(new Set(items.filter(i => i.DebtorID).map(i => JSON.stringify({ value: i.DebtorID!.toString(), label: i.DebtorName }))))
+
+    const entities = Array.from(new Set(items.filter(i => i.DebtorID).map(i => JSON.stringify({
+      value: i.DebtorID!.toString(),
+      label: i.DebtorName
+    }))))
       .map(s => JSON.parse(s));
-    
+
     if (items.some(i => i.DebtorID === null || i.DebtorID === undefined)) {
-      entities.unshift({ value: 'none', label: 'None' });
+      entities.unshift({value: 'none', label: 'None'});
     }
 
     const hasExclusions = items.some(i => i.IsExcludedFromDiscount);
 
-    return { categories, entities, hasExclusions };
+    return {categories, entities, hasExclusions};
   }, [rawLineItems]);
 
   const images = useMemo(() => {
-    if (window.electronAPI && settings.datastore.folderPath && rawImages) {
+    if (globalThis.electronAPI && settings.datastore.folderPath && rawImages) {
       return rawImages.map(img => ({
         key: img.ImagePath,
         ImagePath: img.ImagePath,
@@ -196,13 +198,13 @@ const ReceiptViewPage: React.FC = () => {
   const displayTotalQuantity = useMemo(() => calculateTotalQuantity(rawLineItems || []), [rawLineItems]);
 
   const debtStatus = useMemo(() => {
-    if (!debtEnabled || !debtSummary || !debtSummary.debtors.length) return null;
+    if (!debtEnabled || !debtSummary?.debtors.length) return null;
     const totalDebtors = debtSummary.debtors.length;
     const paidDebtors = debtSummary.debtors.filter(d => d.isPaid).length;
 
-    if (paidDebtors === 0) return { label: 'Not Paid to You', color: 'red' };
-    if (paidDebtors === totalDebtors) return { label: 'Fully Paid to You', color: 'green' };
-    return { label: `${paidDebtors}/${totalDebtors} Paid to You`, color: 'yellow' };
+    if (paidDebtors === 0) return {label: 'Not Paid to You', color: 'red'};
+    if (paidDebtors === totalDebtors) return {label: 'Fully Paid to You', color: 'green'};
+    return {label: `${paidDebtors}/${totalDebtors} Paid to You`, color: 'yellow'};
   }, [debtSummary, debtEnabled]);
 
   const handleSavePdf = async () => {
@@ -331,23 +333,23 @@ const ReceiptViewPage: React.FC = () => {
 
   const tableHeaders = useMemo(() => {
     const headers = [
-      { label: 'Product' },
-      { label: 'Category', className: 'w-32 text-right' },
-      { label: 'Qty', className: 'w-24 text-right' },
-      { label: 'Unit Price (€)', className: 'w-32 text-right' },
-      { label: 'Total (€)', className: 'w-32 text-right' },
+      {label: 'Product'},
+      {label: 'Category', className: 'w-32 text-right'},
+      {label: 'Qty', className: 'w-24 text-right'},
+      {label: 'Unit Price (€)', className: 'w-32 text-right'},
+      {label: 'Total (€)', className: 'w-32 text-right'},
     ];
     if (debtEnabled && receipt?.SplitType === 'line_item') {
-      headers.push({ label: 'Debtor', className: 'w-40 text-right' });
+      headers.push({label: 'Debtor', className: 'w-40 text-right'});
     }
     return headers;
   }, [debtEnabled, receipt?.SplitType]);
 
   const tableRows = useMemo(() => {
-    return filteredLineItems.map((item, index) => {
+    return filteredLineItems.map((item) => {
       const isDebtorUnpaid = item.DebtorID && !(payments || []).some(p => p.DebtorID === item.DebtorID);
       const row: React.ReactNode[] = [
-        <div className="flex items-center gap-2">
+        <div key={`product-${item.LineItemID}`} className="flex items-center gap-2">
           {receipt?.Discount > 0 && filterOptions.hasExclusions && (
             <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
               <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
@@ -358,14 +360,16 @@ const ReceiptViewPage: React.FC = () => {
             <p className="text-xs text-gray-500">{item.ProductBrand}</p>
           </div>
         </div>,
-        <div className="text-right text-gray-500">{item.CategoryName || '-'}</div>,
-        <div className="text-right">{item.LineQuantity}</div>,
-        <div className="text-right">{(item.LineUnitPrice).toFixed(2)}</div>,
-        <div className="text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</div>,
+        <div key={`category-${item.LineItemID}`} className="text-right text-gray-500">{item.CategoryName || '-'}</div>,
+        <div key={`qty-${item.LineItemID}`} className="text-right">{item.LineQuantity}</div>,
+        <div key={`price-${item.LineItemID}`} className="text-right">{(item.LineUnitPrice).toFixed(2)}</div>,
+        <div key={`total-${item.LineItemID}`}
+             className="text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</div>,
       ];
       if (debtEnabled && receipt?.SplitType === 'line_item') {
         row.push(
-          <div className={cn("text-right", isDebtorUnpaid ? "text-red font-medium" : "text-gray-600 dark:text-gray-400")}>
+          <div key={`debtor-${item.LineItemID}`}
+               className={cn("text-right", isDebtorUnpaid ? "text-red font-medium" : "text-gray-600 dark:text-gray-400")}>
             {item.DebtorName || '-'}
           </div>
         );
@@ -435,7 +439,7 @@ const ReceiptViewPage: React.FC = () => {
       />
       <PageWrapper>
         <div className="py-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
-          
+
           {/* Left Column (Notes, Filters, Images, Items) */}
           <div className="xl:col-span-2 space-y-6 xl:col-start-1 xl:row-start-1">
             {receipt?.ReceiptNote && (
@@ -470,10 +474,10 @@ const ReceiptViewPage: React.FC = () => {
                   <div className="blur-sm">
                     <NanoDataTable
                       headers={[
-                        { label: 'Product' },
-                        { label: 'Qty', className: 'w-24 text-center' },
-                        { label: 'Unit Price (€)', className: 'w-32 text-right' },
-                        { label: 'Total (€)', className: 'w-32 text-right' },
+                        {label: 'Product'},
+                        {label: 'Qty', className: 'w-24 text-center'},
+                        {label: 'Unit Price (€)', className: 'w-32 text-right'},
+                        {label: 'Total (€)', className: 'w-32 text-right'},
                       ]}
                       rows={[]} // Empty rows to trigger "No results found" for non-itemised
                     />
@@ -490,15 +494,16 @@ const ReceiptViewPage: React.FC = () => {
               <Card>
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Items</h3>
                     <ButtonGroup>
                       <Tooltip content="Filters">
                         <Button variant="secondary" size="icon" onClick={() => setIsFilterModalOpen(true)}>
-                          <Filter className="h-4 w-4" />
+                          <Filter className="h-4 w-4"/>
                         </Button>
                       </Tooltip>
                       <Tooltip content="Reset Filters">
                         <Button variant="secondary" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
-                          <RotateCcw className="h-4 w-4" />
+                          <RotateCcw className="h-4 w-4"/>
                         </Button>
                       </Tooltip>
                     </ButtonGroup>
@@ -518,7 +523,7 @@ const ReceiptViewPage: React.FC = () => {
                       {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
                         <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
                           <div className="flex items-center gap-1 cursor-help">
-                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            <AlertTriangle className="h-4 w-4 text-yellow-500"/>
                             <span className="text-sm underline decoration-dotted">
                               Discount ({receipt.Discount || 0}%)
                             </span>
@@ -544,7 +549,7 @@ const ReceiptViewPage: React.FC = () => {
             <Card>
               <div className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-6">
-                  
+
                   {/* Total Amount */}
                   <div className="sm:col-start-1 sm:row-start-1 xl:col-start-1 xl:row-start-1 2xl:col-start-1 2xl:row-start-1">
                     <p className="text-sm text-gray-500">Total Amount</p>
@@ -636,44 +641,44 @@ const ReceiptViewPage: React.FC = () => {
                   {(debtSummary && (debtSummary.debtors.length > 0 || debtSummary.ownShare)) ? (
                     <>
                       {debtSummary.debtors.map((debtor) => (
-                          <Card
-                            key={debtor.debtorId}
-                            className="p-4 cursor-pointer transition-all duration-200"
-                            onClick={() => handleSettleClick(debtor)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <Link to={`/entities/${debtor.debtorId}`}
-                                    className="font-medium hover:underline flex items-center gap-1.5 group"
-                                    onClick={(e) => e.stopPropagation()}>
-                                <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
-                                <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
-                              </Link>
-                              <div className="flex items-center">
-                                {debtor.isPaid ? (
-                                  <Tooltip content={`Paid on ${payments.find(p => p.DebtorID === debtor.debtorId)?.PaidDate}`}>
-                                    <CheckCircle className="h-5 w-5 text-green"/>
-                                  </Tooltip>
-                                ) : (
-                                  <Tooltip content="Unpaid">
-                                    <AlertCircle className="h-5 w-5 text-red"/>
-                                  </Tooltip>
-                                )}
-                              </div>
+                        <Card
+                          key={debtor.debtorId}
+                          className="p-4 cursor-pointer transition-all duration-200"
+                          onClick={() => handleSettleClick(debtor)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <Link to={`/entities/${debtor.debtorId}`}
+                                  className="font-medium hover:underline flex items-center gap-1.5 group"
+                                  onClick={(e) => e.stopPropagation()}>
+                              <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
+                              <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
+                            </Link>
+                            <div className="flex items-center">
+                              {debtor.isPaid ? (
+                                <Tooltip content={`Paid on ${payments.find(p => p.DebtorID === debtor.debtorId)?.PaidDate}`}>
+                                  <CheckCircle className="h-5 w-5 text-green"/>
+                                </Tooltip>
+                              ) : (
+                                <Tooltip content="Unpaid">
+                                  <AlertCircle className="h-5 w-5 text-red"/>
+                                </Tooltip>
+                              )}
                             </div>
-                            <div className="flex justify-between items-baseline mt-1">
-                              <p className={cn("font-bold truncate", debtor.isPaid ? "text-green" : "text-red")}
-                                 style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
-                                €{debtor.amount.toFixed(2)}
-                              </p>
-                              <div className="text-right flex-shrink-0 pl-2">
-                                {receipt?.SplitType === 'total_split' &&
-                                  <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
-                                {receipt?.SplitType === 'line_item' && !receipt.IsNonItemised &&
-                                  <p className="text-sm text-gray-500">{debtor.itemCount} / {displayTotalItems} items</p>}
-                              </div>
+                          </div>
+                          <div className="flex justify-between items-baseline mt-1">
+                            <p className={cn("font-bold truncate", debtor.isPaid ? "text-green" : "text-red")}
+                               style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                              €{debtor.amount.toFixed(2)}
+                            </p>
+                            <div className="text-right flex-shrink-0 pl-2">
+                              {receipt?.SplitType === 'total_split' &&
+                                <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
+                              {receipt?.SplitType === 'line_item' && !receipt.IsNonItemised &&
+                                <p className="text-sm text-gray-500">{debtor.itemCount} / {displayTotalItems} items</p>}
                             </div>
-                          </Card>
-                        ))}
+                          </div>
+                        </Card>
+                      ))}
                       {!!debtSummary.ownShare && (
                         <Card className="p-4">
                           <div className="flex justify-between items-start">
@@ -721,7 +726,8 @@ const ReceiptViewPage: React.FC = () => {
                         </div>
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-black/40 backdrop-blur-sm">
                           <Info className="h-8 w-8 text-gray-400 dark:text-gray-500"/>
-                          <p className="mt-2 text-sm text-gray-500 font-medium">No debts owed to you for this receipt.</p>
+                          <p className="mt-2 text-sm text-gray-500 font-medium">No debts owed to you for this
+                                                                                receipt.</p>
                         </div>
                       </div>
                     </Card>
@@ -742,46 +748,46 @@ const ReceiptViewPage: React.FC = () => {
         filterCount={activeFilterCount}
         hasActiveFilters={hasPendingFilters}
       >
-        <FilterOption 
-          title="Category" 
+        <FilterOption
+          title="Category"
           onReset={() => setPendingCategoryFilter('all')}
           isModified={pendingCategoryFilter !== 'all'}
         >
-          <Select 
-            options={[{ value: 'all', label: 'All Categories' }, ...filterOptions.categories]} 
-            value={pendingCategoryFilter} 
-            onChange={e => setPendingCategoryFilter(e.target.value)} 
+          <Select
+            options={[{value: 'all', label: 'All Categories'}, ...filterOptions.categories]}
+            value={pendingCategoryFilter}
+            onChange={e => setPendingCategoryFilter(e.target.value)}
           />
         </FilterOption>
 
         {filterOptions.entities.length > 0 && (
-          <FilterOption 
-            title="Entity" 
+          <FilterOption
+            title="Entity"
             onReset={() => setPendingEntityFilter('all')}
             isModified={pendingEntityFilter !== 'all'}
           >
-            <Select 
-              options={[{ value: 'all', label: 'All Entities' }, ...filterOptions.entities]} 
-              value={pendingEntityFilter} 
-              onChange={e => setPendingEntityFilter(e.target.value)} 
+            <Select
+              options={[{value: 'all', label: 'All Entities'}, ...filterOptions.entities]}
+              value={pendingEntityFilter}
+              onChange={e => setPendingEntityFilter(e.target.value)}
             />
           </FilterOption>
         )}
 
         {filterOptions.hasExclusions && (
-          <FilterOption 
+          <FilterOption
             title="Discount Exclusion"
             onReset={() => setPendingExcludedFilter('all')}
             isModified={pendingExcludedFilter !== 'all'}
           >
-            <Select 
+            <Select
               options={[
-                { value: 'all', label: 'Included & Excluded' },
-                { value: 'yes', label: 'Excluded Only' },
-                { value: 'no', label: 'Included Only' }
-              ]} 
-              value={pendingExcludedFilter} 
-              onChange={e => setPendingExcludedFilter(e.target.value)} 
+                {value: 'all', label: 'Included & Excluded'},
+                {value: 'yes', label: 'Excluded Only'},
+                {value: 'no', label: 'Included Only' }
+              ]}
+              value={pendingExcludedFilter}
+              onChange={e => setPendingExcludedFilter(e.target.value)}
             />
           </FilterOption>
         )}

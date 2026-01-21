@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import React, {useState, useEffect, useMemo} from 'react';
+import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
+import {useNavigate, useLocation} from 'react-router-dom';
 import {
-  TrendingUp,
   Calendar,
-  CheckCircle,
   Clock,
   Plus,
   Trash,
@@ -14,19 +12,17 @@ import {
   X,
   FilePlus2,
   CalendarPlus,
-  Link as LinkIcon,
   History,
   MoreHorizontal,
   CreditCard,
   FileText,
-  User,
-  Repeat
+  User
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
-import { Header } from '../components/ui/Header';
-import { incomeCommitments } from '../logic/incomeCommitments';
-import { incomeLogic } from '../logic/incomeLogic';
-import { humanizeRecurrenceRule, parseRecurrenceRule, calculateOccurrences } from '../logic/incomeScheduling';
+import {Header} from '../components/ui/Header';
+import {incomeCommitments} from '../logic/incomeCommitments';
+import {incomeLogic} from '../logic/incomeLogic';
+import {humanizeRecurrenceRule, parseRecurrenceRule, calculateOccurrences} from '../logic/incomeScheduling';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -34,13 +30,13 @@ import Select from '../components/ui/Select';
 import Combobox from '../components/ui/Combobox';
 import StepperInput from '../components/ui/StepperInput';
 import Checkbox from '../components/ui/Checkbox';
-import Modal, { ConfirmModal } from '../components/ui/Modal';
+import Modal, {ConfirmModal} from '../components/ui/Modal';
 import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
 import IncomeSourceModal from '../components/income/IncomeSourceModal';
-import { format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths } from 'date-fns';
-import { cn } from '../utils/cn';
-import { useErrorStore } from '../store/useErrorStore';
-import { db } from '../utils/db';
+import {format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths} from 'date-fns';
+import {cn} from '../utils/cn';
+import {useErrorStore} from '../store/useErrorStore';
+import {db} from '../utils/db';
 import Tooltip from '../components/ui/Tooltip';
 import Divider from '../components/ui/Divider';
 import {
@@ -53,23 +49,26 @@ import {
 } from "../components/ui/DropdownMenu"
 import TransferModal from '../components/payment/TransferModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
+import {Tabs, TabsList, TabsTrigger} from '../components/ui/Tabs';
 
-const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+const dayOfMonthOptions = Array.from({length: 31}, (_, i) => ({value: String(i + 1), label: String(i + 1)}));
 const dayOfWeekOptions = [
-  { value: '1', label: 'Monday' }, { value: '2', label: 'Tuesday' }, { value: '3', label: 'Wednesday' },
-  { value: '4', label: 'Thursday' }, { value: '5', label: 'Friday' }, { value: '6', label: 'Saturday' }, { value: '0', label: 'Sunday' }
+  {value: '1', label: 'Monday'}, {value: '2', label: 'Tuesday'}, {value: '3', label: 'Wednesday'},
+  {value: '4', label: 'Thursday'}, {value: '5', label: 'Friday'}, {value: '6', label: 'Saturday'}, {
+    value: '0',
+    label: 'Sunday'
+  }
 ];
 const monthOfYearOptions = [
-  { value: '0', label: 'January' }, { value: '1', label: 'February' }, { value: '2', label: 'March' },
-  { value: '3', label: 'April' }, { value: '4', label: 'May' }, { value: '5', label: 'June' },
-  { value: '6', label: 'July' }, { value: '7', label: 'August' }, { value: '8', label: 'September' },
-  { value: '9', label: 'October' }, { value: '10', label: 'November' }, { value: '11', label: 'December' }
+  {value: '0', label: 'January'}, {value: '1', label: 'February'}, {value: '2', label: 'March'},
+  {value: '3', label: 'April'}, {value: '4', label: 'May'}, {value: '5', label: 'June'},
+  {value: '6', label: 'July'}, {value: '7', label: 'August'}, {value: '8', label: 'September'},
+  {value: '9', label: 'October'}, {value: '10', label: 'November'}, {value: '11', label: 'December'}
 ];
 
 const IncomePage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { showError } = useErrorStore();
+  const {showError} = useErrorStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled' | 'history'>('to-check');
@@ -85,7 +84,7 @@ const IncomePage: React.FC = () => {
   const [isDismissModalOpen, setIsDismissModalOpen] = useState(false);
   const [isOneTimeModalOpen, setIsOneTimeModalOpen] = useState(false);
   const [selectedPending, setSelectedPending] = useState<any>(null);
-  const [confirmData, setConfirmData] = useState({ amount: 0, date: '', paymentMethodId: '' });
+  const [confirmData, setConfirmData] = useState({amount: 0, date: '', paymentMethodId: ''});
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
@@ -117,7 +116,7 @@ const IncomePage: React.FC = () => {
   const [transferToEdit, setTransferToEdit] = useState<any>(null);
 
   useEffect(() => {
-    if (location.state && location.state.activeTab) {
+    if (location.state?.activeTab) {
       setActiveTab(location.state.activeTab);
     }
   }, [location.state]);
@@ -200,10 +199,12 @@ const IncomePage: React.FC = () => {
         label: r.IncomeCategoryName
       })));
       if (newId) {
-        db.queryOne<{ IncomeCategoryName: string }>("SELECT IncomeCategoryName FROM IncomeCategories WHERE IncomeCategoryID = ?", [newId]).then(cat => {
+        db.queryOne<{
+          IncomeCategoryName: string
+        }>("SELECT IncomeCategoryName FROM IncomeCategories WHERE IncomeCategoryID = ?", [newId]).then(cat => {
           if (cat) {
-            if (isOneTimeModalOpen) setOneTimeIncome(prev => ({ ...prev, Category: cat.IncomeCategoryName }));
-            if (isScheduleModalOpen) setNewSchedule(prev => ({ ...prev, Category: cat.IncomeCategoryName }));
+            if (isOneTimeModalOpen) setOneTimeIncome(prev => ({...prev, Category: cat.IncomeCategoryName}));
+            if (isScheduleModalOpen) setNewSchedule(prev => ({...prev, Category: cat.IncomeCategoryName}));
           }
         }).catch(err => showError(err));
       }
@@ -217,10 +218,12 @@ const IncomePage: React.FC = () => {
         label: r.IncomeSourceName
       })));
       if (newId) {
-        db.queryOne<{ IncomeSourceName: string }>("SELECT IncomeSourceName FROM IncomeSources WHERE IncomeSourceID = ?", [newId]).then(src => {
+        db.queryOne<{
+          IncomeSourceName: string
+        }>("SELECT IncomeSourceName FROM IncomeSources WHERE IncomeSourceID = ?", [newId]).then(src => {
           if (src) {
-            if (isOneTimeModalOpen) setOneTimeIncome(prev => ({ ...prev, SourceName: src.IncomeSourceName }));
-            if (isScheduleModalOpen) setNewSchedule(prev => ({ ...prev, SourceName: src.IncomeSourceName }));
+            if (isOneTimeModalOpen) setOneTimeIncome(prev => ({...prev, SourceName: src.IncomeSourceName}));
+            if (isScheduleModalOpen) setNewSchedule(prev => ({...prev, SourceName: src.IncomeSourceName}));
           }
         }).catch(err => showError(err));
       }
@@ -228,29 +231,29 @@ const IncomePage: React.FC = () => {
   };
 
   // Queries
-  const { data: pendingIncomes, isLoading: loadingPending } = useQuery({
+  const {data: pendingIncomes, isLoading: loadingPending} = useQuery({
     queryKey: ['pendingIncome'],
     queryFn: () => incomeCommitments.getPendingIncomes()
   });
 
-  const { data: schedules, isLoading: loadingSchedules } = useQuery({
+  const {data: schedules, isLoading: loadingSchedules} = useQuery({
     queryKey: ['incomeSchedules'],
     queryFn: () => incomeCommitments.getSchedules()
   });
 
-  const { data: confirmedIncomes, isLoading: loadingConfirmed } = useQuery({
+  const {data: confirmedIncomes, isLoading: loadingConfirmed} = useQuery({
     queryKey: ['confirmedIncome'],
     queryFn: () => incomeCommitments.getConfirmedIncomeTopUps()
   });
 
-  const { data: debtRepayments, isLoading: loadingRepayments } = useQuery({
+  const {data: debtRepayments, isLoading: loadingRepayments} = useQuery({
     queryKey: ['debtRepayments'],
     queryFn: () => incomeCommitments.getDebtRepayments()
   });
 
   const historyData = useMemo(() => {
-    const confirmed = (confirmedIncomes || []).map((item: any) => ({ ...item, type: 'Income' }));
-    const repayments = (debtRepayments || []).map((item: any) => ({ ...item, type: 'Repayment' }));
+    const confirmed = (confirmedIncomes || []).map((item: any) => ({...item, type: 'Income'}));
+    const repayments = (debtRepayments || []).map((item: any) => ({...item, type: 'Repayment'}));
     return [...confirmed, ...repayments].sort((a, b) =>
       isBefore(parseISO(a.TopUpDate || a.PaidDate), parseISO(b.TopUpDate || b.PaidDate)) ? 1 : -1
     );
@@ -260,18 +263,23 @@ const IncomePage: React.FC = () => {
   const processSchedulesMutation = useMutation({
     mutationFn: () => incomeLogic.processSchedules(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
-      queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
+      queryClient.invalidateQueries({queryKey: ['pendingIncome']});
+      queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
     },
     onError: (err) => showError(err)
   });
 
   const confirmMutation = useMutation({
-    mutationFn: ({ pending, amount, date, paymentMethodId }: { pending: any, amount: number, date: string, paymentMethodId: number }) =>
+    mutationFn: ({pending, amount, date, paymentMethodId}: {
+      pending: any,
+      amount: number,
+      date: string,
+      paymentMethodId: number
+    }) =>
       incomeLogic.confirmPendingIncome(pending, amount, date, paymentMethodId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
-      queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
+      queryClient.invalidateQueries({queryKey: ['pendingIncome']});
+      queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
       setIsConfirmModalOpen(false);
     },
     onError: (err) => showError(err)
@@ -280,15 +288,15 @@ const IncomePage: React.FC = () => {
   const rejectMutation = useMutation({
     mutationFn: (id: number) => incomeLogic.rejectPendingIncome(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
+      queryClient.invalidateQueries({queryKey: ['pendingIncome']});
     },
     onError: (err) => showError(err)
   });
 
   const updateScheduleMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: any }) => incomeCommitments.updateSchedule(id, data),
+    mutationFn: ({id, data}: { id: number, data: any }) => incomeCommitments.updateSchedule(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
+      queryClient.invalidateQueries({queryKey: ['incomeSchedules']});
       setIsScheduleModalOpen(false);
       setEditingSchedule(null);
       processSchedulesMutation.mutate();
@@ -299,8 +307,8 @@ const IncomePage: React.FC = () => {
   const createScheduleMutation = useMutation({
     mutationFn: (data: any) => incomeCommitments.createSchedule(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
+      queryClient.invalidateQueries({queryKey: ['incomeSchedules']});
+      queryClient.invalidateQueries({queryKey: ['pendingIncome']});
       setIsScheduleModalOpen(false);
       processSchedulesMutation.mutate();
     },
@@ -308,9 +316,9 @@ const IncomePage: React.FC = () => {
   });
 
   const deleteScheduleMutation = useMutation({
-    mutationFn: ({ id, cascade }: { id: number, cascade: boolean }) => incomeCommitments.deleteSchedule(id, cascade),
+    mutationFn: ({id, cascade}: { id: number, cascade: boolean }) => incomeCommitments.deleteSchedule(id, cascade),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
+      queryClient.invalidateQueries({queryKey: ['incomeSchedules']});
       processSchedulesMutation.mutate();
       setIsDeleteModalOpen(false);
       setCascadeDelete(false);
@@ -321,7 +329,7 @@ const IncomePage: React.FC = () => {
   const createOneTimeMutation = useMutation({
     mutationFn: (data: any) => incomeCommitments.createOneTimeIncome(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
+      queryClient.invalidateQueries({queryKey: ['pendingIncome']});
       setIsOneTimeModalOpen(false);
       setOneTimeIncome({
         SourceName: '',
@@ -345,8 +353,8 @@ const IncomePage: React.FC = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
-      queryClient.invalidateQueries({ queryKey: ['debtRepayments'] });
+      queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
+      queryClient.invalidateQueries({queryKey: ['debtRepayments']});
       setIsDeleteHistoryModalOpen(false);
       setHistoryItemToDelete(null);
     },
@@ -368,19 +376,19 @@ const IncomePage: React.FC = () => {
       <Tabs value={activeTab} onValueChange={(val: any) => {
         setActiveTab(val);
         setCurrentPage(1);
-        navigate('.', { state: { activeTab: val }, replace: true });
+        navigate('.', {state: {activeTab: val}, replace: true});
       }}>
         <TabsList>
           <TabsTrigger value="to-check" badge={pendingIncomes?.length} badgeColor="bg-red-500">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-4 w-4"/>
             To Check
           </TabsTrigger>
           <TabsTrigger value="scheduled">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-4 w-4"/>
             Scheduled
           </TabsTrigger>
           <TabsTrigger value="history">
-            <History className="h-4 w-4" />
+            <History className="h-4 w-4"/>
             History
           </TabsTrigger>
         </TabsList>
@@ -389,25 +397,25 @@ const IncomePage: React.FC = () => {
   };
 
   const splitTopUpNote = (note: string) => {
-    if (!note.startsWith('[Income] ')) return { source: note, category: '' };
+    if (!note.startsWith('[Income] ')) return {source: note, category: ''};
     const content = note.substring(9);
     const match = content.match(/^(.*?)(?:\s\((.*?)\))?$/);
     if (match) {
-      return { source: match[1], category: match[2] || '' };
+      return {source: match[1], category: match[2] || ''};
     }
-    return { source: content, category: '' };
+    return {source: content, category: ''};
   };
 
   const handleSaveSchedule = () => {
-    if (newSchedule.MonthOfYear === '1' && parseInt(newSchedule.DayOfMonth) > 28) {
+    if (newSchedule.MonthOfYear === '1' && Number.parseInt(newSchedule.DayOfMonth) > 28) {
       showError(new Error("February cannot have more than 28 days."));
       return;
     }
 
     const data = {
       ...newSchedule,
-      ExpectedAmount: parseFloat(String(newSchedule.ExpectedAmount)) || null,
-      LookaheadDays: parseInt(String(newSchedule.LookaheadDays)) || 0,
+      ExpectedAmount: Number.parseFloat(String(newSchedule.ExpectedAmount)) || null,
+      LookaheadDays: Number.parseInt(String(newSchedule.LookaheadDays)) || 0,
       PaymentMethodID: Number(newSchedule.PaymentMethodID) || null,
       DayOfMonth: Number(newSchedule.DayOfMonth) || null,
       DayOfWeek: Number(newSchedule.DayOfWeek) || null,
@@ -415,14 +423,14 @@ const IncomePage: React.FC = () => {
       CreateForPastPeriod: createForPastPeriod,
     };
     if (editingSchedule) {
-      updateScheduleMutation.mutate({ id: editingSchedule.IncomeScheduleID, data });
+      updateScheduleMutation.mutate({id: editingSchedule.IncomeScheduleID, data});
     } else {
       createScheduleMutation.mutate(data);
     }
   };
 
   const renderRecurrenceDetails = () => {
-    const { type } = parseRecurrenceRule(newSchedule.RecurrenceRule);
+    const {type} = parseRecurrenceRule(newSchedule.RecurrenceRule);
 
     switch (type) {
       case 'MONTHLY':
@@ -432,7 +440,7 @@ const IncomePage: React.FC = () => {
             <Select
               options={dayOfMonthOptions}
               value={newSchedule.DayOfMonth}
-              onChange={e => setNewSchedule(prev => ({ ...prev, DayOfMonth: e.target.value }))}
+              onChange={e => setNewSchedule(prev => ({...prev, DayOfMonth: e.target.value}))}
             />
           </div>
         );
@@ -443,7 +451,7 @@ const IncomePage: React.FC = () => {
             <Select
               options={dayOfWeekOptions}
               value={newSchedule.DayOfWeek}
-              onChange={e => setNewSchedule(prev => ({ ...prev, DayOfWeek: e.target.value }))}
+              onChange={e => setNewSchedule(prev => ({...prev, DayOfWeek: e.target.value}))}
             />
           </div>
         );
@@ -455,7 +463,7 @@ const IncomePage: React.FC = () => {
               <Select
                 options={monthOfYearOptions}
                 value={newSchedule.MonthOfYear}
-                onChange={e => setNewSchedule(prev => ({ ...prev, MonthOfYear: e.target.value }))}
+                onChange={e => setNewSchedule(prev => ({...prev, MonthOfYear: e.target.value}))}
               />
             </div>
             <div className="flex flex-col">
@@ -463,7 +471,7 @@ const IncomePage: React.FC = () => {
               <Select
                 options={dayOfMonthOptions.slice(0, newSchedule.MonthOfYear === '1' ? 28 : 31)}
                 value={newSchedule.DayOfMonth}
-                onChange={e => setNewSchedule(prev => ({ ...prev, DayOfMonth: e.target.value }))}
+                onChange={e => setNewSchedule(prev => ({...prev, DayOfMonth: e.target.value}))}
               />
             </div>
           </div>
@@ -479,7 +487,7 @@ const IncomePage: React.FC = () => {
       const today = startOfToday();
       const oneMonthAgo = subMonths(today, 1);
       const occurrences = calculateOccurrences(
-        { ...newSchedule, CreationTimestamp: new Date().toISOString() } as any,
+        {...newSchedule, CreationTimestamp: new Date().toISOString()} as any,
         oneMonthAgo,
         today
       );
@@ -498,14 +506,14 @@ const IncomePage: React.FC = () => {
 
   const handleStepperChange = (setter: React.Dispatch<React.SetStateAction<any>>, field: string, increment: boolean, step: number) => {
     setter(prev => {
-      const currentValue = parseFloat(prev[field]) || 0;
+      const currentValue = Number.parseFloat(prev[field]) || 0;
       const newValue = increment ? currentValue + step : currentValue - step;
-      return { ...prev, [field]: String(newValue) };
+      return {...prev, [field]: String(newValue)};
     });
   };
 
   const handleTransferSave = () => {
-    queryClient.invalidateQueries({ queryKey: ['confirmedIncome'] });
+    queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
     setTransferToEdit(null);
   };
 
@@ -521,7 +529,7 @@ const IncomePage: React.FC = () => {
   const handleCreateOneTimeIncome = () => {
     createOneTimeMutation.mutate({
       ...oneTimeIncome,
-      Amount: parseFloat(oneTimeIncome.Amount) || 0,
+      Amount: Number.parseFloat(oneTimeIncome.Amount) || 0,
       PaymentMethodID: Number(oneTimeIncome.PaymentMethodID) || null,
       Category: oneTimeIncome.Category || null
     });
@@ -546,7 +554,7 @@ const IncomePage: React.FC = () => {
                 });
                 setIsOneTimeModalOpen(true);
               }}>
-                <FilePlus2 className="h-5 w-5" />
+                <FilePlus2 className="h-5 w-5"/>
               </Button>
             </Tooltip>
             <Tooltip content="Add New Income Schedule">
@@ -554,7 +562,7 @@ const IncomePage: React.FC = () => {
                 setEditingSchedule(null);
                 setIsScheduleModalOpen(true);
               }}>
-                <CalendarPlus className="h-5 w-5" />
+                <CalendarPlus className="h-5 w-5"/>
               </Button>
             </Tooltip>
           </div>
@@ -569,16 +577,16 @@ const IncomePage: React.FC = () => {
                   loading={loadingPending}
                   data={paginatedData(pendingIncomes)}
                   emptyStateText="No pending items to review."
-                  emptyStateIcon={<Check className="h-10 w-10 opacity-50 text-green-500" />}
+                  emptyStateIcon={<Check className="h-10 w-10 opacity-50 text-green-500"/>}
                   columns={[
                     {
                       header: 'Planned Date',
                       accessor: 'PlannedDate',
                       render: (row) => format(parseISO(row.PlannedDate), 'MMM d, yyyy')
                     },
-                    { header: 'Source', accessor: 'SourceName' },
-                    { header: 'Category', accessor: 'Category' },
-                    { header: 'Payment Method', accessor: 'PaymentMethodName' },
+                    {header: 'Source', accessor: 'SourceName'},
+                    {header: 'Category', accessor: 'Category'},
+                    {header: 'Payment Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
                       accessor: 'Amount',
@@ -599,11 +607,15 @@ const IncomePage: React.FC = () => {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedPending(row);
-                                  setConfirmData({ amount: row.Amount || 0, date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'), paymentMethodId: row.PaymentMethodID });
+                                  setConfirmData({
+                                    amount: row.Amount || 0,
+                                    date: format(parseISO(row.PlannedDate), 'yyyy-MM-dd'),
+                                    paymentMethodId: row.PaymentMethodID
+                                  });
                                   setIsConfirmModalOpen(true);
                                 }}
                               >
-                                <Check className="h-4 w-4" />
+                                <Check className="h-4 w-4"/>
                               </Button>
                             </Tooltip>
                             <Tooltip content="Dismiss">
@@ -617,15 +629,18 @@ const IncomePage: React.FC = () => {
                                   setIsDismissModalOpen(true);
                                 }}
                               >
-                                <X className="h-4 w-4" />
+                                <X className="h-4 w-4"/>
                               </Button>
                             </Tooltip>
                           </ButtonGroup>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 p-0"
+                                      onClick={(e) => e.stopPropagation()}>
                                 <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
+                                <MoreHorizontal className="h-4 w-4"/>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -634,10 +649,10 @@ const IncomePage: React.FC = () => {
                                 e.stopPropagation();
                                 navigate(`/payment-methods/${row.PaymentMethodID}`);
                               }}>
-                                <CreditCard className="mr-2 h-4 w-4" />
+                                <CreditCard className="mr-2 h-4 w-4"/>
                                 Payment Method
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
+                              <DropdownMenuSeparator/>
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
@@ -647,7 +662,7 @@ const IncomePage: React.FC = () => {
                                   setIsScheduleModalOpen(true);
                                 }
                               }}>
-                                <Edit className="mr-2 h-4 w-4" />
+                                <Edit className="mr-2 h-4 w-4"/>
                                 Edit
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -677,9 +692,9 @@ const IncomePage: React.FC = () => {
                     setIsScheduleModalOpen(true);
                   }}
                   columns={[
-                    { header: 'Source', accessor: 'SourceName' },
-                    { header: 'Category', accessor: 'Category' },
-                    { header: 'Payment Method', accessor: 'PaymentMethodName' },
+                    {header: 'Source', accessor: 'SourceName'},
+                    {header: 'Category', accessor: 'Category'},
+                    {header: 'Payment Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
                       accessor: 'ExpectedAmount',
@@ -708,9 +723,12 @@ const IncomePage: React.FC = () => {
                       render: (row) => (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 p-0"
+                                    onClick={(e) => e.stopPropagation()}>
                               <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
+                              <MoreHorizontal className="h-4 w-4"/>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -719,17 +737,17 @@ const IncomePage: React.FC = () => {
                               e.stopPropagation();
                               navigate(`/payment-methods/${row.PaymentMethodID}`);
                             }}>
-                              <CreditCard className="mr-2 h-4 w-4" />
+                              <CreditCard className="mr-2 h-4 w-4"/>
                               Payment Method
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
+                            <DropdownMenuSeparator/>
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               setEditingSchedule(row);
                               setIsScheduleModalOpen(true);
                             }}>
-                              <Edit className="mr-2 h-4 w-4" />
+                              <Edit className="mr-2 h-4 w-4"/>
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -741,7 +759,7 @@ const IncomePage: React.FC = () => {
                                 setIsDeleteModalOpen(true);
                               }}
                             >
-                              <Trash className="mr-2 h-4 w-4" />
+                              <Trash className="mr-2 h-4 w-4"/>
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -782,7 +800,7 @@ const IncomePage: React.FC = () => {
                     header: 'Description',
                     render: (row) => {
                       if (row.type === 'Income') {
-                        const { source, category } = splitTopUpNote(row.TopUpNote);
+                        const {source, category} = splitTopUpNote(row.TopUpNote);
                         return `${source}${category ? ` (${category})` : ''}`;
                       }
                       return `Repayment from ${row.DebtorName}`;
@@ -814,9 +832,12 @@ const IncomePage: React.FC = () => {
                     render: (row) => (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => e.stopPropagation()}>
                             <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="h-4 w-4"/>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -825,7 +846,7 @@ const IncomePage: React.FC = () => {
                             e.stopPropagation();
                             navigate(`/payment-methods/${row.PaymentMethodID}`);
                           }}>
-                            <CreditCard className="mr-2 h-4 w-4" />
+                            <CreditCard className="mr-2 h-4 w-4"/>
                             Payment Method
                           </DropdownMenuItem>
                           {row.type === 'Repayment' && (
@@ -834,19 +855,19 @@ const IncomePage: React.FC = () => {
                                 e.stopPropagation();
                                 navigate(`/receipts/view/${row.ReceiptID}`);
                               }}>
-                                <FileText className="mr-2 h-4 w-4" />
+                                <FileText className="mr-2 h-4 w-4"/>
                                 Receipt
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/entities/${row.DebtorID}`);
                               }}>
-                                <User className="mr-2 h-4 w-4" />
+                                <User className="mr-2 h-4 w-4"/>
                                 Entity
                               </DropdownMenuItem>
                             </>
                           )}
-                          <DropdownMenuSeparator />
+                          <DropdownMenuSeparator/>
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           {row.type === 'Income' && (
                             <DropdownMenuItem onClick={(e) => {
@@ -860,7 +881,7 @@ const IncomePage: React.FC = () => {
                               });
                               setIsTransferModalOpen(true);
                             }}>
-                              <Edit className="mr-2 h-4 w-4" />
+                              <Edit className="mr-2 h-4 w-4"/>
                               Edit
                             </DropdownMenuItem>
                           )}
@@ -872,7 +893,7 @@ const IncomePage: React.FC = () => {
                               setIsDeleteHistoryModalOpen(true);
                             }}
                           >
-                            <Trash className="mr-2 h-4 w-4" />
+                            <Trash className="mr-2 h-4 w-4"/>
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -905,7 +926,7 @@ const IncomePage: React.FC = () => {
               variant="danger"
               onClick={() => {
                 if (scheduleToDelete) {
-                  deleteScheduleMutation.mutate({ id: scheduleToDelete, cascade: cascadeDelete });
+                  deleteScheduleMutation.mutate({id: scheduleToDelete, cascade: cascadeDelete});
                 }
               }}
               loading={deleteScheduleMutation.isPending}
@@ -915,7 +936,9 @@ const IncomePage: React.FC = () => {
           </div>
         }
       >
-        <p className="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to delete this income schedule? This will deactivate it, but not remove historical records.</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to delete this income schedule?
+                                                                This will deactivate it, but not remove historical
+                                                                records.</p>
         <div className="flex items-start gap-3 pt-4">
           <Checkbox
             id="cascadeDelete"
@@ -923,7 +946,8 @@ const IncomePage: React.FC = () => {
             onChange={(e) => setCascadeDelete(e.target.checked)}
           />
           <div className="grid gap-1.5 leading-none">
-            <label htmlFor="cascadeDelete" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            <label htmlFor="cascadeDelete"
+                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               Also delete all pending 'To Check' items from this schedule.
             </label>
             <p className="text-xs text-gray-500">This action cannot be undone.</p>
@@ -971,8 +995,8 @@ const IncomePage: React.FC = () => {
               onClick={handleConfirmIncome}
               loading={confirmMutation.isPending}
             >
-               Confirm
-             </Button>
+              Confirm
+            </Button>
           </div>
         }
       >
@@ -984,21 +1008,27 @@ const IncomePage: React.FC = () => {
             label="Amount"
             step={1}
             value={String(confirmData.amount)}
-            onChange={e => setConfirmData(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
-            onIncrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) + 1 }))}
-            onDecrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) - 1 }))}
+            onChange={e => setConfirmData(prev => ({
+              ...prev, amount: Number.parseFloat(e.target.value)
+            }))}
+            onIncrement={() => setConfirmData(prev => ({
+              ...prev, amount: (prev.amount || 0) + 1
+            }))}
+            onDecrement={() => setConfirmData(prev => ({
+              ...prev, amount: (prev.amount || 0) - 1
+            }))}
           />
           <Input
             label="Date"
             type="date"
             value={confirmData.date}
-            onChange={e => setConfirmData(prev => ({ ...prev, date: e.target.value }))}
+            onChange={e => setConfirmData(prev => ({...prev, date: e.target.value}))}
           />
           <Combobox
             label="Payment Method"
             options={paymentMethods}
             value={confirmData.paymentMethodId}
-            onChange={val => setConfirmData(prev => ({ ...prev, paymentMethodId: val }))}
+            onChange={val => setConfirmData(prev => ({...prev, paymentMethodId: val}))}
           />
         </div>
       </Modal>
@@ -1015,8 +1045,8 @@ const IncomePage: React.FC = () => {
               onClick={handleCreateOneTimeIncome}
               loading={createOneTimeMutation.isPending}
             >
-               Confirm
-             </Button>
+              Confirm
+            </Button>
           </div>
         }
       >
@@ -1027,12 +1057,12 @@ const IncomePage: React.FC = () => {
               placeholder="e.g. Bonus, Tax Return"
               options={incomeSources}
               value={oneTimeIncome.SourceName}
-              onChange={val => setOneTimeIncome(prev => ({ ...prev, SourceName: val }))}
+              onChange={val => setOneTimeIncome(prev => ({...prev, SourceName: val}))}
               className="flex-1"
             />
             <Tooltip content="Add Source">
               <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
-                <Plus className="h-5 w-5" />
+                <Plus className="h-5 w-5"/>
               </Button>
             </Tooltip>
           </div>
@@ -1041,16 +1071,16 @@ const IncomePage: React.FC = () => {
               label="Category (Optional)"
               options={incomeCategories}
               value={oneTimeIncome.Category}
-              onChange={val => setOneTimeIncome(prev => ({ ...prev, Category: val }))}
+              onChange={val => setOneTimeIncome(prev => ({...prev, Category: val}))}
               className="flex-1"
             />
             <Tooltip content="Add Category">
               <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                <Plus className="h-5 w-5" />
+                <Plus className="h-5 w-5"/>
               </Button>
             </Tooltip>
           </div>
-          <Divider className="my-2" />
+          <Divider className="my-2"/>
           <div className="grid grid-cols-2 gap-4">
             <StepperInput
               label="Amount"
@@ -1058,7 +1088,7 @@ const IncomePage: React.FC = () => {
               min={0}
               max={10000000}
               value={oneTimeIncome.Amount}
-              onChange={e => setOneTimeIncome(prev => ({ ...prev, Amount: e.target.value }))}
+              onChange={e => setOneTimeIncome(prev => ({...prev, Amount: e.target.value}))}
               onIncrement={() => handleStepperChange(setOneTimeIncome, 'Amount', true, 1)}
               onDecrement={() => handleStepperChange(setOneTimeIncome, 'Amount', false, 1)}
             />
@@ -1066,15 +1096,15 @@ const IncomePage: React.FC = () => {
               label="Payment Method"
               options={paymentMethods}
               value={oneTimeIncome.PaymentMethodID}
-              onChange={val => setOneTimeIncome(prev => ({ ...prev, PaymentMethodID: val }))}
+              onChange={val => setOneTimeIncome(prev => ({...prev, PaymentMethodID: val}))}
             />
           </div>
-          <Divider className="my-2" />
+          <Divider className="my-2"/>
           <Input
             label="Date"
             type="date"
             value={oneTimeIncome.Date}
-            onChange={e => setOneTimeIncome(prev => ({ ...prev, Date: e.target.value }))}
+            onChange={e => setOneTimeIncome(prev => ({...prev, Date: e.target.value}))}
           />
         </div>
       </Modal>
@@ -1091,8 +1121,8 @@ const IncomePage: React.FC = () => {
               onClick={handleSaveSchedule}
               loading={createScheduleMutation.isPending || updateScheduleMutation.isPending}
             >
-               {editingSchedule ? "Confirm" : "Confirm"}
-             </Button>
+              Confirm
+            </Button>
           </div>
         }
       >
@@ -1103,12 +1133,12 @@ const IncomePage: React.FC = () => {
               placeholder="e.g. Salary, Rent"
               options={incomeSources}
               value={newSchedule.SourceName}
-              onChange={val => setNewSchedule(prev => ({ ...prev, SourceName: val }))}
+              onChange={val => setNewSchedule(prev => ({...prev, SourceName: val}))}
               className="flex-1"
             />
             <Tooltip content="Add Source">
               <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
-                <Plus className="h-5 w-5" />
+                <Plus className="h-5 w-5"/>
               </Button>
             </Tooltip>
           </div>
@@ -1117,16 +1147,16 @@ const IncomePage: React.FC = () => {
               label="Category (Optional)"
               options={incomeCategories}
               value={newSchedule.Category}
-              onChange={val => setNewSchedule(prev => ({ ...prev, Category: val }))}
+              onChange={val => setNewSchedule(prev => ({...prev, Category: val}))}
               className="flex-1"
             />
             <Tooltip content="Add Category">
               <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                <Plus className="h-5 w-5" />
+                <Plus className="h-5 w-5"/>
               </Button>
             </Tooltip>
           </div>
-          <Divider className="my-2" />
+          <Divider className="my-2"/>
           <div className="grid grid-cols-2 gap-4">
             <StepperInput
               label="Expected Amount"
@@ -1134,7 +1164,7 @@ const IncomePage: React.FC = () => {
               min={0}
               max={10000000}
               value={newSchedule.ExpectedAmount}
-              onChange={e => setNewSchedule(prev => ({ ...prev, ExpectedAmount: e.target.value }))}
+              onChange={e => setNewSchedule(prev => ({...prev, ExpectedAmount: e.target.value}))}
               onIncrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', true, 1)}
               onDecrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', false, 1)}
             />
@@ -1142,47 +1172,55 @@ const IncomePage: React.FC = () => {
               label="Payment Method"
               options={paymentMethods}
               value={newSchedule.PaymentMethodID}
-              onChange={val => setNewSchedule(prev => ({ ...prev, PaymentMethodID: val }))}
+              onChange={val => setNewSchedule(prev => ({...prev, PaymentMethodID: val}))}
             />
           </div>
-          <Divider className="my-2" />
+          <Divider className="my-2"/>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col">
               <div className="flex items-center gap-1 mb-1">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Recurrence</label>
                 <Tooltip content="How often this income is expected.">
-                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                  <Info className="h-4 w-4 text-gray-400 cursor-help"/>
                 </Tooltip>
               </div>
               <Select
                 options={[
-                  { value: 'FREQ=DAILY;INTERVAL=1', label: 'Daily' },
-                  { value: 'FREQ=WEEKLY;INTERVAL=1', label: 'Weekly' },
-                  { value: 'FREQ=MONTHLY;INTERVAL=1', label: 'Monthly' },
-                  { value: 'FREQ=YEARLY;INTERVAL=1', label: 'Yearly' },
+                  {value: 'FREQ=DAILY;INTERVAL=1', label: 'Daily'},
+                  {value: 'FREQ=WEEKLY;INTERVAL=1', label: 'Weekly'},
+                  {value: 'FREQ=MONTHLY;INTERVAL=1', label: 'Monthly'},
+                  {value: 'FREQ=YEARLY;INTERVAL=1', label: 'Yearly'},
                 ]}
                 value={newSchedule.RecurrenceRule}
-                onChange={e => setNewSchedule(prev => ({ ...prev, RecurrenceRule: e.target.value }))}
+                onChange={e => setNewSchedule(prev => ({...prev, RecurrenceRule: e.target.value}))}
               />
             </div>
             {renderRecurrenceDetails()}
           </div>
-           <div className="flex flex-col">
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lookahead Days</label>
-                <Tooltip content="How many days in advance to generate a 'To Check' item.">
-                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                </Tooltip>
-              </div>
-              <StepperInput
-                value={String(newSchedule.LookaheadDays)}
-                onChange={e => setNewSchedule(prev => ({ ...prev, LookaheadDays: parseInt(e.target.value) || 0 }))}
-                onIncrement={() => setNewSchedule(prev => ({ ...prev, LookaheadDays: (prev.LookaheadDays || 0) + 1 }))}
-                onDecrement={() => setNewSchedule(prev => ({ ...prev, LookaheadDays: Math.max(1, (prev.LookaheadDays || 0) - 1) }))}
-                min={1}
-                max={1000}
-              />
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lookahead Days</label>
+              <Tooltip content="How many days in advance to generate a 'To Check' item.">
+                <Info className="h-4 w-4 text-gray-400 cursor-help"/>
+              </Tooltip>
             </div>
+            <StepperInput
+              value={String(newSchedule.LookaheadDays)}
+              onChange={e => setNewSchedule(prev => ({
+                ...prev, LookaheadDays: Number.parseInt(e.target.value) || 0
+              }))}
+              onIncrement={() => setNewSchedule(prev => ({
+                ...prev,
+                LookaheadDays: (prev.LookaheadDays || 0) + 1
+              }))}
+              onDecrement={() => setNewSchedule(prev => ({
+                ...prev,
+                LookaheadDays: Math.max(1, (prev.LookaheadDays || 0) - 1)
+              }))}
+              min={1}
+              max={1000}
+            />
+          </div>
           <div className="pt-2">
             {showCreateForPastPeriodCheckbox() && (
               <div className="flex items-start gap-3">
@@ -1192,33 +1230,37 @@ const IncomePage: React.FC = () => {
                   onChange={e => setCreateForPastPeriod(e.target.checked)}
                 />
                 <div className="grid gap-1.5 leading-none">
-                  <label htmlFor="createForPastPeriod" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  <label htmlFor="createForPastPeriod"
+                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Create for current period
                   </label>
-                  <p className="text-xs text-gray-500">The scheduled date for the current period is in the past. Check this to create a "To Check" item for it anyway.</p>
+                  <p className="text-xs text-gray-500">The scheduled date for the current period is in the past. Check
+                                                       this to create a "To Check" item for it anyway.</p>
                 </div>
               </div>
             )}
-            <Divider className="my-4" />
+            <Divider className="my-4"/>
           </div>
           <div className="flex items-start gap-3">
             <Checkbox
               id="requiresConfirmation"
               checked={newSchedule.RequiresConfirmation}
-              onChange={e => setNewSchedule(prev => ({ ...prev, RequiresConfirmation: e.target.checked }))}
+              onChange={e => setNewSchedule(prev => ({...prev, RequiresConfirmation: e.target.checked}))}
             />
             <div className="grid gap-1.5 leading-none">
-              <label htmlFor="requiresConfirmation" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <label htmlFor="requiresConfirmation"
+                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Requires manual confirmation
               </label>
-              <p className="text-xs text-gray-500">If enabled, you must confirm each occurrence before it's deposited.</p>
+              <p className="text-xs text-gray-500">If enabled, you must confirm each occurrence before it's
+                                                   deposited.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Checkbox
               id="isActive"
               checked={newSchedule.IsActive}
-              onChange={e => setNewSchedule(prev => ({ ...prev, IsActive: e.target.checked }))}
+              onChange={e => setNewSchedule(prev => ({...prev, IsActive: e.target.checked}))}
             />
             <label htmlFor="isActive" className="text-sm font-medium leading-none">Schedule is active</label>
           </div>
