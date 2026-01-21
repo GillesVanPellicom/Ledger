@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Moon, Sun, RotateCw, Bug, CreditCard, Trash2, Info, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock } from 'lucide-react';
+import { Moon, Sun, Bug, CreditCard, Trash2, Info, Package, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -177,14 +177,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const tabs = [
-    { id: 'appearance', label: 'Appearance' },
-    { id: 'modules', label: 'Modules' },
-    { id: 'pdf', label: 'PDF' },
-    { id: 'data', label: 'Data' },
-    { id: 'formatting', label: 'Formatting' },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'data', label: 'Data', icon: Database },
+    { id: 'formatting', label: 'Formatting', icon: Type },
+    { id: 'modules', label: 'Modules', icon: Package },
+    { id: 'pdf', label: 'PDF', icon: FileText },
   ];
 
-  if (isDev) tabs.push({ id: 'development', label: 'Development' });
+  if (isDev) tabs.push({ id: 'development', label: 'Development', icon: Code });
   tabs.sort((a, b) => a.label.localeCompare(b.label));
 
   const SectionTitle = ({ title, tooltip }: { title: string, tooltip?: string }) => (
@@ -239,10 +239,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xlh" onEnter={onClose}>
         <div className="flex h-full">
-          <div className="w-48 border-r border-gray-200 dark:border-gray-800 pr-4">
-            <nav className="space-y-1">{tabs.map((tab) => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors", activeTab === tab.id ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50")}>{tab.label}</button>)}</nav>
+          <div className="w-56 border-r border-gray-200 dark:border-gray-800 pr-4">
+            <nav className="space-y-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button 
+                    key={tab.id} 
+                    onClick={() => setActiveTab(tab.id)} 
+                    className={cn(
+                      "w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-3", 
+                      activeTab === tab.id 
+                        ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm" 
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5", activeTab === tab.id ? "text-accent" : "text-gray-400 dark:text-gray-500")} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
           </div>
-          <div className="flex-1 pl-6 pr-2 overflow-y-auto">
+          <div className="flex-1 pl-8 pr-2 overflow-y-auto">
             {activeTab === 'appearance' && (
               <div>
                 <div>
