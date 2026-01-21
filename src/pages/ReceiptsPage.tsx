@@ -50,6 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/DropdownMenu"
 import { cn } from '../utils/cn';
+import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -254,7 +255,7 @@ const ReceiptsPage: React.FC = () => {
     header: 'Total',
     width: '10%',
     className: 'text-right',
-    render: (row: Receipt) => `€${(row.Total || 0).toFixed(2)}`
+    render: (row: Receipt) => <MoneyDisplay amount={row.Total || 0} showSign={false} colored={true} />
   });
 
   // Indicators Column (moved to the left of ellipsis)

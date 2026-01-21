@@ -52,6 +52,7 @@ import {useReceiptDebtCalculation} from '../hooks/useDebtCalculation';
 import {usePdfGenerator} from '../hooks/usePdfGenerator';
 import FilterModal, {FilterOption} from '../components/ui/FilterModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
+import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -362,9 +363,9 @@ const ReceiptViewPage: React.FC = () => {
         </div>,
         <div key={`category-${item.LineItemID}`} className="text-right text-gray-500">{item.CategoryName || '-'}</div>,
         <div key={`qty-${item.LineItemID}`} className="text-right">{item.LineQuantity}</div>,
-        <div key={`price-${item.LineItemID}`} className="text-right">{(item.LineUnitPrice).toFixed(2)}</div>,
+        <div key={`price-${item.LineItemID}`} className="text-right"><MoneyDisplay amount={item.LineUnitPrice} showSign={false} colorPositive={false} colorNegative={false} /></div>,
         <div key={`total-${item.LineItemID}`}
-             className="text-right font-medium">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</div>,
+             className="text-right font-medium"><MoneyDisplay amount={item.LineQuantity * item.LineUnitPrice} showSign={false} colorPositive={false} colorNegative={false} /></div>,
       ];
       if (debtEnabled && receipt?.SplitType === 'line_item') {
         row.push(
@@ -517,7 +518,7 @@ const ReceiptViewPage: React.FC = () => {
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-4 text-gray-500">
                       <span className="text-sm">Subtotal</span>
-                      <span className="font-medium">€{displaySubtotal.toFixed(2)}</span>
+                      <MoneyDisplay amount={displaySubtotal} showSign={false} colorPositive={false} colorNegative={false} className="font-medium" />
                     </div>
                     <div className="flex items-center gap-4 text-gray-500">
                       {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
@@ -532,11 +533,11 @@ const ReceiptViewPage: React.FC = () => {
                       ) : (
                         <span className="text-sm">Discount ({receipt?.Discount || 0}%)</span>
                       )}
-                      <span className="font-medium">-€{(displaySubtotal - displayTotalAmount).toFixed(2)}</span>
+                      <span className="font-medium">-<MoneyDisplay amount={displaySubtotal - displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} /></span>
                     </div>
                     <div className="flex items-center gap-4 text-lg font-bold">
                       <span>Total</span>
-                      <span>€{displayTotalAmount.toFixed(2)}</span>
+                      <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} />
                     </div>
                   </div>
                 </div>
@@ -553,7 +554,7 @@ const ReceiptViewPage: React.FC = () => {
                   {/* Total Amount */}
                   <div className="sm:col-start-1 sm:row-start-1 xl:col-start-1 xl:row-start-1 2xl:col-start-1 2xl:row-start-1">
                     <p className="text-sm text-gray-500">Total Amount</p>
-                    <p className="text-2xl font-bold">€{displayTotalAmount.toFixed(2)}</p>
+                    <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} className="text-2xl font-bold" />
                   </div>
 
                   {/* Badges */}
@@ -668,7 +669,7 @@ const ReceiptViewPage: React.FC = () => {
                           <div className="flex justify-between items-baseline mt-1">
                             <p className={cn("font-bold truncate", debtor.isPaid ? "text-green" : "text-red")}
                                style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
-                              €{debtor.amount.toFixed(2)}
+                              <MoneyDisplay amount={debtor.amount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
                             <div className="text-right flex-shrink-0 pl-2">
                               {receipt?.SplitType === 'total_split' &&
@@ -688,7 +689,7 @@ const ReceiptViewPage: React.FC = () => {
                           <div className="flex justify-between items-baseline mt-1">
                             <p className="font-bold text-blue-700 dark:text-blue-300 truncate"
                                style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
-                              €{debtSummary.ownShare.amount.toFixed(2)}
+                              <MoneyDisplay amount={debtSummary.ownShare.amount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
                             <div className="text-right flex-shrink-0 pl-2">
                               <p className="text-sm text-gray-500">
@@ -784,7 +785,7 @@ const ReceiptViewPage: React.FC = () => {
               options={[
                 {value: 'all', label: 'Included & Excluded'},
                 {value: 'yes', label: 'Excluded Only'},
-                {value: 'no', label: 'Included Only'}
+                {value: 'no', label: 'Included Only' }
               ]}
               value={pendingExcludedFilter}
               onChange={e => setPendingExcludedFilter(e.target.value)}

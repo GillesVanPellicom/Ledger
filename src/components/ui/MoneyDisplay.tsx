@@ -9,6 +9,7 @@ interface MoneyDisplayProps {
   colorNegative?: boolean;
   className?: string;
   currency?: string;
+  colored?: boolean;
 }
 
 /**
@@ -20,7 +21,8 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   colorPositive = true,
   colorNegative = true,
   className,
-  currency = '€'
+  currency = '€',
+  colored = true
 }) => {
   const { settings } = useSettingsStore();
   const decimalSeparator = settings.formatting?.decimalSeparator || 'dot';
@@ -36,10 +38,10 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   const sign = isPositive ? '+' : isNegative ? '-' : '';
   const displaySign = showSign ? sign : '';
 
-  const colorClass = cn(
+  const colorClass = colored ? cn(
     isPositive && colorPositive && "text-green-600 dark:text-green-400",
     isNegative && colorNegative && "text-red-600 dark:text-red-400"
-  );
+  ) : "";
 
   return (
     <span className={cn("font-medium tabular-nums", colorClass, className)}>

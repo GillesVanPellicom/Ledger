@@ -32,6 +32,7 @@ import NanoDataTable from '../components/ui/NanoDataTable';
 import DataGrid from '../components/ui/DataGrid';
 import Combobox from '../components/ui/Combobox';
 import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/debtLogic';
+import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 const ReceiptFormPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -1050,11 +1051,11 @@ const ReceiptFormPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-4 text-gray-500">
                               <span className="text-sm">Subtotal</span>
-                              <span className="font-medium">€{subtotal.toFixed(2)}</span>
+                              <MoneyDisplay amount={subtotal} showSign={false} colorPositive={false} colorNegative={false} className="font-medium" />
                             </div>
                             <div className="flex items-center gap-4 text-lg font-bold">
                               <span>Total</span>
-                              <span>€{total.toFixed(2)}</span>
+                              <MoneyDisplay amount={total} showSign={false} colorPositive={false} colorNegative={false} />
                             </div>
                           </div>
                         </div>
@@ -1281,9 +1282,9 @@ const ReceiptFormPage: React.FC = () => {
                               data={[
                                 ...(debtSummary.self ? [{
                                   name: `${settings.userName || 'User'} (Me)`,
-                                  amount: `€${debtSummary.self.toFixed(2)}`
+                                  amount: <MoneyDisplay amount={debtSummary.self} showSign={false} colorPositive={false} colorNegative={false} />
                                 }] : []),
-                                ...debtSummary.debtors.map(d => ({name: d.name, amount: `€${d.amount.toFixed(2)}`}))
+                                ...debtSummary.debtors.map(d => ({name: d.name, amount: <MoneyDisplay amount={d.amount} showSign={false} colorPositive={false} colorNegative={false} />}))
                               ]}
                               renderItem={(item) => (
                                 <div className="flex justify-between items-center">
