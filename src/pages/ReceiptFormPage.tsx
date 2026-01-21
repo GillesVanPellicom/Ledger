@@ -940,6 +940,7 @@ const ReceiptFormPage: React.FC = () => {
                             error={errors.nonItemisedTotal}
                             disabled={hasSettledDebts}
                             inputClassName="text-4xl font-bold text-center w-48 h-16 pl-10 pr-4"
+                            size="xl"
                             placeholder="0.00"
                           />
                         </div>
@@ -1031,6 +1032,7 @@ const ReceiptFormPage: React.FC = () => {
                                   inputClassName="text-right"
                                   error={errors.discount}
                                   disabled={hasSettledDebts}
+                                  size="sm"
                                 />
                               </div>
                             </div>

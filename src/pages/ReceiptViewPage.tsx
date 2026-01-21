@@ -139,13 +139,13 @@ const ReceiptViewPage: React.FC = () => {
     if (!rawLineItems) return [];
     return (rawLineItems as (LineItem & { CategoryName?: string, CategoryID?: number })[]).filter(item => {
       const matchesCategory = categoryFilter === 'all' || item.CategoryID?.toString() === categoryFilter;
-      const matchesEntity = entityFilter === 'all' || 
+      const matchesEntity = entityFilter === 'all' ||
         (entityFilter === 'none' && (item.DebtorID === null || item.DebtorID === undefined)) ||
         (entityFilter !== 'none' && item.DebtorID?.toString() === entityFilter);
       const matchesExclusion = excludedFilter === 'all' ||
         (excludedFilter === 'yes' && !!item.IsExcludedFromDiscount) ||
         (excludedFilter === 'no' && !item.IsExcludedFromDiscount);
-      
+
       return matchesCategory && matchesEntity && matchesExclusion;
     });
   }, [rawLineItems, categoryFilter, entityFilter, excludedFilter]);
@@ -784,7 +784,7 @@ const ReceiptViewPage: React.FC = () => {
               options={[
                 {value: 'all', label: 'Included & Excluded'},
                 {value: 'yes', label: 'Excluded Only'},
-                {value: 'no', label: 'Included Only' }
+                {value: 'no', label: 'Included Only'}
               ]}
               value={pendingExcludedFilter}
               onChange={e => setPendingExcludedFilter(e.target.value)}

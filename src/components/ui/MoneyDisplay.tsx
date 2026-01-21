@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface MoneyDisplayProps {
   amount: number;
@@ -21,9 +22,16 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   className,
   currency = '€'
 }) => {
+  const { settings } = useSettingsStore();
+  const decimalSeparator = settings.formatting?.decimalSeparator || 'dot';
+
   const isPositive = amount > 0;
   const isNegative = amount < 0;
-  const absAmount = Math.abs(amount).toFixed(2);
+  
+  let absAmount = Math.abs(amount).toFixed(2);
+  if (decimalSeparator === 'comma') {
+    absAmount = absAmount.replace('.', ',');
+  }
 
   const sign = isPositive ? '+' : isNegative ? '-' : '';
   const displaySign = showSign ? sign : '';

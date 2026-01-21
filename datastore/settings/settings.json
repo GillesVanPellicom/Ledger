@@ -42,5 +42,8 @@
       "enabled": false,
       "date": null
     }
+  },
+  "formatting": {
+    "decimalSeparator": "dot"
   }
 }

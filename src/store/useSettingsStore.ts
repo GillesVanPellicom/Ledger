@@ -52,6 +52,9 @@ const initialSettings: Settings = {
       enabled: false,
       date: null,
     }
+  },
+  formatting: {
+    decimalSeparator: 'dot', // 'dot' or 'comma'
   }
 };
 
@@ -103,6 +106,7 @@ export const useSettingsStore = create<SettingsState>()(
               datastore: {...state.settings.datastore, ...loadedSettings.datastore},
               receipts: {...state.settings.receipts, ...loadedSettings.receipts},
               dev: {...state.settings.dev, ...loadedSettings.dev},
+              formatting: {...state.settings.formatting, ...loadedSettings.formatting},
             },
             loading: false,
           }), false, 'loadSettings/success');

@@ -12,6 +12,8 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useBackupStore } from '../../store/useBackupStore';
 import StepperInput from '../ui/StepperInput';
 import { format } from 'date-fns';
+import RadioCard from '../ui/RadioCard';
+import MoneyDisplay from '../ui/MoneyDisplay';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -176,6 +178,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     }
   };
 
+  const handleDecimalSeparatorChange = (separator: 'dot' | 'comma') => {
+    updateSettings({ formatting: { ...settings.formatting, decimalSeparator: separator } });
+  };
+
   const tabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'data', label: 'Data', icon: Database },
@@ -266,8 +272,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               <div>
                 <div>
                   <SectionTitle title="Theme" tooltip="Choose between light and dark mode for the application interface." />
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'light' ? "bg-blue-100 text-blue-600" : "bg-gray-800 text-gray-400")}><Sun className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Light Mode</p><p className="text-sm text-gray-500">Default appearance</p></div></div><button onClick={() => handleThemeChange('light')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'light' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'light' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-xl mt-3"><div className="flex items-center gap-3"><div className={cn("p-2 rounded-lg", settings.theme === 'dark' ? "bg-blue-900/30 text-blue-400" : "bg-gray-100 text-gray-400")}><Moon className="h-6 w-6" /></div><div><p className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</p><p className="text-sm text-gray-500">Easier on the eyes</p></div></div><button onClick={() => handleThemeChange('dark')} className={cn("w-6 h-6 rounded-full border flex items-center justify-center", settings.theme === 'dark' ? "border-accent bg-accent" : "border-gray-300 dark:border-gray-600")}>{settings.theme === 'dark' && <div className="w-2.5 h-2.5 bg-white rounded-full" />}</button></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <RadioCard
+                      selected={settings.theme === 'light'}
+                      onClick={() => handleThemeChange('light')}
+                      title="Light Mode"
+                      description="Default appearance"
+                      icon={<Sun className="h-6 w-6" />}
+                    />
+                    <RadioCard
+                      selected={settings.theme === 'dark'}
+                      onClick={() => handleThemeChange('dark')}
+                      title="Dark Mode"
+                      description="Easier on the eyes"
+                      icon={<Moon className="h-6 w-6" />}
+                    />
+                  </div>
                 </div>
                 
                 <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
@@ -338,6 +358,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       isEnabled={settings.modules.capitalizationProtection?.enabled ?? false}
                       onToggle={() => handleModuleToggle('capitalizationProtection')}
                       className="border-0 p-0"
+                    />
+                  </div>
+                </div>
+
+                <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+
+                <div>
+                  <SectionTitle title="Decimal Separator" tooltip="Choose how decimal numbers are displayed and entered." />
+                  <div className="mb-4 p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Preview</p>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        <MoneyDisplay amount={1234.56} showSign={false} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <RadioCard
+                      selected={settings.formatting?.decimalSeparator !== 'comma'}
+                      onClick={() => handleDecimalSeparatorChange('dot')}
+                      title="Dot"
+                      description="International style"
+                      icon={<span className="text-2xl font-bold leading-none">.</span>}
+                    />
+                    <RadioCard
+                      selected={settings.formatting?.decimalSeparator === 'comma'}
+                      onClick={() => handleDecimalSeparatorChange('comma')}
+                      title="Comma"
+                      description="Continental style"
+                      icon={<span className="text-2xl font-bold leading-none">,</span>}
                     />
                   </div>
                 </div>
