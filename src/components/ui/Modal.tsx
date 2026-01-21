@@ -29,9 +29,17 @@ const Modal: React.FC<ModalProps> = ({
   const [isRendered, setIsRendered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const modalId = useRef(Math.random().toString(36).substr(2, 9));
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
+      // Store previously focused element
+      previousActiveElement.current = document.activeElement as HTMLElement;
+      // Blur it to prevent accidental interactions
+      if (previousActiveElement.current) {
+        previousActiveElement.current.blur();
+      }
+
       setIsRendered(true);
       focusStack.push({ id: modalId.current, onEnter });
       const timer = setTimeout(() => setIsAnimating(true), 10);
@@ -39,6 +47,13 @@ const Modal: React.FC<ModalProps> = ({
     } else {
       setIsAnimating(false);
       focusStack.remove(modalId.current);
+      
+      // Restore focus when closing, but only if this modal was the top one
+      // (though in this effect, it's closing, so we just restore if we stored something)
+      if (previousActiveElement.current) {
+        // Optional: restore focus. Some UX patterns prefer this, others don't.
+        // previousActiveElement.current.focus();
+      }
     }
   }, [isOpen, onEnter]);
 
@@ -55,7 +70,17 @@ const Modal: React.FC<ModalProps> = ({
         // Check if the active element is not a button or input that handles enter
         const target = document.activeElement as HTMLElement;
         const activeTag = target?.tagName.toLowerCase();
-        if (activeTag !== 'button' && activeTag !== 'textarea' && activeTag !== 'select' && !target?.isContentEditable) {
+        
+        // If nothing is focused (body) or a non-interactive element is focused, trigger onEnter
+        // Also trigger if the focused element is NOT an input/textarea/button/select
+        const isInteractiveInput = 
+          activeTag === 'input' || 
+          activeTag === 'textarea' || 
+          activeTag === 'select' || 
+          activeTag === 'button' || 
+          target?.isContentEditable;
+
+        if (!isInteractiveInput) {
            e.preventDefault();
            e.stopPropagation();
            onEnter();
@@ -63,14 +88,14 @@ const Modal: React.FC<ModalProps> = ({
       }
     };
     
+    // Use capture phase to ensure we catch it before other listeners if needed, 
+    // but standard bubbling is usually fine. Let's stick to standard but ensure we stop propagation if handled.
     document.addEventListener('keydown', handleKeyDown);
     
-    // Only hide overflow if this is the first modal (conceptually, though we check stack size in a real app, here we just do it when open)
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      // Restore overflow if no modals are left - simplified check
       if (!focusStack.getTop()) {
         document.body.style.overflow = 'unset';
       }
@@ -116,6 +141,14 @@ const Modal: React.FC<ModalProps> = ({
         )}
         role="dialog"
         aria-modal="true"
+        // Make the modal div focusable so we can shift focus to it
+        tabIndex={-1}
+        ref={(el) => {
+          // Auto-focus the modal container when it mounts if nothing inside is auto-focused
+          if (el && isAnimating && !el.contains(document.activeElement)) {
+            el.focus();
+          }
+        }}
       >
         <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-gray-50 dark:bg-zinc-950 rounded-t-xl">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
