@@ -38,7 +38,7 @@ const TabsTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    {badge !== undefined && badge !== null && (
+    {badge !== undefined && badge !== null && badge !== 0 && badge !== "0" && (
       <span className={cn(
         "flex items-center justify-center text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full tabular-nums shadow-sm",
         badgeColor

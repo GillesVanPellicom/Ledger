@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TransferModal from '../components/payment/TransferModal';
-import { Landmark, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Landmark, Pencil, Trash2, ArrowLeft, Info, ArrowRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
@@ -513,13 +513,20 @@ const PaymentMethodDetailsPage: React.FC = () => {
         }
         variant="centered-box"
         centeredContent={
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
-            <MoneyDisplay 
-              amount={balance} 
-              showSign={false}
-              className="text-3xl font-bold"
-            />
+          <div className="text-center flex items-center justify-center gap-2">
+            <div>
+              <div className="flex items-center justify-center gap-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
+                <Tooltip content="This is the net balance of this payment method, calculated by summing all deposits, transfers, and expenses.">
+                  <Info className="h-3 w-3 text-gray-400" />
+                </Tooltip>
+              </div>
+              <MoneyDisplay
+                amount={balance}
+                showSign={false}
+                className="text-3xl font-bold"
+              />
+            </div>
           </div>
         }
       />

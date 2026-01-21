@@ -1,4 +1,4 @@
-const {app, BrowserWindow, ipcMain, dialog, protocol, net, shell, session} = require(
+const {app, BrowserWindow, ipcMain, dialog, protocol, net, shell} = require(
   'electron');
 const path = require('node:path');
 const sqlite3 = require('sqlite3');
@@ -107,27 +107,16 @@ function connectDatabase(dbPath) {
   });
 }
 
-async function installDevTools() {
+function installDevTools() {
   const {default: install, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS} = require(
     'electron-devtools-installer');
 
   const extensions = [REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS];
   const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
 
-  try {
-    // Use session.defaultSession.loadExtension if available, otherwise fallback to install()
-    // However, electron-devtools-installer uses session.loadExtension internally which is deprecated.
-    // We can suppress the warning or just ignore it for now as it still works.
-    // But the user specifically mentioned the deprecation warning.
-    // electron-devtools-installer might need an update or we can manually load extensions.
-    // For now, let's keep using the installer but maybe we can silence the warning or just acknowledge it.
-    // The user's main issue is the white screen (file not found).
-    
-    const names = await Promise.all(extensions.map(ext => install(ext, forceDownload)));
-    console.log(`Added Extension: ${names.join(', ')}`);
-  } catch (err) {
-    console.log('An error occurred: ', err);
-  }
+  return Promise.all(extensions.map(ext => install(ext, forceDownload))).
+    then((names) => console.log(`Added Extension: ${names.join(', ')}`)).
+    catch((err) => console.log('An error occurred: ', err));
 }
 
 function createWindow() {
@@ -154,15 +143,7 @@ function createWindow() {
       setTimeout(() => mainWindow.webContents.openDevTools(), 500);
     });
   } else {
-    // In production, we need to load the file from the dist folder
-    // The path should be relative to the main.cjs file
-    // main.cjs is in electron/main.cjs
-    // dist is in dist/
-    // So we need to go up one level to get to the root, then into dist
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-    
-    // Open DevTools in production
-    mainWindow.webContents.openDevTools();
   }
 
   mainWindow.on('closed', () => {
@@ -176,10 +157,6 @@ app.on('ready', async () => {
   if (process.env.NODE_ENV === 'development') {
     await installDevTools();
   }
-
-  // Register a protocol to handle local file requests if needed
-  // But for loading the index.html in production, loadFile should handle it.
-  // The issue might be with how resources are referenced in index.html (relative paths).
 
   protocol.handle('local-file', (request) => {
     const url = request.url.slice('local-file://'.length);
