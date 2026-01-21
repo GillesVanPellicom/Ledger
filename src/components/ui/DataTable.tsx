@@ -28,6 +28,8 @@ interface DataTableProps {
   className?: string;
   searchable?: boolean;
   searchPlaceholder?: string;
+  emptyStateText?: string;
+  emptyStateIcon?: ReactNode;
   children?: ReactNode;
   selectable?: boolean;
   onSelectionChange?: (selected: any[]) => void;
@@ -56,6 +58,8 @@ const DataTable: React.FC<DataTableProps> = ({
   className,
   searchable = false,
   searchPlaceholder = "Search...",
+  emptyStateText = "No results found.",
+  emptyStateIcon,
   children,
   selectable = false,
   onSelectionChange,
@@ -255,8 +259,8 @@ const DataTable: React.FC<DataTableProps> = ({
         <tr>
           <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
             <div className="flex flex-col items-center gap-2 h-full justify-center" style={{height: '300px'}}>
-              <FileSearch className="h-10 w-10 opacity-50" />
-              <span>No results found.</span>
+              {emptyStateIcon || <FileSearch className="h-10 w-10 opacity-50" />}
+              <span>{emptyStateText}</span>
             </div>
           </td>
         </tr>
@@ -296,7 +300,7 @@ const DataTable: React.FC<DataTableProps> = ({
         })}
       </tr>
     ));
-  }, [loading, pageSize, data, previousData, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow]);
+  }, [loading, pageSize, data, previousData, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow, emptyStateIcon, emptyStateText]);
 
   return (
     <div className={cn("flex flex-col gap-4", className, disabled && "opacity-50 cursor-not-allowed")}>

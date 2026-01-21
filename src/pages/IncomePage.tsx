@@ -568,6 +568,8 @@ const IncomePage: React.FC = () => {
                 <DataTable
                   loading={loadingPending}
                   data={paginatedData(pendingIncomes)}
+                  emptyStateText="No pending items to review."
+                  emptyStateIcon={<Check className="h-10 w-10 opacity-50 text-green-500" />}
                   columns={[
                     {
                       header: 'Planned Date',
@@ -662,12 +664,6 @@ const IncomePage: React.FC = () => {
                   onPageChange={setCurrentPage}
                   onPageSizeChange={setPageSize}
                 />
-                {(!pendingIncomes || pendingIncomes.length === 0) && !loadingPending && (
-                  <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-zinc-900 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-800">
-                    <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p>All caught up! No pending income to check.</p>
-                  </div>
-                )}
               </div>
             )}
 
