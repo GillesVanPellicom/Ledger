@@ -10,7 +10,7 @@ import ReactECharts from 'echarts-for-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
-import { FileDown, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowLeft } from 'lucide-react';
+import { FileDown, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowLeft, Info, ArrowRight } from 'lucide-react';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import { generateReceiptsPdf } from '../logic/pdf/receiptPdf';
 import ProgressModal from '../components/ui/ProgressModal';
@@ -427,30 +427,42 @@ const EntityDetailsPage: React.FC = () => {
         }
         variant="three-boxes"
         leftBoxContent={
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
-            <MoneyDisplay amount={stats.debtToMe} showSign={false} className="text-2xl font-bold" />
-          </div>
-        }
-        centeredContent={
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Balance</p>
-            <div className="flex items-center justify-center gap-2">
-              <Tooltip content={stats.netBalance >= 0 ? `${entity.DebtorName} owes you` : `You owe ${entity.DebtorName}`}>
-                {stats.netBalance >= 0 ? (
-                  <ArrowUpCircle className="h-6 w-6 text-green" />
-                ) : (
-                  <ArrowDownCircle className="h-6 w-6 text-red" />
-                )}
-              </Tooltip>
-              <MoneyDisplay amount={stats.netBalance} showSign={false} className="text-2xl font-bold" />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
+              <MoneyDisplay amount={stats.debtToMe} showSign={false} className="text-2xl font-bold" />
+            </div>
+            <div className="absolute left-full top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:block">
+              <ArrowRight className="h-8 w-8 text-gray-300 dark:text-gray-700" />
             </div>
           </div>
         }
+        centeredContent={
+          <Tooltip content="The net balance is the difference between what this entity owes you and what you owe them.">
+            <div className="text-center cursor-help">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Balance</p>
+              <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center">
+                  {stats.netBalance >= 0 ? (
+                    <ArrowUpCircle className="h-6 w-6 text-green" />
+                  ) : (
+                    <ArrowDownCircle className="h-6 w-6 text-red" />
+                  )}
+                </div>
+                <MoneyDisplay amount={stats.netBalance} showSign={false} className="text-2xl font-bold" />
+              </div>
+            </div>
+          </Tooltip>
+        }
         rightBoxContent={
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
-            <MoneyDisplay amount={-stats.debtToEntity} showSign={false} className="text-2xl font-bold" />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute right-full top-1/2 translate-x-1/2 -translate-y-1/2 z-10 hidden lg:block">
+              <ArrowRight className="h-8 w-8 text-gray-300 dark:text-gray-700 rotate-180" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
+              <MoneyDisplay amount={-stats.debtToEntity} showSign={false} className="text-2xl font-bold" />
+            </div>
           </div>
         }
       />
