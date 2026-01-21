@@ -292,7 +292,7 @@ const ReceiptViewPage: React.FC = () => {
     if (!receipt) return;
     try {
       await deleteReceiptMutation.mutateAsync([receipt.ReceiptID]);
-      navigate('/receipts');
+      navigate('/');
     } catch (error) {
       showError(error as Error);
     } finally {
