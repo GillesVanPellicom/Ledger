@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Moon, Sun, Bug, CreditCard, Trash2, Info, Package, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
+import { Moon, Sun, Bug, CreditCard, Trash2, Info, Plug, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -180,7 +180,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'data', label: 'Data', icon: Database },
     { id: 'formatting', label: 'Formatting', icon: Type },
-    { id: 'modules', label: 'Modules', icon: Package },
+    { id: 'modules', label: 'Modules', icon: Plug },
     { id: 'pdf', label: 'PDF', icon: FileText },
   ];
 
