@@ -12,6 +12,7 @@ import {
 import { incomeCommitments } from './incomeCommitments';
 import { calculateOccurrences } from './incomeScheduling';
 import { db } from '../utils/db';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 /* ==================== Helpers ==================== */
 
@@ -19,12 +20,20 @@ function normalizeDateString(date: string): string {
   return format(startOfDay(parseISO(date)), 'yyyy-MM-dd');
 }
 
+function getCurrentDate(): Date {
+  const settings = useSettingsStore.getState().settings;
+  if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
+    return startOfDay(parseISO(settings.dev.mockTime.date));
+  }
+  return startOfDay(new Date());
+}
+
 /* ==================== Logic ==================== */
 
 export const incomeLogic = {
   processSchedules: async () => {
     const schedules = await incomeCommitments.getSchedules();
-    const today = startOfDay(new Date());
+    const today = getCurrentDate();
 
     for (const schedule of schedules) {
       if (!schedule.IsActive) continue;

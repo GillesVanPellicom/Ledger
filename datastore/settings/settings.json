@@ -36,5 +36,11 @@
     }
   },
   "userName": "Gilles",
-  "uiScale": 110
+  "uiScale": 110,
+  "dev": {
+    "mockTime": {
+      "enabled": false,
+      "date": null
+    }
+  }
 }

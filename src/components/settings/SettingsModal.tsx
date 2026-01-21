@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Moon, Sun, RotateCw, Bug, CreditCard, Trash2, Info, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip } from 'lucide-react';
+import { Moon, Sun, RotateCw, Bug, CreditCard, Trash2, Info, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -11,6 +11,7 @@ import '../../electron.d';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useBackupStore } from '../../store/useBackupStore';
 import StepperInput from '../ui/StepperInput';
+import { format } from 'date-fns';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -30,6 +31,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [backupSettings, setBackupSettings] = useState({ maxBackups: 5, interval: 5, editsSinceLastBackup: 0 });
   const [userName, setUserName] = useState('');
   const [uiScale, setUiScale] = useState(100);
+  const [mockTimeDate, setMockTimeDate] = useState('');
+  const [mockTimeTime, setMockTimeTime] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -52,6 +55,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     }
     if (settings.uiScale) {
       setUiScale(settings.uiScale);
+    }
+    if (settings.dev?.mockTime?.date) {
+      const date = new Date(settings.dev.mockTime.date);
+      setMockTimeDate(format(date, 'yyyy-MM-dd'));
+      setMockTimeTime(format(date, 'HH:mm'));
+    } else {
+      const now = new Date();
+      setMockTimeDate(format(now, 'yyyy-MM-dd'));
+      setMockTimeTime(format(now, 'HH:mm'));
     }
   }, [settings]);
 
@@ -149,6 +161,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     navigator.clipboard.writeText(datastorePath);
     setTooltipText('Copied!');
     setTimeout(() => setTooltipText(datastorePath), 2000);
+  };
+
+  const handleMockTimeToggle = () => {
+    const enabled = !settings.dev?.mockTime?.enabled;
+    const date = enabled ? (settings.dev?.mockTime?.date || new Date().toISOString()) : null;
+    updateSettings({ dev: { ...settings.dev, mockTime: { enabled, date } } });
+  };
+
+  const handleMockTimeSet = () => {
+    if (mockTimeDate && mockTimeTime) {
+      const newDate = new Date(`${mockTimeDate}T${mockTimeTime}`);
+      updateSettings({ dev: { ...settings.dev, mockTime: { ...settings.dev?.mockTime, date: newDate.toISOString() } } });
+    }
   };
 
   const tabs = [
@@ -440,6 +465,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         </div>
                       </div>
                       <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+
+                  <div>
+                    <SectionTitle title="Mock Time" tooltip="Simulate a different date and time for testing recurring events." />
+                    <div className="space-y-4">
+                      <Switch
+                        label="Enable Mock Time"
+                        description="Override the system time with a custom date and time."
+                        isEnabled={settings.dev?.mockTime?.enabled ?? false}
+                        onToggle={handleMockTimeToggle}
+                        icon={Clock}
+                      />
+                      <div className={cn("grid grid-cols-2 gap-4 transition-opacity", !(settings.dev?.mockTime?.enabled) && "opacity-50 pointer-events-none")}>
+                        <Input
+                          type="date"
+                          label="Date"
+                          value={mockTimeDate}
+                          onChange={(e) => setMockTimeDate(e.target.value)}
+                          disabled={!settings.dev?.mockTime?.enabled}
+                        />
+                        <div className="flex items-end gap-2">
+                          <Input
+                            type="time"
+                            label="Time"
+                            value={mockTimeTime}
+                            onChange={(e) => setMockTimeTime(e.target.value)}
+                            disabled={!settings.dev?.mockTime?.enabled}
+                            className="flex-1"
+                          />
+                          <Button onClick={handleMockTimeSet} disabled={!settings.dev?.mockTime?.enabled}>Set</Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -33,7 +33,7 @@ import Checkbox from '../components/ui/Checkbox';
 import Modal, {ConfirmModal} from '../components/ui/Modal';
 import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
 import IncomeSourceModal from '../components/income/IncomeSourceModal';
-import {format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths} from 'date-fns';
+import {format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths, startOfDay} from 'date-fns';
 import {cn} from '../utils/cn';
 import {useErrorStore} from '../store/useErrorStore';
 import {db} from '../utils/db';
@@ -50,6 +50,7 @@ import {
 import TransferModal from '../components/payment/TransferModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
 import {Tabs, TabsList, TabsTrigger} from '../components/ui/Tabs';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 const dayOfMonthOptions = Array.from({length: 31}, (_, i) => ({value: String(i + 1), label: String(i + 1)}));
 const dayOfWeekOptions = [
@@ -69,6 +70,7 @@ const monthOfYearOptions = [
 const IncomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const {showError} = useErrorStore();
+  const { settings } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled' | 'history'>('to-check');
@@ -97,15 +99,22 @@ const IncomePage: React.FC = () => {
   const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
   const [incomeSources, setIncomeSources] = useState<any[]>([]);
 
+  const getCurrentDate = () => {
+    if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
+      return startOfDay(parseISO(settings.dev.mockTime.date));
+    }
+    return startOfToday();
+  };
+
   const [newSchedule, setNewSchedule] = useState({
     SourceName: '',
     Category: '',
     PaymentMethodID: '',
     ExpectedAmount: '0',
     RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-    DayOfMonth: String(getDate(new Date())),
-    DayOfWeek: String(getDay(new Date())),
-    MonthOfYear: String(getMonth(new Date())),
+    DayOfMonth: String(getDate(getCurrentDate())),
+    DayOfWeek: String(getDay(getCurrentDate())),
+    MonthOfYear: String(getMonth(getCurrentDate())),
     RequiresConfirmation: true,
     LookaheadDays: 7,
     IsActive: true
@@ -122,6 +131,7 @@ const IncomePage: React.FC = () => {
   }, [location.state]);
 
   useEffect(() => {
+    const today = getCurrentDate();
     if (editingSchedule) {
       setNewSchedule({
         SourceName: editingSchedule.SourceName || '',
@@ -129,9 +139,9 @@ const IncomePage: React.FC = () => {
         PaymentMethodID: String(editingSchedule.PaymentMethodID),
         ExpectedAmount: String(editingSchedule.ExpectedAmount || '0'),
         RecurrenceRule: editingSchedule.RecurrenceRule || 'FREQ=MONTHLY;INTERVAL=1',
-        DayOfMonth: String(editingSchedule.DayOfMonth || getDate(new Date())),
-        DayOfWeek: String(editingSchedule.DayOfWeek || getDay(new Date())),
-        MonthOfYear: String(editingSchedule.MonthOfYear || getMonth(new Date())),
+        DayOfMonth: String(editingSchedule.DayOfMonth || getDate(today)),
+        DayOfWeek: String(editingSchedule.DayOfWeek || getDay(today)),
+        MonthOfYear: String(editingSchedule.MonthOfYear || getMonth(today)),
         RequiresConfirmation: !!editingSchedule.RequiresConfirmation,
         LookaheadDays: editingSchedule.LookaheadDays || 7,
         IsActive: !!editingSchedule.IsActive
@@ -143,22 +153,22 @@ const IncomePage: React.FC = () => {
         PaymentMethodID: paymentMethods[0]?.value || '',
         ExpectedAmount: '0',
         RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-        DayOfMonth: String(getDate(new Date())),
-        DayOfWeek: String(getDay(new Date())),
-        MonthOfYear: String(getMonth(new Date())),
+        DayOfMonth: String(getDate(today)),
+        DayOfWeek: String(getDay(today)),
+        MonthOfYear: String(getMonth(today)),
         RequiresConfirmation: true,
         LookaheadDays: 7,
         IsActive: true
       });
     }
-  }, [editingSchedule, paymentMethods]);
+  }, [editingSchedule, paymentMethods, settings.dev?.mockTime]);
 
   const [oneTimeIncome, setOneTimeIncome] = useState({
     SourceName: '',
     Category: '',
     PaymentMethodID: '',
     Amount: '0',
-    Date: format(new Date(), 'yyyy-MM-dd')
+    Date: format(getCurrentDate(), 'yyyy-MM-dd')
   });
 
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
@@ -336,7 +346,7 @@ const IncomePage: React.FC = () => {
         Category: '',
         PaymentMethodID: '',
         Amount: '0',
-        Date: format(new Date(), 'yyyy-MM-dd')
+        Date: format(getCurrentDate(), 'yyyy-MM-dd')
       });
     },
     onError: (err) => showError(err)
@@ -484,7 +494,7 @@ const IncomePage: React.FC = () => {
   const showCreateForPastPeriodCheckbox = () => {
     if (editingSchedule) return false;
     try {
-      const today = startOfToday();
+      const today = getCurrentDate();
       const oneMonthAgo = subMonths(today, 1);
       const occurrences = calculateOccurrences(
         {...newSchedule, CreationTimestamp: new Date().toISOString()} as any,
@@ -550,7 +560,7 @@ const IncomePage: React.FC = () => {
                   Category: '',
                   PaymentMethodID: paymentMethods[0]?.value || '',
                   Amount: '0',
-                  Date: format(new Date(), 'yyyy-MM-dd')
+                  Date: format(getCurrentDate(), 'yyyy-MM-dd')
                 });
                 setIsOneTimeModalOpen(true);
               }}>

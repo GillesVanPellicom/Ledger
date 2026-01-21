@@ -46,6 +46,12 @@ const initialSettings: Settings = {
       type: false,
       attachments: false,
     }
+  },
+  dev: {
+    mockTime: {
+      enabled: false,
+      date: null,
+    }
   }
 };
 
@@ -96,6 +102,7 @@ export const useSettingsStore = create<SettingsState>()(
               paymentMethodStyles: {...state.settings.paymentMethodStyles, ...loadedSettings.paymentMethodStyles},
               datastore: {...state.settings.datastore, ...loadedSettings.datastore},
               receipts: {...state.settings.receipts, ...loadedSettings.receipts},
+              dev: {...state.settings.dev, ...loadedSettings.dev},
             },
             loading: false,
           }), false, 'loadSettings/success');

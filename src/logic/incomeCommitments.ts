@@ -1,6 +1,7 @@
 import { db } from '../utils/db';
 import { calculateOccurrences } from './incomeScheduling';
-import { format, startOfToday, subMonths } from 'date-fns';
+import { format, startOfToday, subMonths, parseISO, startOfDay } from 'date-fns';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 /* ==================== Types ==================== */
 
@@ -43,6 +44,14 @@ function assertDefined<T>(
     throw new Error(message);
   }
   return value;
+}
+
+function getCurrentDate(): Date {
+  const settings = useSettingsStore.getState().settings;
+  if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
+    return startOfDay(parseISO(settings.dev.mockTime.date));
+  }
+  return startOfToday();
 }
 
 /* ==================== Commitments ==================== */
@@ -272,7 +281,8 @@ export const incomeCommitments = {
         [newScheduleId]
       );
       if (schedule) {
-        const occurrences = calculateOccurrences(schedule, subMonths(startOfToday(), 1), startOfToday());
+        const today = getCurrentDate();
+        const occurrences = calculateOccurrences(schedule, subMonths(today, 1), today);
         if (occurrences.length > 0) {
           await incomeCommitments.createPendingIncome({
             IncomeScheduleID: newScheduleId,
