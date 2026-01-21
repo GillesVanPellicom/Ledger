@@ -23,16 +23,7 @@
     "interval": 5,
     "editsSinceLastBackup": 0
   },
-  "paymentMethodStyles": {
-    "1": {
-      "symbol": "AlarmClockCheck",
-      "type": "icon"
-    },
-    "3": {
-      "symbol": "Piano",
-      "type": "icon"
-    }
-  },
+  "paymentMethodStyles": {},
   "datastore": {
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
@@ -45,10 +36,5 @@
     }
   },
   "userName": "Gilles",
-  "debtorStyles": {
-    "1": {
-      "symbol": "🍔",
-      "type": "emoji"
-    }
-  }
+  "uiScale": 110
 }
