@@ -23,7 +23,9 @@ import {
   Store,
   Calendar,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  StickyNote,
+  Filter
 } from 'lucide-react';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
@@ -50,6 +52,8 @@ import Combobox from '../components/ui/Combobox';
 import NanoDataTable from '../components/ui/NanoDataTable';
 import { useReceiptDebtCalculation } from '../hooks/useDebtCalculation';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
+import FilterModal, { FilterOption } from '../components/ui/FilterModal';
+import ButtonGroup from '../components/ui/ButtonGroup';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -112,11 +116,26 @@ const ReceiptViewPage: React.FC = () => {
   const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState<boolean>(false);
   const [makePermanentModalOpen, setMakePermanentModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [excludedFilter, setExcludedFilter] = useState<string>('all');
+
+  // Pending filters (for modal)
+  const [pendingCategoryFilter, setPendingCategoryFilter] = useState<string>('all');
+  const [pendingEntityFilter, setPendingEntityFilter] = useState<string>('all');
+  const [pendingExcludedFilter, setPendingExcludedFilter] = useState<string>('all');
+
+  // Sync pending filters when modal opens
+  useEffect(() => {
+    if (isFilterModalOpen) {
+      setPendingCategoryFilter(categoryFilter);
+      setPendingEntityFilter(entityFilter);
+      setPendingExcludedFilter(excludedFilter);
+    }
+  }, [isFilterModalOpen, categoryFilter, entityFilter, excludedFilter]);
 
   const filteredLineItems = useMemo(() => {
     if (!rawLineItems) return [];
@@ -279,13 +298,36 @@ const ReceiptViewPage: React.FC = () => {
     }
   };
 
+  const applyFilters = () => {
+    setCategoryFilter(pendingCategoryFilter);
+    setEntityFilter(pendingEntityFilter);
+    setExcludedFilter(pendingExcludedFilter);
+    setIsFilterModalOpen(false);
+  };
+
   const resetFilters = () => {
     setCategoryFilter('all');
     setEntityFilter('all');
     setExcludedFilter('all');
+    setPendingCategoryFilter('all');
+    setPendingEntityFilter('all');
+    setPendingExcludedFilter('all');
+  };
+
+  const resetPendingFilters = () => {
+    setPendingCategoryFilter('all');
+    setPendingEntityFilter('all');
+    setPendingExcludedFilter('all');
   };
 
   const hasActiveFilters = categoryFilter !== 'all' || entityFilter !== 'all' || excludedFilter !== 'all';
+  const hasPendingFilters = pendingCategoryFilter !== 'all' || pendingEntityFilter !== 'all' || pendingExcludedFilter !== 'all';
+
+  const activeFilterCount = [
+    pendingCategoryFilter !== 'all',
+    pendingEntityFilter !== 'all',
+    pendingExcludedFilter !== 'all'
+  ].filter(Boolean).length;
 
   const tableHeaders = useMemo(() => {
     const headers = [
@@ -394,7 +436,110 @@ const ReceiptViewPage: React.FC = () => {
       <PageWrapper>
         <div className="py-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
           
-          {/* Summary Card - Moved before Items List for mobile order */}
+          {/* Left Column (Notes, Filters, Images, Items) */}
+          <div className="xl:col-span-2 space-y-6 xl:col-start-1 xl:row-start-1">
+            {receipt?.ReceiptNote && (
+              <Card>
+                <div className="p-4">
+                  <p className="text-base text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{receipt.ReceiptNote}</p>
+                </div>
+              </Card>
+            )}
+
+            {!!receipt.IsTentative && (
+              <InfoCard
+                variant="info"
+                title="Tentative Expense"
+                message="This is a draft expense. It won't affect analytics or debts until made permanent."
+              >
+                <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
+              </InfoCard>
+            )}
+
+            {images.length > 0 && (
+              <Card>
+                <div className="p-6">
+                  <Gallery images={images.map(i => i.src) as (string | Image)[]}/>
+                </div>
+              </Card>
+            )}
+
+            {receipt.IsNonItemised ? (
+              <Card className="overflow-hidden">
+                <div className="relative p-6">
+                  <div className="blur-sm">
+                    <NanoDataTable
+                      headers={[
+                        { label: 'Product' },
+                        { label: 'Qty', className: 'w-24 text-center' },
+                        { label: 'Unit Price (€)', className: 'w-32 text-right' },
+                        { label: 'Total (€)', className: 'w-32 text-right' },
+                      ]}
+                      rows={[]} // Empty rows to trigger "No results found" for non-itemised
+                    />
+                  </div>
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
+                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
+                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Expense</h3>
+                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this expense.</p>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Card>
+                <div className="p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <ButtonGroup>
+                      <Tooltip content="Filters">
+                        <Button variant="secondary" size="icon" onClick={() => setIsFilterModalOpen(true)}>
+                          <Filter className="h-4 w-4" />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip content="Reset Filters">
+                        <Button variant="secondary" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      </Tooltip>
+                    </ButtonGroup>
+                  </div>
+                  <NanoDataTable
+                    headers={tableHeaders}
+                    rows={tableRows}
+                  />
+                </div>
+                <div className="px-6 py-4 rounded-b-xl">
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-4 text-gray-500">
+                      <span className="text-sm">Subtotal</span>
+                      <span className="font-medium">€{displaySubtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-gray-500">
+                      {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
+                        <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
+                          <div className="flex items-center gap-1 cursor-help">
+                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            <span className="text-sm underline decoration-dotted">
+                              Discount ({receipt.Discount || 0}%)
+                            </span>
+                          </div>
+                        </Tooltip>
+                      ) : (
+                        <span className="text-sm">Discount ({receipt?.Discount || 0}%)</span>
+                      )}
+                      <span className="font-medium">-€{(displaySubtotal - displayTotalAmount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-lg font-bold">
+                      <span>Total</span>
+                      <span>€{displayTotalAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column (Summary, Debt) */}
           <div className="col-span-1 space-y-6 xl:col-start-3">
             <Card>
               <div className="p-6">
@@ -435,14 +580,6 @@ const ReceiptViewPage: React.FC = () => {
                       </Tooltip>
                     )}
                   </div>
-
-                  {/* Note */}
-                  {receipt?.ReceiptNote && (
-                    <div className="sm:col-start-2 sm:row-start-2 xl:col-start-1 xl:row-start-3 2xl:col-start-2 2xl:row-start-2 sm:text-right xl:text-left 2xl:text-right">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Note</p>
-                      <p className="text-base text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">{receipt.ReceiptNote}</p>
-                    </div>
-                  )}
 
                   {/* Rest (Attributes) */}
                   <div className="flex flex-col gap-4 sm:col-start-1 sm:row-start-2 xl:col-start-1 xl:row-start-4 2xl:col-start-1 2xl:row-start-2">
@@ -594,127 +731,61 @@ const ReceiptViewPage: React.FC = () => {
             )}
           </div>
 
-          {/* Items List - Moved after Summary Card for mobile order, but positioned correctly on desktop */}
-          <div className="xl:col-span-2 space-y-6 xl:col-start-1 xl:row-start-1">
-            {!!receipt.IsTentative && (
-              <InfoCard
-                variant="info"
-                title="Tentative Expense"
-                message="This is a draft expense. It won't affect analytics or debts until made permanent."
-              >
-                <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
-              </InfoCard>
-            )}
-
-            {images.length > 0 && (
-              <Card>
-                <div className="p-6">
-                  <Gallery images={images.map(i => i.src) as (string | Image)[]}/>
-                </div>
-              </Card>
-            )}
-
-            {receipt.IsNonItemised ? (
-              <Card className="overflow-hidden">
-                <div className="relative p-6">
-                  <div className="blur-sm">
-                    <NanoDataTable
-                      headers={[
-                        { label: 'Product' },
-                        { label: 'Qty', className: 'w-24 text-center' },
-                        { label: 'Unit Price (€)', className: 'w-32 text-right' },
-                        { label: 'Total (€)', className: 'w-32 text-right' },
-                      ]}
-                      rows={[]} // Empty rows to trigger "No results found" for non-itemised
-                    />
-                  </div>
-                  <div
-                    className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Expense</h3>
-                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this expense.</p>
-                  </div>
-                </div>
-              </Card>
-            ) : (
-              <>
-                <div className="flex justify-end gap-4 mb-4 flex-wrap">
-                  <Combobox
-                    options={[{ value: 'all', label: 'All Categories' }, ...filterOptions.categories]}
-                    value={categoryFilter}
-                    onChange={setCategoryFilter}
-                    placeholder="Filter by Category"
-                    className="w-full sm:w-48 shrink min-w-[120px]"
-                  />
-                  {filterOptions.entities.length > 0 && (
-                    <Combobox
-                      options={[{ value: 'all', label: 'All Entities' }, ...filterOptions.entities]}
-                      value={entityFilter}
-                      onChange={setEntityFilter}
-                      placeholder="Filter by Entity"
-                      className="w-full sm:w-48 shrink min-w-[120px]"
-                    />
-                  )}
-                  {filterOptions.hasExclusions && (
-                    <Combobox
-                      options={[
-                        { value: 'all', label: 'Included & Excluded' },
-                        { value: 'yes', label: 'Excluded Only' },
-                        { value: 'no', label: 'Included Only' }
-                      ]}
-                      value={excludedFilter}
-                      onChange={setExcludedFilter}
-                      placeholder="Filter by Exclusion"
-                      className="w-full sm:w-48 shrink min-w-[120px]"
-                    />
-                  )}
-                  <Tooltip content="Reset Filters">
-                    <Button variant="ghost" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
-                      <RotateCcw className="h-5 w-5" />
-                    </Button>
-                  </Tooltip>
-                </div>
-                <Card>
-                  <div className="p-6">
-                    <NanoDataTable
-                      headers={tableHeaders}
-                      rows={tableRows}
-                    />
-                  </div>
-                  <div className="px-6 py-4 rounded-b-xl">
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-center gap-4 text-gray-500">
-                        <span className="text-sm">Subtotal</span>
-                        <span className="font-medium">€{displaySubtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-gray-500">
-                        {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
-                          <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
-                            <div className="flex items-center gap-1 cursor-help">
-                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                              <span className="text-sm underline decoration-dotted">
-                                Discount ({receipt.Discount || 0}%)
-                              </span>
-                            </div>
-                          </Tooltip>
-                        ) : (
-                          <span className="text-sm">Discount ({receipt?.Discount || 0}%)</span>
-                        )}
-                        <span className="font-medium">-€{(displaySubtotal - displayTotalAmount).toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-lg font-bold">
-                        <span>Total</span>
-                        <span>€{displayTotalAmount.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </>
-            )}
-          </div>
-
         </div>
       </PageWrapper>
+
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApply={applyFilters}
+        onResetAll={resetPendingFilters}
+        filterCount={activeFilterCount}
+        hasActiveFilters={hasPendingFilters}
+      >
+        <FilterOption 
+          title="Category" 
+          onReset={() => setPendingCategoryFilter('all')}
+          isModified={pendingCategoryFilter !== 'all'}
+        >
+          <Select 
+            options={[{ value: 'all', label: 'All Categories' }, ...filterOptions.categories]} 
+            value={pendingCategoryFilter} 
+            onChange={e => setPendingCategoryFilter(e.target.value)} 
+          />
+        </FilterOption>
+
+        {filterOptions.entities.length > 0 && (
+          <FilterOption 
+            title="Entity" 
+            onReset={() => setPendingEntityFilter('all')}
+            isModified={pendingEntityFilter !== 'all'}
+          >
+            <Select 
+              options={[{ value: 'all', label: 'All Entities' }, ...filterOptions.entities]} 
+              value={pendingEntityFilter} 
+              onChange={e => setPendingEntityFilter(e.target.value)} 
+            />
+          </FilterOption>
+        )}
+
+        {filterOptions.hasExclusions && (
+          <FilterOption 
+            title="Discount Exclusion"
+            onReset={() => setPendingExcludedFilter('all')}
+            isModified={pendingExcludedFilter !== 'all'}
+          >
+            <Select 
+              options={[
+                { value: 'all', label: 'Included & Excluded' },
+                { value: 'yes', label: 'Excluded Only' },
+                { value: 'no', label: 'Included Only' }
+              ]} 
+              value={pendingExcludedFilter} 
+              onChange={e => setPendingExcludedFilter(e.target.value)} 
+            />
+          </FilterOption>
+        )}
+      </FilterModal>
 
       <DebtSettlementModal
         isOpen={isSettlementModalOpen}
