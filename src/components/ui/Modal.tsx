@@ -156,7 +156,7 @@ const Modal: React.FC<ModalProps> = ({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
+        <div className="pl-6 pr-3 py-4 overflow-y-auto flex-1">{children}</div>
         {footer && (
           <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-bg-modal rounded-b-xl"> {/* Changed bg-bg-2 to bg-bg-modal */}
             {footer}

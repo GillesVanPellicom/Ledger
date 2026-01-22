@@ -48,7 +48,7 @@ const ColorSelector: React.FC<ColorSelectorProps> = ({
   lockedMessage = "This setting is locked by the current theme."
 }) => {
   return (
-    <div className="relative p-3 rounded-xl border border-border bg-bg-2 flex flex-col items-center gap-3 shrink-0 h-full justify-center">
+    <div className="relative p-4 rounded-xl border border-border bg-bg-2 flex flex-col items-center gap-3 shrink-0 h-full justify-start">
       <Tooltip content={`${title}: ${tooltip}`}>
         <Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" />
       </Tooltip>
@@ -144,7 +144,7 @@ const AppearanceSettings: React.FC = () => {
       
       <div className="flex items-stretch gap-4 mb-4">
         {/* UI Mock Preview */}
-        <div className="flex-grow p-6 rounded-xl border border-border bg-bg flex flex-col gap-4 transition-colors duration-300 scale-90 origin-top-left -m-4">
+        <div className="flex-grow p-4 rounded-xl border border-border bg-bg flex flex-col gap-4 transition-colors duration-300">
             {/* Mock Header with Animation */}
             <div className="h-16 rounded-lg overflow-hidden relative shadow-sm border border-border">
             <BackgroundGradientAnimation 

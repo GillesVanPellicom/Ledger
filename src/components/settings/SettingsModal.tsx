@@ -259,7 +259,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               })}
             </nav>
           </div>
-          <div className="flex-1 pl-8 pr-2 overflow-y-auto">
+          <div className="flex-1 px-8 overflow-y-auto">
             {activeTab === 'appearance' && (
               <div>
                 <AppearanceSettings />
