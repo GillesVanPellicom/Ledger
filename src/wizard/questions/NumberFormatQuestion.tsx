@@ -9,21 +9,23 @@ export const NumberFormatQuestion: WizardQuestion = {
   appliesWhen: () => true,
   component: ({ onNext }) => {
     return (
-      <div className="space-y-8 max-w-lg mx-auto">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-font-1">How should numbers be formatted?</h2>
-          <p className="text-font-2">
-            Choose your preferred decimal separator.
-          </p>
+      <div className="flex flex-col h-full">
+        <div className="flex-grow flex flex-col justify-center space-y-8 overflow-y-auto max-w-lg mx-auto w-full p-6">
+          <div className="text-center space-y-2 mb-8">
+            <h2 className="text-2xl font-bold text-font-1">How should numbers be formatted?</h2>
+            <p className="text-font-2">
+              Choose your preferred decimal separator.
+            </p>
+          </div>
+
+          <FormattingSettings showPreview={true} showTitle={false} showCard={false} />
         </div>
 
-        <div className="bg-bg-2 p-6 rounded-xl border border-border">
-          <FormattingSettings />
+        <div className="pt-6 pb-2 mt-auto w-full max-w-md mx-auto">
+          <Button onClick={onNext} className="w-full" size="lg">
+            Next
+          </Button>
         </div>
-
-        <Button onClick={onNext} className="w-full" size="lg">
-          Next
-        </Button>
       </div>
     );
   },

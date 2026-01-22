@@ -25,32 +25,36 @@ export const NameQuestion: WizardQuestion = {
     };
 
     return (
-      <div className="space-y-6 max-w-md mx-auto">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-font-1">What should we call you?</h2>
-          <p className="text-font-2">
-            This name will be used for light personalisation and on generated documents.
-          </p>
+      <div className="flex flex-col h-full">
+        <div className="flex-grow flex flex-col justify-center space-y-6 overflow-y-auto max-w-md mx-auto w-full p-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold text-font-1">What should we call you?</h2>
+            <p className="text-font-2">
+              This name will be used for light personalisation and on generated documents.
+            </p>
+          </div>
+          
+          <Input
+            type="text"
+            placeholder="Enter your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="w-full text-lg p-4"
+            autoFocus
+          />
         </div>
         
-        <Input
-          type="text"
-          placeholder="Enter your name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-full text-lg p-4"
-          autoFocus
-        />
-        
-        <Button 
-          onClick={handleContinue} 
-          disabled={!name.trim()} 
-          className="w-full"
-          size="lg"
-        >
-          Next
-        </Button>
+        <div className="pt-6 pb-2 mt-auto w-full max-w-md mx-auto">
+          <Button 
+            onClick={handleContinue} 
+            disabled={!name.trim()} 
+            className="w-full"
+            size="lg"
+          >
+            Next
+          </Button>
+        </div>
       </div>
     );
   },

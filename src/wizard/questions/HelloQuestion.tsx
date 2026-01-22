@@ -17,7 +17,7 @@ export const HelloQuestion: WizardQuestion = {
   appliesWhen: () => true, // Always relevant if not already asked.
   component: ({ onNext }) => {
     return (
-      <div className="fixed inset-0 z-0 flex flex-col items-center justify-center overflow-hidden">
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-bg">
         <BackgroundGradientAnimation 
           containerClassName="absolute inset-0"
           className="absolute inset-0 flex items-center justify-center"

@@ -4,8 +4,15 @@ import Tooltip from '../ui/Tooltip';
 import RadioCard from '../ui/RadioCard';
 import MoneyDisplay from '../ui/MoneyDisplay';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { cn } from '../../utils/cn';
 
-const FormattingSettings: React.FC = () => {
+interface FormattingSettingsProps {
+  showPreview?: boolean;
+  showTitle?: boolean;
+  showCard?: boolean;
+}
+
+const FormattingSettings: React.FC<FormattingSettingsProps> = ({ showPreview = true, showTitle = true, showCard = true }) => {
   const { settings, updateSettings } = useSettingsStore();
 
   const handleDecimalSeparatorChange = (separator: 'dot' | 'comma') => {
@@ -20,24 +27,30 @@ const FormattingSettings: React.FC = () => {
   );
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <SectionTitle title="Decimal Separator" tooltip="Choose how decimal numbers are displayed and entered." />
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-font-2 uppercase tracking-wider font-semibold">Preview</span>
-          <Tooltip content="This preview shows how monetary values will be formatted.">
-            <Info className="h-4 w-4 text-font-2 cursor-help" />
-          </Tooltip>
+    <div className={cn(!showCard && "contents")}>
+      {showTitle && (
+        <div className="flex items-center justify-between mb-4">
+          <SectionTitle title="Decimal Separator" tooltip="Choose how decimal numbers are displayed and entered." />
+          {showPreview && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-font-2 uppercase tracking-wider font-semibold">Preview</span>
+              <Tooltip content="This preview shows how monetary values will be formatted.">
+                <Info className="h-4 w-4 text-font-2 cursor-help" />
+              </Tooltip>
+            </div>
+          )}
         </div>
-      </div>
+      )}
       
-      <div className="mb-6 p-4 rounded-xl border border-border flex items-center justify-center scale-90 origin-top">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-font-1">
-            <MoneyDisplay amount={1234.56} showSign={false} />
+      {showPreview && (
+        <div className={cn("mb-6 flex justify-center", showCard && "p-4 rounded-xl border border-border bg-field-disabled")}>
+          <div className={cn("text-center inline-block", !showCard && "p-4 rounded-xl border border-border bg-field-disabled min-w-[200px]")}>
+            <div className="text-2xl font-bold text-font-1">
+              <MoneyDisplay amount={1234.56} showSign={false} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <RadioCard
           selected={settings.formatting?.decimalSeparator !== 'comma'}

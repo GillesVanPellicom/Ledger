@@ -1,6 +1,7 @@
 import React from 'react';
 import Button from '../../components/ui/Button';
 import { ArrowLeft } from 'lucide-react';
+import { WizardHeader } from './WizardHeader';
 
 interface WizardShellProps {
   currentStep: number;
@@ -29,28 +30,32 @@ const WizardShell: React.FC<WizardShellProps> = ({
   showCounter = true,
 }) => {
   return (
-    <div className="min-h-screen bg-bg flex flex-col">
-      {/* Header: Navigation and Progress */}
-      <header className="p-4 flex items-center justify-between">
-        <div className="w-20">
+    <div className="h-screen bg-bg flex flex-col overflow-hidden">
+      <WizardHeader
+        title=""
+        backButton={
           <Button 
             variant="ghost" 
+            size="icon"
             onClick={onBack} 
-            className={`flex items-center gap-2 ${!canGoBack ? 'invisible pointer-events-none' : ''}`}
+            className={!canGoBack ? 'invisible pointer-events-none' : ''}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-        </div>
-        <div className="text-sm text-font-2 font-medium">
-          {showCounter && `Page ${currentStep} / ${totalSteps}`}
-        </div>
-        <div className="w-20" /> {/* Spacer for visual balance */}
-      </header>
+        }
+        variant="centered-box"
+        centeredContent={
+          showCounter && (
+            <div className="text-sm text-font-2 font-medium">
+              Page {currentStep} / {totalSteps}
+            </div>
+          )
+        }
+      />
       
       {/* Main Content Area */}
-      <main className="flex-grow flex flex-col items-center justify-center p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="w-full max-w-2xl">
+      <main className="flex-1 flex flex-col items-center px-8 py-6 w-full relative overflow-hidden">
+        <div className="w-full max-w-2xl h-full flex flex-col overflow-visible">
           {children}
         </div>
       </main>
