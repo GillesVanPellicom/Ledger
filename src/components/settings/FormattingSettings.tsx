@@ -14,8 +14,8 @@ const FormattingSettings: React.FC = () => {
 
   const SectionTitle = ({ title, tooltip }: { title: string, tooltip?: string }) => (
     <div className="flex items-center gap-2 mb-4">
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
-      {tooltip && <Tooltip content={tooltip}><Info className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>}
+      <h3 className="text-lg font-medium text-font-1">{title}</h3>
+      {tooltip && <Tooltip content={tooltip}><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>}
     </div>
   );
 
@@ -24,16 +24,16 @@ const FormattingSettings: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <SectionTitle title="Decimal Separator" tooltip="Choose how decimal numbers are displayed and entered." />
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Preview</span>
+          <span className="text-xs text-font-2 uppercase tracking-wider font-semibold">Preview</span>
           <Tooltip content="This preview shows how monetary values will be formatted.">
-            <Info className="h-4 w-4 text-gray-400 cursor-help" />
+            <Info className="h-4 w-4 text-font-2 cursor-help" />
           </Tooltip>
         </div>
       </div>
       
-      <div className="mb-6 p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-center scale-90 origin-top">
+      <div className="mb-6 p-4 rounded-xl border border-border flex items-center justify-center scale-90 origin-top">
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <div className="text-2xl font-bold text-font-1">
             <MoneyDisplay amount={1234.56} showSign={false} />
           </div>
         </div>

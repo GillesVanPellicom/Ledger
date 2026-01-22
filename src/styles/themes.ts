@@ -21,6 +21,8 @@ export interface Theme {
   id: string;
   name: string;
   colors: ThemeColors;
+  lockedAccent?: boolean;
+  lockedHeader?: boolean;
 }
 
 export const themes: Record<string, Theme> = {
@@ -68,28 +70,41 @@ export const themes: Record<string, Theme> = {
       TEXT_DISABLED: '#4B5563', // gray-600
     },
   },
-  highContrast: {
-    id: 'highContrast',
-    name: 'High Contrast',
-    colors: {
-      BG_COLOR: '#FFFFFF',
-      BG_COLOR_2: '#FFFFFF',
-      BG_COLOR_MODAL: '#FFFFFF',
-      BORDER_COLOR: '#000000',
-      ACCENT_COLOR: '#0000FF',
-      FONT_COLOR_1: '#000000',
-      FONT_COLOR_2: '#000000',
-      FIELD_COLOR: '#FFFFFF',
-      FIELD_COLOR_DISABLED: '#E5E5E5',
-      FIELD_COLOR_HOVER: '#F0F0F0',
-      BLUE: '#0000FF',
-      GREEN: '#008000',
-      RED: '#FF0000',
-      YELLOW: '#FFFF00',
-      HYPERLINK_COLOR: '#0000EE',
-      TEXT_DISABLED: '#666666',
-    },
+highContrast: {
+  id: 'highContrast',
+  name: 'High Contrast',
+  lockedAccent: true,
+  lockedHeader: false, // Changed to false as requested
+  colors: {
+    // Backgrounds
+    BG_COLOR: '#000000',
+    BG_COLOR_2: '#000000',
+    BG_COLOR_MODAL: '#000000',
+
+    // Borders & separators
+    BORDER_COLOR: '#FFFFFF',
+
+    // Text
+    FONT_COLOR_1: '#FFFFFF',   // primary text
+    FONT_COLOR_2: '#FFFF00',   // secondary / emphasis text
+    TEXT_DISABLED: '#7F7F7F',  // still readable on black
+
+    // Accents & interaction
+    ACCENT_COLOR: '#00FFFF',   // yellow (primary HC accent)
+    HYPERLINK_COLOR: '#00FFFF',// aqua (Windows HC classic)
+
+    // Form fields
+    FIELD_COLOR: '#000000',
+    FIELD_COLOR_HOVER: '#1A1A1A',
+    FIELD_COLOR_DISABLED: '#000000',
+
+    // Semantic colors (do not overuse)
+    BLUE: '#00FFFF',
+    GREEN: '#00FF00',
+    RED: '#FF0000',
+    YELLOW: '#FFFF00',
   },
+},
   development: {
     id: 'development',
     name: 'Development',

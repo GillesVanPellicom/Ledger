@@ -89,12 +89,6 @@ export const useSettingsStore = create<SettingsState>()(
         } else if (themeId === 'light') {
           root.classList.remove('dark');
         } else {
-           // For other themes, we might want to decide if they are "dark" or "light" based on background color
-           // For now, let's assume non-dark themes are light-ish, or we can check brightness.
-           // But since we are overriding all colors with CSS variables, the 'dark' class might only affect
-           // some hardcoded tailwind classes if any remain.
-           // Let's remove 'dark' class for custom themes to avoid confusion, or maybe add it if background is dark.
-           // For simplicity, let's stick to 'dark' class only for 'dark' theme for now, or check system preference for 'system'.
            root.classList.remove('dark');
         }
       },
@@ -137,16 +131,18 @@ export const useSettingsStore = create<SettingsState>()(
              get().applyTheme(themeId);
           }
 
-          // Apply accent color override if it exists and we are not using a strict theme that forbids it?
-          // The prompt says "When a theme is selected, update all CSS variables live".
-          // But we also have an accent color picker.
-          // If the user picks a theme, it sets ACCENT_COLOR.
-          // If the user picks an accent color, it should probably override the theme's accent color.
-          // Let's allow the accent color setting to override the theme's accent color if it's explicitly set by the user
-          // distinct from the theme default.
-          // However, the current implementation stores themeColor separately.
-          // Let's apply it after the theme.
-          if (currentSettings.themeColor) {
+          // Apply accent color override if it exists
+          // If the theme locks the accent color, we should respect that, but we don't have easy access to theme config here without importing themes.
+          // However, the logic for locking is handled in AppearanceSettings.tsx for UI.
+          // Here we just apply what's in settings.
+          // BUT, if the theme is locked, we should probably apply the theme's accent color instead of the user's stored preference if they conflict?
+          // The requirement says: "whenever you select a theme which overrwrites one of the colorpickers, the currrently user picked color should stay selected. The overwrite should happen in the background. Once another theme without overwrite is selected the previously chosen color should take effect once again."
+          // This means we should ALWAYS apply the theme's accent color if the theme locks it, but keep the user's preference in the store.
+          
+          const theme = themes[themeId] || themes.light;
+          if (theme.lockedAccent) {
+             document.documentElement.style.setProperty('--color-accent', theme.colors.ACCENT_COLOR);
+          } else if (currentSettings.themeColor) {
             document.documentElement.style.setProperty('--color-accent', currentSettings.themeColor);
           }
 
@@ -167,21 +163,31 @@ export const useSettingsStore = create<SettingsState>()(
         set({settings: updatedSettings}, false, `updateSettings/${Object.keys(newSettings).join(',')}`);
 
         // Apply theme if changed
-        if (newSettings.theme) {
-           if (newSettings.theme === 'system') {
-             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-               get().applyTheme('dark');
-             } else {
-               get().applyTheme('light');
-             }
-           } else {
-             get().applyTheme(newSettings.theme);
-           }
+        let themeId = newSettings.theme || currentSettings.theme || 'light';
+        if (themeId === 'system') {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                get().applyTheme('dark');
+                themeId = 'dark'; // Resolve for checking locks
+            } else {
+                get().applyTheme('light');
+                themeId = 'light'; // Resolve for checking locks
+            }
+        } else {
+            get().applyTheme(themeId);
         }
 
-        // Apply accent color if changed
-        if (newSettings.themeColor) {
-          document.documentElement.style.setProperty('--color-accent', newSettings.themeColor);
+        const theme = themes[themeId] || themes.light;
+
+        // Apply accent color logic
+        // If theme locks accent, use theme's accent.
+        // Otherwise, use the user's stored preference (newSettings.themeColor or currentSettings.themeColor).
+        if (theme.lockedAccent) {
+             document.documentElement.style.setProperty('--color-accent', theme.colors.ACCENT_COLOR);
+        } else {
+             const colorToApply = newSettings.themeColor || currentSettings.themeColor;
+             if (colorToApply) {
+                 document.documentElement.style.setProperty('--color-accent', colorToApply);
+             }
         }
 
         try {

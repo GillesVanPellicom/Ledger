@@ -23,9 +23,9 @@ const RadioCard: React.FC<RadioCardProps> = ({
   return (
     <div 
       className={cn(
-        "flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all duration-200",
+        "flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all duration-200 bg-field", // Added bg-field
         selected 
-          ? "border-accent bg-accent/5 ring-1 ring-accent" 
+          ? "border-accent ring-1 ring-accent" // Removed bg-accent/5 to keep bg-field consistent, or could be bg-accent/5 if desired, but user asked for field_color. Let's stick to bg-field base but maybe tint if selected? User said "background of radiocard component should be field_color". So let's ensure it is.
           : "border-border hover:border-accent/50 hover:bg-field-hover",
         className
       )}

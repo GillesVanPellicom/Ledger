@@ -274,7 +274,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     </div>
                     <button onClick={resetUiScale} className="text-xs text-font-2 hover:text-font-1 underline">reset</button>
                   </div>
-                  <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-field-disabled rounded-lg appearance-none cursor-pointer" /><span className="text-sm font-medium text-font-1 w-12 text-right">{uiScale}%</span></div>
+                  <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-field rounded-lg appearance-none cursor-pointer border border-border" /><span className="text-sm font-medium text-font-1 w-12 text-right">{uiScale}%</span></div>
                 </div>
                 
                 <div className="h-px bg-border my-6" />

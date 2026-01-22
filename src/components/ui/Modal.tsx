@@ -150,7 +150,7 @@ const Modal: React.FC<ModalProps> = ({
           }
         }}
       >
-        <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-bg-2 rounded-t-xl">
+        <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-bg-modal rounded-t-xl"> {/* Changed bg-bg-2 to bg-bg-modal */}
           <h3 className="text-lg font-semibold text-font-1">{title}</h3>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-field-hover transition-colors text-font-2">
             <X className="h-5 w-5" />
@@ -158,7 +158,7 @@ const Modal: React.FC<ModalProps> = ({
         </div>
         <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
         {footer && (
-          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-bg-2 rounded-b-xl">
+          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-bg-modal rounded-b-xl"> {/* Changed bg-bg-2 to bg-bg-modal */}
             {footer}
           </div>
         )}
