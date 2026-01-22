@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { cn } from "../../utils/cn";
 import { useSettingsStore } from "../../store/useSettingsStore";
 
@@ -6,40 +6,31 @@ export const BackgroundGradientAnimation = ({
   gradientBackgroundStart = "var(--color-bg)",
   gradientBackgroundEnd = "var(--color-bg)",
   color = "18, 113, 255",
-  pointerColor = "140, 100, 255",
+  pointerColor = "140, 100, 255", // This prop will no longer be used for interactive pointer
   size = "40%",
   blendingValue = "hard-light",
   children,
   className,
-  interactive = true,
+  // interactive = true, // Removed interactive prop
   containerClassName,
   forceColor,
 }: {
   gradientBackgroundStart?: string;
   gradientBackgroundEnd?: string;
   color?: string;
-  pointerColor?: string;
+  pointerColor?: string; // This prop will no longer be used for interactive pointer
   size?: string;
   blendingValue?: string;
   children?: React.ReactNode;
   className?: string;
-  interactive?: boolean;
+  // interactive?: boolean; // Removed interactive prop
   containerClassName?: string;
   forceColor?: string;
 }) => {
   const interactiveRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettingsStore();
 
-  const [curX, setCurX] = useState(0);
-  const [curY, setCurY] = useState(0);
-
-  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (interactiveRef.current) {
-      const rect = interactiveRef.current.getBoundingClientRect();
-      setCurX(event.clientX - rect.left);
-      setCurY(event.clientY - rect.top);
-    }
-  };
+  // Removed curX, curY state and handleMouseMove function as they are for interactive pointer
 
   // Convert hex color to RGB string for CSS variables
   const hexToRgb = (hex: string) => {
@@ -63,12 +54,12 @@ export const BackgroundGradientAnimation = ({
       container.style.setProperty("--third-color", rgbColor);
       container.style.setProperty("--fourth-color", rgbColor);
       container.style.setProperty("--fifth-color", rgbColor);
-      container.style.setProperty("--pointer-color", pointerColor);
+      // container.style.setProperty("--pointer-color", pointerColor); // Removed pointer color
       container.style.setProperty("--size", size);
       container.style.setProperty("--blending-value", blendingValue);
     }
 
-  }, [gradientBackgroundStart, gradientBackgroundEnd, color, pointerColor, size, blendingValue, settings.headerColor, forceColor]);
+  }, [gradientBackgroundStart, gradientBackgroundEnd, color, size, blendingValue, settings.headerColor, forceColor]); // Removed pointerColor from dependencies
 
   return (
     <div
@@ -152,19 +143,7 @@ export const BackgroundGradientAnimation = ({
           )}
         ></div>
 
-        {interactive && (
-          <div
-            onMouseMove={handleMouseMove}
-            className={cn(
-                `absolute [background-image:radial-gradient(circle_at_center,_rgba(var(--pointer-color),_0.8)_0,_rgba(var(--pointer-color),_0)_50%)]`,
-                `[mix-blend-mode:var(--blending-value)] w-full h-full -top-1/2 -left-1/2`,
-                `opacity-70`
-            )}
-            style={{
-              transform: `translate(${curX}px, ${curY}px)`,
-            }}
-          ></div>
-        )}
+        {/* Removed interactive pointer div */}
       </div>
     </div>
   );

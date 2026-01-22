@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Moon, Sun, RotateCw, Bug, CreditCard, Trash2, Info, Plug, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
+import { Moon, Sun, RotateCw, Bug, CreditCard, Trash2, Info, Plug, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code, PlayCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -14,6 +14,9 @@ import StepperInput from '../ui/StepperInput';
 import { format } from 'date-fns';
 import AppearanceSettings from './AppearanceSettings';
 import FormattingSettings from './FormattingSettings';
+import { wizardState } from '../../settings/wizardState';
+import { ModulesComponent } from '../../preferences/modules/ModulesComponent';
+import WizardDevTools from './WizardDevTools';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -180,9 +183,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     { id: 'formatting', label: 'Formatting', icon: Type },
     { id: 'modules', label: 'Modules', icon: Plug },
     { id: 'pdf', label: 'PDF', icon: FileText },
+    { id: 'development', label: 'Development', icon: Code }, // Always show Development tab
   ];
 
-  if (isDev) tabs.push({ id: 'development', label: 'Development', icon: Code });
   tabs.sort((a, b) => a.label.localeCompare(b.label));
 
   const SectionTitle = ({ title, tooltip }: { title: string, tooltip?: string }) => (
@@ -302,22 +305,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               <div className="space-y-6">
                 <div>
                   <SectionTitle title="Modules" tooltip="Enable or disable optional features to customize your experience." />
-                  <div className="space-y-4">
-                    <Switch 
-                      label="Payment Methods" 
-                      description="Track spending across different payment methods." 
-                      isEnabled={settings.modules.paymentMethods.enabled} 
-                      onToggle={() => handleModuleToggle('paymentMethods')}
-                      icon={CreditCard}
-                    />
-                    <Switch 
-                      label="Debt Tracking" 
-                      description="Track debts and shared expenses." 
-                      isEnabled={settings.modules.debt?.enabled ?? false} 
-                      onToggle={() => handleModuleToggle('debt')}
-                      icon={Users}
-                    />
-                  </div>
+                  <ModulesComponent settings={settings} onToggle={handleModuleToggle} />
                 </div>
               </div>
             )}
@@ -432,94 +420,99 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 </div>
               </div>
             )}
-            {activeTab === 'development' && isDev && (
+            {activeTab === 'development' && (
               <div>
-                <div>
-                  <h3 className="text-lg font-medium text-font-1 mb-4">Development Tools</h3>
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-red/20 text-red">
-                          <Bug className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-font-1">Test Error Modal</p>
-                          <p className="text-sm text-font-2">Generate a fake error to test the error modal.</p>
-                        </div>
-                      </div>
-                      <Button variant="danger" onClick={handleGenerateError}>Generate Error</Button>
-                    </div>
-                  </div>
-                  
-                  <div className="h-px bg-border my-6" />
-                  
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-yellow/20 text-yellow">
-                          <Trash2 className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-font-1">Reset Datastore</p>
-                          <p className="text-sm text-font-2">Remove the datastore folder path from settings.</p>
-                        </div>
-                      </div>
-                      <Button variant="danger" onClick={handleRemoveDatastore}>Reset</Button>
-                    </div>
-                  </div>
-                  
-                  <div className="h-px bg-border my-6" />
-                  
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-red/20 text-red">
-                          <Trash2 className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-font-1">Reset All Settings</p>
-                          <p className="text-sm text-font-2">Clear all settings and quit the application.</p>
-                        </div>
-                      </div>
-                      <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
-                    </div>
-                  </div>
+                <WizardDevTools />
 
-                  <div className="h-px bg-border my-6" />
+                {isDev && (
+                  <>
+                    <div className="h-px bg-border my-6" />
 
-                  <div>
-                    <SectionTitle title="Mock Time" tooltip="Simulate a different date and time for testing recurring events." />
-                    <div className="space-y-4">
-                      <Switch
-                        label="Enable Mock Time"
-                        description="Override the system time with a custom date and time."
-                        isEnabled={settings.dev?.mockTime?.enabled ?? false}
-                        onToggle={handleMockTimeToggle}
-                        icon={Clock}
-                      />
-                      <div className={cn("grid grid-cols-2 gap-4 transition-opacity", !(settings.dev?.mockTime?.enabled) && "opacity-50 pointer-events-none")}>
-                        <Input
-                          type="date"
-                          label="Date"
-                          value={mockTimeDate}
-                          onChange={(e) => setMockTimeDate(e.target.value)}
-                          disabled={!settings.dev?.mockTime?.enabled}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 mr-4">
+                          <div className="p-2 rounded-lg bg-red/20 text-red">
+                            <Bug className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-font-1">Test Error Modal</p>
+                            <p className="text-sm text-font-2">Generate a fake error to test the error modal.</p>
+                          </div>
+                        </div>
+                        <Button variant="danger" onClick={handleGenerateError}>Generate Error</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="h-px bg-border my-6" />
+                    
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 mr-4">
+                          <div className="p-2 rounded-lg bg-yellow/20 text-yellow">
+                            <Trash2 className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-font-1">Reset Datastore</p>
+                            <p className="text-sm text-font-2">Remove the datastore folder path from settings.</p>
+                          </div>
+                        </div>
+                        <Button variant="danger" onClick={handleRemoveDatastore}>Reset</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="h-px bg-border my-6" />
+                    
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 mr-4">
+                          <div className="p-2 rounded-lg bg-red/20 text-red">
+                            <Trash2 className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-font-1">Reset All Settings</p>
+                            <p className="text-sm text-font-2">Clear all settings and quit the application.</p>
+                          </div>
+                        </div>
+                        <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-border my-6" />
+
+                    <div>
+                      <SectionTitle title="Mock Time" tooltip="Simulate a different date and time for testing recurring events." />
+                      <div className="space-y-4">
+                        <Switch
+                          label="Enable Mock Time"
+                          description="Override the system time with a custom date and time."
+                          isEnabled={settings.dev?.mockTime?.enabled ?? false}
+                          onToggle={handleMockTimeToggle}
+                          icon={Clock}
                         />
-                        <div className="flex items-end gap-2">
+                        <div className={cn("grid grid-cols-2 gap-4 transition-opacity", !(settings.dev?.mockTime?.enabled) && "opacity-50 pointer-events-none")}>
                           <Input
-                            type="time"
-                            label="Time"
-                            value={mockTimeTime}
-                            onChange={(e) => setMockTimeTime(e.target.value)}
+                            type="date"
+                            label="Date"
+                            value={mockTimeDate}
+                            onChange={(e) => setMockTimeDate(e.target.value)}
                             disabled={!settings.dev?.mockTime?.enabled}
-                            className="flex-1"
                           />
-                          <Button onClick={handleMockTimeSet} disabled={!settings.dev?.mockTime?.enabled}>Set</Button>
+                          <div className="flex items-end gap-2">
+                            <Input
+                              type="time"
+                              label="Time"
+                              value={mockTimeTime}
+                              onChange={(e) => setMockTimeTime(e.target.value)}
+                              disabled={!settings.dev?.mockTime?.enabled}
+                              className="flex-1"
+                            />
+                            <Button onClick={handleMockTimeSet} disabled={!settings.dev?.mockTime?.enabled}>Set</Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             )}
           </div>

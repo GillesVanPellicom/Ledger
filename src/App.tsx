@@ -1,30 +1,13 @@
-import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import MainLayout from './components/layout/MainLayout';
-import ReferenceDataPage from './pages/ReferenceDataPage';
-import ReceiptsPage from './pages/ReceiptsPage';
-import IncomePage from './pages/IncomePage';
-import ReceiptFormPage from './pages/ReceiptFormPage';
-import ReceiptViewPage from './pages/ReceiptViewPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import PaymentMethodsPage from './pages/PaymentMethodsPage';
-import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
-import EntitiesPage from './pages/EntitiesPage';
-import EntityDetailsPage from './pages/EntityDetailsPage';
-import WelcomeScreen from './components/layout/WelcomeScreen';
-import UserNameSetup from './components/layout/UserNameSetup';
-import SettingsModal from './components/settings/SettingsModal';
+import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useErrorStore } from './store/useErrorStore';
-import { useUIStore } from './store/useUIStore';
-import { incomeLogic } from './logic/incomeLogic';
-import { useQueryClient } from '@tanstack/react-query';
+import { WizardController } from './wizard/WizardController';
+import { MainApp } from './MainApp';
 
 function App() {
   const { showError } = useErrorStore();
-  const { settings, loading } = useSettingsStore();
-  const { isSettingsModalOpen, closeSettingsModal, settingsModalInitialTab } = useUIStore();
-  const queryClient = useQueryClient();
+  const { loading } = useSettingsStore();
+  const [wizardFinished, setWizardFinished] = useState(false);
 
   useEffect(() => {
     const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
@@ -44,77 +27,23 @@ function App() {
     };
   }, [showError]);
 
-  useEffect(() => {
-    // Only process schedules if we have a datastore path
-    if (!settings.datastore?.folderPath) {
-      return;
-    }
-
-    const processSchedules = async () => {
-      try {
-        await incomeLogic.processSchedules();
-        queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
-      } catch (error) {
-        showError(error as Error);
-      }
-    };
-
-    // Process on startup
-    processSchedules();
-
-    // Process every day at midnight
-    const now = new Date();
-    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-    const msToMidnight = midnight.getTime() - now.getTime();
-
-    const dailyTimer = setTimeout(() => {
-      processSchedules(); // First run at midnight
-      setInterval(processSchedules, 24 * 60 * 60 * 1000); // Then every 24 hours
-    }, msToMidnight);
-
-    return () => clearTimeout(dailyTimer);
-  }, [queryClient, showError, settings.datastore?.folderPath]);
-
   if (loading) {
     return null; // Or a loading spinner
   }
 
-  if (window.electronAPI) {
-    if (!settings.datastore.folderPath) {
-      return <WelcomeScreen />;
-    }
-    if (!settings.userName) {
-      return <UserNameSetup />;
-    }
+  // If we are in Electron, we might need to run the wizard.
+  // The wizard controller itself determines if it needs to show anything.
+  // If it finishes (or decides not to show anything), it calls onFinish.
+  // However, we need to know if we should even mount the WizardController.
+  // The spec says: "On app launch (before database initialization)... Check for existing wizard metadata... If empty, proceed directly to database initialization"
+  // But WizardController handles this logic inside its useEffect.
+  // So we can just render WizardController if we haven't finished it yet.
+  
+  if (window.electronAPI && !wizardFinished) {
+    return <WizardController onFinish={() => setWizardFinished(true)} />;
   }
 
-  return (
-    <>
-      <Router>
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<ReceiptsPage />} />
-            <Route path="income" element={<IncomePage />} />
-            <Route path="reference-data" element={<ReferenceDataPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="payment-methods" element={<PaymentMethodsPage />} />
-            <Route path="payment-methods/:id" element={<PaymentMethodDetailsPage />} />
-            <Route path="entities" element={<EntitiesPage />} />
-            <Route path="entities/:id" element={<EntityDetailsPage />} />
-            
-            <Route path="receipts/new" element={<ReceiptFormPage />} />
-            <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />
-            <Route path="receipts/view/:id" element={<ReceiptViewPage />} />
-          </Route>
-        </Routes>
-      </Router>
-      <SettingsModal 
-        isOpen={isSettingsModalOpen} 
-        onClose={closeSettingsModal}
-        initialTab={settingsModalInitialTab}
-      />
-    </>
-  );
+  return <MainApp />;
 }
 
 export default App;

@@ -1,0 +1,149 @@
+Ledger Versioned Preference Wizard — Monolithic Implementation Specification
+
+Purpose
+Implement a versioned preference elicitation system (“wizard”) for an Electron application. The system asks each preference question only once per semantic version of that question. The wizard runs on first launch, on updates, and when explicitly triggered via developer tools. Its goal is to establish thoughtful user-specific defaults without forcing users to rummage through settings later. This is not a tutorial and not limited to onboarding.
+
+Core invariant
+While the wizard is active, the application must not connect to, initialize, migrate, query, or otherwise interact with the database runtime. All preference changes, including datastore configuration, are allowed, but the database engine itself must remain completely inactive. Database initialization occurs only after the wizard finishes.
+
+Technology constraints
+The app is Electron. Persistent settings are stored using electron-store. The database runtime is separate and must be lazily initialized only after the wizard completes. Wizard code must not import or reference database modules.
+
+Conceptual model
+The wizard is a delivery mechanism for versioned questions. Each question represents a single preference decision and is asked only once per semantic version. Pages are merely the UI representation of questions.
+
+Question definition
+Each question has:
+	•	id: stable string identifier, never changes once shipped
+	•	version: integer, incremented only when the meaning or default of the question changes
+	•	appliesWhen(context): boolean determining whether the question is relevant
+	•	render(context): renders UI
+	•	apply(context): persists chosen value (usually to electron-store)
+
+Questions may immediately apply settings. No rollback is required.
+
+Asked-questions tracking
+Persist in electron-store a map of questionId → highestVersionAsked. A question should be asked if and only if question.version > storedAskedVersion. When the wizard finishes successfully, update the stored version for each question that was shown.
+
+Backward compatibility rule (existing deployments)
+There are already deployed versions of the app that do not have wizard versioning or asked-question tracking. Therefore, the following rule must be enforced: if no wizard state exists in electron-store (for example, no hasShownWelcome flag or no asked-questions map), the wizard must be shown in full. In other words, absence of prior wizard metadata implies the welcome flow has never been shown and must run.
+
+Wizard startup logic
+On app launch (before database initialization):
+	•	Load electron-store
+	•	Check for existing wizard metadata
+	•	If no wizard metadata exists, assume the welcome flow has never been shown and run the wizard
+	•	Otherwise, build the list of all available questions
+	•	Filter questions by appliesWhen(context)
+	•	Filter questions by version > asked version
+	•	If the resulting list is non-empty, launch the wizard
+	•	If empty, proceed directly to database initialization
+
+Wizard session
+The wizard maintains:
+	•	Ordered list of questions to ask
+	•	Current index
+	•	Shared context object containing already-known preferences (e.g. name, theme)
+
+Navigation rules:
+	•	Previous button available except on first question
+	•	Next button advances
+	•	On last question, Next becomes “Finish”
+	•	Display page index as “Page X / Y”, computed dynamically from the filtered list
+
+Hello page (first question)
+This is always the first question when the wizard runs. It has an id and version like any other question.
+Design requirements:
+	•	Visually large and calm
+	•	Not bombastic, flashy, or noisy
+	•	No animation-heavy hero treatment
+	•	A simple centered greeting such as “Welcome to Ledger”
+	•	Optional minimal supporting text
+	•	A single primary button labeled “Get started”
+	•	No inputs
+	•	apply() performs no state changes other than marking the question as asked
+
+Name question
+Asks what the user should be called. Stores the value immediately in electron-store. The name is used for light personalisation in subsequent questions. Personalisation must be restrained and respectful, used mainly in headings or introductory lines and never in error messages.
+
+Theme question
+Allows choosing UI theme. Theme changes apply immediately. The question may greet the user by name, for example: “Hi Robert, what theme would you like?”. Stores the theme choice in electron-store.
+
+Number formatting question
+Asks how decimals or number formatting should be displayed. Applies immediately and stores the preference in electron-store.
+
+Modules question
+This question renders the existing “Modules” preferences page, which must be factored out into a standalone reusable component. Modules are optional functional capabilities (for example, debt tracking) that not all users need. Each module provides:
+	•	Name
+	•	Short explainer
+	•	Enable/disable toggle
+
+Defaults are pre-selected thoughtfully. Changes are written immediately to electron-store. The wizard explains modules succinctly as optional ways to add or disable functionality and notes they can be changed later.
+
+Datastore question
+Asks the user to choose a datastore folder. Explains clearly:
+	•	This is where all data, images, and backups are stored
+	•	A backup is created every 5 saves
+	•	Up to 5 backups are kept
+	•	The oldest backup is deleted when the limit is exceeded
+	•	These settings can be changed later under Settings → Data
+
+The selected path and related backup settings are written to electron-store immediately. Filesystem validation (exists, writable) is allowed. No database initialization, connection, migration, or query is allowed.
+
+Completion question
+Final page with a friendly confirmation such as “You’re all set. Welcome to Ledger.” The Next button is replaced with “Finish”. No additional settings are changed here.
+
+Update behavior
+Updates are handled automatically by the versioned-question system. Patch notes are implemented as a normal question with its own id and version. It displays scrollable release notes and applies no settings. When the meaning or default of an existing preference changes, increment that question’s version so it is re-asked. Questions with unchanged meaning are never shown again.
+
+Developer tools
+Under Settings → Development, provide tooling to:
+	•	Force-run the wizard
+	•	Reset all asked-question versions
+	•	Reset specific question IDs
+	•	Simulate an upgrade by lowering stored asked versions
+	•	Start the wizard at a specific question
+
+These tools exist solely for testing and QA.
+
+File structure under /src
+Organize wizard-related code clearly and modularly under /src as follows:
+	•	/src/wizard/
+	•	WizardController.ts (or equivalent): entry point, startup logic, sequencing, navigation
+	•	WizardSession.ts: session state, current index, context handling
+	•	WizardContext.ts: shared context model (name, theme, formatting, etc.)
+	•	questionRegistry.ts: central list of all wizard questions
+	•	/src/wizard/questions/
+	•	HelloQuestion.ts
+	•	NameQuestion.ts
+	•	ThemeQuestion.ts
+	•	NumberFormatQuestion.ts
+	•	ModulesQuestion.ts
+	•	DatastoreQuestion.ts
+	•	CompletionQuestion.ts
+	•	PatchNotesQuestion.ts
+	•	/src/wizard/components/
+	•	WizardShell.tsx: layout, navigation buttons, page counter
+	•	WizardHeader.tsx
+	•	WizardFooter.tsx
+	•	Reused UI components specific to wizard pages
+	•	/src/preferences/modules/
+	•	ModulesComponent.tsx (factored-out reusable modules UI)
+	•	ModuleExplainers.ts or similar data definitions
+	•	/src/settings/
+	•	electronStore.ts: store initialization and schema
+	•	wizardState.ts: asked-questions persistence and helpers
+	•	/src/database/
+	•	(database runtime code; must not be imported by wizard code)
+
+Database initialization
+Only after the wizard finishes successfully:
+	•	Read datastore path and settings from electron-store
+	•	Initialize the database runtime
+	•	Run migrations
+	•	Start background workers
+
+At no point before Finish may the database runtime be constructed or touched.
+
+Design philosophy
+The wizard exists to make defaults explicit, respectful, and intentional. Each question should be simple, calm, and focused. The “Hello” page must feel welcoming and confident without being loud or theatrical. No question should be re-asked unless its meaning truly changes. The system must scale cleanly with future features and minimize long-term settings clutter.

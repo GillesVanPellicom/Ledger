@@ -47,5 +47,23 @@
     "decimalSeparator": "comma"
   },
   "themeColor": "#007AFF",
-  "headerColor": "#8b5cf6"
+  "headerColor": "#8b5cf6",
+  "wizard": {
+    "askedQuestions": {
+      "hello": 1,
+      "name": 1,
+      "theme": 1,
+      "numberFormat": 1,
+      "modules": 1,
+      "datastore": 1,
+      "completion": 1
+    },
+    "inProgress": false,
+    "debugConfig": {
+      "skipHello": false,
+      "autoApplyDefaults": true,
+      "verboseLogging": true,
+      "ignoreHistory": true
+    }
+  }
 }
