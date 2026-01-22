@@ -20,11 +20,11 @@ const MainLayout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100">
+    <div className="flex h-screen w-full overflow-hidden bg-bg text-font-1">
       <Sidenav pendingIncomeCount={toCheckCount} />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300">
-        <div className="absolute top-0 bottom-0 right-0 w-[9px] border-l border-gray-200 dark:border-zinc-800 z-[60] pointer-events-none" />
+        <div className="absolute top-0 bottom-0 right-0 w-[9px] border-l border-border z-[60] pointer-events-none" />
         <div className="flex-1 overflow-y-scroll scrollbar-gutter-stable relative">
           <Outlet />
         </div>
@@ -37,7 +37,7 @@ const MainLayout: React.FC = () => {
 
         {settings.dev?.mockTime?.enabled && settings.dev.mockTime.date && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[100] pointer-events-none">
-            <div className="bg-red-100 dark:bg-red-900/80 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 backdrop-blur-sm">
+            <div className="bg-red/10 border border-red/20 text-red px-4 py-2 rounded-full shadow-lg flex items-center gap-2 backdrop-blur-sm">
               <Clock className="h-4 w-4" />
               <span className="text-sm font-medium">
                 Mock Time: {format(new Date(settings.dev.mockTime.date), 'MMM d, yyyy HH:mm')}

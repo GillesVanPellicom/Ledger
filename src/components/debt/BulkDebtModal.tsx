@@ -140,12 +140,12 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
                                                                                        disabled={totalShares === 0}>Apply</Button></>}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">This will apply a 'Split Total' debt configuration to
+          <p className="text-sm text-font-2">This will apply a 'Split Total' debt configuration to
                                                                   all selected expenses. Any existing debt assignments
                                                                   on these expenses will be affected.</p>
           <div className="space-y-2">
             <Card className="flex items-center justify-between p-3">
-              <span className="font-medium">{settings.userName || 'User'} (Me)</span>
+              <span className="font-medium text-font-1">{settings.userName || 'User'} (Me)</span>
               <div className="flex items-center gap-3">
                 <StepperInput
                   value={String(ownShares)}
@@ -157,7 +157,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
                 />
                 <div className="w-8 h-8 flex items-center justify-center">
                   <Tooltip content="You cannot remove yourself.">
-                    <Lock className="h-4 w-4 text-gray-400"/>
+                    <Lock className="h-4 w-4 text-font-2"/>
                   </Tooltip>
                 </div>
               </div>
@@ -165,7 +165,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
 
             {receiptSplits.map(split => (
               <Card key={split.key} className="flex items-center justify-between p-3">
-                <span className="font-medium">{split.DebtorName}</span>
+                <span className="font-medium text-font-1">{split.DebtorName}</span>
                 <div className="flex items-center gap-3">
                   <StepperInput
                     value={String(split.SplitPart)}
@@ -178,7 +178,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
                   <Button variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveSplit(split.key)}
-                          className="text-danger hover:text-danger/90">
+                          className="text-red hover:text-red/80">
                     <X className="h-4 w-4"/>
                   </Button>
                 </div>
@@ -198,7 +198,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
               searchPlaceholder="Search for a debtor..."
               noResultsText="No debtors found."
             />
-            <div className="text-sm text-gray-500 text-right">Total Shares: {totalShares}</div>
+            <div className="text-sm text-font-2 text-right">Total Shares: {totalShares}</div>
           </div>
         </div>
       </Modal>

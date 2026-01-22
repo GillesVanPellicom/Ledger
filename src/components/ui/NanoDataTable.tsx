@@ -20,7 +20,7 @@ const NanoDataTable: React.FC<NanoDataTableProps> = ({
   return (
     <div className={cn("overflow-x-auto", className)}>
       <table className="w-full text-sm">
-        <thead className="text-left text-gray-500">
+        <thead className="text-left text-font-2">
           <tr>
             {headers.map((header, index) => (
               <th key={index} className={cn("p-2", header.className)}>
@@ -29,10 +29,10 @@ const NanoDataTable: React.FC<NanoDataTableProps> = ({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y dark:divide-gray-800 border-y border-gray-200 dark:border-gray-800">
+        <tbody className="divide-y divide-border border-y border-border">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={headers.length} className="p-4 py-8 text-center text-gray-500">
+              <td colSpan={headers.length} className="p-4 py-8 text-center text-font-2">
                 <div className="flex flex-col items-center gap-2 justify-center">
                   {emptyStateIcon}
                   <span>{emptyStateText}</span>
@@ -43,7 +43,7 @@ const NanoDataTable: React.FC<NanoDataTableProps> = ({
             rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="p-2">
+                  <td key={cellIndex} className="p-2 text-font-1">
                     {cell}
                   </td>
                 ))}

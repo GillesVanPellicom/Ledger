@@ -73,7 +73,7 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({isOpen, onClose,
     >
       <div className="space-y-4">
         {error &&
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red text-sm rounded-lg">{error}</div>}
+          <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{error}</div>}
         <Input label="Method Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. PayPal"/>
 
         <VisibilityCard 

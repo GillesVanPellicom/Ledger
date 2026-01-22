@@ -75,7 +75,7 @@ const IncomeSourceModal: React.FC<IncomeSourceModalProps> = ({ isOpen, onClose, 
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <div className="space-y-4">
-        {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{error}</div>}
+        {error && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{error}</div>}
         <Input
           label="Source Name"
           value={name}

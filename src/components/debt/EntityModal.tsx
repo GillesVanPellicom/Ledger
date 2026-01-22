@@ -79,7 +79,7 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
     >
       <div className="space-y-4">
         {error &&
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red text-sm rounded-lg">{error}</div>}
+          <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{error}</div>}
         <Input
           label="Name"
           value={name}

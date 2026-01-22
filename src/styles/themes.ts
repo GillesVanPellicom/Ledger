@@ -99,7 +99,7 @@ export const themes: Record<string, Theme> = {
       BG_COLOR_MODAL: '#FFFF00', // Yellow
       BORDER_COLOR: '#006fff', // Lime
       ACCENT_COLOR: '#11ff00', // Red
-      FONT_COLOR_1: '#000080', // Navy
+      FONT_COLOR_1: '#11ff00', // Navy
       FONT_COLOR_2: '#800080', // Purple
       FIELD_COLOR: '#FFA500', // Orange
       FIELD_COLOR_DISABLED: '#808080', // Gray (explicitly requested no gray, but for disabled maybe ok? User said "no gray or white". Let's use Brown)
@@ -122,7 +122,7 @@ themes.development.colors = {
   BORDER_COLOR: '#006fff', // Lime
   ACCENT_COLOR: '#11ff00', // OrangeRed (No Blue Accent)
   FONT_COLOR_1: '#000000', // Black (for contrast on vibrant backgrounds)
-  FONT_COLOR_2: '#000080', // Navy
+  FONT_COLOR_2: '#11ff00', // Navy
   FIELD_COLOR: '#FFA500', // Orange
   FIELD_COLOR_DISABLED: '#8B4513', // SaddleBrown
   FIELD_COLOR_HOVER: '#FF1493', // DeepPink

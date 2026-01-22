@@ -68,13 +68,13 @@ const Sidenav: React.FC = () => {
   return (
     <aside
       className={cn(
-        "h-full bg-gray-50 dark:bg-zinc-950 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out z-20",
+        "h-full bg-bg-2 border-r border-border flex flex-col transition-all duration-300 ease-in-out z-20",
         isSidenavCollapsed ? "w-14" : "w-64"
       )}
     >
       <div
         className={cn(
-          "flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0 transition-all duration-300",
+          "flex items-center border-b border-border shrink-0 transition-all duration-300",
           isSidenavCollapsed ? "justify-center px-2" : "justify-between px-4"
         )}
         style={{ height: '86px' }}
@@ -87,7 +87,7 @@ const Sidenav: React.FC = () => {
         </span>
         <button
           onClick={toggleSidenav}
-          className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 transition-colors shrink-0"
+          className="p-1.5 rounded-md hover:bg-field-hover text-font-2 transition-colors shrink-0"
         >
           {isSidenavCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>
@@ -105,7 +105,7 @@ const Sidenav: React.FC = () => {
                 isSidenavCollapsed ? "justify-center gap-0" : "justify-start gap-3",
                 isActive
                   ? "bg-accent text-white shadow-md"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
+                  : "text-font-2 hover:bg-field-hover hover:text-font-1"
               )}
               title={isSidenavCollapsed ? item.label : undefined}
             >
@@ -117,7 +117,7 @@ const Sidenav: React.FC = () => {
                 {item.label}
               </span>
               {item.badge !== undefined && (
-                <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full tabular-nums shadow-md pointer-events-none z-10">
+                <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 flex items-center justify-center bg-red text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full tabular-nums shadow-md pointer-events-none z-10">
                   {item.badge}
                 </span>
               )}
@@ -126,11 +126,11 @@ const Sidenav: React.FC = () => {
         })}
       </nav>
 
-      <div className="p-2 border-t border-gray-200 dark:border-gray-800">
+      <div className="p-2 border-t border-border">
         <button
           onClick={() => openSettingsModal()}
           className={cn(
-            "flex items-center h-10 px-2.5 w-full rounded-lg transition-all duration-300 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 overflow-hidden",
+            "flex items-center h-10 px-2.5 w-full rounded-lg transition-all duration-300 text-font-2 hover:bg-field-hover hover:text-font-1 overflow-hidden",
             isSidenavCollapsed ? "justify-center gap-0" : "justify-start gap-3"
           )}
           title="Settings"

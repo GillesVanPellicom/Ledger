@@ -154,8 +154,8 @@ const TopProducts: React.FC = () => {
       width: '70%',
       render: (row: ProductSpending) => (
         <div>
-          <p className="font-medium">{row.ProductName}{row.ProductSize ? ` - ${row.ProductSize}${row.ProductUnitType || ''}` : ''}</p>
-          <p className="text-xs text-gray-500">{row.ProductBrand || ''}</p>
+          <p className="font-medium text-font-1">{row.ProductName}{row.ProductSize ? ` - ${row.ProductSize}${row.ProductUnitType || ''}` : ''}</p>
+          <p className="text-xs text-font-2">{row.ProductBrand || ''}</p>
         </div>
       )
     },
@@ -190,8 +190,8 @@ const TopProducts: React.FC = () => {
 
   const CardHeader = ({ title, tooltipText }: { title: string, tooltipText: string }) => (
     <div className="flex items-center gap-2">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <Tooltip content={tooltipText}><Info className="h-5 w-5 text-gray-400" /></Tooltip>
+      <h2 className="text-lg font-semibold text-font-1">{title}</h2>
+      <Tooltip content={tooltipText}><Info className="h-5 w-5 text-font-2" /></Tooltip>
     </div>
   );
 
@@ -233,7 +233,7 @@ const TopProducts: React.FC = () => {
         {loading ? (
           <div className="h-64 flex items-center justify-center w-full"><Spinner /></div>
         ) : data.length === 0 ? (
-          <div className="h-64 flex flex-col items-center justify-center text-gray-500 gap-2">
+          <div className="h-64 flex flex-col items-center justify-center text-font-2 gap-2">
             <FileSearch className="h-12 w-12 opacity-50" />
             <p>No data for this period.</p>
           </div>

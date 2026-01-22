@@ -14,16 +14,16 @@ interface FilterOptionProps {
 
 export const FilterOption: React.FC<FilterOptionProps> = ({ title, onReset, children, className, isModified = false }) => {
   return (
-    <div className={`flex flex-col gap-2 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 ${className || ''}`}>
+    <div className={`flex flex-col gap-2 py-3 border-b border-border last:border-0 ${className || ''}`}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{title}</span>
+        <span className="text-sm font-medium text-font-1">{title}</span>
         {onReset && (
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={onReset} 
             disabled={!isModified}
-            className="text-xs h-6 px-2 underline decoration-gray-400 underline-offset-2 disabled:no-underline disabled:text-gray-400"
+            className="text-xs h-6 px-2 underline decoration-font-2 underline-offset-2 disabled:no-underline disabled:text-font-2"
           >
             Reset
           </Button>
@@ -70,7 +70,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
               size="icon"
               onClick={onResetAll} 
               disabled={!hasActiveFilters}
-              className="text-gray-500"
+              className="text-font-2"
             >
               <RotateCcw className="h-4 w-4" />
             </Button>

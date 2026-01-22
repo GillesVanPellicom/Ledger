@@ -53,7 +53,7 @@ const DataGrid = <T extends { [key: string]: any }>({
   const items = Array.from({ length: numToRender }, (_, i) => data[i] || null);
 
   return (
-    <div ref={gridRef} className={cn("rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden", className)}>
+    <div ref={gridRef} className={cn("rounded-lg border border-border overflow-hidden", className)}>
       <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {items.map((item, index) => (
           <div
@@ -61,10 +61,10 @@ const DataGrid = <T extends { [key: string]: any }>({
             className={cn(
               "p-4",
               // Add top border to items not in the first row
-              index >= cols && "border-t border-gray-200 dark:border-gray-800",
+              index >= cols && "border-t border-border",
               // Add left border to items not in the first column
-              index % cols !== 0 && "border-l border-gray-200 dark:border-gray-800",
-              { "cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50": !!item && !!onItemClick },
+              index % cols !== 0 && "border-l border-border",
+              { "cursor-pointer transition-colors hover:bg-field-hover": !!item && !!onItemClick },
             )}
             onClick={() => item && onItemClick && onItemClick(item)}
           >
@@ -72,7 +72,7 @@ const DataGrid = <T extends { [key: string]: any }>({
               renderItem(item)
             ) : (
               <div className={cn("h-full w-full flex items-center justify-center", !disableMinHeight && "min-h-[5rem]")}>
-                <Minus className="h-8 w-8 text-gray-300 dark:text-gray-700" />
+                <Minus className="h-8 w-8 text-field-disabled" />
               </div>
             )}
           </div>

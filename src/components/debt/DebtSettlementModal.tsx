@@ -102,8 +102,8 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Settle</Button></>}
     >
       <div className="space-y-4">
-        {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red text-sm rounded-lg">{error}</div>}
-        <p>You are about to mark a debt of <span className="font-bold">€{debtInfo.amount.toFixed(2)}</span> as paid.</p>
+        {error && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{error}</div>}
+        <p className="text-font-1">You are about to mark a debt of <span className="font-bold">€{debtInfo.amount.toFixed(2)}</span> as paid.</p>
         <DatePicker
           label="Payment Date"
           selected={paidDate}

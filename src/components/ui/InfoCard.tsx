@@ -13,25 +13,25 @@ interface InfoCardProps {
 
 const variantConfig = {
   info: {
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    bg: 'bg-blue/10',
     icon: Info,
-    iconColor: 'text-blue-500',
-    titleColor: 'text-blue-800 dark:text-blue-200',
-    messageColor: 'text-blue-700 dark:text-blue-300',
+    iconColor: 'text-blue',
+    titleColor: 'text-blue',
+    messageColor: 'text-blue/80',
   },
   warning: {
-    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+    bg: 'bg-yellow/10',
     icon: AlertTriangle,
-    iconColor: 'text-yellow-500',
-    titleColor: 'text-yellow-800 dark:text-yellow-200',
-    messageColor: 'text-yellow-700 dark:text-yellow-300',
+    iconColor: 'text-yellow',
+    titleColor: 'text-yellow',
+    messageColor: 'text-yellow/80',
   },
   danger: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
+    bg: 'bg-red/10',
     icon: AlertCircle,
-    iconColor: 'text-red-500',
-    titleColor: 'text-red-800 dark:text-red-200',
-    messageColor: 'text-red-700 dark:text-red-300',
+    iconColor: 'text-red',
+    titleColor: 'text-red',
+    messageColor: 'text-red/80',
   },
 };
 

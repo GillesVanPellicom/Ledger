@@ -39,8 +39,8 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   const displaySign = showSign ? sign : '';
 
   const colorClass = colored ? cn(
-    isPositive && colorPositive && "text-green-600 dark:text-green-400",
-    isNegative && colorNegative && "text-red-600 dark:text-red-400"
+    isPositive && colorPositive && "text-green",
+    isNegative && colorNegative && "text-red"
   ) : "";
 
   return (

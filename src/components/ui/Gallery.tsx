@@ -50,7 +50,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], onDelete }) => {
         {images.map((img, idx) => (
           <div 
             key={idx} 
-            className="group relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900 cursor-pointer"
+            className="group relative aspect-square rounded-lg overflow-hidden border border-border bg-field-disabled cursor-pointer"
             onClick={() => openLightbox(idx)}
           >
             <img 
@@ -67,7 +67,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [], onDelete }) => {
                   e.stopPropagation();
                   onDelete(img, idx);
                 }}
-                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                className="absolute top-2 right-2 p-1 bg-red text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red/80"
               >
                 <X className="h-4 w-4" />
               </button>

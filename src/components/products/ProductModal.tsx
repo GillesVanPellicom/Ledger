@@ -162,13 +162,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
         }
       >
         <div className="space-y-4">
-          {errors.form && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">{errors.form}</div>}
+          {errors.form && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{errors.form}</div>}
           <Input label="Product Name" name="ProductName" value={formData.ProductName} onChange={handleInputChange} placeholder="e.g. gouda cheese" error={errors.ProductName} />
           
           <div className="relative py-2">
             <Separator />
             <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-              <span className="px-2 bg-white dark:bg-black text-sm text-gray-500">Optional Details</span>
+              <span className="px-2 bg-bg text-sm text-font-2">Optional Details</span>
             </div>
           </div>
 
@@ -176,7 +176,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
           
           <div className="flex items-end gap-2">
             <div className="flex-grow">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+              <label className="block text-sm font-medium text-font-1 mb-1">Category</label>
               <Combobox
                 options={categories}
                 value={formData.CategoryID}

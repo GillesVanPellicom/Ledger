@@ -32,7 +32,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
         }
 
         const variantClasses = variant === 'ghost-bordered' 
-          ? 'border border-gray-200 dark:border-gray-700 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50' 
+          ? 'border border-border bg-transparent hover:bg-field-hover'
           : '';
 
         const applyStyles = (element: React.ReactElement<any>): React.ReactElement<any> => {
