@@ -75,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="absolute left-0 right-0 overflow-hidden"
           style={{ height: `${minHeight}px`, top: '0px' }}
         >
-          <div className="absolute inset-0 bg-white dark:bg-black" />
+          <div className="absolute inset-0 bg-bg dark:bg-black" />
           <BackgroundGradientAnimation
             gradientBackgroundStart={isDarkMode ? '#000000' : '#FFFFFF'}
             gradientBackgroundEnd={isDarkMode ? '#000000' : '#FFFFFF'}
@@ -139,9 +139,9 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               <div className="flex items-center gap-8">
                 <div className="relative">
-                  <h1 className="text-2xl font-bold">{title}</h1>
+                  <h1 className="text-2xl font-bold text-font-1">{title}</h1>
                   {subtitle && (
-                    <p className="absolute top-full left-0 text-sm text-gray-500 whitespace-nowrap">{subtitle}</p>
+                    <p className="absolute top-full left-0 text-sm text-font-2 whitespace-nowrap">{subtitle}</p>
                   )}
                 </div>
                 {variant === 'tabs' ? (
@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Sticky Border Element */}
       <div 
-        className="sticky z-40 border-b border-gray-200 dark:border-gray-800 pointer-events-none"
+        className="sticky z-40 border-b border-border pointer-events-none"
         style={{ 
           top: `${rowHeight * 2}px`, 
           height: '0px',

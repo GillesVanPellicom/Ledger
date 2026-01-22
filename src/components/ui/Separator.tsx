@@ -6,7 +6,7 @@ interface SeparatorProps {
 }
 
 const Separator: React.FC<SeparatorProps> = ({ className }) => {
-  return <hr className={cn('border-t border-gray-200 dark:border-gray-800', className)} />;
+  return <hr className={cn('border-t border-border', className)} />;
 };
 
 export default Separator;

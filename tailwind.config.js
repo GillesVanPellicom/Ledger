@@ -54,17 +54,48 @@ export default {
       colors: {
         // Replace the default gray with zinc for a more neutral dark theme
         gray: colors.zinc,
-        background: {
-          light: '#FFFFFF',
-          dark: '#000000',
+        bg: {
+          DEFAULT: 'var(--color-bg)',
+          2: 'var(--color-bg-2)',
+          modal: 'var(--color-bg-modal)',
+        },
+        border: {
+          DEFAULT: 'var(--color-border)',
         },
         accent: {
-          DEFAULT: '#007AFF', // macOS Blue
-          hover: '#0062C4',
+          DEFAULT: 'var(--color-accent)',
+          hover: 'var(--color-accent)', // We might want to compute a hover color or use opacity
+        },
+        font: {
+          1: 'var(--color-font-1)',
+          2: 'var(--color-font-2)',
+        },
+        field: {
+          DEFAULT: 'var(--color-field)',
+          disabled: 'var(--color-field-disabled)',
+          hover: 'var(--color-field-hover)',
+        },
+        blue: {
+          DEFAULT: 'var(--color-blue)',
+        },
+        green: {
+          DEFAULT: 'var(--color-green)',
+        },
+        red: {
+          DEFAULT: 'var(--color-red)',
+        },
+        yellow: {
+          DEFAULT: 'var(--color-yellow)',
+        },
+        hyperlink: {
+          DEFAULT: 'var(--color-hyperlink)',
+        },
+        text: {
+          disabled: 'var(--color-text-disabled)',
         },
         danger: {
-          DEFAULT: '#FF3B30',
-          hover: '#D73329',
+          DEFAULT: 'var(--color-red)',
+          hover: 'var(--color-red)', // Simplified for now
         }
       }
     },

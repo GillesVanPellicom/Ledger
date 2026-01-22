@@ -17,7 +17,24 @@
       rgba(0, 0, 0, 0.39) 59%,
       rgba(255, 255, 255, 0.27) 100%
     );
-    --color-accent: #007AFF; /* Default macOS Blue */
+
+    /* Default Theme Variables (Light) */
+    --color-bg: #FFFFFF;
+    --color-bg-2: #F9FAFB;
+    --color-bg-modal: #FFFFFF;
+    --color-border: #E5E7EB;
+    --color-accent: #007AFF;
+    --color-font-1: #111827;
+    --color-font-2: #4B5563;
+    --color-field: #FFFFFF;
+    --color-field-disabled: #F3F4F6;
+    --color-field-hover: #F9FAFB;
+    --color-blue: #3B82F6;
+    --color-green: #22C55E;
+    --color-red: #EF4444;
+    --color-yellow: #EAB308;
+    --color-hyperlink: #2563EB;
+    --color-text-disabled: #9CA3AF;
   }
 
   html {
@@ -25,7 +42,11 @@
   }
 
   body {
-    @apply bg-background-light text-gray-900 dark:bg-background-dark dark:text-gray-100 transition-colors duration-200;
+    @apply bg-bg text-font-1 transition-colors duration-200;
+  }
+
+  a {
+    @apply text-hyperlink hover:underline;
   }
 
   /* Modern Scrollbar */
@@ -52,7 +73,7 @@
 
   /* Checkbox Accent */
   input[type="checkbox"] {
-    @apply accent-accent h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent;
+    @apply accent-accent h-4 w-4 rounded border-border text-accent focus:ring-accent;
   }
 
   /* Number Input Spinners */
@@ -67,11 +88,11 @@
   .text-inverted {
     @apply text-white mix-blend-difference;
   }
-  .text-red {
-    @apply text-red-500;
+  .text-red-custom {
+    color: var(--color-red);
   }
-  .text-green {
-    @apply text-green-500;
+  .text-green-custom {
+    color: var(--color-green);
   }
 }
 

@@ -134,7 +134,7 @@ const Modal: React.FC<ModalProps> = ({
       <div 
         onTransitionEnd={handleTransitionEnd}
         className={cn(
-          "relative w-full transform rounded-xl bg-white dark:bg-zinc-950 text-left shadow-xl transition-all duration-300 flex flex-col max-h-[90vh] border border-gray-200 dark:border-zinc-800",
+          "relative w-full transform rounded-xl bg-bg-modal text-left shadow-xl transition-all duration-300 flex flex-col max-h-[90vh] border border-border",
           sizes[size],
           isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
           className
@@ -150,15 +150,15 @@ const Modal: React.FC<ModalProps> = ({
           }
         }}
       >
-        <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-gray-50 dark:bg-zinc-950 rounded-t-xl">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-          <button onClick={onClose} className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500">
+        <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-bg-2 rounded-t-xl">
+          <h3 className="text-lg font-semibold text-font-1">{title}</h3>
+          <button onClick={onClose} className="rounded-full p-1 hover:bg-field-hover transition-colors text-font-2">
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
         {footer && (
-          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-gray-50 dark:bg-zinc-950 rounded-b-xl">
+          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-bg-2 rounded-b-xl">
             {footer}
           </div>
         )}
@@ -211,7 +211,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       </>
     }
   >
-    {children ? children : <p className="text-gray-600 dark:text-gray-300">{message}</p>}
+    {children ? children : <p className="text-font-2">{message}</p>}
   </Modal>
 );
 

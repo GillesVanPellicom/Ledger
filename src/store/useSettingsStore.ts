@@ -1,6 +1,7 @@
 import {create} from 'zustand';
 import {devtools} from 'zustand/middleware';
 import {Settings} from '../types';
+import {themes} from '../styles/themes';
 
 interface SettingsState {
   settings: Settings;
@@ -8,6 +9,7 @@ interface SettingsState {
   setSettings: (settings: Settings) => void;
   updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
   loadSettings: () => Promise<void>;
+  applyTheme: (themeId: string) => void;
 }
 
 const initialSettings: Settings = {
@@ -68,6 +70,35 @@ export const useSettingsStore = create<SettingsState>()(
 
       setSettings: (settings) => set({settings}, false, 'setSettings'),
 
+      applyTheme: (themeId: string) => {
+        const theme = themes[themeId] || themes.light;
+        const root = document.documentElement;
+
+        // Apply CSS variables
+        Object.entries(theme.colors).forEach(([key, value]) => {
+          // Remove _COLOR suffix to match index.css variable names
+          // e.g. BG_COLOR -> bg, BG_COLOR_2 -> bg-2
+          const normalizedKey = key.replace('_COLOR', '');
+          const cssVarName = `--color-${normalizedKey.toLowerCase().replace(/_/g, '-')}`;
+          root.style.setProperty(cssVarName, value);
+        });
+
+        // Handle dark mode class for Tailwind
+        if (themeId === 'dark') {
+          root.classList.add('dark');
+        } else if (themeId === 'light') {
+          root.classList.remove('dark');
+        } else {
+           // For other themes, we might want to decide if they are "dark" or "light" based on background color
+           // For now, let's assume non-dark themes are light-ish, or we can check brightness.
+           // But since we are overriding all colors with CSS variables, the 'dark' class might only affect
+           // some hardcoded tailwind classes if any remain.
+           // Let's remove 'dark' class for custom themes to avoid confusion, or maybe add it if background is dark.
+           // For simplicity, let's stick to 'dark' class only for 'dark' theme for now, or check system preference for 'system'.
+           root.classList.remove('dark');
+        }
+      },
+
       loadSettings: async () => {
         set({loading: true}, false, 'loadSettings/start');
         try {
@@ -81,43 +112,48 @@ export const useSettingsStore = create<SettingsState>()(
             }
           }
 
-          // Apply theme immediately
-          const theme = loadedSettings.theme || initialSettings.theme;
-          if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-          } else if (theme === 'light') {
-            document.documentElement.classList.remove('dark');
-          } else {
-            // Handle 'system' theme
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-              document.documentElement.classList.add('dark');
-            } else {
-              document.documentElement.classList.remove('dark');
-            }
-          }
-
-          // Apply accent color immediately
-          const accentColor = loadedSettings.themeColor || initialSettings.themeColor;
-          if (accentColor) {
-            document.documentElement.style.setProperty('--color-accent', accentColor);
-          }
-
-          // Deep merge to ensure new settings are not lost
-          set((state) => ({
-            settings: {
-              ...state.settings,
+          const currentSettings = {
+              ...initialSettings,
               ...loadedSettings,
-              modules: {...state.settings.modules, ...loadedSettings.modules},
-              pdf: {...state.settings.pdf, ...loadedSettings.pdf},
-              backup: {...state.settings.backup, ...loadedSettings.backup},
-              paymentMethodStyles: {...state.settings.paymentMethodStyles, ...loadedSettings.paymentMethodStyles},
-              datastore: {...state.settings.datastore, ...loadedSettings.datastore},
-              receipts: {...state.settings.receipts, ...loadedSettings.receipts},
-              dev: {...state.settings.dev, ...loadedSettings.dev},
-              formatting: {...state.settings.formatting, ...loadedSettings.formatting},
-            },
+              modules: {...initialSettings.modules, ...loadedSettings.modules},
+              pdf: {...initialSettings.pdf, ...loadedSettings.pdf},
+              backup: {...initialSettings.backup, ...loadedSettings.backup},
+              paymentMethodStyles: {...initialSettings.paymentMethodStyles, ...loadedSettings.paymentMethodStyles},
+              datastore: {...initialSettings.datastore, ...loadedSettings.datastore},
+              receipts: {...initialSettings.receipts, ...loadedSettings.receipts},
+              dev: {...initialSettings.dev, ...loadedSettings.dev},
+              formatting: {...initialSettings.formatting, ...loadedSettings.formatting},
+          };
+
+          // Apply theme immediately
+          const themeId = currentSettings.theme || 'light';
+          if (themeId === 'system') {
+             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+               get().applyTheme('dark');
+             } else {
+               get().applyTheme('light');
+             }
+          } else {
+             get().applyTheme(themeId);
+          }
+
+          // Apply accent color override if it exists and we are not using a strict theme that forbids it?
+          // The prompt says "When a theme is selected, update all CSS variables live".
+          // But we also have an accent color picker.
+          // If the user picks a theme, it sets ACCENT_COLOR.
+          // If the user picks an accent color, it should probably override the theme's accent color.
+          // Let's allow the accent color setting to override the theme's accent color if it's explicitly set by the user
+          // distinct from the theme default.
+          // However, the current implementation stores themeColor separately.
+          // Let's apply it after the theme.
+          if (currentSettings.themeColor) {
+            document.documentElement.style.setProperty('--color-accent', currentSettings.themeColor);
+          }
+
+          set({
+            settings: currentSettings,
             loading: false,
-          }), false, 'loadSettings/success');
+          }, false, 'loadSettings/success');
         } catch (error) {
           console.error("Failed to load settings:", error);
           set({loading: false}, false, 'loadSettings/error');
@@ -132,17 +168,15 @@ export const useSettingsStore = create<SettingsState>()(
 
         // Apply theme if changed
         if (newSettings.theme) {
-          if (newSettings.theme === 'dark') {
-            document.documentElement.classList.add('dark');
-          } else if (newSettings.theme === 'light') {
-            document.documentElement.classList.remove('dark');
-          } else {
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-              document.documentElement.classList.add('dark');
-            } else {
-              document.documentElement.classList.remove('dark');
-            }
-          }
+           if (newSettings.theme === 'system') {
+             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+               get().applyTheme('dark');
+             } else {
+               get().applyTheme('light');
+             }
+           } else {
+             get().applyTheme(newSettings.theme);
+           }
         }
 
         // Apply accent color if changed

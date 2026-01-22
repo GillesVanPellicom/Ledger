@@ -187,8 +187,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   const SectionTitle = ({ title, tooltip }: { title: string, tooltip?: string }) => (
     <div className="flex items-center gap-2 mb-4">
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
-      {tooltip && <Tooltip content={tooltip}><Info className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>}
+      <h3 className="text-lg font-medium text-font-1">{title}</h3>
+      {tooltip && <Tooltip content={tooltip}><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>}
     </div>
   );
 
@@ -196,7 +196,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const indicatorDefs = [
     {
       key: 'debt',
-      header: <div className="flex flex-col items-center gap-1"><AlertTriangle className="h-5 w-5 text-yellow-500" /><AlertCircleIcon className="h-5 w-5 text-red-500" /><CheckCircle className="h-5 w-5 text-green-500" /></div>,
+      header: <div className="flex flex-col items-center gap-1"><AlertTriangle className="h-5 w-5 text-yellow" /><AlertCircleIcon className="h-5 w-5 text-red" /><CheckCircle className="h-5 w-5 text-green" /></div>,
       title: 'Debt',
       desc: 'Marks items that are part of a split or debt.',
       enabled: settings.receipts?.indicators.debt ?? false,
@@ -204,21 +204,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     },
     {
       key: 'tentative',
-      header: <HelpCircle className="h-5 w-5 text-gray-400" />,
+      header: <HelpCircle className="h-5 w-5 text-font-2" />,
       title: 'Tentative',
       desc: 'Marks expenses or items as drafts/tentative.',
       enabled: settings.receipts?.indicators.tentative ?? false,
     },
     {
       key: 'type',
-      header: <div className="flex flex-col items-center gap-1"><ClipboardList className="h-5 w-5 text-gray-400" /><Clipboard className="h-5 w-5 text-gray-400" /></div>,
+      header: <div className="flex flex-col items-center gap-1"><ClipboardList className="h-5 w-5 text-font-2" /><Clipboard className="h-5 w-5 text-font-2" /></div>,
       title: 'Receipt Type',
       desc: 'Indicates if an expense is total-only or detailed.',
       enabled: settings.receipts?.indicators.type ?? false,
     },
     {
       key: 'attachments',
-      header: <Paperclip className="h-5 w-5 text-gray-400" />,
+      header: <Paperclip className="h-5 w-5 text-font-2" />,
       title: 'Attachments',
       desc: 'Indicates the presence of attached images or receipt files.',
       enabled: settings.receipts?.indicators.attachments ?? false,
@@ -237,7 +237,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xlh" onEnter={onClose}>
         <div className="flex h-full">
-          <div className="w-56 border-r border-gray-200 dark:border-gray-800 pr-4">
+          <div className="w-56 border-r border-border pr-4">
             <nav className="space-y-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -248,11 +248,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     className={cn(
                       "w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-3", 
                       activeTab === tab.id 
-                        ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm" 
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200"
+                        ? "bg-field-hover text-font-1 shadow-sm" 
+                        : "text-font-2 hover:bg-field-hover hover:text-font-1"
                     )}
                   >
-                    <Icon className={cn("h-5 w-5", activeTab === tab.id ? "text-accent" : "text-gray-400 dark:text-gray-500")} />
+                    <Icon className={cn("h-5 w-5", activeTab === tab.id ? "text-accent" : "text-font-2")} />
                     {tab.label}
                   </button>
                 );
@@ -264,20 +264,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               <div>
                 <AppearanceSettings />
                 
-                <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                <div className="h-px bg-border my-6" />
 
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">UI Scale</h3>
-                      <Tooltip content="Adjust the size of text and other interface elements."><Info className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>
+                      <h3 className="text-lg font-medium text-font-1">UI Scale</h3>
+                      <Tooltip content="Adjust the size of text and other interface elements."><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>
                     </div>
-                    <button onClick={resetUiScale} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">reset</button>
+                    <button onClick={resetUiScale} className="text-xs text-font-2 hover:text-font-1 underline">reset</button>
                   </div>
-                  <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" /><span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-12 text-right">{uiScale}%</span></div>
+                  <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-field-disabled rounded-lg appearance-none cursor-pointer" /><span className="text-sm font-medium text-font-1 w-12 text-right">{uiScale}%</span></div>
                 </div>
                 
-                <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                <div className="h-px bg-border my-6" />
                 
                 <div>
                   <SectionTitle title="Expense Indicators" tooltip="Toggle visibility of indicator icons on the expense list." />
@@ -286,8 +286,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       <div key={d.key} className="grid grid-cols-[40px_1fr_auto] items-center gap-3 py-2">
                         <div className="flex items-center justify-center">{d.header}</div>
                         <div>
-                          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{d.title}</div>
-                          <div className="text-xs text-gray-500">{d.desc}</div>
+                          <div className="font-medium text-sm text-font-1">{d.title}</div>
+                          <div className="text-xs text-font-2">{d.desc}</div>
                         </div>
                         <div className="flex items-center justify-end">
                           <Switch isEnabled={d.enabled} onToggle={() => handleIndicatorToggle(d.key as any)} />
@@ -325,7 +325,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
               <div className="space-y-6">
                 <FormattingSettings />
 
-                <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                <div className="h-px bg-border my-6" />
 
                 <div>
                   <SectionTitle title="Formatting" tooltip="Manage automatic text formatting and capitalization rules." />
@@ -353,7 +353,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                   </div>
                 </div>
                 
-                <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                <div className="h-px bg-border my-6" />
                 
                 <div>
                   <SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple expenses at once." />
@@ -380,16 +380,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                   </div>
                 </div>
                 
-                <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                <div className="h-px bg-border my-6" />
 
                 <div>
                   <SectionTitle title="Datastore" tooltip="The location where this app will save all data. Preferrably placed in a folder which is backed up." />
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0 mr-4">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">Datastore Folder</p>
+                      <p className="font-medium text-font-1">Datastore Folder</p>
                       <Tooltip content={tooltipText} className="block">
                         <p 
-                          className="text-sm text-gray-500 truncate cursor-pointer" 
+                          className="text-sm text-font-2 truncate cursor-pointer" 
                           onClick={handleCopyToClipboard}
                         >
                           {datastorePath || 'No folder selected'}
@@ -400,30 +400,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                   </div>
                 </div>
 
-                <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                <div className="h-px bg-border my-6" />
 
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Backup</h3>
-                        <Tooltip content="Automatically back up your database."><Info className="h-5 w-5 text-gray-400 hover:text-gray-500 cursor-help" /></Tooltip>
-                        <span className="text-sm text-gray-500 ml-2">({backupCount}/{backupSettings.maxBackups})</span>
+                        <h3 className="text-lg font-medium text-font-1">Backup</h3>
+                        <Tooltip content="Automatically back up your database."><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>
+                        <span className="text-sm text-font-2 ml-2">({backupCount}/{backupSettings.maxBackups})</span>
                     </div>
-                    <button onClick={resetBackupSettings} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">reset</button>
+                    <button onClick={resetBackupSettings} className="text-xs text-font-2 hover:text-font-1 underline">reset</button>
                   </div>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label htmlFor="max-backups" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-2">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                        <label htmlFor="max-backups" className="text-sm font-medium text-font-1 flex items-center gap-1 mb-2">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-font-2" /></Tooltip></label>
                         <StepperInput id="max-backups" min={1} max={50} value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('maxBackups', Math.min(50, backupSettings.maxBackups + 1))} onDecrement={() => handleBackupSettingChange('maxBackups', Math.max(1, backupSettings.maxBackups - 1))} />
                       </div>
                       <div>
-                        <label htmlFor="backup-interval" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 mb-2">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-gray-400" /></Tooltip></label>
+                        <label htmlFor="backup-interval" className="text-sm font-medium text-font-1 flex items-center gap-1 mb-2">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-font-2" /></Tooltip></label>
                         <StepperInput id="backup-interval" min={1} max={50} value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('interval', Math.min(50, backupSettings.interval + 1))} onDecrement={() => handleBackupSettingChange('interval', Math.max(1, backupSettings.interval - 1))} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <button onClick={() => window.electronAPI?.openBackupFolder()} className="text-xs text-blue-500 hover:underline">Open Backup Folder</button>
+                      <button onClick={() => window.electronAPI?.openBackupFolder()} className="text-xs text-blue hover:underline">Open Backup Folder</button>
                     </div>
                     <div className="flex justify-end">
                         <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp}>Backup Now</Button>
@@ -435,57 +435,57 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             {activeTab === 'development' && isDev && (
               <div>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Development Tools</h3>
+                  <h3 className="text-lg font-medium text-font-1 mb-4">Development Tools</h3>
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                        <div className="p-2 rounded-lg bg-red/20 text-red">
                           <Bug className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">Test Error Modal</p>
-                          <p className="text-sm text-gray-500">Generate a fake error to test the error modal.</p>
+                          <p className="font-medium text-font-1">Test Error Modal</p>
+                          <p className="text-sm text-font-2">Generate a fake error to test the error modal.</p>
                         </div>
                       </div>
                       <Button variant="danger" onClick={handleGenerateError}>Generate Error</Button>
                     </div>
                   </div>
                   
-                  <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                  <div className="h-px bg-border my-6" />
                   
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        <div className="p-2 rounded-lg bg-yellow/20 text-yellow">
                           <Trash2 className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">Reset Datastore</p>
-                          <p className="text-sm text-gray-500">Remove the datastore folder path from settings.</p>
+                          <p className="font-medium text-font-1">Reset Datastore</p>
+                          <p className="text-sm text-font-2">Remove the datastore folder path from settings.</p>
                         </div>
                       </div>
                       <Button variant="danger" onClick={handleRemoveDatastore}>Reset</Button>
                     </div>
                   </div>
                   
-                  <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                  <div className="h-px bg-border my-6" />
                   
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 mr-4">
-                        <div className="p-2 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                        <div className="p-2 rounded-lg bg-red/20 text-red">
                           <Trash2 className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">Reset All Settings</p>
-                          <p className="text-sm text-gray-500">Clear all settings and quit the application.</p>
+                          <p className="font-medium text-font-1">Reset All Settings</p>
+                          <p className="text-sm text-font-2">Clear all settings and quit the application.</p>
                         </div>
                       </div>
                       <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
                     </div>
                   </div>
 
-                  <div className="h-px bg-gray-200 dark:bg-gray-800 my-6" />
+                  <div className="h-px bg-border my-6" />
 
                   <div>
                     <SectionTitle title="Mock Time" tooltip="Simulate a different date and time for testing recurring events." />

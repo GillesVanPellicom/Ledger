@@ -187,10 +187,10 @@ const Combobox: React.FC<ComboboxProps> = ({
     <div 
       ref={popoverRef}
       style={popoverStyle}
-      className="rounded-xl bg-white dark:bg-zinc-950 shadow-xl border border-gray-200 dark:border-zinc-800 outline-none animate-in fade-in-0 zoom-in-95 flex flex-col"
+      className="rounded-xl bg-field shadow-xl border border-border outline-none animate-in fade-in-0 zoom-in-95 flex flex-col"
     >
       <div className="p-2 relative shrink-0">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-font-2" />
         <Input
           ref={inputRef}
           type="text"
@@ -201,7 +201,7 @@ const Combobox: React.FC<ComboboxProps> = ({
           autoComplete="off"
         />
       </div>
-      <Separator className="border-gray-200 dark:border-zinc-800 shrink-0" />
+      <Separator className="border-border shrink-0" />
       <div ref={listRef} className="max-h-60 overflow-auto p-1">
         {filteredOptions.length > 0 ? (
           filteredOptions.map((option, index) => (
@@ -211,23 +211,23 @@ const Combobox: React.FC<ComboboxProps> = ({
               aria-selected={value === option.value}
               data-active={index === activeIndex}
               className={cn(
-                "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none transition-colors",
-                "data-[active=true]:bg-gray-100 dark:data-[active=true]:bg-zinc-800",
-                "hover:bg-gray-100 dark:hover:bg-zinc-800"
+                "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none transition-colors text-font-1",
+                "data-[active=true]:bg-field-hover",
+                "hover:bg-field-hover"
               )}
               onClick={() => handleSelectOption(option.value)}
               onMouseEnter={() => setActiveIndex(index)}
             >
               {value === option.value && (
                 <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                  <Check className="h-4 w-4" />
+                  <Check className="h-4 w-4 text-accent" />
                 </span>
               )}
               <span className="truncate">{option.label}</span>
             </div>
           ))
         ) : (
-          <div className="py-6 text-center text-sm text-gray-500">
+          <div className="py-6 text-center text-sm text-font-2">
             {noResultsText}
           </div>
         )}
@@ -238,7 +238,7 @@ const Combobox: React.FC<ComboboxProps> = ({
   return (
     <div className={cn("w-full", className)}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-font-1 mb-1">
           {label}
         </label>
       )}
@@ -251,7 +251,7 @@ const Combobox: React.FC<ComboboxProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+          "flex h-10 w-full items-center justify-between rounded-lg border border-border bg-field px-3 py-2 text-sm text-font-1 placeholder:text-font-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all",
           error && "border-danger focus:ring-danger"
         )}
       >

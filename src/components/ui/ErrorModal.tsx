@@ -29,15 +29,15 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
       }
     >
       <div className="flex flex-col items-center text-center space-y-4">
-        <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+        <div className="p-3 bg-red/20 rounded-full">
           <TriangleAlert className="h-8 w-8 text-red" />
         </div>
         
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+        <h3 className="text-lg font-medium text-font-1">
           An error occurred
         </h3>
         
-        <p className="text-gray-600 dark:text-gray-300">
+        <p className="text-font-2">
           An error occurred with this function, please inform the developer.
         </p>
 
@@ -45,7 +45,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
           <div className="w-full mt-4">
             <button
               onClick={toggleExpand}
-              className="flex items-center justify-center w-full gap-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center justify-center w-full gap-2 text-sm text-font-2 hover:text-font-1 transition-colors"
             >
               <span>{isExpanded ? 'Hide details' : 'Show details'}</span>
               {isExpanded ? (
@@ -57,7 +57,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, error }) => {
 
             {isExpanded && (
               <div className="mt-4 w-full text-left">
-                <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-x-auto">
+                <div className="p-4 bg-field-disabled rounded-lg overflow-x-auto">
                   <pre className="text-xs text-red font-mono whitespace-pre-wrap break-words">
                     {error.stack || error.message || String(error)}
                   </pre>

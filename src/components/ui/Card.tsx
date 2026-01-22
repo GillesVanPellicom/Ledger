@@ -3,16 +3,16 @@ import { cn } from '../../utils/cn';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  variant?: 'default' | 'frosted';
+  variant?: 'default' | 'frosted' | 'transparent';
 }
 
 const Card: React.FC<CardProps> = ({ className, children, variant = 'default', ...props }) => {
-  const baseClasses = "rounded-lg text-gray-950 dark:text-gray-50";
+  const baseClasses = "rounded-lg text-font-1";
   
   const variantClasses = {
-    default: "border border-gray-200 dark:border-gray-800 bg-neutral-50 dark:bg-zinc-950 shadow-md",
-    transparent: "p-4 border border-gray-200 dark:border-gray-800 rounded-xl space-y-4",
-    frosted: "bg-neutral-100 dark:bg-white/10 backdrop-blur-md border border-white/20 shadow-md"
+    default: "border border-border bg-bg-2 shadow-md",
+    transparent: "p-4 border border-border rounded-xl space-y-4",
+    frosted: "bg-bg-2/50 backdrop-blur-md border border-white/20 shadow-md"
   };
 
   return (

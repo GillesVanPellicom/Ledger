@@ -1,5 +1,5 @@
 {
-  "theme": "dark",
+  "theme": "development",
   "modules": {
     "paymentMethods": {
       "enabled": true
@@ -12,7 +12,7 @@
     }
   },
   "pdf": {
-    "showUniqueItems": false,
+    "showUniqueItems": true,
     "showTotalQuantity": false,
     "showPaymentMethod": false,
     "addSummaryPage": false,

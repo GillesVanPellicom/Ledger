@@ -60,16 +60,19 @@ export const BackgroundGradientAnimation = ({
     
     const container = interactiveRef.current?.parentElement || document.body;
     
-    container.style.setProperty("--gradient-background-start", gradientBackgroundStart);
-    container.style.setProperty("--gradient-background-end", gradientBackgroundEnd);
-    container.style.setProperty("--first-color", rgbColor);
-    container.style.setProperty("--second-color", rgbColor);
-    container.style.setProperty("--third-color", rgbColor);
-    container.style.setProperty("--fourth-color", rgbColor);
-    container.style.setProperty("--fifth-color", rgbColor);
-    container.style.setProperty("--pointer-color", pointerColor);
-    container.style.setProperty("--size", size);
-    container.style.setProperty("--blending-value", blendingValue);
+    // Check if container is valid before setting properties
+    if (container && container.style) {
+      container.style.setProperty("--gradient-background-start", gradientBackgroundStart);
+      container.style.setProperty("--gradient-background-end", gradientBackgroundEnd);
+      container.style.setProperty("--first-color", rgbColor);
+      container.style.setProperty("--second-color", rgbColor);
+      container.style.setProperty("--third-color", rgbColor);
+      container.style.setProperty("--fourth-color", rgbColor);
+      container.style.setProperty("--fifth-color", rgbColor);
+      container.style.setProperty("--pointer-color", pointerColor);
+      container.style.setProperty("--size", size);
+      container.style.setProperty("--blending-value", blendingValue);
+    }
 
   }, [gradientBackgroundStart, gradientBackgroundEnd, color, pointerColor, size, blendingValue, settings.headerColor, forceColor]);
 
