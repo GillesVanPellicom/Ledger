@@ -144,55 +144,72 @@ const AppearanceSettings: React.FC = () => {
       
       <div className="flex items-stretch gap-4 mb-4">
         {/* UI Mock Preview */}
-        <div className="flex-grow p-4 rounded-xl border border-border bg-bg flex flex-col gap-4 transition-colors duration-300">
-            {/* Mock Header with Animation */}
-            <div className="h-16 rounded-lg overflow-hidden relative shadow-sm border border-border">
-            <BackgroundGradientAnimation 
-                containerClassName="absolute inset-0"
-                size="60%"
-                className="absolute inset-0 flex items-center px-4"
-                interactive={false}
-                forceColor={headerColor}
-            >
-                <div className="z-10 w-full flex justify-between items-center">
-                    <div className="h-4 w-32 bg-white/20 rounded backdrop-blur-sm"></div>
-                    <div className="h-8 w-8 rounded-full bg-white/20 backdrop-blur-sm"></div>
-                </div>
-            </BackgroundGradientAnimation>
+        <div className="flex-grow flex flex-col">
+            <div className="flex items-center gap-2 mb-4 pt-4">
+                <h4 className="text-sm font-medium text-font-2">Theme Preview</h4>
+                <Tooltip content="A live preview of how your chosen colors and theme will look in the application.">
+                    <Info className="h-4 w-4 text-font-2 hover:text-font-1 cursor-help" />
+                </Tooltip>
             </div>
+            <div className="flex-grow p-4 rounded-xl border border-border bg-bg flex flex-col gap-3 transition-colors duration-300">
+                {/* Mock Header with Animation */}
+                <div className="h-10 rounded-lg overflow-hidden relative shadow-sm border border-border shrink-0">
+                <BackgroundGradientAnimation 
+                    containerClassName="absolute inset-0"
+                    size="60%"
+                    className="absolute inset-0 flex items-center px-3"
+                    interactive={false}
+                    forceColor={headerColor}
+                >
+                    <div className="z-10 w-full flex justify-between items-center">
+                        <div className="h-2.5 w-12 bg-white/20 rounded-full backdrop-blur-sm"></div>
+                        <div className="h-5 w-5 rounded-full bg-white/20 backdrop-blur-sm"></div>
+                    </div>
+                </BackgroundGradientAnimation>
+                </div>
 
-            <div className="flex items-center justify-between">
-            <div className="h-4 w-24 bg-field-disabled rounded animate-pulse"></div>
-            <div className="flex gap-2">
-                <div className="h-8 w-8 rounded-full bg-field-disabled animate-pulse"></div>
-                <div className="h-8 w-8 rounded-full bg-field-disabled animate-pulse"></div>
-            </div>
-            </div>
-            <div className="flex gap-4">
-            <div className="w-1/3 space-y-3">
-                <div className="h-24 rounded-lg bg-bg-2 shadow-sm border border-border p-3">
-                <div className="h-3 w-16 bg-field-disabled rounded mb-2"></div>
-                <div className="h-6 w-20 bg-field-disabled rounded"></div>
-                </div>
-                <div className="h-24 rounded-lg bg-bg-2 shadow-sm border border-border p-3">
-                <div className="h-3 w-16 bg-field-disabled rounded mb-2"></div>
-                <div className="h-6 w-20 bg-field-disabled rounded"></div>
-                </div>
-            </div>
-            <div className="w-2/3">
-                <div className="h-full rounded-lg bg-bg-2 shadow-sm border border-border p-4 flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
-                    <div className="h-4 w-32 bg-field-disabled rounded"></div>
-                    <div className="h-8 w-20 rounded-md" style={{ backgroundColor: accentColor }}></div>
+                <div className="flex gap-3 flex-grow overflow-hidden">
+                    {/* Mock Sidenav (Collapsed) */}
+                    <div className="w-10 flex flex-col items-center gap-3 py-1 border-r border-border/50 shrink-0">
+                        <div className="p-1.5 rounded-md bg-accent/10">
+                            <div className="h-3.5 w-3.5 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                        </div>
+                        <div className="p-1.5">
+                            <div className="h-3.5 w-3.5 rounded-sm bg-font-2/20"></div>
+                        </div>
+                        <div className="p-1.5">
+                            <div className="h-3.5 w-3.5 rounded-sm bg-font-2/20"></div>
+                        </div>
                     </div>
-                    <div className="h-px w-full bg-field-disabled"></div>
-                    <div className="space-y-2">
-                    <div className="h-3 w-full bg-field-disabled/50 rounded"></div>
-                    <div className="h-3 w-5/6 bg-field-disabled/50 rounded"></div>
-                    <div className="h-3 w-4/6 bg-field-disabled/50 rounded"></div>
+
+                    {/* Mock Content */}
+                    <div className="flex-1 flex flex-col gap-3 min-w-0">
+                        <div className="p-3 rounded-lg bg-bg-2 border border-border shadow-sm flex-1 flex flex-col gap-3 overflow-hidden">
+                            <div className="flex justify-between items-center">
+                                <div className="h-3 w-16 bg-font-1/20 rounded-full"></div>
+                                <div className="h-3.5 w-8 bg-accent/20 rounded-full"></div>
+                            </div>
+                            <div className="h-px w-full bg-border"></div>
+                            
+                            {/* Mock Table */}
+                            <div className="space-y-3 mt-1">
+                                <div className="flex justify-between items-center">
+                                    <div className="h-2 w-20 bg-font-2/20 rounded-full"></div>
+                                    <div className="h-2 w-10 bg-font-1/20 rounded-full"></div>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <div className="h-2 w-16 bg-font-2/20 rounded-full"></div>
+                                    <div className="h-2 w-12 bg-font-1/20 rounded-full"></div>
+                                </div>
+                            </div>
+
+                            {/* Mock Button */}
+                            <div className="mt-auto flex justify-end">
+                                <div className="h-6 w-14 rounded-md shadow-sm" style={{ backgroundColor: accentColor }}></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
             </div>
         </div>
 

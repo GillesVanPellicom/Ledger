@@ -251,7 +251,8 @@ const Combobox: React.FC<ComboboxProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-lg border border-border bg-field px-3 py-2 text-sm text-font-1 placeholder:text-font-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 hover:bg-field-hover transition-all", // Added hover:bg-field-hover
+          "flex h-10 w-full items-center justify-between rounded-lg border border-border bg-field px-3 py-2 text-sm text-font-1 placeholder:text-font-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all",
+          disabled ? "bg-field-disabled cursor-not-allowed opacity-50" : "hover:bg-field-hover",
           error && "border-danger focus:ring-danger"
         )}
       >
