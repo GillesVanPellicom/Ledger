@@ -333,7 +333,7 @@ const ReceiptsPage: React.FC = () => {
             className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-8"
             style={{ minWidth: `${enabledCount * 28}px` }}
           >
-            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-font-2">-</span>}
+            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-field-disabled">-</span>}
           </div>
         </div>
       );

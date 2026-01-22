@@ -37,7 +37,7 @@ const Button: React.FC<ButtonProps> = ({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:opacity-50 disabled:pointer-events-none',
+        'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:bg-field-disabled disabled:text-font-2 disabled:cursor-not-allowed disabled:border-border disabled:shadow-none',
         variants[variant],
         sizes[size],
         className

@@ -1,5 +1,6 @@
 import React, { forwardRef, InputHTMLAttributes } from 'react';
 import { cn } from '../../utils/cn';
+import { Check } from 'lucide-react';
 
 interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -11,19 +12,26 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ className, label
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="checkbox-wrapper-13 flex items-center gap-2">
-        <input
-          ref={ref}
-          type="checkbox"
-          id={id}
-          className={cn(
-            error && "border-danger",
-            className
-          )}
-          {...props}
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative flex items-center justify-center">
+          <input
+            ref={ref}
+            type="checkbox"
+            id={id}
+            className={cn(
+              "peer h-5 w-5 cursor-pointer appearance-none rounded border border-border bg-field transition-all checked:border-accent checked:bg-accent hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
+              error && "border-danger",
+              className
+            )}
+            {...props}
+          />
+          <Check 
+            className="pointer-events-none absolute h-3.5 w-3.5 text-white opacity-0 transition-opacity peer-checked:opacity-100" 
+            strokeWidth={3}
+          />
+        </div>
         {label && (
-          <label htmlFor={id} className="text-sm font-medium text-font-1 cursor-pointer">
+          <label htmlFor={id} className="text-sm font-medium text-font-1 cursor-pointer select-none">
             {label}
           </label>
         )}

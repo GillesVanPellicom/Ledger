@@ -19,7 +19,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
 
   const containerClasses = variant === 'toggle'
     ? "inline-flex p-1 border border-border bg-field-disabled rounded-lg shadow-sm isolate"
-    : "inline-flex shadow-sm isolate";
+    : "inline-flex shadow-sm isolate border border-border rounded-lg overflow-hidden divide-x divide-border"; // Added divide-x divide-border
 
   return (
     <div className={cn(containerClasses, fullWidth && "flex w-full", className)}>
@@ -39,7 +39,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
 
         let variantClasses = '';
         if (variant === 'ghost-bordered') {
-          variantClasses = 'border border-border bg-transparent hover:bg-field-hover';
+          variantClasses = 'bg-transparent hover:bg-field-hover';
         } else if (variant === 'toggle') {
           roundingClasses = '!rounded-md'; // Toggles usually have smaller rounding for inner items
           variantClasses = 'transition-all duration-200';
@@ -75,8 +75,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
               activeClasses,
               fullWidth && "flex-1",
               'relative focus:z-10',
-              (variant !== 'toggle' && !isFirst) && '-ml-px',
-              'shadow-none border-0' // Remove individual borders in toggle mode
+              'shadow-none border-0' // Remove individual borders
             )
           });
         };

@@ -5,6 +5,7 @@ import Input from './Input';
 import Select from './Select';
 import Tooltip from './Tooltip';
 import Spinner from './Spinner';
+import Checkbox from './Checkbox';
 
 interface Column {
   header: string;
@@ -157,7 +158,9 @@ const DataTable: React.FC<DataTableProps> = ({
   }, [currentPage, totalPages, onPageChange, disabled]);
 
   useEffect(() => {
-    setPageInput(String(currentPage));
+    if (currentPage !== undefined) {
+      setPageInput(String(currentPage));
+    }
   }, [currentPage]);
 
   useEffect(() => {
@@ -272,17 +275,15 @@ const DataTable: React.FC<DataTableProps> = ({
     return displayData.map((row, rowIdx) => (
       <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-accent/10": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
         {selectable && (
-          <td className="px-4 py-3 align-middle">
-            <div className="checkbox-wrapper-13 flex items-center justify-center">
-              <input
+          <td className="px-4 py-3 align-middle w-10">
+            <div className="flex items-center justify-center">
+              <Checkbox
                 id={`checkbox-${row[itemKey]}`}
-                type="checkbox"
                 checked={selectedRows.has(row[itemKey])}
                 onChange={(e) => handleSelectRow(e, row[itemKey])}
                 onClick={(e) => e.stopPropagation()}
                 disabled={disabled}
               />
-              <label htmlFor={`checkbox-${row[itemKey]}`}></label>
             </div>
           </td>
         )}
@@ -290,7 +291,7 @@ const DataTable: React.FC<DataTableProps> = ({
           const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
           let displayContent = content;
           if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
-            displayContent = <span className="text-font-2">-</span>;
+            displayContent = <span className="text-field-disabled">-</span>;
           }
           return (
             <td key={colIdx} className={cn("px-4 py-3 text-font-1 break-words align-middle", col.className)}>
@@ -430,10 +431,9 @@ const DataTable: React.FC<DataTableProps> = ({
             <thead className="bg-field-hover border-b border-border">
               <tr>
                 {selectable && (
-                  <th className="px-4 py-3 align-middle">
-                    <div className="checkbox-wrapper-13 flex items-center justify-center">
-                      <input id="select-all-checkbox" type="checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} disabled={disabled} />
-                      <label htmlFor="select-all-checkbox"></label>
+                  <th className="px-4 py-3 align-middle w-10">
+                    <div className="flex items-center justify-center">
+                      <Checkbox id="select-all-checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} disabled={disabled} />
                     </div>
                   </th>
                 )}

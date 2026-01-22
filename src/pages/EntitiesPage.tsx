@@ -46,8 +46,8 @@ const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, o
         ) : (
           <MoneyDisplay 
             amount={stats.netBalance} 
-            showSign={false} 
-            className="text-2xl font-semibold text-font-1" 
+            useSignum={true} // Enabled useSignum
+            className="text-2xl font-semibold"
           />
         )}
       </div>

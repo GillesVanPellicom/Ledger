@@ -13,25 +13,16 @@ interface InfoCardProps {
 
 const variantConfig = {
   info: {
-    bg: 'bg-blue/10',
     icon: Info,
-    iconColor: 'text-blue',
-    titleColor: 'text-blue',
-    messageColor: 'text-blue',
+    color: 'text-blue',
   },
   warning: {
-    bg: 'bg-yellow/10',
     icon: AlertTriangle,
-    iconColor: 'text-yellow',
-    titleColor: 'text-yellow',
-    messageColor: 'text-yellow',
+    color: 'text-yellow',
   },
   danger: {
-    bg: 'bg-red/10',
     icon: AlertCircle,
-    iconColor: 'text-red',
-    titleColor: 'text-red',
-    messageColor: 'text-red',
+    color: 'text-red',
   },
 };
 
@@ -40,11 +31,11 @@ const InfoCard: React.FC<InfoCardProps> = ({ variant = 'info', title, message, c
   const Icon = config.icon;
 
   return (
-    <div className={cn('p-4 rounded-lg flex items-center gap-4', config.bg)}>
-      <Icon className={cn('h-8 w-8', config.iconColor)} />
+    <div className="p-4 rounded-xl flex items-center gap-4 bg-bg-2 border border-border">
+      <Icon className={cn('h-8 w-8', config.color)} />
       <div className="flex-grow">
-        <p className={cn('font-semibold', config.titleColor)}>{title}</p>
-        <p className={cn('text-sm', config.messageColor)}>{message}</p>
+        <p className={cn('font-semibold', config.color)}>{title}</p>
+        <p className="text-sm text-font-1">{message}</p>
       </div>
       {children && <div className="flex-shrink-0">{children}</div>}
     </div>

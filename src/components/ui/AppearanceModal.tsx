@@ -98,7 +98,19 @@ const AppearanceModal: React.FC<AppearanceModalProps> = ({
               {filteredIcons.map(iconName => {
                 const Icon = (SolidIcons as any)[iconName];
                 if (!Icon) return null;
-                return <button key={iconName} onClick={() => setSelectedSymbol(iconName)} className={cn("flex items-center justify-center p-2 rounded-lg transition-colors", selectedSymbol === iconName ? 'bg-accent text-white' : 'hover:bg-field-hover text-font-1')} title={iconName}><Icon className="h-6 w-6" /></button>;
+                return (
+                  <button 
+                    key={iconName} 
+                    onClick={() => setSelectedSymbol(iconName)} 
+                    className={cn(
+                      "flex items-center justify-center aspect-square rounded-lg transition-colors", // Added aspect-square
+                      selectedSymbol === iconName ? 'bg-accent text-white' : 'hover:bg-field-hover text-font-1'
+                    )} 
+                    title={iconName}
+                  >
+                    <Icon className="h-6 w-6" />
+                  </button>
+                );
               })}
             </div>
           </>
@@ -108,7 +120,16 @@ const AppearanceModal: React.FC<AppearanceModalProps> = ({
             <Input placeholder="Search emojis..." value={emojiSearchTerm} onChange={(e) => setEmojiSearchTerm(e.target.value)} />
             <div className="h-56 overflow-y-auto grid grid-cols-8 gap-2 p-2 bg-field-disabled rounded-lg">
               {filteredEmojis.map(emoji => (
-                <button key={emoji} onClick={() => setSelectedSymbol(emoji)} className={cn("flex items-center justify-center p-2 rounded-lg transition-colors text-2xl", selectedSymbol === emoji ? 'bg-accent' : 'hover:bg-field-hover')}>{emoji}</button>
+                <button 
+                  key={emoji} 
+                  onClick={() => setSelectedSymbol(emoji)} 
+                  className={cn(
+                    "flex items-center justify-center aspect-square rounded-lg transition-colors text-2xl", // Added aspect-square
+                    selectedSymbol === emoji ? 'bg-accent' : 'hover:bg-field-hover'
+                  )}
+                >
+                  {emoji}
+                </button>
               ))}
             </div>
           </>

@@ -98,7 +98,7 @@ export const themes: Record<string, Theme> = {
       BG_COLOR_2: '#00FFFF', // Cyan
       BG_COLOR_MODAL: '#FFFF00', // Yellow
       BORDER_COLOR: '#006fff', // Lime
-      ACCENT_COLOR: '#11ff00', // Red
+      ACCENT_COLOR: '#ff0000', // Red
       FONT_COLOR_1: '#11ff00', // Navy
       FONT_COLOR_2: '#800080', // Purple
       FIELD_COLOR: '#FFA500', // Orange
@@ -106,7 +106,7 @@ export const themes: Record<string, Theme> = {
       FIELD_COLOR_HOVER: '#FFC0CB', // Pink
       BLUE: '#FFFF00',
       GREEN: '#1E90FF',
-      RED: '#ff8000',
+      RED: '#00ffc4',
       YELLOW: '#FF0000',
       HYPERLINK_COLOR: '#0000FF',
       TEXT_DISABLED: '#800000', // Maroon
@@ -120,7 +120,7 @@ themes.development.colors = {
   BG_COLOR_2: '#00FFFF', // Cyan
   BG_COLOR_MODAL: '#FFFF00', // Yellow
   BORDER_COLOR: '#006fff', // Lime
-  ACCENT_COLOR: '#11ff00', // OrangeRed (No Blue Accent)
+  ACCENT_COLOR: '#ff0000', // OrangeRed (No Blue Accent)
   FONT_COLOR_1: '#000000', // Black (for contrast on vibrant backgrounds)
   FONT_COLOR_2: '#11ff00', // Navy
   FIELD_COLOR: '#FFA500', // Orange
@@ -128,7 +128,7 @@ themes.development.colors = {
   FIELD_COLOR_HOVER: '#FF1493', // DeepPink
   BLUE: '#FFFF00', // DodgerBlue
   GREEN: '#1E90FF', // LimeGreen
-  RED: '#ff8000', // Red
+  RED: '#00ffc4', // Red
   YELLOW: '#FF0000', // Gold
   HYPERLINK_COLOR: '#4B0082', // Indigo
   TEXT_DISABLED: '#800000', // Maroon

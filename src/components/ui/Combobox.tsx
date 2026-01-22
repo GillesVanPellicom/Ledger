@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { ChevronsUpDown, Check, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Input from './Input';
-import Separator from './Separator';
+import Divider from './Divider';
 
 export interface ComboboxOption {
   value: string;
@@ -201,7 +201,7 @@ const Combobox: React.FC<ComboboxProps> = ({
           autoComplete="off"
         />
       </div>
-      <Separator className="border-border shrink-0" />
+      <Divider className="shrink-0" />
       <div ref={listRef} className="max-h-60 overflow-auto p-1">
         {filteredOptions.length > 0 ? (
           filteredOptions.map((option, index) => (

@@ -357,16 +357,21 @@ const EntityDetailsPage: React.FC = () => {
     { 
       header: 'Amount', 
       render: (row: Receipt) => (
-        <MoneyDisplay amount={row.amount || 0} showSign={false} colorPositive={false} colorNegative={false} />
+        <MoneyDisplay 
+          amount={row.amount || 0} 
+          useSignum={true} // Enabled useSignum
+          colorPositive={row.type === 'to_me'} // Color based on type
+          colorNegative={row.type === 'to_entity'} // Color based on type
+        />
       ) 
     },
     {
       header: 'Direction',
       render: (row: Receipt) => (
-        <div className="flex items-center">
+        <div className={cn("flex items-center", row.type === 'to_me' ? "text-green" : "text-red")}> {/* Applied text color */}
           {row.type === 'to_me' ? 
-            <ArrowUpCircle className="h-5 w-5 text-green mr-2" /> : 
-            <ArrowDownCircle className="h-5 w-5 text-red mr-2" />}
+            <ArrowUpCircle className="h-5 w-5 mr-2" /> : 
+            <ArrowDownCircle className="h-5 w-5 mr-2" />}
           {row.type === 'to_me' ? 'Owes You' : 'You Owe'}
         </div>
       )
@@ -381,11 +386,7 @@ const EntityDetailsPage: React.FC = () => {
           <Badge variant={row.isSettled ? 'green' : 'red'}>
             {row.isSettled ? 'Settled' : 'Unsettled'}
           </Badge>
-          {row.splitPart && row.TotalShares ? (
-            <span className="text-xs text-font-2 mt-1">
-              {row.splitPart}/{row.TotalShares} shares
-            </span>
-          ) : null}
+          {/* Removed x/y shares text */}
         </div>
       )
     },

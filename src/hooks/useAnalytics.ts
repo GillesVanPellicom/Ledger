@@ -67,6 +67,9 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       const itemlessCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Receipts r WHERE r.IsNonItemised = 1 AND ${yearFilter}`, [selectedYear]);
       const hasItemlessReceipts = itemlessCheck ? itemlessCheck.count > 0 : false;
 
+      const itemisedCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Receipts r WHERE r.IsNonItemised = 0 AND ${yearFilter}`, [selectedYear]);
+      const onlyNonItemised = itemisedCheck ? itemisedCheck.count === 0 : true;
+
       const tentativeCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Receipts r WHERE r.IsTentative = 1 AND ${yearFilter}`, [selectedYear]);
       const hasTentativeReceipts = tentativeCheck ? tentativeCheck.count > 0 : false;
 
@@ -148,6 +151,7 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
 
       return {
         hasItemlessReceipts,
+        onlyNonItemised,
         hasTentativeReceipts,
         hasUncategorizedProducts,
         monthlySpending,

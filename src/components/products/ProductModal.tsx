@@ -5,7 +5,7 @@ import Select from '../ui/Select';
 import Button from '../ui/Button';
 import { db } from '../../utils/db';
 import { Product } from '../../types';
-import Separator from '../ui/Separator';
+import Divider from '../ui/Divider';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { Plus } from 'lucide-react';
 import Tooltip from '../ui/Tooltip';
@@ -165,12 +165,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
           {errors.form && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{errors.form}</div>}
           <Input label="Product Name" name="ProductName" value={formData.ProductName} onChange={handleInputChange} placeholder="e.g. gouda cheese" error={errors.ProductName} />
           
-          <div className="relative py-2">
-            <Separator />
-            <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-              <span className="px-2 bg-bg text-sm text-font-2">Optional Details</span>
-            </div>
-          </div>
+          <Divider text="Optional Details" />
 
           <Input label="Brand" name="ProductBrand" value={formData.ProductBrand} onChange={handleInputChange} placeholder="e.g. Old Amsterdam" error={errors.ProductBrand} />
           

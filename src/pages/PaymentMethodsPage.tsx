@@ -52,8 +52,8 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
                 ) : (
                   <MoneyDisplay 
                     amount={balance} 
-                    showSign={false} 
-                    className="text-2xl font-semibold text-font-1" 
+                    useSignum={true} // Enabled useSignum
+                    className="text-2xl font-semibold"
                   />
                 )}
             </div>
