@@ -275,7 +275,7 @@ const DataTable: React.FC<DataTableProps> = ({
     return displayData.map((row, rowIdx) => (
       <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors bg-bg-2", { "bg-accent/10": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
         {selectable && (
-          <td className="px-4 py-3 align-middle w-10">
+          <td className="px-4 py-3 align-middle w-12">
             <div className="flex items-center justify-center">
               <Checkbox
                 id={`checkbox-${row[itemKey]}`}
@@ -423,7 +423,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 colWidths.map((width, idx) => <col key={idx} style={{ width: `${width}px` }} />)
               ) : (
                 <>
-                  {selectable && <col style={{ width: '40px' }} />}
+                  {selectable && <col style={{ width: '48px' }} />}
                   {columns.map((col, idx) => <col key={idx} style={{ width: col.width }} />)}
                 </>
               )}
@@ -431,7 +431,7 @@ const DataTable: React.FC<DataTableProps> = ({
             <thead className="bg-bg-modal border-b border-border">
               <tr>
                 {selectable && (
-                  <th className="px-4 py-3 align-middle w-10">
+                  <th className="px-4 py-3 align-middle w-12">
                     <div className="flex items-center justify-center">
                       <Checkbox id="select-all-checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} disabled={disabled} />
                     </div>

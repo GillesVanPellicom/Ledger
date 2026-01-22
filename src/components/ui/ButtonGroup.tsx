@@ -18,7 +18,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
   const count = childrenArray.length;
 
   const containerClasses = variant === 'toggle'
-    ? "inline-flex p-1 border border-border bg-field-disabled rounded-lg shadow-sm isolate"
+    ? "inline-flex p-1 border border-border bg-field-disabled rounded-lg shadow-sm isolate gap-1"
     : "inline-flex shadow-sm isolate border border-border rounded-lg overflow-hidden divide-x divide-border"; // Added divide-x divide-border
 
   return (
@@ -63,8 +63,8 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
           if (variant === 'toggle') {
              const isActive = props.active || props.className?.includes('bg-field') || props.className?.includes('bg-bg-2') || props.className?.includes('bg-gray-100');
              activeClasses = isActive 
-               ? 'bg-field text-font-1 shadow-sm' 
-               : 'bg-transparent text-font-2 hover:bg-field-hover/50';
+               ? 'bg-field text-font-1 shadow-sm hover:bg-field-hover' 
+               : 'bg-transparent text-font-2 hover:bg-field-hover';
           }
 
           return React.cloneElement(element, {

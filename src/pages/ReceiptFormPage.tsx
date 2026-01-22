@@ -887,7 +887,7 @@ const ReceiptFormPage: React.FC = () => {
 
           <Card>
             <div className="p-6 flex justify-center">
-              <ButtonGroup variant="toggle" fullWidth className="max-w-md">
+              <ButtonGroup variant="toggle" fullWidth className="w-full">
                 <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
                   <button onClick={() => handleFormatChange('itemised')}
                           disabled={hasSettledDebts}
@@ -1288,23 +1288,20 @@ const ReceiptFormPage: React.FC = () => {
                               <Tooltip content="This is an estimate of what each person owes based on the current split."><Info
                                 className="h-5 w-5 text-font-2"/></Tooltip>
                             </div>
-                            <DataGrid
-                              itemKey="name"
-                              disableMinHeight
-                              data={[
-                                ...(debtSummary.self ? [{
-                                  name: `${settings.userName || 'User'} (Me)`,
-                                  amount: <MoneyDisplay amount={debtSummary.self} showSign={false} colorPositive={false} colorNegative={false} />
-                                }] : []),
-                                ...debtSummary.debtors.map(d => ({name: d.name, amount: <MoneyDisplay amount={d.amount} showSign={false} colorPositive={false} colorNegative={false} />}))
-                              ]}
-                              renderItem={(item) => (
-                                <div className="flex justify-between items-center">
-                                  <span className="font-medium text-font-1">{item.name}</span>
-                                  <span className="text-lg font-semibold text-font-1">{item.amount}</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {debtSummary.self !== null && (
+                                <div className="flex justify-between items-center p-3 rounded-lg bg-bg-2 border border-border">
+                                  <span className="font-medium text-font-1">{settings.userName || 'User'} (Me)</span>
+                                  <span className="text-lg font-semibold text-font-1"><MoneyDisplay amount={debtSummary.self} showSign={false} colorPositive={false} colorNegative={false} /></span>
                                 </div>
                               )}
-                            />
+                              {debtSummary.debtors.map(d => (
+                                <div key={d.name} className="flex justify-between items-center p-3 rounded-lg bg-bg-2 border border-border">
+                                  <span className="font-medium text-font-1">{d.name}</span>
+                                  <span className="text-lg font-semibold text-font-1"><MoneyDisplay amount={d.amount} showSign={false} colorPositive={false} colorNegative={false} /></span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </>
                       )}

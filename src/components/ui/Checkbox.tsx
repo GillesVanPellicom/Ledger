@@ -19,14 +19,14 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ className, label
             type="checkbox"
             id={id}
             className={cn(
-              "peer h-6 w-6 cursor-pointer appearance-none rounded border border-border bg-field transition-all checked:border-accent checked:bg-accent hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50", // Changed h-5 w-5 to h-6 w-6
+              "peer h-8 w-8 cursor-pointer appearance-none rounded border border-border bg-field transition-all checked:border-accent checked:bg-accent hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
               error && "border-danger",
               className
             )}
             {...props}
           />
           <Check 
-            className="pointer-events-none absolute h-4 w-4 text-white opacity-0 transition-opacity peer-checked:opacity-100" // Changed h-3.5 w-3.5 to h-4 w-4
+            className="pointer-events-none absolute h-5 w-5 text-white opacity-0 transition-opacity peer-checked:opacity-100"
             strokeWidth={3}
           />
         </div>

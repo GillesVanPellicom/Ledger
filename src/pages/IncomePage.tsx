@@ -596,7 +596,7 @@ const IncomePage: React.FC = () => {
                     },
                     {header: 'Source', accessor: 'SourceName'},
                     {header: 'Category', accessor: 'Category'},
-                    {header: 'Payment Method', accessor: 'PaymentMethodName'},
+                    {header: 'Receiving Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
                       accessor: 'Amount',
@@ -704,7 +704,7 @@ const IncomePage: React.FC = () => {
                   columns={[
                     {header: 'Source', accessor: 'SourceName'},
                     {header: 'Category', accessor: 'Category'},
-                    {header: 'Payment Method', accessor: 'PaymentMethodName'},
+                    {header: 'Receiving Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
                       accessor: 'ExpectedAmount',
@@ -1035,7 +1035,7 @@ const IncomePage: React.FC = () => {
             onChange={e => setConfirmData(prev => ({...prev, date: e.target.value}))}
           />
           <Combobox
-            label="Payment Method"
+            label="Receiving Method"
             options={paymentMethods}
             value={confirmData.paymentMethodId}
             onChange={val => setConfirmData(prev => ({...prev, paymentMethodId: val}))}
@@ -1103,7 +1103,7 @@ const IncomePage: React.FC = () => {
               onDecrement={() => handleStepperChange(setOneTimeIncome, 'Amount', false, 1)}
             />
             <Combobox
-              label="Payment Method"
+              label="Receiving Method"
               options={paymentMethods}
               value={oneTimeIncome.PaymentMethodID}
               onChange={val => setOneTimeIncome(prev => ({...prev, PaymentMethodID: val}))}
@@ -1179,7 +1179,7 @@ const IncomePage: React.FC = () => {
               onDecrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', false, 1)}
             />
             <Combobox
-              label="Payment Method"
+              label="Receiving Method"
               options={paymentMethods}
               value={newSchedule.PaymentMethodID}
               onChange={val => setNewSchedule(prev => ({...prev, PaymentMethodID: val}))}

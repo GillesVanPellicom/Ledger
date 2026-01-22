@@ -19,7 +19,7 @@ const Switch: React.FC<SwitchProps> = ({ label, description, isEnabled, onToggle
             {Icon && <div className={cn("p-2 rounded-lg", isEnabled ? "bg-green/20 text-green" : "bg-field-disabled text-font-2")}><Icon className="h-6 w-6" /></div>}
             <div><p className="font-medium text-font-1">{label}</p><p className="text-sm text-font-2">{description}</p></div>
           </div>
-          <button type="button" onClick={onToggle} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", isEnabled ? "bg-accent" : "bg-field-disabled")}>
+          <button type="button" onClick={onToggle} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-border transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", isEnabled ? "bg-accent" : "bg-field-disabled")}>
             <span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", isEnabled ? "translate-x-5" : "translate-x-0")} />
           </button>
         </div>
@@ -28,7 +28,7 @@ const Switch: React.FC<SwitchProps> = ({ label, description, isEnabled, onToggle
   }
   
   return (
-    <button type="button" onClick={onToggle} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", isEnabled ? "bg-accent" : "bg-field-disabled", className)}>
+    <button type="button" onClick={onToggle} className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-border transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2", isEnabled ? "bg-accent" : "bg-field-disabled", className)}>
       <span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", isEnabled ? "translate-x-5" : "translate-x-0")} />
     </button>
   );

@@ -87,7 +87,7 @@ highContrast: {
     // Text
     FONT_COLOR_1: '#FFFFFF',   // primary text
     FONT_COLOR_2: '#FFFF00',   // secondary / emphasis text
-    TEXT_DISABLED: '#7F7F7F',  // still readable on black
+    TEXT_DISABLED: '#FFFFFF',  // still readable on black
 
     // Accents & interaction
     ACCENT_COLOR: '#00FFFF',   // yellow (primary HC accent)
