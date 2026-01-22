@@ -61,6 +61,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/DropdownMenu"
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import Badge, { BadgeVariant } from '../components/ui/Badge';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -217,9 +218,9 @@ const ReceiptViewPage: React.FC = () => {
     const totalDebtors = debtSummary.debtors.length;
     const paidDebtors = debtSummary.debtors.filter(d => d.isPaid).length;
 
-    if (paidDebtors === 0) return {label: 'Not Paid to You', color: 'red'};
-    if (paidDebtors === totalDebtors) return {label: 'Fully Paid to You', color: 'green'};
-    return {label: `${paidDebtors}/${totalDebtors} Paid to You`, color: 'yellow'};
+    if (paidDebtors === 0) return {label: 'Unpaid to You', variant: 'red' as BadgeVariant};
+    if (paidDebtors === totalDebtors) return {label: 'Fully Paid to You', variant: 'green' as BadgeVariant};
+    return {label: `${paidDebtors}/${totalDebtors} Paid to You`, variant: 'yellow' as BadgeVariant};
   }, [debtSummary, debtEnabled]);
 
   const handleSavePdf = async () => {
@@ -574,29 +575,15 @@ const ReceiptViewPage: React.FC = () => {
                   {/* Badges */}
                   <div className="flex flex-col items-start sm:items-end xl:items-start 2xl:items-end gap-2 sm:col-start-2 sm:row-start-1 xl:col-start-1 xl:row-start-2 2xl:col-start-2 2xl:row-start-1">
                     <Tooltip content={receipt?.Status === 'paid' ? 'This expense has been paid to the vendor.' : `Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
-                      <span
-                        className={cn(
-                          'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
-                          receipt?.Status === 'paid'
-                            ? 'bg-green/20 text-green border-green/30'
-                            : 'bg-red/20 text-red border-red/30'
-                        )}
-                      >
-                        {receipt?.Status === 'paid' ? 'Paid to Vendor' : 'Unpaid'}
-                      </span>
+                      <Badge variant={receipt?.Status === 'paid' ? 'green' : 'red'}>
+                        {receipt?.Status === 'paid' ? 'Paid to Vendor' : 'Unpaid to Vendor'}
+                      </Badge>
                     </Tooltip>
                     {debtStatus && (
                       <Tooltip content="This indicates the status of debts owed to you by others for this receipt.">
-                        <span
-                          className={cn(
-                            'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border cursor-help',
-                            debtStatus.color === 'green' && 'bg-green/20 text-green border-green/30',
-                            debtStatus.color === 'yellow' && 'bg-yellow/20 text-yellow border-yellow/30',
-                            debtStatus.color === 'red' && 'bg-red/20 text-red border-red/30'
-                          )}
-                        >
+                        <Badge variant={debtStatus.variant} className="cursor-help">
                           {debtStatus.label}
-                        </span>
+                        </Badge>
                       </Tooltip>
                     )}
                   </div>

@@ -104,10 +104,10 @@ export const themes: Record<string, Theme> = {
       FIELD_COLOR: '#FFA500', // Orange
       FIELD_COLOR_DISABLED: '#808080', // Gray (explicitly requested no gray, but for disabled maybe ok? User said "no gray or white". Let's use Brown)
       FIELD_COLOR_HOVER: '#FFC0CB', // Pink
-      BLUE: '#0000FF',
-      GREEN: '#00FF00',
-      RED: '#FF0000',
-      YELLOW: '#FFFF00',
+      BLUE: '#FFFF00',
+      GREEN: '#1E90FF',
+      RED: '#ff8000',
+      YELLOW: '#FF0000',
       HYPERLINK_COLOR: '#0000FF',
       TEXT_DISABLED: '#800000', // Maroon
     },
@@ -126,10 +126,10 @@ themes.development.colors = {
   FIELD_COLOR: '#FFA500', // Orange
   FIELD_COLOR_DISABLED: '#8B4513', // SaddleBrown
   FIELD_COLOR_HOVER: '#FF1493', // DeepPink
-  BLUE: '#1E90FF', // DodgerBlue
-  GREEN: '#32CD32', // LimeGreen
-  RED: '#FF0000', // Red
-  YELLOW: '#FFD700', // Gold
+  BLUE: '#FFFF00', // DodgerBlue
+  GREEN: '#1E90FF', // LimeGreen
+  RED: '#ff8000', // Red
+  YELLOW: '#FF0000', // Gold
   HYPERLINK_COLOR: '#4B0082', // Indigo
   TEXT_DISABLED: '#800000', // Maroon
 };

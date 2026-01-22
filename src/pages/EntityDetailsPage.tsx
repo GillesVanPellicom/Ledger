@@ -27,6 +27,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import Badge from '../components/ui/Badge';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -377,18 +378,11 @@ const EntityDetailsPage: React.FC = () => {
           className="flex flex-col items-end cursor-pointer"
           onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleSettleClick(row); }}
         >
-          <span 
-            className={cn(
-              'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
-              row.isSettled 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
-            )}
-          >
+          <Badge variant={row.isSettled ? 'green' : 'red'}>
             {row.isSettled ? 'Settled' : 'Unsettled'}
-          </span>
+          </Badge>
           {row.splitPart && row.TotalShares ? (
-            <span className="text-xs text-gray-500 mt-1">
+            <span className="text-xs text-font-2 mt-1">
               {row.splitPart}/{row.TotalShares} shares
             </span>
           ) : null}
@@ -428,13 +422,13 @@ const EntityDetailsPage: React.FC = () => {
         variant="three-boxes"
         leftBoxContent={
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Owes You</p>
+            <p className="text-sm font-medium text-font-2">Owes You</p>
             <MoneyDisplay amount={stats.debtToMe} showSign={false} className="text-2xl font-bold" />
           </div>
         }
         centeredContent={
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Net Balance</p>
+            <p className="text-sm font-medium text-font-2">Net Balance</p>
             <div className="flex items-center justify-center gap-2">
               <Tooltip content={stats.netBalance >= 0 ? `${entity.DebtorName} owes you` : `You owe ${entity.DebtorName}`}>
                 {stats.netBalance >= 0 ? (
@@ -449,7 +443,7 @@ const EntityDetailsPage: React.FC = () => {
         }
         rightBoxContent={
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">You Owe</p>
+            <p className="text-sm font-medium text-font-2">You Owe</p>
             <MoneyDisplay amount={-stats.debtToEntity} showSign={false} className="text-2xl font-bold" />
           </div>
         }
