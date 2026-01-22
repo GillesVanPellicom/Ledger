@@ -33,6 +33,7 @@ import DataGrid from '../components/ui/DataGrid';
 import Combobox from '../components/ui/Combobox';
 import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/debtLogic';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import ButtonGroup from '../components/ui/ButtonGroup';
 
 const ReceiptFormPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -133,7 +134,7 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const handleEntitySave = async () => {
-    const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+    const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtrorName');
     setDebtors(debtorsData);
 
     const newDebtor = await db.queryOne<{
@@ -713,25 +714,22 @@ const ReceiptFormPage: React.FC = () => {
     ];
 
     return (
-      <div className="flex rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <ButtonGroup variant="toggle">
         {buttons.map(btn => (
           <Tooltip key={btn.type} content={btn.tooltip}>
             <button
               onClick={() => handleSplitTypeChange(btn.type)}
               disabled={isDebtDisabled}
               className={cn(
-                "px-3 py-1.5 text-sm font-medium rounded-md transition-colors w-full",
-                splitType === btn.type
-                  ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100"
-                  : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50",
-                isDebtDisabled ? "opacity-50 cursor-not-allowed" : ""
+                "px-3 py-1.5 text-sm font-medium transition-colors w-full",
+                splitType === btn.type ? "bg-field" : ""
               )}
             >
               {btn.label}
             </button>
           </Tooltip>
         ))}
-      </div>
+      </ButtonGroup>
     );
   };
 
@@ -764,7 +762,7 @@ const ReceiptFormPage: React.FC = () => {
                 <div className="col-span-1">
                   <div className="flex items-end gap-2">
                     <div className="flex-grow">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Store</label>
+                      <label className="block text-sm font-medium text-font-1 mb-1">Store</label>
                       <Combobox
                         options={stores}
                         value={formData.storeId}
@@ -792,7 +790,7 @@ const ReceiptFormPage: React.FC = () => {
                     <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
                       <div className="flex items-end gap-2">
                         <div className="flex-grow">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid
+                          <label className="block text-sm font-medium text-font-1 mb-1">Paid
                                                                                                              by</label>
                           <Tooltip className="w-full flex"
                                    content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
@@ -824,7 +822,7 @@ const ReceiptFormPage: React.FC = () => {
                     <div>
                       <div className="flex items-end gap-2">
                         <div className="flex-grow">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment
+                          <label className="block text-sm font-medium text-font-1 mb-1">Payment
                                                                                                              Method</label>
                           <Tooltip className="w-full flex"
                                    content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
@@ -863,21 +861,21 @@ const ReceiptFormPage: React.FC = () => {
 
                 <div className="col-span-2">
                   <div className="flex items-center gap-2 mb-4">
-                    <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">Images</h2>
-                    <Tooltip content="Attach images of the physical receipt for your records."><Info className="h-4 w-4 text-gray-400"/></Tooltip>
+                    <h2 className="text-sm font-medium text-font-1">Images</h2>
+                    <Tooltip content="Attach images of the physical receipt for your records."><Info className="h-4 w-4 text-font-2"/></Tooltip>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                     {images.map(image => (
                       <div key={image.key} className="relative group">
                         <img src={getImagePath(image)} alt="Receipt" className="w-full h-24 object-cover rounded-lg"/>
                         <button onClick={() => removeImage(image.key)}
-                                className="absolute top-1 right-1 bg-danger text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                className="absolute top-1 right-1 bg-red text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <X className="h-3 w-3"/>
                         </button>
                       </div>
                     ))}
-                    <label className="w-full h-24 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-lg flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                      <Image className="h-8 w-8 text-gray-400 dark:text-gray-500"/>
+                    <label className="w-full h-24 border border-border bg-field rounded-lg flex flex-col items-center justify-center text-font-2 hover:bg-field-hover cursor-pointer transition-colors">
+                      <Image className="h-8 w-8 text-font-2"/>
                       <span className="text-xs mt-1">Add Images</span>
                       <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden"/>
                     </label>
@@ -888,24 +886,24 @@ const ReceiptFormPage: React.FC = () => {
           </Card>
 
           <Card>
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-1 rounded-lg p-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <div className="p-6 flex justify-center">
+              <ButtonGroup variant="toggle" fullWidth className="max-w-md">
                 <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter each product individually."}>
                   <button onClick={() => handleFormatChange('itemised')}
                           disabled={hasSettledDebts}
-                          className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'itemised' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
+                          className={cn("w-full px-3 py-1.5 text-sm font-medium transition-colors", receiptFormat === 'itemised' ? "bg-field" : "")}>Enter
                                                                                                                                                                                                                                                                                                                                            Items
                   </button>
                 </Tooltip>
                 <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
                   <button onClick={() => handleFormatChange('item-less')}
                           disabled={hasSettledDebts}
-                          className={cn("w-full px-3 py-1.5 text-sm font-medium rounded-md transition-colors", receiptFormat === 'item-less' ? "bg-gray-100 dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50", hasSettledDebts && "cursor-not-allowed opacity-50")}>Enter
+                          className={cn("w-full px-3 py-1.5 text-sm font-medium transition-colors", receiptFormat === 'item-less' ? "bg-field" : "")}>Enter
                                                                                                                                                                                                                                                                                                                                             Total
                                                                                                                                                                                                                                                                                                                                             Only
                   </button>
                 </Tooltip>
-              </div>
+              </ButtonGroup>
             </div>
           </Card>
 
@@ -914,10 +912,10 @@ const ReceiptFormPage: React.FC = () => {
               <Card className="overflow-hidden">
                 <div className="relative p-6">
                   {hasSettledDebts && (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                      <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                      <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
-                      <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-bg/30 backdrop-blur-sm">
+                      <Info className="h-12 w-12 text-font-2"/>
+                      <h3 className="mt-2 text-lg font-semibold text-font-1">Debts Settled</h3>
+                      <p className="mt-1 text-center text-sm text-font-2">One or more debts on this expense have been
                                                                             settled.<br/>To preserve data accuracy, some
                                                                             configurations for this expense are now
                                                                             locked.</p>
@@ -926,10 +924,10 @@ const ReceiptFormPage: React.FC = () => {
                   <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
                     {receiptFormat === 'item-less' ? (
                       <div className="text-center py-4">
-                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Total
+                        <label className="block text-sm font-medium text-font-2 mb-2">Total
                                                                                                            Amount</label>
                         <div className="relative inline-block">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-gray-400">€</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-font-2">€</span>
                           <StepperInput
                             value={String(nonItemisedTotal)}
                             onChange={(e) => setNonItemisedTotal(parseFloat(e.target.value) || 0)}
@@ -954,7 +952,7 @@ const ReceiptFormPage: React.FC = () => {
                             {label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]'},
                             {label: 'Qty', className: 'w-[10%] text-center'},
                             {label: 'Unit Price (€)', className: 'w-[10%] text-center'},
-                            {label: 'Total (€)', className: splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]'},
+                            {label: 'Total (€)', className: cn("text-right", splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]')},
                             ...(splitType === 'line_item' ? [{label: 'Debtor', className: 'w-[15%]'}] : []),
                             {label: '', className: 'w-auto'},
                           ]}
@@ -962,12 +960,12 @@ const ReceiptFormPage: React.FC = () => {
                             <div className="flex items-center gap-2">
                               {parseFloat(String(formData.discount)) > 0 && (
                                 <Tooltip content={excludedLineItemKeys.has(item.key) ? 'Excluded from discount' : 'Included in discount'}>
-                                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", excludedLineItemKeys.has(item.key) ? "bg-gray-400" : "bg-green-500")}></div>
+                                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", excludedLineItemKeys.has(item.key) ? "bg-text-disabled" : "bg-green")}></div>
                                 </Tooltip>
                               )}
                               <div>
-                                <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-                                <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+                                <p className="font-medium text-font-1">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+                                <p className="text-xs text-font-2">{item.ProductBrand}</p>
                               </div>
                             </div>,
                             <StepperInput
@@ -996,13 +994,13 @@ const ReceiptFormPage: React.FC = () => {
                               error={errors[`price_${item.key}`]}
                               disabled={isDebtDisabled}
                             />,
-                            <span className="font-medium text-right block">{(item.LineQuantity * item.LineUnitPrice).toFixed(2)}</span>,
+                            <span className="font-medium text-right block text-font-1"><MoneyDisplay amount={item.LineQuantity * item.LineUnitPrice} showSign={false} colorPositive={false} colorNegative={false} /></span>,
                             ...(splitType === 'line_item' ? [
-                              <div className="text-right text-sm text-gray-600 dark:text-gray-400">{item.DebtorName || '-'}</div>] : []),
+                              <div className="text-right text-sm text-font-2">{item.DebtorName || '-'}</div>] : []),
                             <div className="text-right">
                               {!isDebtDisabled && <Button variant="ghost"
                                                           size="icon"
-                                                          onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-danger"/></Button>}
+                                                          onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-red"/></Button>}
                             </div>
                           ])}
                           emptyStateIcon={<ArrowDown className="h-10 w-10 opacity-50" />}
@@ -1019,7 +1017,7 @@ const ReceiptFormPage: React.FC = () => {
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             <div className="flex items-center gap-4 mb-1">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Discount (%)</span>
+                              <span className="text-sm font-medium text-font-2">Discount (%)</span>
                               <div className="w-24">
                                 <StepperInput
                                   value={String(formData.discount)}
@@ -1049,11 +1047,26 @@ const ReceiptFormPage: React.FC = () => {
                                 {isExclusionMode ? (excludedLineItemKeys.size > 0 ? "Edit Exclusions" : "No Exclusions") : "Exclude Items"}
                               </button>
                             </div>
-                            <div className="flex items-center gap-4 text-gray-500">
+                            <div className="flex items-center gap-4 text-font-2">
                               <span className="text-sm">Subtotal</span>
                               <MoneyDisplay amount={subtotal} showSign={false} colorPositive={false} colorNegative={false} className="font-medium" />
                             </div>
-                            <div className="flex items-center gap-4 text-lg font-bold">
+                            <div className="flex items-center gap-4 text-font-2">
+                              {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
+                                <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
+                                  <div className="flex items-center gap-1 cursor-help">
+                                    <AlertTriangle className="h-4 w-4 text-yellow"/>
+                                    <span className="text-sm underline decoration-dotted">
+                                      Discount ({receipt.Discount || 0}%)
+                                    </span>
+                                  </div>
+                                </Tooltip>
+                              ) : (
+                                <span className="text-sm">Discount ({receipt?.Discount || 0}%)</span>
+                              )}
+                              <span className="font-medium">-<MoneyDisplay amount={displaySubtotal - displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} /></span>
+                            </div>
+                            <div className="flex items-center gap-4 text-lg font-bold text-font-1">
                               <span>Total</span>
                               <MoneyDisplay amount={total} showSign={false} colorPositive={false} colorNegative={false} />
                             </div>
@@ -1069,10 +1082,10 @@ const ReceiptFormPage: React.FC = () => {
                 <Card className="overflow-hidden">
                   <div className="relative p-6 space-y-4 min-h-[300px]">
                     {hasSettledDebts && (
-                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                        <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                        <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debts Settled</h3>
-                        <p className="mt-1 text-center text-sm text-gray-500">One or more debts on this expense have been
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-bg/30 backdrop-blur-sm">
+                        <Info className="h-12 w-12 text-font-2"/>
+                        <h3 className="mt-2 text-lg font-semibold text-font-1">Debts Settled</h3>
+                        <p className="mt-1 text-center text-sm text-font-2">One or more debts on this expense have been
                                                                               settled.<br/>To preserve data accuracy, some
                                                                               configurations for this expense are now
                                                                               locked.</p>
@@ -1084,18 +1097,18 @@ const ReceiptFormPage: React.FC = () => {
                           <div className="blur-sm select-none pointer-events-none opacity-50">
                             <div className="flex items-center justify-between mb-4">
                               <div className="flex items-center gap-2">
-                                <h2 className="text-lg font-semibold">Debt Management</h2>
-                                <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
+                                <h2 className="text-lg font-semibold text-font-1">Debt Management</h2>
+                                <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-font-2"/></Tooltip>
                               </div>
-                              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                                <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">None</button>
-                                <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100">Split
+                              <ButtonGroup variant="toggle">
+                                <button className="px-3 py-1.5 text-sm font-medium transition-colors text-font-2">None</button>
+                                <button className="px-3 py-1.5 text-sm font-medium transition-colors bg-field shadow-sm text-font-1">Split
                                                                                                                                                                                       Total
                                 </button>
                                 {receiptFormat === 'itemised' &&
-                                  <button className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-500">Per
+                                  <button className="px-3 py-1.5 text-sm font-medium transition-colors text-font-2">Per
                                                                                                                                  Item</button>}
-                              </div>
+                              </ButtonGroup>
                             </div>
                             <div className="space-y-4">
                               <NanoDataTable
@@ -1106,13 +1119,13 @@ const ReceiptFormPage: React.FC = () => {
                                 ]}
                                 rows={[
                                   [
-                                    <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
+                                    <span className="font-medium text-font-1">{settings.userName || 'User'} (Me)</span>,
                                     <StepperInput
                                       value="0"
                                       disabled={true}
                                       className="w-32 mx-auto"
                                     />,
-                                    <div className="text-right text-gray-400">
+                                    <div className="text-right text-font-2">
                                       <Tooltip content="You cannot remove yourself">
                                         <Lock className="h-4 w-4"/>
                                       </Tooltip>
@@ -1128,19 +1141,18 @@ const ReceiptFormPage: React.FC = () => {
                                     onChange={() => {
                                     }}
                                     placeholder="Add Person..."
-                                    className="bg-white dark:bg-gray-800"
                                     disabled={true}
                                   />
                                 </div>
-                                <div className="text-sm text-gray-500">Total Shares: 0</div>
+                                <div className="text-sm text-font-2">Total Shares: 0</div>
                               </div>
                             </div>
                           </div>
                           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
-                            <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                            <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Debt Management
+                            <Info className="h-12 w-12 text-font-2"/>
+                            <h3 className="mt-2 text-lg font-semibold text-font-1">Debt Management
                                                                                                         Disabled</h3>
-                            <p className="mt-1 text-sm text-gray-500">Debt management is disabled when an expense isn't paid
+                            <p className="mt-1 text-sm text-font-2">Debt management is disabled when an expense isn't paid
                                                                       by you.</p>
                           </div>
                         </div>
@@ -1148,8 +1160,8 @@ const ReceiptFormPage: React.FC = () => {
                         <>
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                              <h2 className="text-lg font-semibold">Debt Management</h2>
-                              <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-gray-400"/></Tooltip>
+                              <h2 className="text-lg font-semibold text-font-1">Debt Management</h2>
+                              <Tooltip content="Split the cost of this expense with others."><Info className="h-5 w-5 text-font-2"/></Tooltip>
                             </div>
                             <SplitTypeSelector/>
                           </div>
@@ -1164,7 +1176,7 @@ const ReceiptFormPage: React.FC = () => {
                                 ]}
                                 rows={[
                                   [
-                                    <span className="font-medium">{settings.userName || 'User'} (Me)</span>,
+                                    <span className="font-medium text-font-1">{settings.userName || 'User'} (Me)</span>,
                                     <StepperInput
                                       value={String(formData.ownShares)}
                                       onChange={(e) => handleFormChange('ownShares', e.target.value)}
@@ -1186,7 +1198,7 @@ const ReceiptFormPage: React.FC = () => {
                                     </div>
                                   ],
                                   ...receiptSplits.map(split => ([
-                                    <span className="font-medium truncate">{split.DebtorName}</span>,
+                                    <span className="font-medium truncate text-font-1">{split.DebtorName}</span>,
                                     <StepperInput
                                       value={String(split.SplitPart)}
                                       onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
@@ -1202,7 +1214,7 @@ const ReceiptFormPage: React.FC = () => {
                                     <div className="text-right">
                                       {!isDebtDisabled &&
                                         <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><X
-                                          className="h-4 w-4 text-danger"/></Button>}
+                                          className="h-4 w-4 text-red"/></Button>}
                                     </div>
                                   ]))
                                 ]}
@@ -1226,7 +1238,7 @@ const ReceiptFormPage: React.FC = () => {
                                       />
                                     </div>
                                   </div>
-                                  <div className="text-sm text-gray-500 text-right">{totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0'}</div>
+                                  <div className="text-sm text-font-2 text-right">{totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0'}</div>
                                 </div>
                               </div>
                             </div>
@@ -1234,12 +1246,12 @@ const ReceiptFormPage: React.FC = () => {
 
                           {splitType === 'line_item' && receiptFormat === 'itemised' && (
                             <div className="flex justify-center items-center h-full min-h-[400px]">
-                              <div className="w-3/4 border border-gray-200 dark:border-gray-700 p-8 rounded-xl space-y-4 bg-transparent">
+                              <div className="w-3/4 border border-border p-8 rounded-xl space-y-4 bg-transparent">
                                 <div className="flex items-center justify-between">
                                   <div>
-                                    <h4 className="text-base font-medium text-gray-900 dark:text-gray-100">Item
+                                    <h4 className="text-base font-medium text-font-1">Item
                                                                                                            Assignment</h4>
-                                    <p className="text-sm text-gray-500 mt-1">
+                                    <p className="text-sm text-font-2 mt-1">
                                       {lineItems.filter(i => i.DebtorID).length} of {lineItems.length} items assigned
                                     </p>
                                   </div>
@@ -1250,7 +1262,7 @@ const ReceiptFormPage: React.FC = () => {
                                     {lineItems.some(i => i.DebtorID) ? 'Edit Assignments' : 'Assign Items'}
                                   </Button>
                                 </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                <div className="w-full bg-field-disabled rounded-full h-2 overflow-hidden">
                                   <div
                                     className="bg-accent h-2 rounded-full transition-all duration-300"
                                     style={{width: `${(lineItems.filter(i => i.DebtorID).length / Math.max(1, lineItems.length)) * 100}%`}}
@@ -1262,19 +1274,19 @@ const ReceiptFormPage: React.FC = () => {
 
                           {splitType === 'none' && (
                             <div className="flex flex-col items-center justify-center py-8 text-center min-h-[400px]">
-                              <Info className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2"/>
-                              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Debt Splitting</h3>
-                              <p className="text-sm text-gray-500 max-w-sm">The full amount of this expense is assigned to
+                              <Info className="h-12 w-12 text-font-2 mb-2"/>
+                              <h3 className="text-lg font-medium text-font-1">No Debt Splitting</h3>
+                              <p className="text-sm text-font-2 max-w-sm">The full amount of this expense is assigned to
                                                                             you. Select a split type above to share the
                                                                             cost.</p>
                             </div>
                           )}
 
-                          <div className={cn("mt-4 pt-4 border-t border-gray-200 dark:border-gray-700", splitType === 'none' && "invisible")}>
+                          <div className={cn("mt-4 pt-4 border-t border-border", splitType === 'none' && "invisible")}>
                             <div className="flex items-center gap-2 mb-4">
-                              <h2 className="text-lg font-semibold">Estimated Debt</h2>
+                              <h2 className="text-lg font-semibold text-font-1">Estimated Debt</h2>
                               <Tooltip content="This is an estimate of what each person owes based on the current split."><Info
-                                className="h-5 w-5 text-gray-400"/></Tooltip>
+                                className="h-5 w-5 text-font-2"/></Tooltip>
                             </div>
                             <DataGrid
                               itemKey="name"
@@ -1288,8 +1300,8 @@ const ReceiptFormPage: React.FC = () => {
                               ]}
                               renderItem={(item) => (
                                 <div className="flex justify-between items-center">
-                                  <span className="font-medium">{item.name}</span>
-                                  <span className="text-lg font-semibold">{item.amount}</span>
+                                  <span className="font-medium text-font-1">{item.name}</span>
+                                  <span className="text-lg font-semibold text-font-1">{item.amount}</span>
                                 </div>
                               )}
                             />

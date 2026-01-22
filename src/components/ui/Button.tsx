@@ -2,9 +2,9 @@ import React, {ButtonHTMLAttributes} from 'react';
 import {cn} from '../../utils/cn';
 
 const variants = {
-  primary: 'bg-accent hover:bg-accent-hover text-white shadow-lg border border-accent-hover',
-  secondary: 'bg-field-disabled text-font-1 hover:bg-field-hover shadow-lg border border-border',
-  danger: 'bg-danger hover:bg-danger-hover text-white shadow-sm border border-danger-hover',
+  primary: 'bg-accent hover:bg-accent text-white shadow-lg border border-accent',
+  secondary: 'bg-field text-font-1 hover:bg-field-hover shadow-lg border border-border',
+  danger: 'bg-red hover:bg-red text-white shadow-sm border border-red',
   ghost: 'bg-transparent hover:bg-field-hover text-font-2',
   minimal: 'inline-flex items-center justify-center p-0 m-0 bg-transparent border-0 appearance-none focus:outline-none',
 };

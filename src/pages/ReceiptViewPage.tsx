@@ -52,6 +52,14 @@ import {useReceiptDebtCalculation} from '../hooks/useDebtCalculation';
 import {usePdfGenerator} from '../hooks/usePdfGenerator';
 import FilterModal, {FilterOption} from '../components/ui/FilterModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/DropdownMenu"
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 
 interface MarkAsPaidModalProps {
@@ -63,6 +71,12 @@ interface MarkAsPaidModalProps {
 
 const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({isOpen, onClose, onConfirm, paymentMethods}) => {
   const [paymentMethodId, setPaymentMethodId] = useState(paymentMethods[0]?.value.toString() || '');
+
+  useEffect(() => {
+    if (isOpen && paymentMethods.length > 0 && !paymentMethodId) {
+      setPaymentMethodId(paymentMethods[0].value.toString());
+    }
+  }, [isOpen, paymentMethods, paymentMethodId]);
 
   return (
     <Modal
@@ -353,16 +367,16 @@ const ReceiptViewPage: React.FC = () => {
         <div key={`product-${item.LineItemID}`} className="flex items-center gap-2">
           {receipt?.Discount > 0 && filterOptions.hasExclusions && (
             <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
-              <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-gray-400" : "bg-green-500")}></div>
+              <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-text-disabled" : "bg-green")}></div>
             </Tooltip>
           )}
           <div>
-            <p className="font-medium">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
-            <p className="text-xs text-gray-500">{item.ProductBrand}</p>
+            <p className="font-medium text-font-1">{item.ProductName}{item.ProductSize ? ` - ${item.ProductSize}${item.ProductUnitType || ''}` : ''}</p>
+            <p className="text-xs text-font-2">{item.ProductBrand}</p>
           </div>
         </div>,
-        <div key={`category-${item.LineItemID}`} className="text-right text-gray-500">{item.CategoryName || '-'}</div>,
-        <div key={`qty-${item.LineItemID}`} className="text-right">{item.LineQuantity}</div>,
+        <div key={`category-${item.LineItemID}`} className="text-right text-font-2">{item.CategoryName || '-'}</div>,
+        <div key={`qty-${item.LineItemID}`} className="text-right text-font-1">{item.LineQuantity}</div>,
         <div key={`price-${item.LineItemID}`} className="text-right"><MoneyDisplay amount={item.LineUnitPrice} showSign={false} colorPositive={false} colorNegative={false} /></div>,
         <div key={`total-${item.LineItemID}`}
              className="text-right font-medium"><MoneyDisplay amount={item.LineQuantity * item.LineUnitPrice} showSign={false} colorPositive={false} colorNegative={false} /></div>,
@@ -370,7 +384,7 @@ const ReceiptViewPage: React.FC = () => {
       if (debtEnabled && receipt?.SplitType === 'line_item') {
         row.push(
           <div key={`debtor-${item.LineItemID}`}
-               className={cn("text-right", isDebtorUnpaid ? "text-red font-medium" : "text-gray-600 dark:text-gray-400")}>
+               className={cn("text-right", isDebtorUnpaid ? "text-red font-medium" : "text-font-2")}>
             {item.DebtorName || '-'}
           </div>
         );
@@ -389,7 +403,7 @@ const ReceiptViewPage: React.FC = () => {
   }
 
   if (!receipt) {
-    return <div className="text-center">Expense not found.</div>;
+    return <div className="text-center text-font-1">Expense not found.</div>;
   }
 
   return (
@@ -446,7 +460,7 @@ const ReceiptViewPage: React.FC = () => {
             {receipt?.ReceiptNote && (
               <Card>
                 <div className="p-4">
-                  <p className="text-base text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{receipt.ReceiptNote}</p>
+                  <p className="text-base text-font-1 whitespace-pre-wrap break-words">{receipt.ReceiptNote}</p>
                 </div>
               </Card>
             )}
@@ -484,10 +498,10 @@ const ReceiptViewPage: React.FC = () => {
                     />
                   </div>
                   <div
-                    className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-                    <Info className="h-12 w-12 text-gray-400 dark:text-gray-500"/>
-                    <h3 className="mt-2 text-lg font-semibold text-gray-700 dark:text-gray-300">Total-only Expense</h3>
-                    <p className="mt-1 text-sm text-gray-500">Only the total amount was recorded for this expense.</p>
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-bg/30 backdrop-blur-sm">
+                    <Info className="h-12 w-12 text-font-2"/>
+                    <h3 className="mt-2 text-lg font-semibold text-font-1">Total-only Expense</h3>
+                    <p className="mt-1 text-sm text-font-2">Only the total amount was recorded for this expense.</p>
                   </div>
                 </div>
               </Card>
@@ -495,7 +509,7 @@ const ReceiptViewPage: React.FC = () => {
               <Card>
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Items</h3>
+                    <h3 className="text-lg font-semibold text-font-1">Items</h3>
                     <ButtonGroup>
                       <Tooltip content="Filters">
                         <Button variant="secondary" size="icon" onClick={() => setIsFilterModalOpen(true)}>
@@ -516,15 +530,15 @@ const ReceiptViewPage: React.FC = () => {
                 </div>
                 <div className="px-6 py-4 rounded-b-xl">
                   <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-4 text-gray-500">
+                    <div className="flex items-center gap-4 text-font-2">
                       <span className="text-sm">Subtotal</span>
                       <MoneyDisplay amount={displaySubtotal} showSign={false} colorPositive={false} colorNegative={false} className="font-medium" />
                     </div>
-                    <div className="flex items-center gap-4 text-gray-500">
+                    <div className="flex items-center gap-4 text-font-2">
                       {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
                         <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
                           <div className="flex items-center gap-1 cursor-help">
-                            <AlertTriangle className="h-4 w-4 text-yellow-500"/>
+                            <AlertTriangle className="h-4 w-4 text-yellow"/>
                             <span className="text-sm underline decoration-dotted">
                               Discount ({receipt.Discount || 0}%)
                             </span>
@@ -535,7 +549,7 @@ const ReceiptViewPage: React.FC = () => {
                       )}
                       <span className="font-medium">-<MoneyDisplay amount={displaySubtotal - displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} /></span>
                     </div>
-                    <div className="flex items-center gap-4 text-lg font-bold">
+                    <div className="flex items-center gap-4 text-lg font-bold text-font-1">
                       <span>Total</span>
                       <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} />
                     </div>
@@ -553,8 +567,8 @@ const ReceiptViewPage: React.FC = () => {
 
                   {/* Total Amount */}
                   <div className="sm:col-start-1 sm:row-start-1 xl:col-start-1 xl:row-start-1 2xl:col-start-1 2xl:row-start-1">
-                    <p className="text-sm text-gray-500">Total Amount</p>
-                    <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} className="text-2xl font-bold" />
+                    <p className="text-sm text-font-2">Total Amount</p>
+                    <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} className="text-2xl font-bold text-font-1" />
                   </div>
 
                   {/* Badges */}
@@ -564,8 +578,8 @@ const ReceiptViewPage: React.FC = () => {
                         className={cn(
                           'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border',
                           receipt?.Status === 'paid'
-                            ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700'
-                            : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
+                            ? 'bg-green/20 text-green border-green/30'
+                            : 'bg-red/20 text-red border-red/30'
                         )}
                       >
                         {receipt?.Status === 'paid' ? 'Paid to Vendor' : 'Unpaid'}
@@ -576,9 +590,9 @@ const ReceiptViewPage: React.FC = () => {
                         <span
                           className={cn(
                             'px-2 inline-flex text-xs leading-5 font-semibold rounded-full border cursor-help',
-                            debtStatus.color === 'green' && 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-100 dark:border-green-700',
-                            debtStatus.color === 'yellow' && 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-100 dark:border-yellow-700',
-                            debtStatus.color === 'red' && 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-100 dark:border-red-700'
+                            debtStatus.color === 'green' && 'bg-green/20 text-green border-green/30',
+                            debtStatus.color === 'yellow' && 'bg-yellow/20 text-yellow border-yellow/30',
+                            debtStatus.color === 'red' && 'bg-red/20 text-red border-red/30'
                           )}
                         >
                           {debtStatus.label}
@@ -592,24 +606,24 @@ const ReceiptViewPage: React.FC = () => {
                     {receipt?.StoreName && (
                       <Tooltip content="The vendor where this expense was incurred">
                         <div className="flex items-center gap-3 cursor-help">
-                          <Store className="h-5 w-5 text-gray-400"/>
-                          <span className="text-sm">{receipt.StoreName}</span>
+                          <Store className="h-5 w-5 text-font-2"/>
+                          <span className="text-sm text-font-1">{receipt.StoreName}</span>
                         </div>
                       </Tooltip>
                     )}
                     {receipt?.ReceiptDate && (
                       <Tooltip content="The date this expense was incurred">
                         <div className="flex items-center gap-3 cursor-help">
-                          <Calendar className="h-5 w-5 text-gray-400"/>
-                          <span className="text-sm">{format(parseISO(receipt.ReceiptDate), 'MMM d, yyyy')}</span>
+                          <Calendar className="h-5 w-5 text-font-2"/>
+                          <span className="text-sm text-font-1">{format(parseISO(receipt.ReceiptDate), 'MMM d, yyyy')}</span>
                         </div>
                       </Tooltip>
                     )}
                     {paymentMethodsEnabled && (
                       <Tooltip content="The payment method used for this expense">
                         <div className="flex items-center gap-3 cursor-help">
-                          <CreditCard className="h-5 w-5 text-gray-400"/>
-                          <span className="text-sm">{receipt.PaymentMethodName || 'N/A'}</span>
+                          <CreditCard className="h-5 w-5 text-font-2"/>
+                          <span className="text-sm text-font-1">{receipt.PaymentMethodName || 'N/A'}</span>
                         </div>
                       </Tooltip>
                     )}
@@ -617,14 +631,14 @@ const ReceiptViewPage: React.FC = () => {
                       <>
                         <Tooltip content="Number of unique items in this receipt">
                           <div className="flex items-center gap-3 cursor-help">
-                            <Tag className="h-5 w-5 text-gray-400"/>
-                            <span className="text-sm">{displayTotalItems} Unique Items</span>
+                            <Tag className="h-5 w-5 text-font-2"/>
+                            <span className="text-sm text-font-1">{displayTotalItems} Unique Items</span>
                           </div>
                         </Tooltip>
                         <Tooltip content="Total quantity of all items purchased">
                           <div className="flex items-center gap-3 cursor-help">
-                            <ShoppingCart className="h-5 w-5 text-gray-400"/>
-                            <span className="text-sm">{displayTotalQuantity} Total Quantity</span>
+                            <ShoppingCart className="h-5 w-5 text-font-2"/>
+                            <span className="text-sm text-font-1">{displayTotalQuantity} Total Quantity</span>
                           </div>
                         </Tooltip>
                       </>
@@ -651,8 +665,8 @@ const ReceiptViewPage: React.FC = () => {
                             <Link to={`/entities/${debtor.debtorId}`}
                                   className="font-medium hover:underline flex items-center gap-1.5 group"
                                   onClick={(e) => e.stopPropagation()}>
-                              <span className="text-gray-900 dark:text-gray-100">{debtor.name}</span>
-                              <LinkIcon className="h-4 w-4 text-gray-400 dark:text-gray-500"/>
+                              <span className="text-font-1">{debtor.name}</span>
+                              <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
                             </Link>
                             <div className="flex items-center">
                               {debtor.isPaid ? (
@@ -673,9 +687,9 @@ const ReceiptViewPage: React.FC = () => {
                             </p>
                             <div className="text-right flex-shrink-0 pl-2">
                               {receipt?.SplitType === 'total_split' &&
-                                <p className="text-sm text-gray-500">{debtor.shares} / {debtor.totalShares} shares</p>}
+                                <p className="text-sm text-font-2">{debtor.shares} / {debtor.totalShares} shares</p>}
                               {receipt?.SplitType === 'line_item' && !receipt.IsNonItemised &&
-                                <p className="text-sm text-gray-500">{debtor.itemCount} / {displayTotalItems} items</p>}
+                                <p className="text-sm text-font-2">{debtor.itemCount} / {displayTotalItems} items</p>}
                             </div>
                           </div>
                         </Card>
@@ -683,16 +697,16 @@ const ReceiptViewPage: React.FC = () => {
                       {!!debtSummary.ownShare && (
                         <Card className="p-4">
                           <div className="flex justify-between items-start">
-                            <p className="font-medium text-gray-900 dark:text-gray-100">Own Share</p>
-                            <User className="h-5 w-5 text-blue-600 dark:text-blue-400"/>
+                            <p className="font-medium text-font-1">Own Share</p>
+                            <User className="h-5 w-5 text-accent"/>
                           </div>
                           <div className="flex justify-between items-baseline mt-1">
-                            <p className="font-bold text-blue-700 dark:text-blue-300 truncate"
+                            <p className="font-bold text-accent truncate"
                                style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                               <MoneyDisplay amount={debtSummary.ownShare.amount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
                             <div className="text-right flex-shrink-0 pl-2">
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-font-2">
                                 {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
                               </p>
                             </div>
@@ -704,30 +718,30 @@ const ReceiptViewPage: React.FC = () => {
                     <Card className="overflow-hidden">
                       <div className="relative p-6">
                         <div className="blur-sm space-y-3">
-                          <div className="h-24 bg-gray-100 dark:bg-gray-900 rounded-xl w-full border border-gray-200 dark:border-gray-800 flex flex-col p-4 justify-between">
+                          <div className="h-24 bg-field-disabled rounded-xl w-full border border-border flex flex-col p-4 justify-between">
                             <div className="flex justify-between items-start">
-                              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-800 rounded-full"></div>
+                              <div className="h-4 w-24 bg-field rounded"></div>
+                              <div className="h-5 w-5 bg-field rounded-full"></div>
                             </div>
                             <div className="flex justify-between items-baseline">
-                              <div className="h-8 w-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                              <div className="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                              <div className="h-8 w-20 bg-field rounded"></div>
+                              <div className="h-4 w-16 bg-field rounded"></div>
                             </div>
                           </div>
-                          <div className="h-24 bg-gray-100 dark:bg-gray-900 rounded-xl w-full border border-gray-200 dark:border-gray-800 flex flex-col p-4 justify-between">
+                          <div className="h-24 bg-field-disabled rounded-xl w-full border border-border flex flex-col p-4 justify-between">
                             <div className="flex justify-between items-start">
-                              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-800 rounded-full"></div>
+                              <div className="h-4 w-24 bg-field rounded"></div>
+                              <div className="h-5 w-5 bg-field rounded-full"></div>
                             </div>
                             <div className="flex justify-between items-baseline">
-                              <div className="h-8 w-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                              <div className="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                              <div className="h-8 w-20 bg-field rounded"></div>
+                              <div className="h-4 w-16 bg-field rounded"></div>
                             </div>
                           </div>
                         </div>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 dark:bg-black/40 backdrop-blur-sm">
-                          <Info className="h-8 w-8 text-gray-400 dark:text-gray-500"/>
-                          <p className="mt-2 text-sm text-gray-500 font-medium">No debts owed to you for this
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg/30 backdrop-blur-sm">
+                          <Info className="h-8 w-8 text-font-2"/>
+                          <p className="mt-2 text-sm text-font-2 font-medium">No debts owed to you for this
                                                                                 receipt.</p>
                         </div>
                       </div>
@@ -806,17 +820,14 @@ const ReceiptViewPage: React.FC = () => {
         onClose={() => setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null})}
         onConfirm={handleUnsettleDebt}
         title="Unsettle Debt"
-        message="Are you sure you want to mark this debt as unpaid? This will also delete the associated top-up transaction."
+        message={`Are you sure you want to mark this debt as unpaid?`}
       />
 
       <MarkAsPaidModal
         isOpen={isMarkAsPaidModalOpen}
         onClose={() => setIsMarkAsPaidModalOpen(false)}
         onConfirm={handleMarkAsPaid}
-        paymentMethods={(activePaymentMethods || []).map(pm => ({
-          value: pm.PaymentMethodID,
-          label: pm.PaymentMethodName
-        }))}
+        paymentMethods={activePaymentMethods?.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })) || []}
       />
 
       <ConfirmModal

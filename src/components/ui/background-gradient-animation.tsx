@@ -3,8 +3,8 @@ import { cn } from "../../utils/cn";
 import { useSettingsStore } from "../../store/useSettingsStore";
 
 export const BackgroundGradientAnimation = ({
-  gradientBackgroundStart = "rgb(108, 0, 162)",
-  gradientBackgroundEnd = "rgb(0, 17, 82)",
+  gradientBackgroundStart = "var(--color-bg)",
+  gradientBackgroundEnd = "var(--color-bg)",
   color = "18, 113, 255",
   pointerColor = "140, 100, 255",
   size = "40%",
@@ -43,6 +43,7 @@ export const BackgroundGradientAnimation = ({
 
   // Convert hex color to RGB string for CSS variables
   const hexToRgb = (hex: string) => {
+    if (hex.startsWith('var')) return null; // Can't easily convert var to rgb here
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
   };
@@ -52,15 +53,8 @@ export const BackgroundGradientAnimation = ({
     const headerColor = forceColor || settings.headerColor || '#8b5cf6'; 
     const rgbColor = hexToRgb(headerColor) || color;
 
-    // We need to scope these variables if we want multiple instances with different colors
-    // But CSS variables on body are global. 
-    // To support the preview, we should apply these to the container ref if possible, 
-    // but the animation relies on these variables being available to the child divs.
-    // Let's try applying to the container element instead of body.
-    
     const container = interactiveRef.current?.parentElement || document.body;
     
-    // Check if container is valid before setting properties
     if (container && container.style) {
       container.style.setProperty("--gradient-background-start", gradientBackgroundStart);
       container.style.setProperty("--gradient-background-end", gradientBackgroundEnd);
@@ -85,7 +79,7 @@ export const BackgroundGradientAnimation = ({
       style={{
         background: `linear-gradient(to bottom, var(--gradient-background-start), var(--gradient-background-end))`,
       }}
-      ref={interactiveRef} // Use this ref to scope styles if we change logic, currently used for mouse move
+      ref={interactiveRef}
     >
       <svg className="hidden">
         <defs>

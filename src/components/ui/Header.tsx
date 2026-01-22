@@ -75,10 +75,10 @@ export const Header: React.FC<HeaderProps> = ({
           className="absolute left-0 right-0 overflow-hidden"
           style={{ height: `${minHeight}px`, top: '0px' }}
         >
-          <div className="absolute inset-0 bg-bg dark:bg-black" />
+          <div className="absolute inset-0 bg-bg" />
           <BackgroundGradientAnimation
-            gradientBackgroundStart={isDarkMode ? '#000000' : '#FFFFFF'}
-            gradientBackgroundEnd={isDarkMode ? '#000000' : '#FFFFFF'}
+            gradientBackgroundStart="var(--color-bg)"
+            gradientBackgroundEnd="var(--color-bg)"
             color="135, 94, 242"
             pointerColor="135, 94, 242"
             interactive={false}

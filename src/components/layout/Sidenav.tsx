@@ -68,7 +68,7 @@ const Sidenav: React.FC = () => {
   return (
     <aside
       className={cn(
-        "h-full bg-bg-2 border-r border-border flex flex-col transition-all duration-300 ease-in-out z-20",
+        "h-full bg-bg border-r border-border flex flex-col transition-all duration-300 ease-in-out z-20",
         isSidenavCollapsed ? "w-14" : "w-64"
       )}
     >

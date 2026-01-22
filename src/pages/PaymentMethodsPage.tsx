@@ -36,37 +36,41 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
     return (
         <div className={cn("flex flex-col justify-between h-full relative group", method.PaymentMethodIsActive === 0 && "opacity-60")}>
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{method.PaymentMethodName}</h3>
+                <h3 className="text-lg font-bold text-font-1">{method.PaymentMethodName}</h3>
                 <div className="w-8 h-8 flex items-center justify-center">
-                  {IconComponent ? <IconComponent className="h-8 w-8 text-gray-400" /> :
+                  {IconComponent ? <IconComponent className="h-8 w-8 text-font-2" /> :
                    style?.type === 'emoji' ? <span className="text-3xl">{style.symbol}</span> :
-                   <CreditCard className="h-8 w-8 text-gray-300 dark:text-gray-700" />}
+                   <CreditCard className="h-8 w-8 text-font-2" />}
                 </div>
             </div>
             <div className="mt-4 text-right">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Current Balance</p>
+                <p className="text-xs text-font-2">Current Balance</p>
                 {isLoading || balance === undefined ? (
                   <div className="flex justify-end items-center h-7">
-                    <Spinner className="h-5 w-5 text-gray-400" />
+                    <Spinner className="h-5 w-5 text-font-2" />
                   </div>
                 ) : (
                   <MoneyDisplay 
                     amount={balance} 
                     showSign={false} 
-                    className="text-2xl font-semibold" 
+                    className="text-2xl font-semibold text-font-1" 
                   />
                 )}
             </div>
             <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <Tooltip content="Edit Style">
-                <button onClick={(e) => { e.stopPropagation(); onStyleClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><Palette className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
+                <Button variant="secondary" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onStyleClick(method); }}>
+                  <Palette className="h-4 w-4" />
+                </Button>
               </Tooltip>
               <Tooltip content="Edit">
-                <button onClick={(e) => { e.stopPropagation(); onEditClick(method); }} className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><Pencil className="h-4 w-4 text-gray-600 dark:text-gray-300" /></button>
+                <Button variant="secondary" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onEditClick(method); }}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
               </Tooltip>
               {method.PaymentMethodIsActive === 0 && (
                 <Tooltip content="Hidden">
-                  <EyeOff className="h-5 w-5 text-gray-400" />
+                  <EyeOff className="h-5 w-5 text-font-2" />
                 </Tooltip>
               )}
             </div>

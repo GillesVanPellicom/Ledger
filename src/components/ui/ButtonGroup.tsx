@@ -4,19 +4,25 @@ import { cn } from '../../utils/cn';
 interface ButtonGroupProps {
   children: ReactNode;
   className?: string;
-  variant?: 'default' | 'ghost-bordered';
+  variant?: 'default' | 'ghost-bordered' | 'toggle';
+  fullWidth?: boolean;
 }
 
 /**
  * ButtonGroup component that ensures only the outer corners of the group are rounded.
  * Supports a 'ghost-bordered' variant for transparent buttons with a shared border.
+ * Supports a 'toggle' variant for segmented control style selection.
  */
-export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, variant = 'default' }) => {
+export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, variant = 'default', fullWidth = false }) => {
   const childrenArray = React.Children.toArray(children).filter(React.isValidElement);
   const count = childrenArray.length;
 
+  const containerClasses = variant === 'toggle'
+    ? "inline-flex p-1 border border-border bg-field-disabled rounded-lg shadow-sm isolate"
+    : "inline-flex shadow-sm isolate";
+
   return (
-    <div className={cn("inline-flex shadow-sm isolate", className)}>
+    <div className={cn(containerClasses, fullWidth && "flex w-full", className)}>
       {childrenArray.map((child, index) => {
         const isFirst = index === 0;
         const isLast = index === count - 1;
@@ -31,9 +37,13 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
           roundingClasses = '!rounded-r-lg !rounded-l-none';
         }
 
-        const variantClasses = variant === 'ghost-bordered' 
-          ? 'border border-border bg-transparent hover:bg-field-hover'
-          : '';
+        let variantClasses = '';
+        if (variant === 'ghost-bordered') {
+          variantClasses = 'border border-border bg-transparent hover:bg-field-hover';
+        } else if (variant === 'toggle') {
+          roundingClasses = '!rounded-md'; // Toggles usually have smaller rounding for inner items
+          variantClasses = 'transition-all duration-200';
+        }
 
         const applyStyles = (element: React.ReactElement<any>): React.ReactElement<any> => {
           const props = element.props as Record<string, any>;
@@ -42,8 +52,19 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
 
           if (name === 'Tooltip' && React.isValidElement(props.children)) {
             return React.cloneElement(element, {
-              children: applyStyles(props.children as React.ReactElement<any>)
+              children: applyStyles(props.children as React.ReactElement<any>),
+              className: cn(props.className, fullWidth && "flex-1")
             });
+          }
+
+          // For toggle variant, we expect buttons to have an 'active' prop or similar
+          // We'll handle the active state styling here if it's a toggle
+          let activeClasses = '';
+          if (variant === 'toggle') {
+             const isActive = props.active || props.className?.includes('bg-field') || props.className?.includes('bg-bg-2') || props.className?.includes('bg-gray-100');
+             activeClasses = isActive 
+               ? 'bg-field text-font-1 shadow-sm' 
+               : 'bg-transparent text-font-2 hover:bg-field-hover/50';
           }
 
           return React.cloneElement(element, {
@@ -51,9 +72,11 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
               props.className,
               roundingClasses,
               variantClasses,
+              activeClasses,
+              fullWidth && "flex-1",
               'relative focus:z-10',
-              !isFirst && '-ml-px',
-              'shadow-none'
+              (variant !== 'toggle' && !isFirst) && '-ml-px',
+              'shadow-none border-0' // Remove individual borders in toggle mode
             )
           });
         };

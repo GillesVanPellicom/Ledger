@@ -17,21 +17,21 @@ const variantConfig = {
     icon: Info,
     iconColor: 'text-blue',
     titleColor: 'text-blue',
-    messageColor: 'text-blue/80',
+    messageColor: 'text-blue',
   },
   warning: {
     bg: 'bg-yellow/10',
     icon: AlertTriangle,
     iconColor: 'text-yellow',
     titleColor: 'text-yellow',
-    messageColor: 'text-yellow/80',
+    messageColor: 'text-yellow',
   },
   danger: {
     bg: 'bg-red/10',
     icon: AlertCircle,
     iconColor: 'text-red',
     titleColor: 'text-red',
-    messageColor: 'text-red/80',
+    messageColor: 'text-red',
   },
 };
 

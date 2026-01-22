@@ -59,7 +59,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
         : Number(value);
 
     const buttonBaseClasses =
-      'bg-field hover:bg-field-hover text-font-1 focus:z-10 flex items-center justify-center p-0';
+      'bg-field hover:bg-field-hover text-font-1 focus:z-10 flex items-center justify-center p-0 disabled:bg-field-disabled';
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let raw = e.target.value;
@@ -153,12 +153,12 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
           />
 
           <div className="flex flex-col h-full aspect-square shrink-0 w-auto">
-            <Button
+            <button
               type="button"
               aria-label="Increase value"
               className={cn(
                 buttonBaseClasses,
-                'w-full h-1/2 rounded-l-none rounded-br-none border border-border border-l-0 border-b-[0.5px]'
+                'w-full h-1/2 rounded-tr-lg border border-border border-l-0 border-b-[0.5px]'
               )}
               onClick={() => {
                 let num = isNaN(numericValue) ? 0 : numericValue;
@@ -170,14 +170,14 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
               disabled={(max !== undefined && numericValue >= max) || props.disabled}
             >
               <ChevronUp size={iconSizes[size]} className="shrink-0" />
-            </Button>
+            </button>
 
-            <Button
+            <button
               type="button"
               aria-label="Decrease value"
               className={cn(
                 buttonBaseClasses,
-                'w-full h-1/2 rounded-l-none rounded-tr-none border border-border border-l-0 border-t-[0.5px]'
+                'w-full h-1/2 rounded-br-lg border border-border border-l-0 border-t-[0.5px]'
               )}
               onClick={() => {
                 let num = isNaN(numericValue) ? 0 : numericValue;
@@ -189,7 +189,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
               disabled={(min !== undefined && numericValue <= min) || props.disabled}
             >
               <ChevronDown size={iconSizes[size]} className="shrink-0" />
-            </Button>
+            </button>
           </div>
         </div>
 

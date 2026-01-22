@@ -270,11 +270,11 @@ const ReceiptsPage: React.FC = () => {
         visibleIndicators.push(
           row.IsNonItemised ? (
             <Tooltip key="type" content="Total-only expense">
-              <Clipboard className="h-4 w-4 text-gray-400"/>
+              <Clipboard className="h-4 w-4 text-font-2"/>
             </Tooltip>
           ) : (
             <Tooltip key="type" content="Detailed Expense">
-              <ClipboardList className="h-4 w-4 text-gray-400"/>
+              <ClipboardList className="h-4 w-4 text-font-2"/>
             </Tooltip>
           )
         );
@@ -284,19 +284,19 @@ const ReceiptsPage: React.FC = () => {
         if (row.Status === 'unpaid') {
           visibleIndicators.push(
             <Tooltip key="debt" content="Unpaid expense">
-              <AlertTriangle className="h-4 w-4 text-yellow-500"/>
+              <AlertTriangle className="h-4 w-4 text-yellow"/>
             </Tooltip>
           );
         } else if ((row.UnpaidDebtorCount || 0) > 0) {
           visibleIndicators.push(
             <Tooltip key="debt" content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-              <AlertCircle className="h-4 w-4 text-red-500"/>
+              <AlertCircle className="h-4 w-4 text-red"/>
             </Tooltip>
           );
         } else if ((row.TotalDebtorCount || 0) > 0) {
           visibleIndicators.push(
             <Tooltip key="debt" content="All debts settled">
-              <CheckCircle className="h-4 w-4 text-green-500"/>
+              <CheckCircle className="h-4 w-4 text-green"/>
             </Tooltip>
           );
         }
@@ -305,7 +305,7 @@ const ReceiptsPage: React.FC = () => {
       if (indicatorSettings?.tentative && row.IsTentative) {
         visibleIndicators.push(
           <Tooltip key="tentative" content="Tentative Expense">
-            <HelpCircle className="h-4 w-4 text-gray-400"/>
+            <HelpCircle className="h-4 w-4 text-font-2"/>
           </Tooltip>
         );
       }
@@ -313,7 +313,7 @@ const ReceiptsPage: React.FC = () => {
       if (indicatorSettings?.attachments && (row.AttachmentCount || 0) > 0) {
         visibleIndicators.push(
           <Tooltip key="attachments" content={`${row.AttachmentCount} attachment(s)`}>
-            <Paperclip className="h-4 w-4 text-gray-400"/>
+            <Paperclip className="h-4 w-4 text-font-2"/>
           </Tooltip>
         );
       }
@@ -330,10 +330,10 @@ const ReceiptsPage: React.FC = () => {
       return (
         <div className="flex justify-end">
           <div 
-            className="border border-gray-200 dark:border-gray-700 rounded-lg p-1 flex items-center justify-center gap-2 h-8"
+            className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-8"
             style={{ minWidth: `${enabledCount * 28}px` }}
           >
-            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-gray-500 dark:text-gray-600">-</span>}
+            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-font-2">-</span>}
           </div>
         </div>
       );
@@ -358,48 +358,48 @@ const ReceiptsPage: React.FC = () => {
             <div className="flex items-center gap-2 px-2 py-1.5 pointer-events-none">
               {row.IsNonItemised ? (
                 <Tooltip content="Total-only expense">
-                  <Clipboard className="h-4 w-4 text-gray-400"/>
+                  <Clipboard className="h-4 w-4 text-font-2"/>
                 </Tooltip>
               ) : (
                 <Tooltip content="Detailed Expense">
-                  <ClipboardList className="h-4 w-4 text-gray-400"/>
+                  <ClipboardList className="h-4 w-4 text-font-2"/>
                 </Tooltip>
               )}
               {debtEnabled && (
                 row.Status === 'unpaid' ? (
                   <Tooltip content="Unpaid expense">
-                    <AlertTriangle className="h-4 w-4 text-yellow-500"/>
+                    <AlertTriangle className="h-4 w-4 text-yellow"/>
                   </Tooltip>
                 ) : (row.UnpaidDebtorCount || 0) > 0 ? (
                   <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-                    <AlertCircle className="h-4 w-4 text-red-500"/>
+                    <AlertCircle className="h-4 w-4 text-red"/>
                   </Tooltip>
                 ) : (row.TotalDebtorCount || 0) > 0 ? (
                   <Tooltip content="All debts settled">
-                    <CheckCircle className="h-4 w-4 text-green-500"/>
+                    <CheckCircle className="h-4 w-4 text-green"/>
                   </Tooltip>
                 ) : (
                   <Tooltip content="No debts">
-                    <AlertCircle className="h-4 w-4 text-gray-300"/>
+                    <AlertCircle className="h-4 w-4 text-text-disabled"/>
                   </Tooltip>
                 )
               )}
               {row.IsTentative ? (
                 <Tooltip content="Tentative Expense">
-                  <HelpCircle className="h-4 w-4 text-gray-400"/>
+                  <HelpCircle className="h-4 w-4 text-font-2"/>
                 </Tooltip>
               ) : (
                 <Tooltip content="Finished Expense">
-                  <CheckCircle className="h-4 w-4 text-gray-300"/>
+                  <CheckCircle className="h-4 w-4 text-text-disabled"/>
                 </Tooltip>
               )}
               {(row.AttachmentCount || 0) > 0 ? (
                 <Tooltip content={`${row.AttachmentCount} attachment(s)`}>
-                  <Paperclip className="h-4 w-4 text-gray-400"/>
+                  <Paperclip className="h-4 w-4 text-font-2"/>
                 </Tooltip>
               ) : (
                 <Tooltip content="No attachments">
-                  <Paperclip className="h-4 w-4 text-gray-300"/>
+                  <Paperclip className="h-4 w-4 text-text-disabled"/>
                 </Tooltip>
               )}
             </div>
@@ -434,7 +434,7 @@ const ReceiptsPage: React.FC = () => {
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="text-red-600"
+              className="text-red"
               onClick={(e) => {
                 e.stopPropagation();
                 openDeleteModal(row.ReceiptID);
@@ -532,12 +532,12 @@ const ReceiptsPage: React.FC = () => {
               <ButtonGroup>
                 <Tooltip content="Filters">
                   <Button variant="secondary" size="icon" onClick={() => setIsFilterModalOpen(true)}>
-                    <Filter className="h-4 w-4" />
+                    <Filter className="h-4 w-4"/>
                   </Button>
                 </Tooltip>
                 <Tooltip content="Reset Filters">
                   <Button variant="secondary" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
-                    <RotateCcw className="h-4 w-4" />
+                    <RotateCcw className="h-4 w-4"/>
                   </Button>
                 </Tooltip>
               </ButtonGroup>
