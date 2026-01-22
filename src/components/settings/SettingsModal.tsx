@@ -40,6 +40,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [mockTimeDate, setMockTimeDate] = useState('');
   const [mockTimeTime, setMockTimeTime] = useState('');
   const [devActiveTab, setDevActiveTab] = useState('general');
+  const [appearanceActiveTab, setAppearanceActiveTab] = useState('general');
 
   useEffect(() => {
     if (isOpen) {
@@ -251,6 +252,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     { id: 'time', label: 'Time' },
   ];
 
+  const appearanceTabs = [
+    { id: 'general', label: 'General' },
+    { id: 'indicators', label: 'Indicators' },
+  ];
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xlh" onEnter={onClose}>
@@ -280,40 +286,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
           <div className="flex-1 px-8 overflow-y-auto">
             {activeTab === 'appearance' && (
               <div>
-                <AppearanceSettings />
-                
-                <div className="h-px bg-border my-6" />
+                <div className="mb-6">
+                  <TabsComponent 
+                    tabs={appearanceTabs} 
+                    activeTab={appearanceActiveTab} 
+                    onChange={setAppearanceActiveTab} 
+                  />
+                </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-medium text-font-1">UI Scale</h3>
-                      <Tooltip content="Adjust the size of text and other interface elements."><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>
-                    </div>
-                    <button onClick={resetUiScale} className="text-xs text-font-2 hover:text-font-1 underline">reset</button>
-                  </div>
-                  <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-field rounded-lg appearance-none cursor-pointer border border-border" /><span className="text-sm font-medium text-font-1 w-12 text-right">{uiScale}%</span></div>
-                </div>
-                
-                <div className="h-px bg-border my-6" />
-                
-                <div>
-                  <SectionTitle title="Expense Indicators" tooltip="Toggle visibility of indicator icons on the expense list." />
-                  <div className="space-y-2">
-                    {indicatorDefs.map((d) => (
-                      <div key={d.key} className="grid grid-cols-[40px_1fr_auto] items-center gap-3 py-2">
-                        <div className="flex items-center justify-center">{d.header}</div>
-                        <div>
-                          <div className="font-medium text-sm text-font-1">{d.title}</div>
-                          <div className="text-xs text-font-2">{d.desc}</div>
+                {appearanceActiveTab === 'general' && (
+                  <div>
+                    <AppearanceSettings />
+                    
+                    <div className="h-px bg-border my-6" />
+
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-medium text-font-1">UI Scale</h3>
+                          <Tooltip content="Adjust the size of text and other interface elements."><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>
                         </div>
-                        <div className="flex items-center justify-end">
-                          <Switch isEnabled={d.enabled} onToggle={() => handleIndicatorToggle(d.key as any)} />
-                        </div>
+                        <button onClick={resetUiScale} className="text-xs text-font-2 hover:text-font-1 underline">reset</button>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-4"><input type="range" min="50" max="200" step="10" value={uiScale} onChange={handleUiScaleChange} onMouseUp={handleUiScaleSave} className="w-full h-2 bg-field rounded-lg appearance-none cursor-pointer border border-border" /><span className="text-sm font-medium text-font-1 w-12 text-right">{uiScale}%</span></div>
+                    </div>
                   </div>
-                </div>
+                )}
+                
+                {appearanceActiveTab === 'indicators' && (
+                  <div>
+                    <SectionTitle title="Expense Indicators" tooltip="Toggle visibility of indicator icons on the expense list." />
+                    <div className="space-y-2">
+                      {indicatorDefs.map((d) => (
+                        <div key={d.key} className="grid grid-cols-[40px_1fr_auto] items-center gap-3 py-2">
+                          <div className="flex items-center justify-center">{d.header}</div>
+                          <div>
+                            <div className="font-medium text-sm text-font-1">{d.title}</div>
+                            <div className="text-xs text-font-2">{d.desc}</div>
+                          </div>
+                          <div className="flex items-center justify-end">
+                            <Switch isEnabled={d.enabled} onToggle={() => handleIndicatorToggle(d.key as any)} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {activeTab === 'modules' && (
@@ -438,6 +456,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             {activeTab === 'development' && (
               <div>
                 <div className="mb-6">
+                  <h3 className="text-lg font-medium text-font-1 mb-4">Development Tools</h3>
                   <TabsComponent
                     tabs={devTabs} 
                     activeTab={devActiveTab} 
@@ -447,10 +466,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
                 {devActiveTab === 'general' && (
                   <div>
-
-
                     {isDev && (
                       <>
+                        <div className="h-px bg-border my-6" />
 
                         <div>
                           <div className="flex items-center justify-between">

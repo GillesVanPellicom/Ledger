@@ -28,7 +28,7 @@
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
   "themeColor": "#007AFF",
-  "headerColor": "#000000",
+  "headerColor": "#8b5cf6",
   "receipts": {
     "indicators": {
       "debt": true,
@@ -57,7 +57,13 @@
       "datastore": 1,
       "completion": 1
     },
-    "inProgress": false
+    "inProgress": false,
+    "debugConfig": {
+      "skipHello": false,
+      "autoApplyDefaults": false,
+      "verboseLogging": false,
+      "ignoreHistory": true
+    }
   },
   "userName": "Gilles"
 }
