@@ -255,7 +255,7 @@ const ReceiptsPage: React.FC = () => {
     header: 'Total',
     width: '10%',
     className: 'text-right',
-    render: (row: Receipt) => <MoneyDisplay amount={row.Total || 0} showSign={false} colored={true} />
+    render: (row: Receipt) => <MoneyDisplay amount={-(row.Total || 0)} useSignum={true} colorNegative={true} /> // Always negative and red
   });
 
   // Indicators Column (moved to the left of ellipsis)
@@ -333,7 +333,7 @@ const ReceiptsPage: React.FC = () => {
             className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-8"
             style={{ minWidth: `${enabledCount * 28}px` }}
           >
-            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-field-disabled">-</span>}
+            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-font-2">-</span>}
           </div>
         </div>
       );

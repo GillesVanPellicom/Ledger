@@ -51,15 +51,15 @@ export const themes: Record<string, Theme> = {
     name: 'Dark',
     colors: {
       BG_COLOR: '#000000',
-      BG_COLOR_2: '#18181B', // zinc-900
-      BG_COLOR_MODAL: '#18181B', // zinc-900
+      BG_COLOR_2: '#09090b', // zinc-950
+      BG_COLOR_MODAL: '#050505', // zinc-950
       BORDER_COLOR: '#27272A', // zinc-800
       ACCENT_COLOR: '#007AFF',
       FONT_COLOR_1: '#F3F4F6', // gray-100
       FONT_COLOR_2: '#9CA3AF', // gray-400
-      FIELD_COLOR: '#18181B', // zinc-900
-      FIELD_COLOR_DISABLED: '#09090B', // zinc-950
-      FIELD_COLOR_HOVER: '#27272A', // zinc-800
+      FIELD_COLOR: '#09090b',
+      FIELD_COLOR_DISABLED: '#030303', // zinc-950
+      FIELD_COLOR_HOVER: '#18181b', // zinc-900
       BLUE: '#3B82F6',
       GREEN: '#22C55E',
       RED: '#EF4444',

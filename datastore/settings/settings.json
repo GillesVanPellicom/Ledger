@@ -1,5 +1,5 @@
 {
-  "theme": "development",
+  "theme": "dark",
   "modules": {
     "paymentMethods": {
       "enabled": true
@@ -46,6 +46,6 @@
   "formatting": {
     "decimalSeparator": "comma"
   },
-  "themeColor": "#11ff00",
+  "themeColor": "#007AFF",
   "headerColor": "#8b5cf6"
 }

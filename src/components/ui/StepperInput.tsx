@@ -59,7 +59,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
         : Number(value);
 
     const buttonBaseClasses =
-      'bg-field hover:bg-field-hover text-font-1 focus:z-10 flex items-center justify-center p-0 disabled:bg-field-disabled';
+      'bg-field hover:bg-field-hover text-font-2 focus:z-10 flex items-center justify-center p-0 disabled:bg-field-disabled'; // Changed text-font-1 to text-font-2
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let raw = e.target.value;
@@ -158,7 +158,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
               aria-label="Increase value"
               className={cn(
                 buttonBaseClasses,
-                'w-full h-1/2 rounded-tr-lg border border-border border-l-0 border-b-[0.5px]'
+                'w-full h-1/2 rounded-tr-lg border border-border border-l-0 border-b-0' // Removed border-b-[0.5px]
               )}
               onClick={() => {
                 let num = isNaN(numericValue) ? 0 : numericValue;
@@ -177,7 +177,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
               aria-label="Decrease value"
               className={cn(
                 buttonBaseClasses,
-                'w-full h-1/2 rounded-br-lg border border-border border-l-0 border-t-[0.5px]'
+                'w-full h-1/2 rounded-br-lg border border-border border-l-0 border-t-[1px]' // Changed border-t-[0.5px] to border-t-[1px]
               )}
               onClick={() => {
                 let num = isNaN(numericValue) ? 0 : numericValue;

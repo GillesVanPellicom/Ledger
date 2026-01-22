@@ -72,7 +72,7 @@ const DataGrid = <T extends { [key: string]: any }>({
               renderItem(item)
             ) : (
               <div className={cn("h-full w-full flex items-center justify-center", !disableMinHeight && "min-h-[5rem]")}>
-                <Minus className="h-8 w-8 text-field-disabled" />
+                <Minus className="h-8 w-8 text-font-2" /> {/* Changed text-field-disabled to text-font-2 */}
               </div>
             )}
           </div>

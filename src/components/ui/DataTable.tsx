@@ -241,7 +241,7 @@ const DataTable: React.FC<DataTableProps> = ({
     // If loading, show previousData with skeleton placeholders on new rows
     if (loading && previousData.length > 0) {
       return previousData.map((row, rowIdx) => (
-        <tr key={row[itemKey] || rowIdx} className={cn("transition-colors opacity-50", { "bg-accent/10": selectedRows.has(row[itemKey]) }, "cursor-pointer hover:bg-field-hover")}>
+        <tr key={row[itemKey] || rowIdx} className={cn("transition-colors opacity-50 bg-bg-2", { "bg-accent/10": selectedRows.has(row[itemKey]) }, "cursor-pointer hover:bg-field-hover")}>
           {selectable && (
             <td className="px-4 py-3 align-middle">
               <SkeletonCell width="w-5" />
@@ -260,7 +260,7 @@ const DataTable: React.FC<DataTableProps> = ({
     if (data.length === 0 && previousData.length === 0) {
       return (
         <tr>
-          <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-font-2">
+          <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-font-2 bg-bg-2">
             <div className="flex flex-col items-center gap-2 h-full justify-center" style={{height: '300px'}}>
               {emptyStateIcon || <FileSearch className="h-10 w-10 opacity-50" />}
               <span>{emptyStateText}</span>
@@ -273,7 +273,7 @@ const DataTable: React.FC<DataTableProps> = ({
     // Show current data (either newly loaded or during loading with previousData)
     const displayData = data.length > 0 ? data : previousData;
     return displayData.map((row, rowIdx) => (
-      <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors", { "bg-accent/10": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
+      <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors bg-bg-2", { "bg-accent/10": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
         {selectable && (
           <td className="px-4 py-3 align-middle w-10">
             <div className="flex items-center justify-center">
@@ -291,7 +291,7 @@ const DataTable: React.FC<DataTableProps> = ({
           const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
           let displayContent = content;
           if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
-            displayContent = <span className="text-field-disabled">-</span>;
+            displayContent = <span className="text-font-2">-</span>; // Changed text-field-disabled to text-font-2
           }
           return (
             <td key={colIdx} className={cn("px-4 py-3 text-font-1 break-words align-middle", col.className)}>
@@ -428,7 +428,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 </>
               )}
             </colgroup>
-            <thead className="bg-field-hover border-b border-border">
+            <thead className="bg-bg-modal border-b border-border">
               <tr>
                 {selectable && (
                   <th className="px-4 py-3 align-middle w-10">

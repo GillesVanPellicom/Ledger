@@ -7,7 +7,7 @@ import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import DatePicker from '../components/ui/DatePicker';
 import ProductSelector from '../components/products/ProductSelector';
-import {X, Plus, Image, RotateCw, Info, ArrowLeft, Lock, ArrowDown} from 'lucide-react';
+import {X, Plus, Image, RotateCw, Info, ArrowLeft, Lock, ArrowDown, AlertTriangle} from 'lucide-react';
 import {nanoid} from 'nanoid';
 import {cn} from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
@@ -1052,19 +1052,19 @@ const ReceiptFormPage: React.FC = () => {
                               <MoneyDisplay amount={subtotal} showSign={false} colorPositive={false} colorNegative={false} className="font-medium" />
                             </div>
                             <div className="flex items-center gap-4 text-font-2">
-                              {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
+                              {parseFloat(String(formData.discount)) > 0 && isExclusionMode ? (
                                 <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
                                   <div className="flex items-center gap-1 cursor-help">
                                     <AlertTriangle className="h-4 w-4 text-yellow"/>
                                     <span className="text-sm underline decoration-dotted">
-                                      Discount ({receipt.Discount || 0}%)
+                                      Discount ({formData.discount || 0}%)
                                     </span>
                                   </div>
                                 </Tooltip>
                               ) : (
-                                <span className="text-sm">Discount ({receipt?.Discount || 0}%)</span>
+                                <span className="text-sm">Discount ({formData.discount || 0}%)</span>
                               )}
-                              <span className="font-medium">-<MoneyDisplay amount={displaySubtotal - displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} /></span>
+                              <span className="font-medium">-<MoneyDisplay amount={subtotal - total} showSign={false} colorPositive={false} colorNegative={false} /></span>
                             </div>
                             <div className="flex items-center gap-4 text-lg font-bold text-font-1">
                               <span>Total</span>
