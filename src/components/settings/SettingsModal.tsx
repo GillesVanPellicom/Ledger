@@ -17,6 +17,7 @@ import FormattingSettings from './FormattingSettings';
 import { wizardState } from '../../settings/wizardState';
 import { ModulesComponent } from '../../preferences/modules/ModulesComponent';
 import WizardDevTools from './WizardDevTools';
+import TabsComponent from '../ui/Tabs';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [uiScale, setUiScale] = useState(100);
   const [mockTimeDate, setMockTimeDate] = useState('');
   const [mockTimeTime, setMockTimeTime] = useState('');
+  const [devActiveTab, setDevActiveTab] = useState('general');
 
   useEffect(() => {
     if (isOpen) {
@@ -177,6 +179,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     }
   };
 
+  const handleForceRunWizard = () => {
+    // Reset wizard state to force run
+    updateSettings({ wizard: { askedQuestions: {} } } as any);
+    // Reload the page to trigger wizard
+    window.location.reload();
+  };
+
   const tabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'data', label: 'Data', icon: Database },
@@ -235,6 +244,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     type: () => handleIndicatorToggle('type'),
     attachments: () => handleIndicatorToggle('attachments'),
   } as const;
+
+  const devTabs = [
+    { id: 'general', label: 'General' },
+    { id: 'wizard', label: 'Wizard' },
+    { id: 'time', label: 'Time' },
+  ];
 
   return (
     <>
@@ -422,96 +437,111 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             )}
             {activeTab === 'development' && (
               <div>
-                <WizardDevTools />
+                <div className="mb-6">
+                  <TabsComponent
+                    tabs={devTabs} 
+                    activeTab={devActiveTab} 
+                    onChange={setDevActiveTab} 
+                  />
+                </div>
 
-                {isDev && (
-                  <>
-                    <div className="h-px bg-border my-6" />
+                {devActiveTab === 'general' && (
+                  <div>
 
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 mr-4">
-                          <div className="p-2 rounded-lg bg-red/20 text-red">
-                            <Bug className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-font-1">Test Error Modal</p>
-                            <p className="text-sm text-font-2">Generate a fake error to test the error modal.</p>
+
+                    {isDev && (
+                      <>
+
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 mr-4">
+                              <div className="p-2 rounded-lg bg-red/20 text-red">
+                                <Bug className="h-6 w-6" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-font-1">Test Error Modal</p>
+                                <p className="text-sm text-font-2">Generate a fake error to test the error modal.</p>
+                              </div>
+                            </div>
+                            <Button variant="danger" onClick={handleGenerateError}>Generate Error</Button>
                           </div>
                         </div>
-                        <Button variant="danger" onClick={handleGenerateError}>Generate Error</Button>
-                      </div>
-                    </div>
-                    
-                    <div className="h-px bg-border my-6" />
-                    
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 mr-4">
-                          <div className="p-2 rounded-lg bg-yellow/20 text-yellow">
-                            <Trash2 className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-font-1">Reset Datastore</p>
-                            <p className="text-sm text-font-2">Remove the datastore folder path from settings.</p>
-                          </div>
-                        </div>
-                        <Button variant="danger" onClick={handleRemoveDatastore}>Reset</Button>
-                      </div>
-                    </div>
-                    
-                    <div className="h-px bg-border my-6" />
-                    
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 mr-4">
-                          <div className="p-2 rounded-lg bg-red/20 text-red">
-                            <Trash2 className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-font-1">Reset All Settings</p>
-                            <p className="text-sm text-font-2">Clear all settings and quit the application.</p>
+                        
+                        <div className="h-px bg-border my-6" />
+                        
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 mr-4">
+                              <div className="p-2 rounded-lg bg-yellow/20 text-yellow">
+                                <Trash2 className="h-6 w-6" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-font-1">Reset Datastore</p>
+                                <p className="text-sm text-font-2">Remove the datastore folder path from settings.</p>
+                              </div>
+                            </div>
+                            <Button variant="danger" onClick={handleRemoveDatastore}>Reset</Button>
                           </div>
                         </div>
-                        <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
-                      </div>
-                    </div>
+                        
+                        <div className="h-px bg-border my-6" />
+                        
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 mr-4">
+                              <div className="p-2 rounded-lg bg-red/20 text-red">
+                                <Trash2 className="h-6 w-6" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-font-1">Reset All Settings</p>
+                                <p className="text-sm text-font-2">Clear all settings and quit the application.</p>
+                              </div>
+                            </div>
+                            <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
-                    <div className="h-px bg-border my-6" />
+                {devActiveTab === 'wizard' && (
+                  <WizardDevTools />
+                )}
 
-                    <div>
-                      <SectionTitle title="Mock Time" tooltip="Simulate a different date and time for testing recurring events." />
-                      <div className="space-y-4">
-                        <Switch
-                          label="Enable Mock Time"
-                          description="Override the system time with a custom date and time."
-                          isEnabled={settings.dev?.mockTime?.enabled ?? false}
-                          onToggle={handleMockTimeToggle}
-                          icon={Clock}
+                {devActiveTab === 'time' && isDev && (
+                  <div>
+                    <SectionTitle title="Mock Time" tooltip="Simulate a different date and time for testing recurring events." />
+                    <div className="space-y-4">
+                      <Switch
+                        label="Enable Mock Time"
+                        description="Override the system time with a custom date and time."
+                        isEnabled={settings.dev?.mockTime?.enabled ?? false}
+                        onToggle={handleMockTimeToggle}
+                        icon={Clock}
+                      />
+                      <div className={cn("grid grid-cols-2 gap-4 transition-opacity", !(settings.dev?.mockTime?.enabled) && "opacity-50 pointer-events-none")}>
+                        <Input
+                          type="date"
+                          label="Date"
+                          value={mockTimeDate}
+                          onChange={(e) => setMockTimeDate(e.target.value)}
+                          disabled={!settings.dev?.mockTime?.enabled}
                         />
-                        <div className={cn("grid grid-cols-2 gap-4 transition-opacity", !(settings.dev?.mockTime?.enabled) && "opacity-50 pointer-events-none")}>
+                        <div className="flex items-end gap-2">
                           <Input
-                            type="date"
-                            label="Date"
-                            value={mockTimeDate}
-                            onChange={(e) => setMockTimeDate(e.target.value)}
+                            type="time"
+                            label="Time"
+                            value={mockTimeTime}
+                            onChange={(e) => setMockTimeTime(e.target.value)}
                             disabled={!settings.dev?.mockTime?.enabled}
+                            className="flex-1"
                           />
-                          <div className="flex items-end gap-2">
-                            <Input
-                              type="time"
-                              label="Time"
-                              value={mockTimeTime}
-                              onChange={(e) => setMockTimeTime(e.target.value)}
-                              disabled={!settings.dev?.mockTime?.enabled}
-                              className="flex-1"
-                            />
-                            <Button onClick={handleMockTimeSet} disabled={!settings.dev?.mockTime?.enabled}>Set</Button>
-                          </div>
+                          <Button onClick={handleMockTimeSet} disabled={!settings.dev?.mockTime?.enabled}>Set</Button>
                         </div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}

@@ -7,6 +7,7 @@ import { questionRegistry } from '../../wizard/questionRegistry';
 import { wizardState } from '../../settings/wizardState';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { PlayCircle, RotateCcw, SkipForward, Settings2, Bug, EyeOff } from 'lucide-react';
+import Divider from '../ui/Divider';
 
 const WizardDevTools: React.FC = () => {
   const { updateSettings } = useSettingsStore();
@@ -67,7 +68,7 @@ const WizardDevTools: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 bg-bg-2 rounded-xl border border-border">
+    <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
         <Settings2 className="h-5 w-5 text-accent" />
         <h3 className="text-lg font-medium text-font-1">Wizard Debug Configuration</h3>
@@ -81,6 +82,8 @@ const WizardDevTools: React.FC = () => {
             onChange={(e) => setStartAtQuestionId(e.target.value)}
             options={[{ value: '', label: 'Start from beginning' }, ...questionOptions]}
           />
+
+          <Divider />
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-font-1">Reset Specific Questions</label>
@@ -110,6 +113,8 @@ const WizardDevTools: React.FC = () => {
             </Button>
           </div>
 
+          <Divider />
+
           <div className="space-y-2">
              <label className="text-sm font-medium text-font-1">Simulate Upgrade (Lower Versions by N)</label>
              <div className="flex gap-2">
@@ -123,6 +128,19 @@ const WizardDevTools: React.FC = () => {
                <Button size="sm" variant="secondary" onClick={handleSimulateUpgrade} disabled={simulateUpgradeN <= 0}>
                  Apply Downgrade
                </Button>
+             </div>
+          </div>
+
+          <Divider />
+
+          <div className="pt-2">
+             <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-font-1">Global Actions</span>
+             </div>
+             <div className="flex gap-2">
+                <Button variant="danger" size="sm" onClick={handleResetAll} icon={RotateCcw}>
+                  Reset All History
+                </Button>
              </div>
           </div>
         </div>
@@ -156,21 +174,12 @@ const WizardDevTools: React.FC = () => {
             onToggle={() => setVerboseLogging(!verboseLogging)}
             icon={Bug}
           />
-          
-          <div className="pt-4 border-t border-border">
-             <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-font-1">Global Actions</span>
-             </div>
-             <div className="flex gap-2">
-                <Button variant="danger" size="sm" onClick={handleResetAll} icon={RotateCcw}>
-                  Reset All History
-                </Button>
-             </div>
-          </div>
         </div>
       </div>
 
-      <div className="pt-6 mt-2 border-t border-border flex justify-end">
+      <Divider />
+
+      <div className="flex justify-end">
         <Button size="lg" onClick={handleRunWizard} icon={PlayCircle}>
           Run Wizard with Config
         </Button>

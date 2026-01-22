@@ -1,5 +1,5 @@
 {
-  "theme": "light",
+  "theme": "dark",
   "modules": {
     "paymentMethods": {
       "enabled": true
@@ -12,7 +12,7 @@
     }
   },
   "pdf": {
-    "showUniqueItems": true,
+    "showUniqueItems": false,
     "showTotalQuantity": false,
     "showPaymentMethod": false,
     "addSummaryPage": false,
@@ -27,6 +27,8 @@
   "datastore": {
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
+  "themeColor": "#007AFF",
+  "headerColor": "#000000",
   "receipts": {
     "indicators": {
       "debt": true,
@@ -35,8 +37,6 @@
       "attachments": false
     }
   },
-  "userName": "Gilles",
-  "uiScale": 110,
   "dev": {
     "mockTime": {
       "enabled": false,
@@ -46,25 +46,18 @@
   "formatting": {
     "decimalSeparator": "comma"
   },
-  "themeColor": "#007AFF",
-  "headerColor": "#8b5cf6",
   "wizard": {
     "askedQuestions": {
       "hello": 1,
       "name": 1,
+      "intro": 1,
       "theme": 1,
       "numberFormat": 1,
       "modules": 1,
       "datastore": 1,
-      "completion": 1,
-      "intro": 1
+      "completion": 1
     },
-    "inProgress": false,
-    "debugConfig": {
-      "skipHello": false,
-      "autoApplyDefaults": false,
-      "verboseLogging": false,
-      "ignoreHistory": true
-    }
-  }
+    "inProgress": false
+  },
+  "userName": "Gilles"
 }

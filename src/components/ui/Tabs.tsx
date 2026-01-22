@@ -65,4 +65,25 @@ const TabsContent = React.forwardRef<
 ))
 TabsContent.displayName = TabsPrimitive.Content.displayName
 
+// Default export for simpler usage if needed, though named exports are preferred
+const TabsComponent = ({ tabs, activeTab, onChange, className }: { 
+  tabs: { id: string, label: string, badge?: string | number }[], 
+  activeTab: string, 
+  onChange: (id: string) => void,
+  className?: string
+}) => {
+  return (
+    <Tabs value={activeTab} onValueChange={onChange} className={className}>
+      <TabsList>
+        {tabs.map(tab => (
+          <TabsTrigger key={tab.id} value={tab.id} badge={tab.badge}>
+            {tab.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  );
+};
+
+export default TabsComponent;
 export { Tabs, TabsList, TabsTrigger, TabsContent }
