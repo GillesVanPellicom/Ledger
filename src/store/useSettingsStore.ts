@@ -10,6 +10,7 @@ interface SettingsState {
   updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
   loadSettings: () => Promise<void>;
   applyTheme: (themeId: string) => void;
+  repairWizardState: () => void;
 }
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -99,6 +100,27 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
 
+      repairWizardState: () => {
+        const { settings } = get();
+        if (!settings.wizard) return;
+
+        const hasDatastore = !!settings.datastore?.folderPath;
+        const hasName = !!settings.userName;
+        const isInProgress = settings.wizard.inProgress;
+
+        // If we have critical data but wizard is marked as inProgress, it's an inconsistent state
+        // (likely a crash or forced quit during the final steps)
+        if (hasDatastore && hasName && isInProgress) {
+          console.warn('[SettingsStore] Inconsistent wizard state detected. Repairing...');
+          get().updateSettings({
+            wizard: {
+              ...settings.wizard,
+              inProgress: false
+            }
+          });
+        }
+      },
+
       loadSettings: async () => {
         set({loading: true}, false, 'loadSettings/start');
         try {
@@ -131,7 +153,10 @@ export const useSettingsStore = create<SettingsState>()(
                   }
               } as any,
               dev: {...initialSettings.dev, ...loadedSettings.dev},
-              formatting: {...initialSettings.formatting, ...loadedSettings.formatting},
+              formatting: {
+                ...initialSettings.formatting,
+                ...loadedSettings.formatting
+              } as any,
               wizard: {
                   ...initialSettings.wizard!,
                   ...loadedSettings.wizard,
@@ -167,6 +192,9 @@ export const useSettingsStore = create<SettingsState>()(
             settings: currentSettings,
             loading: false,
           }, false, 'loadSettings/success');
+
+          // Run repair logic after loading
+          get().repairWizardState();
         } catch (error) {
           console.error("[SettingsStore] Failed to load settings:", error);
           set({loading: false}, false, 'loadSettings/error');
@@ -196,7 +224,7 @@ export const useSettingsStore = create<SettingsState>()(
             formatting: { 
                 ...(currentSettings.formatting || { decimalSeparator: 'dot' }), 
                 ...(newSettings.formatting || {}) 
-            },
+            } as any,
             wizard: {
                 ...(currentSettings.wizard || { askedQuestions: {}, inProgress: false }),
                 ...(newSettings.wizard || {})

@@ -9,6 +9,7 @@ const Store = require('./store.cjs');
 let mainWindow;
 let db;
 let store;
+let dbConnectionError = null;
 
 const dev = process.env.NODE_ENV === 'development';
 
@@ -57,6 +58,7 @@ function initializeStore() {
 
 function connectDatabase(dbPath) {
   return new Promise((resolve, reject) => {
+    dbConnectionError = null;
     if (db) {
       db.close((err) => {
         if (err) console.error('Failed to close existing DB connection:', err);
@@ -77,15 +79,18 @@ function connectDatabase(dbPath) {
       }
     } catch (error) {
       console.error('Failed to create database directory:', error);
+      dbConnectionError = `Failed to create directory: ${error.message}`;
       return reject({
         success: false,
-        error: `Failed to create directory: ${error.message}`,
+        error: dbConnectionError,
       });
     }
 
     db = new sqlite3.Database(dbPath, (err) => {
       if (err) {
         console.error('Database connection failed:', err);
+        dbConnectionError = err.message;
+        db = null;
         return reject({success: false, error: err.message});
       }
 
@@ -96,6 +101,7 @@ function connectDatabase(dbPath) {
       db.run('PRAGMA journal_mode = WAL;', async (walErr) => {
         if (walErr) {
           console.error('Failed to set WAL mode:', walErr);
+          dbConnectionError = walErr.message;
           return reject({success: false, error: walErr.message});
         }
 
@@ -103,9 +109,11 @@ function connectDatabase(dbPath) {
           await runMigrations(db);
           console.log('Migrations run successfully');
           console.log(`Connected to database: ${dbPath}`);
+          dbConnectionError = null;
           resolve({success: true});
         } catch (migrationError) {
           console.error('Failed to run migrations:', migrationError);
+          dbConnectionError = migrationError.message;
           return reject({success: false, error: migrationError.message});
         }
       });
@@ -174,16 +182,8 @@ app.on('ready', async () => {
     try {
       await connectDatabase(path.join(datastorePath, 'fin.db'));
     } catch (error) {
-      // Send error to renderer instead of showing dialog
-      if (mainWindow) {
-        mainWindow.webContents.send('database-error', error.message);
-      } else {
-        // Fallback if window isn't ready yet, though unlikely with current flow
-        dialog.showErrorBox(
-          'Database Connection Error',
-          `Failed to connect to the database at "${datastorePath}". Please check your folder permissions and try again.\n\nError: ${error.error}`,
-        );
-      }
+      console.error('Initial database connection failed:', error);
+      // Error is stored in dbConnectionError and can be queried via IPC
     }
   }
 
@@ -211,11 +211,19 @@ app.on('quit', () => {
 });
 
 // IPC Handlers
+ipcMain.handle('get-db-status', () => {
+  return {
+    connected: !!db,
+    error: dbConnectionError,
+  };
+});
+
 ipcMain.handle('query-db', (event, sql, params = []) => {
   return new Promise((resolve, reject) => {
     if (!db) {
-      console.error('[IPC query-db] Error: Database not connected.');
-      return reject(new Error('Database not connected'));
+      const errorMsg = dbConnectionError ? `Database not connected: ${dbConnectionError}` : 'Database not connected';
+      console.error(`[IPC query-db] Error: ${errorMsg}`);
+      return reject(new Error(errorMsg));
     }
 
     const isSelect = sql.trim().toLowerCase().startsWith('select');
@@ -244,6 +252,7 @@ const {promisify} = require('node:util');
 
 ipcMain.handle('create-transaction',
   async (event, {type, from, to, amount, date, note}) => {
+    if (!db) throw new Error('Database not connected');
     const run = promisify(db.run.bind(db));
 
     try {
@@ -289,6 +298,7 @@ ipcMain.handle('create-transaction',
   });
 
 ipcMain.handle('delete-transaction', async (event, {topUpId}) => {
+  if (!db) throw new Error('Database not connected');
   return new Promise((resolve, reject) => {
     db.get('SELECT TransferID FROM TopUps WHERE TopUpID = ?', [topUpId],
       (err, row) => {

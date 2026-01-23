@@ -33,8 +33,8 @@
     "indicators": {
       "debt": true,
       "tentative": true,
-      "type": true,
-      "attachments": true
+      "type": false,
+      "attachments": false
     }
   },
   "dev": {
@@ -44,7 +44,7 @@
     }
   },
   "formatting": {
-    "decimalSeparator": "dot"
+    "decimalSeparator": "comma"
   },
   "wizard": {
     "askedQuestions": {
