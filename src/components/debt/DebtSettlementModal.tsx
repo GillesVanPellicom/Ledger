@@ -57,18 +57,14 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
 
   const handleSubmit = async () => {
     if (!paymentMethodId) {
-      setError('Please select a payment method.');
+      setError('Please select a method.');
       return;
     }
     setLoading(true);
     setError('');
 
     try {
-      const topUpNote = JSON.stringify({
-        type: 'debt_settlement',
-        debtorName: debtInfo!.debtorName,
-        receiptId: debtInfo!.receiptId,
-      });
+      const topUpNote = `Repayment from ${debtInfo!.debtorName}`;
 
       const topUpResult = await db.execute(
         'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
@@ -115,7 +111,7 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
             value={paymentMethodId}
             onChange={(e) => setPaymentMethodId(e.target.value)}
             options={paymentMethods}
-            placeholder="Select a payment method"
+            placeholder="Select a method"
           />
         )}
       </div>

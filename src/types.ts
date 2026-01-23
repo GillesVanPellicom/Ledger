@@ -228,3 +228,24 @@ export interface TopUp {
   TopUpAmount: number;
 }
 
+export interface Transaction {
+  id: string;
+  originalId: number;
+  date: string;
+  note: string;
+  amount: number;
+  methodName: string;
+  methodId: number | null;
+  type: 'expense' | 'income' | 'transfer' | 'repayment';
+  creationTimestamp: string;
+  storeName?: string;
+  debtorName?: string;
+  debtorId?: number;
+  receiptId?: number;
+  isNonItemised?: number;
+  isTentative?: number;
+  attachmentCount?: number;
+  status?: string;
+  totalDebtorCount?: number;
+  unpaidDebtorCount?: number;
+}

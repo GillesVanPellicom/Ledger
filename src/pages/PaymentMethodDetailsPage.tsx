@@ -324,6 +324,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
       
       queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
 
       fetchDetails();
       setIsDeleteModalOpen(false);
@@ -485,7 +486,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
   ];
 
   if (loading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
-  if (!method) return <div>Payment method not found.</div>;
+  if (!method) return <div>Method not found.</div>;
 
   return (
     <div>
@@ -511,7 +512,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
             <div>
               <div className="flex items-center justify-center gap-1">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
-                <Tooltip content="This is the net balance of this payment method, calculated by summing all deposits, transfers, and expenses.">
+                <Tooltip content="This is the net balance of this method, calculated by summing all deposits, transfers, and expenses.">
                   <Info className="h-3 w-3 text-gray-400" />
                 </Tooltip>
               </div>
@@ -591,7 +592,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
             message={`Are you sure you want to permanently delete this ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}? This action cannot be undone.`}
           />
 
-          <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Payment Method" onEnter={handleUpdateMethodName}>
+          <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Method" onEnter={handleUpdateMethodName}>
             <div className="space-y-4">
               <Input
                 label="Method Name"
@@ -600,7 +601,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
                 placeholder="Enter new method name"
               />
               <div className="flex justify-end space-x-2">
-                <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+                <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
                 <Button onClick={handleUpdateMethodName}>Save</Button>
               </div>
             </div>

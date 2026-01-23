@@ -7,10 +7,11 @@ interface MoneyDisplayProps {
   showSign?: boolean;
   colorPositive?: boolean;
   colorNegative?: boolean;
+  colorNeutral?: boolean;
   className?: string;
   currency?: string;
   colored?: boolean;
-  useSignum?: boolean; // Added useSignum prop
+  useSignum?: boolean;
 }
 
 /**
@@ -21,10 +22,11 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   showSign = true,
   colorPositive = true,
   colorNegative = true,
+  colorNeutral = false,
   className,
   currency = '€',
   colored = true,
-  useSignum = false // Default to false
+  useSignum = false
 }) => {
   const { settings } = useSettingsStore();
   const decimalSeparator = settings.formatting?.decimalSeparator || 'dot';
@@ -38,11 +40,12 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   }
 
   const sign = isPositive ? '+' : isNegative ? '-' : '';
-  const displaySign = (showSign || (useSignum && (isPositive || isNegative))) ? sign : ''; // Show sign if showSign is true OR useSignum is true and amount is non-zero
+  const displaySign = (showSign || (useSignum && (isPositive || isNegative))) ? sign : '';
 
   const colorClass = (colored || useSignum) ? cn(
-    isPositive && colorPositive && "text-green",
-    isNegative && colorNegative && "text-red"
+    colorNeutral && "text-yellow",
+    !colorNeutral && isPositive && colorPositive && "text-green",
+    !colorNeutral && isNegative && colorNegative && "text-red"
   ) : "";
 
   return (

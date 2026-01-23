@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect} from 'react';
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
 import {useNavigate, useLocation} from 'react-router-dom';
 import {
@@ -12,11 +12,8 @@ import {
   X,
   FilePlus2,
   CalendarPlus,
-  History,
   MoreHorizontal,
-  CreditCard,
-  FileText,
-  User
+  CreditCard
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import {Header} from '../components/ui/Header';
@@ -47,7 +44,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../components/ui/DropdownMenu"
-import TransferModal from '../components/payment/TransferModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
 import {Tabs, TabsList, TabsTrigger} from '../components/ui/Tabs';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -73,7 +69,7 @@ const IncomePage: React.FC = () => {
   const { settings } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled' | 'history'>('to-check');
+  const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled'>('to-check');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,9 +87,6 @@ const IncomePage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
   const [cascadeDelete, setCascadeDelete] = useState(false);
-
-  const [isDeleteHistoryModalOpen, setIsDeleteHistoryModalOpen] = useState(false);
-  const [historyItemToDelete, setHistoryItemToDelete] = useState<any>(null);
 
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
@@ -120,9 +113,6 @@ const IncomePage: React.FC = () => {
     IsActive: true
   });
   const [createForPastPeriod, setCreateForPastPeriod] = useState(false);
-
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [transferToEdit, setTransferToEdit] = useState<any>(null);
 
   useEffect(() => {
     if (location.state?.activeTab) {
@@ -251,30 +241,11 @@ const IncomePage: React.FC = () => {
     queryFn: () => incomeCommitments.getSchedules()
   });
 
-  const {data: confirmedIncomes, isLoading: loadingConfirmed} = useQuery({
-    queryKey: ['confirmedIncome'],
-    queryFn: () => incomeCommitments.getConfirmedIncomeTopUps()
-  });
-
-  const {data: debtRepayments, isLoading: loadingRepayments} = useQuery({
-    queryKey: ['debtRepayments'],
-    queryFn: () => incomeCommitments.getDebtRepayments()
-  });
-
-  const historyData = useMemo(() => {
-    const confirmed = (confirmedIncomes || []).map((item: any) => ({...item, type: 'Income'}));
-    const repayments = (debtRepayments || []).map((item: any) => ({...item, type: 'Repayment'}));
-    return [...confirmed, ...repayments].sort((a, b) =>
-      isBefore(parseISO(a.TopUpDate || a.PaidDate), parseISO(b.TopUpDate || b.PaidDate)) ? 1 : -1
-    );
-  }, [confirmedIncomes, debtRepayments]);
-
   // Mutations
   const processSchedulesMutation = useMutation({
     mutationFn: () => incomeLogic.processSchedules(),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['pendingIncome']});
-      queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
     },
     onError: (err) => showError(err)
   });
@@ -289,7 +260,7 @@ const IncomePage: React.FC = () => {
       incomeLogic.confirmPendingIncome(pending, amount, date, paymentMethodId),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['pendingIncome']});
-      queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
+      queryClient.invalidateQueries({queryKey: ['transactions']});
       setIsConfirmModalOpen(false);
     },
     onError: (err) => showError(err)
@@ -340,6 +311,7 @@ const IncomePage: React.FC = () => {
     mutationFn: (data: any) => incomeCommitments.createOneTimeIncome(data),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: ['pendingIncome']});
+      queryClient.invalidateQueries({queryKey: ['transactions']});
       setIsOneTimeModalOpen(false);
       setOneTimeIncome({
         SourceName: '',
@@ -348,25 +320,6 @@ const IncomePage: React.FC = () => {
         Amount: '0',
         Date: format(getCurrentDate(), 'yyyy-MM-dd')
       });
-    },
-    onError: (err) => showError(err)
-  });
-
-  const deleteHistoryItemMutation = useMutation({
-    mutationFn: async (item: any) => {
-      if (item.type === 'Income') {
-        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [item.TopUpID]);
-      } else {
-        // For repayments, we might need more complex logic depending on how they are stored
-        // Assuming they are linked to a payment ID in ReceiptDebtorPayments
-        await db.execute('DELETE FROM ReceiptDebtorPayments WHERE PaymentID = ?', [item.PaymentID]);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
-      queryClient.invalidateQueries({queryKey: ['debtRepayments']});
-      setIsDeleteHistoryModalOpen(false);
-      setHistoryItemToDelete(null);
     },
     onError: (err) => showError(err)
   });
@@ -397,23 +350,9 @@ const IncomePage: React.FC = () => {
             <Calendar className="h-4 w-4"/>
             Scheduled
           </TabsTrigger>
-          <TabsTrigger value="history">
-            <History className="h-4 w-4"/>
-            History
-          </TabsTrigger>
         </TabsList>
       </Tabs>
     );
-  };
-
-  const splitTopUpNote = (note: string) => {
-    if (!note.startsWith('[Income] ')) return {source: note, category: ''};
-    const content = note.substring(9);
-    const match = content.match(/^(.*?)(?:\s\((.*?)\))?$/);
-    if (match) {
-      return {source: match[1], category: match[2] || ''};
-    }
-    return {source: content, category: ''};
   };
 
   const handleSaveSchedule = () => {
@@ -522,11 +461,6 @@ const IncomePage: React.FC = () => {
     });
   };
 
-  const handleTransferSave = () => {
-    queryClient.invalidateQueries({queryKey: ['confirmedIncome']});
-    setTransferToEdit(null);
-  };
-
   const handleConfirmIncome = () => {
     confirmMutation.mutate({
       pending: selectedPending,
@@ -596,7 +530,7 @@ const IncomePage: React.FC = () => {
                     },
                     {header: 'Source', accessor: 'SourceName'},
                     {header: 'Category', accessor: 'Category'},
-                    {header: 'Receiving Method', accessor: 'PaymentMethodName'},
+                    {header: 'Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
                       accessor: 'Amount',
@@ -660,7 +594,7 @@ const IncomePage: React.FC = () => {
                                 navigate(`/payment-methods/${row.PaymentMethodID}`);
                               }}>
                                 <CreditCard className="mr-2 h-4 w-4"/>
-                                Payment Method
+                                Method
                               </DropdownMenuItem>
                               <DropdownMenuSeparator/>
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -704,7 +638,7 @@ const IncomePage: React.FC = () => {
                   columns={[
                     {header: 'Source', accessor: 'SourceName'},
                     {header: 'Category', accessor: 'Category'},
-                    {header: 'Receiving Method', accessor: 'PaymentMethodName'},
+                    {header: 'Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
                       accessor: 'ExpectedAmount',
@@ -748,7 +682,7 @@ const IncomePage: React.FC = () => {
                               navigate(`/payment-methods/${row.PaymentMethodID}`);
                             }}>
                               <CreditCard className="mr-2 h-4 w-4"/>
-                              Payment Method
+                              Method
                             </DropdownMenuItem>
                             <DropdownMenuSeparator/>
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -784,140 +718,6 @@ const IncomePage: React.FC = () => {
                   onPageSizeChange={setPageSize}
                 />
               </div>
-            )}
-
-            {activeTab === 'history' && (
-              <DataTable
-                loading={loadingConfirmed || loadingRepayments}
-                data={paginatedData(historyData)}
-                columns={[
-                  {
-                    header: 'Date',
-                    render: (row) => format(parseISO(row.TopUpDate || row.PaidDate), 'MMM d, yyyy')
-                  },
-                  {
-                    header: 'Type',
-                    render: (row) => (
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-xs font-medium",
-                        row.type === 'Income' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                      )}>
-                        {row.type}
-                      </span>
-                    )
-                  },
-                  {
-                    header: 'Description',
-                    render: (row) => {
-                      if (row.type === 'Income') {
-                        const {source, category} = splitTopUpNote(row.TopUpNote);
-                        return `${source}${category ? ` (${category})` : ''}`;
-                      }
-                      return `Repayment from ${row.DebtorName}`;
-                    }
-                  },
-                  {
-                    header: 'Account',
-                    render: (row) => (
-                      <span className="inline-block">
-                        {row.PaymentMethodName}
-                      </span>
-                    )
-                  },
-                  {
-                    header: 'Amount',
-                    render: (row) => (
-                      <span className={cn(
-                        "font-semibold",
-                        row.TopUpAmount > 0 ? "text-green-600" : "text-red-600"
-                      )}>
-                        {row.TopUpAmount > 0 ? '+' : ''}€{(row.TopUpAmount || 0).toFixed(2)}
-                      </span>
-                    )
-                  },
-                  {
-                    header: '',
-                    width: '5%',
-                    className: 'text-right',
-                    render: (row) => (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 p-0"
-                                  onClick={(e) => e.stopPropagation()}>
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4"/>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Go To</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/payment-methods/${row.PaymentMethodID}`);
-                          }}>
-                            <CreditCard className="mr-2 h-4 w-4"/>
-                            Payment Method
-                          </DropdownMenuItem>
-                          {row.type === 'Repayment' && (
-                            <>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/receipts/view/${row.ReceiptID}`);
-                              }}>
-                                <FileText className="mr-2 h-4 w-4"/>
-                                Receipt
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/entities/${row.DebtorID}`);
-                              }}>
-                                <User className="mr-2 h-4 w-4"/>
-                                Entity
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuSeparator/>
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          {row.type === 'Income' && (
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              setTransferToEdit({
-                                id: row.TopUpID,
-                                date: row.TopUpDate,
-                                note: row.TopUpNote,
-                                amount: row.TopUpAmount,
-                                paymentMethodId: row.PaymentMethodID
-                              });
-                              setIsTransferModalOpen(true);
-                            }}>
-                              <Edit className="mr-2 h-4 w-4"/>
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setHistoryItemToDelete(row);
-                              setIsDeleteHistoryModalOpen(true);
-                            }}
-                          >
-                            <Trash className="mr-2 h-4 w-4"/>
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )
-                  }
-                ]}
-                searchable
-                totalCount={historyData.length}
-                currentPage={currentPage}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={setPageSize}
-              />
             )}
           </div>
         </div>
@@ -964,20 +764,6 @@ const IncomePage: React.FC = () => {
           </div>
         </div>
       </Modal>
-
-      <ConfirmModal
-        isOpen={isDeleteHistoryModalOpen}
-        onClose={() => setIsDeleteHistoryModalOpen(false)}
-        onConfirm={() => {
-          if (historyItemToDelete) {
-            deleteHistoryItemMutation.mutate(historyItemToDelete);
-          }
-        }}
-        title="Delete History Item"
-        message="Are you sure you want to delete this record? This action cannot be undone."
-        confirmText="Delete"
-        variant="danger"
-      />
 
       <ConfirmModal
         isOpen={isDismissModalOpen}
@@ -1035,7 +821,7 @@ const IncomePage: React.FC = () => {
             onChange={e => setConfirmData(prev => ({...prev, date: e.target.value}))}
           />
           <Combobox
-            label="Receiving Method"
+            label="Method"
             options={paymentMethods}
             value={confirmData.paymentMethodId}
             onChange={val => setConfirmData(prev => ({...prev, paymentMethodId: val}))}
@@ -1103,7 +889,7 @@ const IncomePage: React.FC = () => {
               onDecrement={() => handleStepperChange(setOneTimeIncome, 'Amount', false, 1)}
             />
             <Combobox
-              label="Receiving Method"
+              label="Method"
               options={paymentMethods}
               value={oneTimeIncome.PaymentMethodID}
               onChange={val => setOneTimeIncome(prev => ({...prev, PaymentMethodID: val}))}
@@ -1179,7 +965,7 @@ const IncomePage: React.FC = () => {
               onDecrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', false, 1)}
             />
             <Combobox
-              label="Receiving Method"
+              label="Method"
               options={paymentMethods}
               value={newSchedule.PaymentMethodID}
               onChange={val => setNewSchedule(prev => ({...prev, PaymentMethodID: val}))}
@@ -1276,15 +1062,6 @@ const IncomePage: React.FC = () => {
           </div>
         </div>
       </Modal>
-
-      <TransferModal
-        isOpen={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
-        onSave={handleTransferSave}
-        topUpToEdit={transferToEdit}
-        paymentMethodId={transferToEdit?.paymentMethodId}
-        currentBalance={0} // Not needed for editing income
-      />
 
       <IncomeCategoryModal
         isOpen={isIncomeCategoryModalOpen}

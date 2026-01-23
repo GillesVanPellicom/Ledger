@@ -90,6 +90,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
         queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance', parseInt(transferTo)] });
       }
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
 
       onSave();
       onClose();
@@ -141,7 +142,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
           <DatePicker label="Date" selected={formData.date} onChange={(date: Date | null) => date && setFormData(prev => ({ ...prev, date }))} error={errors.date} />
         </div>
 
-        <Input label="Notes (Optional)" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly savings" />
+        <Input label="Note" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly savings" />
       </div>
     </Modal>
   );

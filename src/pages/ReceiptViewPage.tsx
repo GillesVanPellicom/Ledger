@@ -92,7 +92,7 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({isOpen, onClose, onCon
       }
     >
       <Select
-        label="Payment Method"
+        label="Method"
         value={paymentMethodId}
         onChange={(e) => setPaymentMethodId(e.target.value)}
         options={paymentMethods}
@@ -236,6 +236,7 @@ const ReceiptViewPage: React.FC = () => {
   };
 
   const handleSettleClick = (debtor: any) => {
+    if (receipt?.IsTentative) return;
     const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
     if (payment) {
       confirmUnsettleDebt(payment.PaymentID, payment.TopUpID);
@@ -573,11 +574,19 @@ const ReceiptViewPage: React.FC = () => {
 
                   {/* Badges */}
                   <div className="flex flex-col items-start sm:items-end xl:items-start 2xl:items-end gap-2 sm:col-start-2 sm:row-start-1 xl:col-start-1 xl:row-start-2 2xl:col-start-2 2xl:row-start-1">
-                    <Tooltip content={receipt?.Status === 'paid' ? 'This expense has been paid to the vendor.' : `Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
-                      <Badge variant={receipt?.Status === 'paid' ? 'green' : 'red'}>
-                        {receipt?.Status === 'paid' ? 'Paid to Vendor' : 'Unpaid to Vendor'}
-                      </Badge>
-                    </Tooltip>
+                    {receipt?.Status === 'paid' ? (
+                      <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the vendor.'}>
+                        <Badge variant="green">
+                          Paid to Vendor
+                        </Badge>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip content={`Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
+                        <Badge variant="red">
+                          Unpaid to {receipt?.OwedToDebtorName}
+                        </Badge>
+                      </Tooltip>
+                    )}
                     {debtStatus && (
                       <Tooltip content="This indicates the status of debts owed to you by others for this receipt.">
                         <Badge variant={debtStatus.variant} className="cursor-help">
@@ -606,7 +615,7 @@ const ReceiptViewPage: React.FC = () => {
                       </Tooltip>
                     )}
                     {paymentMethodsEnabled && (
-                      <Tooltip content="The payment method used for this expense">
+                      <Tooltip content="The method used for this expense">
                         <div className="flex items-center gap-3 cursor-help">
                           <CreditCard className="h-5 w-5 text-font-2"/>
                           <span className="text-sm text-font-1">{receipt.PaymentMethodName || 'N/A'}</span>
@@ -644,7 +653,10 @@ const ReceiptViewPage: React.FC = () => {
                       {debtSummary.debtors.map((debtor) => (
                         <Card
                           key={debtor.debtorId}
-                          className="p-4 cursor-pointer transition-all duration-200"
+                          className={cn(
+                            "p-4 transition-all duration-200",
+                            !receipt?.IsTentative && "cursor-pointer hover:bg-field-hover"
+                          )}
                           onClick={() => handleSettleClick(debtor)}
                         >
                           <div className="flex justify-between items-start">
@@ -660,14 +672,14 @@ const ReceiptViewPage: React.FC = () => {
                                   <CheckCircle className="h-5 w-5 text-green"/>
                                 </Tooltip>
                               ) : (
-                                <Tooltip content="Unpaid">
-                                  <AlertCircle className="h-5 w-5 text-red"/>
+                                <Tooltip content={receipt?.IsTentative ? "Cannot settle debts for tentative expenses" : "Unpaid"}>
+                                  <AlertCircle className={cn("h-5 w-5", receipt?.IsTentative ? "text-text-disabled" : "text-red")}/>
                                 </Tooltip>
                               )}
                             </div>
                           </div>
                           <div className="flex justify-between items-baseline mt-1">
-                            <p className={cn("font-bold truncate", debtor.isPaid ? "text-green" : "text-red")}
+                            <p className={cn("font-bold truncate", debtor.isPaid ? "text-green" : (receipt?.IsTentative ? "text-text-disabled" : "text-red"))}
                                style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                               <MoneyDisplay amount={debtor.amount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
@@ -797,7 +809,10 @@ const ReceiptViewPage: React.FC = () => {
       <DebtSettlementModal
         isOpen={isSettlementModalOpen}
         onClose={() => setIsSettlementModalOpen(false)}
-        onSave={refetch}
+        onSave={() => {
+          refetch();
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        }}
         debtInfo={selectedDebtForSettlement}
       />
 

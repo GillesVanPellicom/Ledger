@@ -12,12 +12,11 @@ import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
 import { FileDown, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowLeft } from 'lucide-react';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
-import { generateReceiptsPdf } from '../logic/pdf/receiptPdf';
 import ProgressModal from '../components/ui/ProgressModal';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
 import EntityModal from '../components/debt/EntityModal';
-import { Debtor, Entity, Receipt } from '../types';
+import { Debtor, Receipt } from '../types';
 import { useDebtCalculation } from '../hooks/useDebtCalculation';
 import { Header } from '../components/ui/Header';
 import Tooltip from '../components/ui/Tooltip';
@@ -69,7 +68,7 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onCo
         <p>You are about to mark your debt of <span className="font-bold">€{receipt?.amount?.toFixed(2)}</span> to <span className="font-bold">{entityName}</span> as paid.</p>
         {paymentMethodsEnabled && (
           <Select
-            label="Payment Method"
+            label="Method"
             value={paymentMethodId}
             onChange={(e) => setPaymentMethodId(e.target.value)}
             options={paymentMethods}

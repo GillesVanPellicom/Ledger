@@ -22,7 +22,12 @@ import {
   CreditCard,
   User,
   FileText,
-  Edit
+  Edit,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowRightLeft,
+  HandCoins,
+  Clock
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -30,10 +35,11 @@ import DatePicker from '../components/ui/DatePicker';
 import ProgressModal from '../components/ui/ProgressModal';
 import Tooltip from '../components/ui/Tooltip';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
-import {Receipt, LineItem, ReceiptImage} from '../types';
+import {Receipt, LineItem, ReceiptImage, Transaction} from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import { useReceipts, useDeleteReceipt } from '../hooks/useReceipts';
+import { useDeleteReceipt } from '../hooks/useReceipts';
+import { useTransactions } from '../hooks/useTransactions';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useErrorStore } from '../store/useErrorStore';
 import Select from '../components/ui/Select';
@@ -51,6 +57,8 @@ import {
 } from "../components/ui/DropdownMenu"
 import { cn } from '../utils/cn';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import Badge from '../components/ui/Badge';
+import Divider from '../components/ui/Divider';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -73,8 +81,9 @@ const ReceiptsPage: React.FC = () => {
   ];
   
   const initialFilters = {
-    debt: searchParams.get('debt') || 'all',
     type: searchParams.get('type') || 'all',
+    debt: searchParams.get('debt') || 'all',
+    expenseType: searchParams.get('expenseType') || 'all',
     tentative: searchParams.get('tentative') || 'all',
     attachment: searchParams.get('attachment') || 'all',
   };
@@ -87,9 +96,9 @@ const ReceiptsPage: React.FC = () => {
   const [pendingDateRange, setPendingDateRange] = useState<[Date | null, Date | null]>(initialDateRange);
   const [pendingFilters, setPendingFilters] = useState(initialFilters);
 
-  const [selectedReceiptIds, setSelectedReceiptIds] = useState<number[]>([]);
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
-  const [receiptToDelete, setReceiptToDelete] = useState<number | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   const { generatePdf, isGenerating: isGeneratingPdf, progress: pdfProgress } = usePdfGenerator();
@@ -109,8 +118,9 @@ const ReceiptsPage: React.FC = () => {
     if (searchTerm) params.set('search', searchTerm);
     if (appliedDateRange[0]) params.set('startDate', appliedDateRange[0].toISOString());
     if (appliedDateRange[1]) params.set('endDate', appliedDateRange[1].toISOString());
-    if (appliedFilters.debt !== 'all') params.set('debt', appliedFilters.debt);
     if (appliedFilters.type !== 'all') params.set('type', appliedFilters.type);
+    if (appliedFilters.debt !== 'all') params.set('debt', appliedFilters.debt);
+    if (appliedFilters.expenseType !== 'all') params.set('expenseType', appliedFilters.expenseType);
     if (appliedFilters.tentative !== 'all') params.set('tentative', appliedFilters.tentative);
     if (appliedFilters.attachment !== 'all') params.set('attachment', appliedFilters.attachment);
     setSearchParams(params, { replace: true });
@@ -124,14 +134,15 @@ const ReceiptsPage: React.FC = () => {
     }
   }, [isFilterModalOpen, appliedDateRange, appliedFilters]);
 
-  const { data, isLoading, refetch } = useReceipts({
+  const { data, isLoading, refetch } = useTransactions({
     page: currentPage,
     pageSize,
     searchTerm,
     startDate: appliedDateRange[0],
     endDate: appliedDateRange[1],
-    debtFilter: appliedFilters.debt,
     typeFilter: appliedFilters.type,
+    debtFilter: appliedFilters.debt,
+    expenseTypeFilter: appliedFilters.expenseType,
     tentativeFilter: appliedFilters.tentative,
     attachmentFilter: appliedFilters.attachment,
     debtEnabled
@@ -151,7 +162,7 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const resetFilters = () => {
-    const defaultFilters = { debt: 'all', type: 'all', tentative: 'all', attachment: 'all' };
+    const defaultFilters = { type: 'all', debt: 'all', expenseType: 'all', tentative: 'all', attachment: 'all' };
     const defaultDateRange: [Date | null, Date | null] = [null, null];
     
     setAppliedFilters(defaultFilters);
@@ -163,7 +174,7 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const resetPendingFilters = () => {
-    const defaultFilters = { debt: 'all', type: 'all', tentative: 'all', attachment: 'all' };
+    const defaultFilters = { type: 'all', debt: 'all', expenseType: 'all', tentative: 'all', attachment: 'all' };
     const defaultDateRange: [Date | null, Date | null] = [null, null];
     
     setPendingFilters(defaultFilters);
@@ -171,8 +182,9 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const hasActiveFilters = 
-    appliedFilters.debt !== 'all' || 
     appliedFilters.type !== 'all' || 
+    appliedFilters.debt !== 'all' || 
+    appliedFilters.expenseType !== 'all' || 
     appliedFilters.tentative !== 'all' || 
     appliedFilters.attachment !== 'all' || 
     appliedDateRange[0] !== null || 
@@ -180,42 +192,58 @@ const ReceiptsPage: React.FC = () => {
     searchTerm !== '';
 
   const hasPendingFilters = 
-    pendingFilters.debt !== 'all' || 
     pendingFilters.type !== 'all' || 
+    pendingFilters.debt !== 'all' || 
+    pendingFilters.expenseType !== 'all' || 
     pendingFilters.tentative !== 'all' || 
     pendingFilters.attachment !== 'all' || 
     pendingDateRange[0] !== null || 
     pendingDateRange[1] !== null;
 
   const activeFilterCount = [
-    pendingFilters.debt !== 'all',
     pendingFilters.type !== 'all',
+    pendingFilters.debt !== 'all',
+    pendingFilters.expenseType !== 'all',
     pendingFilters.tentative !== 'all',
     pendingFilters.attachment !== 'all',
     pendingDateRange[0] !== null || pendingDateRange[1] !== null
   ].filter(Boolean).length;
 
   const handleDelete = async () => {
-    const idsToDelete = receiptToDelete ? [receiptToDelete] : selectedReceiptIds;
-    if (idsToDelete.length === 0) return;
+    const transactionsToDelete = transactionToDelete ? [transactionToDelete] : data?.transactions.filter(t => selectedTransactionIds.includes(t.id)) || [];
+    if (transactionsToDelete.length === 0) return;
 
     try {
-      await deleteReceiptMutation.mutateAsync(idsToDelete);
-      setSelectedReceiptIds([]);
+      for (const tx of transactionsToDelete) {
+        if (tx.type === 'expense') {
+          await deleteReceiptMutation.mutateAsync([tx.originalId]);
+        } else if (tx.type === 'income' || tx.type === 'repayment') {
+          await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [tx.originalId]);
+        } else if (tx.type === 'transfer') {
+          await db.execute('DELETE FROM Transfers WHERE TransferID = ?', [tx.originalId]);
+        }
+      }
+      setSelectedTransactionIds([]);
       setDeleteModalOpen(false);
-      setReceiptToDelete(null);
+      setTransactionToDelete(null);
+      refetch();
     } catch (error) {
       showError(error as Error);
     }
   };
 
-  const openDeleteModal = (id: number | null = null) => {
-    setReceiptToDelete(id);
+  const openDeleteModal = (tx: Transaction | null = null) => {
+    setTransactionToDelete(tx);
     setDeleteModalOpen(true);
   };
 
   const handleMassPdfSave = async () => {
-    const placeholders = selectedReceiptIds.map(() => '?').join(',');
+    const selectedExpenses = data?.transactions.filter(t => selectedTransactionIds.includes(t.id) && t.type === 'expense') || [];
+    if (selectedExpenses.length === 0) return;
+
+    const expenseIds = selectedExpenses.map(t => t.originalId);
+    const placeholders = expenseIds.map(() => '?').join(',');
+    
     const receiptsData: (Receipt & { lineItems: LineItem[], totalAmount: number })[] = await db.query(`
         SELECT r.*, s.StoreName, pm.PaymentMethodName
         FROM Receipts r
@@ -223,7 +251,7 @@ const ReceiptsPage: React.FC = () => {
                  LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
         WHERE r.ReceiptID IN (${placeholders})
         ORDER BY r.ReceiptDate DESC
-    `, selectedReceiptIds);
+    `, expenseIds);
 
     const lineItemsData: LineItem[] = await db.query(`
         SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
@@ -231,7 +259,7 @@ const ReceiptsPage: React.FC = () => {
                  JOIN Products p ON li.ProductID = p.ProductID
                  LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
         WHERE li.ReceiptID IN (${placeholders})
-    `, selectedReceiptIds);
+    `, expenseIds);
 
     const fullReceipts: FullReceipt[] = receiptsData.map(receipt => {
       const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
@@ -243,33 +271,113 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const columns: any[] = [
-    {header: 'Date', width: '15%', render: (row: Receipt) => format(new Date(row.ReceiptDate), 'dd/MM/yyyy')},
-    {header: 'Store', accessor: 'StoreName', width: '25%'},
-    {header: 'Note', accessor: 'ReceiptNote', width: '25%'},
+    {
+      header: 'Date', 
+      width: '12%', 
+      render: (row: Transaction) => format(new Date(row.date), 'dd/MM/yyyy')
+    },
+    {
+      header: 'Type',
+      width: '10%',
+      render: (row: Transaction) => {
+        if (row.type === 'expense' && row.status === 'unpaid') {
+          return (
+            <Tooltip content="Unpaid expense - not yet deducted from balance">
+              <Badge variant="yellow" className="flex items-center gap-1 w-fit">
+                <Clock className="h-3 w-3"/> Unpaid
+              </Badge>
+            </Tooltip>
+          );
+        }
+        switch (row.type) {
+          case 'expense':
+            return <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3"/> Expense</Badge>;
+          case 'income':
+            return <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3"/> Income</Badge>;
+          case 'transfer':
+            return <Badge variant="blue" className="flex items-center gap-1 w-fit"><ArrowRightLeft className="h-3 w-3"/> Transfer</Badge>;
+          case 'repayment':
+            return <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3"/> Repayment</Badge>;
+          default:
+            return row.type;
+        }
+      }
+    },
+    {
+      header: 'Description',
+      width: '20%',
+      render: (row: Transaction) => {
+        if (row.type === 'expense') return row.storeName;
+        if (row.type === 'repayment') return `Repayment from ${row.debtorName}`;
+        if (row.type === 'income') {
+          return row.note && row.note.startsWith('[Income] ') ? row.note.substring(9) : row.note;
+        }
+        if (row.type === 'transfer') return 'Transfer';
+        return '';
+      }
+    },
+    {header: 'Note', accessor: 'note', width: '23%'},
   ];
 
   if (paymentMethodsEnabled) {
-    columns.push({header: 'Payment Method', accessor: 'PaymentMethodName', width: '15%'});
+    columns.push({header: 'Method', accessor: 'methodName', width: '15%'});
   }
 
   columns.push({
-    header: 'Total',
+    header: 'Amount',
     width: '10%',
     className: 'text-right',
-    render: (row: Receipt) => <MoneyDisplay amount={-(row.Total || 0)} useSignum={true} colorNegative={true} /> // Always negative and red
+    render: (row: Transaction) => {
+      const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
+      return (
+        <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
+          <div className="inline-block">
+            <MoneyDisplay 
+              amount={row.amount} 
+              useSignum={true} 
+              colorNegative={!isUnpaid && row.amount < 0} 
+              colorPositive={row.amount > 0}
+              colorNeutral={isUnpaid}
+            />
+          </div>
+        </Tooltip>
+      );
+    }
   });
 
-  // Indicators Column (moved to the left of ellipsis)
+  // Indicators Column
   columns.push({
     header: '',
     width: '10%',
     className: 'text-right',
-    render: (row: Receipt) => {
+    render: (row: Transaction) => {
+      const enabledCount = [
+        indicatorSettings?.type,
+        indicatorSettings?.debt && debtEnabled,
+        indicatorSettings?.tentative,
+        indicatorSettings?.attachments
+      ].filter(Boolean).length;
+
+      if (enabledCount === 0) return <span className="text-font-2">-</span>;
+
+      if (row.type !== 'expense') {
+        return (
+          <div className="flex justify-end">
+            <div 
+              className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-8"
+              style={{ minWidth: `${enabledCount * 28}px` }}
+            >
+              <span className="text-font-2">-</span>
+            </div>
+          </div>
+        );
+      }
+      
       const visibleIndicators = [];
       
       if (indicatorSettings?.type) {
         visibleIndicators.push(
-          row.IsNonItemised ? (
+          row.isNonItemised ? (
             <Tooltip key="type" content="Total-only expense">
               <Clipboard className="h-4 w-4 text-font-2"/>
             </Tooltip>
@@ -282,19 +390,19 @@ const ReceiptsPage: React.FC = () => {
       }
 
       if (indicatorSettings?.debt && debtEnabled) {
-        if (row.Status === 'unpaid') {
+        if (row.status === 'unpaid') {
           visibleIndicators.push(
             <Tooltip key="debt" content="Unpaid expense">
               <AlertTriangle className="h-4 w-4 text-yellow"/>
             </Tooltip>
           );
-        } else if ((row.UnpaidDebtorCount || 0) > 0) {
+        } else if ((row.unpaidDebtorCount || 0) > 0) {
           visibleIndicators.push(
-            <Tooltip key="debt" content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
+            <Tooltip key="debt" content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
               <AlertCircle className="h-4 w-4 text-red"/>
             </Tooltip>
           );
-        } else if ((row.TotalDebtorCount || 0) > 0) {
+        } else if ((row.totalDebtorCount || 0) > 0) {
           visibleIndicators.push(
             <Tooltip key="debt" content="All debts settled">
               <CheckCircle className="h-4 w-4 text-green"/>
@@ -303,7 +411,7 @@ const ReceiptsPage: React.FC = () => {
         }
       }
 
-      if (indicatorSettings?.tentative && row.IsTentative) {
+      if (indicatorSettings?.tentative && row.isTentative) {
         visibleIndicators.push(
           <Tooltip key="tentative" content="Tentative Expense">
             <HelpCircle className="h-4 w-4 text-font-2"/>
@@ -311,22 +419,13 @@ const ReceiptsPage: React.FC = () => {
         );
       }
 
-      if (indicatorSettings?.attachments && (row.AttachmentCount || 0) > 0) {
+      if (indicatorSettings?.attachments && (row.attachmentCount || 0) > 0) {
         visibleIndicators.push(
-          <Tooltip key="attachments" content={`${row.AttachmentCount} attachment(s)`}>
+          <Tooltip key="attachments" content={`${row.attachmentCount} attachment(s)`}>
             <Paperclip className="h-4 w-4 text-font-2"/>
           </Tooltip>
         );
       }
-
-      const enabledCount = [
-        indicatorSettings?.type,
-        indicatorSettings?.debt && debtEnabled,
-        indicatorSettings?.tentative,
-        indicatorSettings?.attachments
-      ].filter(Boolean).length;
-
-      if (enabledCount === 0) return null;
 
       return (
         <div className="flex justify-end">
@@ -345,7 +444,7 @@ const ReceiptsPage: React.FC = () => {
     header: '',
     width: '5%',
     className: 'text-right',
-    render: (row: Receipt) => (
+    render: (row: Transaction) => (
       <div className="flex justify-end items-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -355,90 +454,106 @@ const ReceiptsPage: React.FC = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Indicators</DropdownMenuLabel>
-            <div className="flex items-center gap-2 px-2 py-1.5 pointer-events-none">
-              {row.IsNonItemised ? (
-                <Tooltip content="Total-only expense">
-                  <Clipboard className="h-4 w-4 text-font-2"/>
-                </Tooltip>
-              ) : (
-                <Tooltip content="Detailed Expense">
-                  <ClipboardList className="h-4 w-4 text-font-2"/>
-                </Tooltip>
-              )}
-              {debtEnabled && (
-                row.Status === 'unpaid' ? (
-                  <Tooltip content="Unpaid expense">
-                    <AlertTriangle className="h-4 w-4 text-yellow"/>
-                  </Tooltip>
-                ) : (row.UnpaidDebtorCount || 0) > 0 ? (
-                  <Tooltip content={`${row.UnpaidDebtorCount} unpaid debtor(s)`}>
-                    <AlertCircle className="h-4 w-4 text-red"/>
-                  </Tooltip>
-                ) : (row.TotalDebtorCount || 0) > 0 ? (
-                  <Tooltip content="All debts settled">
-                    <CheckCircle className="h-4 w-4 text-green"/>
-                  </Tooltip>
-                ) : (
-                  <Tooltip content="No debts">
-                    <AlertCircle className="h-4 w-4 text-text-disabled"/>
-                  </Tooltip>
-                )
-              )}
-              {row.IsTentative ? (
-                <Tooltip content="Tentative Expense">
-                  <HelpCircle className="h-4 w-4 text-font-2"/>
-                </Tooltip>
-              ) : (
-                <Tooltip content="Finished Expense">
-                  <CheckCircle className="h-4 w-4 text-text-disabled"/>
-                </Tooltip>
-              )}
-              {(row.AttachmentCount || 0) > 0 ? (
-                <Tooltip content={`${row.AttachmentCount} attachment(s)`}>
-                  <Paperclip className="h-4 w-4 text-font-2"/>
-                </Tooltip>
-              ) : (
-                <Tooltip content="No attachments">
-                  <Paperclip className="h-4 w-4 text-text-disabled"/>
-                </Tooltip>
-              )}
-            </div>
-            <div className={cn(!paymentMethodsEnabled && "hidden")}>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Go To</DropdownMenuLabel>
-              <DropdownMenuItem 
-                disabled={!row.PaymentMethodID}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (row.PaymentMethodID) navigate(`/payment-methods/${row.PaymentMethodID}`);
-                }}
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                Payment Method
+            {row.type === 'expense' && (
+              <>
+                <DropdownMenuLabel>Indicators</DropdownMenuLabel>
+                <div className="flex items-center gap-2 px-2 py-1.5 pointer-events-none">
+                  {row.isNonItemised ? (
+                    <Tooltip content="Total-only expense">
+                      <Clipboard className="h-4 w-4 text-font-2"/>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip content="Detailed Expense">
+                      <ClipboardList className="h-4 w-4 text-font-2"/>
+                    </Tooltip>
+                  )}
+                  {debtEnabled && (
+                    row.status === 'unpaid' ? (
+                      <Tooltip content="Unpaid expense">
+                        <AlertTriangle className="h-4 w-4 text-yellow"/>
+                      </Tooltip>
+                    ) : (row.unpaidDebtorCount || 0) > 0 ? (
+                      <Tooltip content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
+                        <AlertCircle className="h-4 w-4 text-red"/>
+                      </Tooltip>
+                    ) : (row.totalDebtorCount || 0) > 0 ? (
+                      <Tooltip content="All debts settled">
+                        <CheckCircle className="h-4 w-4 text-green"/>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip content="No debts">
+                        <AlertCircle className="h-4 w-4 text-text-disabled"/>
+                      </Tooltip>
+                    )
+                  )}
+                  {row.isTentative ? (
+                    <Tooltip content="Tentative Expense">
+                      <HelpCircle className="h-4 w-4 text-font-2"/>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip content="Finished Expense">
+                      <CheckCircle className="h-4 w-4 text-text-disabled"/>
+                    </Tooltip>
+                  )}
+                  {(row.attachmentCount || 0) > 0 ? (
+                    <Tooltip content={`${row.attachmentCount} attachment(s)`}>
+                      <Paperclip className="h-4 w-4 text-font-2"/>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip content="No attachments">
+                      <Paperclip className="h-4 w-4 text-text-disabled"/>
+                    </Tooltip>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuLabel>Go To</DropdownMenuLabel>
+            <DropdownMenuItem 
+              disabled={!row.methodId}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (row.methodId) navigate(`/payment-methods/${row.methodId}`);
+              }}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Method
+            </DropdownMenuItem>
+            {(row.type === 'expense' || row.type === 'repayment') && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                const receiptId = row.type === 'expense' ? row.originalId : row.receiptId;
+                if (receiptId) navigate(`/receipts/view/${receiptId}`);
+              }}>
+                <Eye className="mr-2 h-4 w-4" />
+                Expense
               </DropdownMenuItem>
-            </div>
+            )}
+            {row.type === 'repayment' && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                if (row.debtorId) navigate(`/entities/${row.debtorId}`);
+              }}>
+                <User className="mr-2 h-4 w-4" />
+                Entity
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/receipts/view/${row.ReceiptID}`);
-            }}>
-              <Eye className="mr-2 h-4 w-4" />
-              View
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/receipts/edit/${row.ReceiptID}`);
-            }}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
+            {row.type === 'expense' && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/receipts/edit/${row.originalId}`);
+              }}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               className="text-red"
               onClick={(e) => {
                 e.stopPropagation();
-                openDeleteModal(row.ReceiptID);
+                openDeleteModal(row);
               }}
             >
               <Trash className="mr-2 h-4 w-4" />
@@ -450,6 +565,14 @@ const ReceiptsPage: React.FC = () => {
     )
   });
 
+  const typeFilterOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'expense', label: 'Expenses' },
+    { value: 'income', label: 'Income' },
+    { value: 'transfer', label: 'Transfers' },
+    { value: 'repayment', label: 'Repayments' },
+  ];
+
   const debtFilterOptions = [
     { value: 'all', label: 'All' },
     { value: 'none', label: 'No Debt' },
@@ -458,7 +581,7 @@ const ReceiptsPage: React.FC = () => {
     { value: 'paid', label: 'Paid Debt' },
   ];
 
-  const typeFilterOptions = [
+  const expenseTypeFilterOptions = [
     { value: 'all', label: 'All' },
     { value: 'detailed', label: 'Detailed' },
     { value: 'total-only', label: 'Total-only' },
@@ -476,28 +599,25 @@ const ReceiptsPage: React.FC = () => {
     { value: 'yes', label: 'Has Attachments' },
   ];
 
+  const showExpenseFilters = pendingFilters.type === 'all' || pendingFilters.type === 'expense';
+
   return (
     <div>
       <Header
-        title="Expenses"
+        title="History"
         actions={
           <div className="flex items-center gap-2">
-            {selectedReceiptIds.length > 0 && (
+            {selectedTransactionIds.length > 0 && (
               <>
-                <Tooltip content={`Delete ${selectedReceiptIds.length} expense(s)`}>
+                <Tooltip content={`Delete ${selectedTransactionIds.length} item(s)`}>
                   <Button variant="secondary" size="icon" onClick={() => openDeleteModal()}>
                     <Trash className="h-5 w-5"/>
                   </Button>
                 </Tooltip>
-                <Tooltip content="Feature broken, WIP">
-                  <Button variant="secondary" size="icon" onClick={handleMassPdfSave} disabled>
-                    <FileDown className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
-                {debtEnabled && (
-                  <Tooltip content="Bulk Debt">
-                    <Button variant="secondary" size="icon" onClick={() => setIsBulkDebtModalOpen(true)}>
-                      <Users className="h-5 w-5"/>
+                {selectedTransactionIds.some(id => id.startsWith('expense-')) && (
+                  <Tooltip content="Feature broken, WIP">
+                    <Button variant="secondary" size="icon" onClick={handleMassPdfSave} disabled>
+                      <FileDown className="h-5 w-5"/>
                     </Button>
                   </Tooltip>
                 )}
@@ -514,7 +634,7 @@ const ReceiptsPage: React.FC = () => {
       <PageWrapper>
         <div className="py-6">
           <DataTable
-            data={data?.receipts || []}
+            data={data?.transactions || []}
             columns={columns}
             totalCount={data?.totalCount || 0}
             pageSize={pageSize}
@@ -524,11 +644,13 @@ const ReceiptsPage: React.FC = () => {
             onSearch={setSearchTerm}
             searchable={true}
             loading={isLoading}
-            onRowClick={(row: Receipt) => navigate(`/receipts/view/${row.ReceiptID}`)}
+            onRowClick={(row: Transaction) => {
+              if (row.type === 'expense') navigate(`/receipts/view/${row.originalId}`);
+            }}
             selectable={true}
-            onSelectionChange={setSelectedReceiptIds}
-            selectedIds={selectedReceiptIds}
-            itemKey="ReceiptID"
+            onSelectionChange={setSelectedTransactionIds}
+            selectedIds={selectedTransactionIds}
+            itemKey="id"
             actions={
               <ButtonGroup>
                 <Tooltip content="Filters">
@@ -568,22 +690,8 @@ const ReceiptsPage: React.FC = () => {
               />
             </FilterOption>
 
-            {debtEnabled && (
-              <FilterOption 
-                title="Debt Status" 
-                onReset={() => handlePendingFilterChange('debt', 'all')}
-                isModified={pendingFilters.debt !== 'all'}
-              >
-                <Select 
-                  options={debtFilterOptions} 
-                  value={pendingFilters.debt} 
-                  onChange={e => handlePendingFilterChange('debt', e.target.value)} 
-                />
-              </FilterOption>
-            )}
-
             <FilterOption 
-              title="Expense Type" 
+              title="Transaction Type" 
               onReset={() => handlePendingFilterChange('type', 'all')}
               isModified={pendingFilters.type !== 'all'}
             >
@@ -594,40 +702,72 @@ const ReceiptsPage: React.FC = () => {
               />
             </FilterOption>
 
-            <FilterOption 
-              title="Status" 
-              onReset={() => handlePendingFilterChange('tentative', 'all')}
-              isModified={pendingFilters.tentative !== 'all'}
-            >
-              <Select 
-                options={tentativeFilterOptions} 
-                value={pendingFilters.tentative} 
-                onChange={e => handlePendingFilterChange('tentative', e.target.value)} 
-              />
-            </FilterOption>
+            {showExpenseFilters && (
+              <>
+                <Divider text="Expense Specific Filters" className="my-4" />
+                
+                {debtEnabled && (
+                  <FilterOption 
+                    title="Debt Status" 
+                    onReset={() => handlePendingFilterChange('debt', 'all')}
+                    isModified={pendingFilters.debt !== 'all'}
+                  >
+                    <Select 
+                      options={debtFilterOptions} 
+                      value={pendingFilters.debt} 
+                      onChange={e => handlePendingFilterChange('debt', e.target.value)} 
+                    />
+                  </FilterOption>
+                )}
 
-            <FilterOption 
-              title="Attachments" 
-              onReset={() => handlePendingFilterChange('attachment', 'all')}
-              isModified={pendingFilters.attachment !== 'all'}
-            >
-              <Select 
-                options={attachmentFilterOptions} 
-                value={pendingFilters.attachment} 
-                onChange={e => handlePendingFilterChange('attachment', e.target.value)}
-              />
-            </FilterOption>
+                <FilterOption 
+                  title="Expense Format" 
+                  onReset={() => handlePendingFilterChange('expenseType', 'all')}
+                  isModified={pendingFilters.expenseType !== 'all'}
+                >
+                  <Select 
+                    options={expenseTypeFilterOptions} 
+                    value={pendingFilters.expenseType} 
+                    onChange={e => handlePendingFilterChange('expenseType', e.target.value)} 
+                  />
+                </FilterOption>
+
+                <FilterOption 
+                  title="Status" 
+                  onReset={() => handlePendingFilterChange('tentative', 'all')}
+                  isModified={pendingFilters.tentative !== 'all'}
+                >
+                  <Select 
+                    options={tentativeFilterOptions} 
+                    value={pendingFilters.tentative} 
+                    onChange={e => handlePendingFilterChange('tentative', e.target.value)} 
+                  />
+                </FilterOption>
+
+                <FilterOption 
+                  title="Attachments" 
+                  onReset={() => handlePendingFilterChange('attachment', 'all')}
+                  isModified={pendingFilters.attachment !== 'all'}
+                >
+                  <Select 
+                    options={attachmentFilterOptions} 
+                    value={pendingFilters.attachment} 
+                    onChange={e => handlePendingFilterChange('attachment', e.target.value)}
+                  />
+                </FilterOption>
+              </>
+            )}
           </FilterModal>
 
           <ConfirmModal
             isOpen={deleteModalOpen}
             onClose={() => {
               setDeleteModalOpen(false);
-              setReceiptToDelete(null);
+              setTransactionToDelete(null);
             }}
             onConfirm={handleDelete}
-            title={`Delete ${receiptToDelete ? 'Expense' : `${selectedReceiptIds.length} Expenses`}`}
-            message={`Are you sure you want to permanently delete ${receiptToDelete ? 'this expense' : `${selectedReceiptIds.length} selected expenses`}? This action cannot be undone.`}
+            title={`Delete ${transactionToDelete ? 'Transaction' : `${selectedTransactionIds.length} Transactions`}`}
+            message={`Are you sure you want to permanently delete ${transactionToDelete ? 'this transaction' : `${selectedTransactionIds.length} selected transactions`}? This action cannot be undone.`}
           />
 
           <ProgressModal
@@ -635,18 +775,6 @@ const ReceiptsPage: React.FC = () => {
             progress={pdfProgress}
             title="Generating PDF Report..."
           />
-
-          {debtEnabled && (
-            <BulkDebtModal
-              isOpen={isBulkDebtModalOpen}
-              onClose={() => setIsBulkDebtModalOpen(false)}
-              receiptIds={selectedReceiptIds}
-              onComplete={() => {
-                refetch();
-                setSelectedReceiptIds([]);
-              }}
-            />
-          )}
         </div>
       </PageWrapper>
     </div>
