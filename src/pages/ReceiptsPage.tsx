@@ -342,49 +342,6 @@ const ReceiptsPage: React.FC = () => {
       render: (row: Transaction) => format(new Date(row.date), 'dd/MM/yyyy')
     },
     {
-      header: 'Type',
-      width: '10%',
-      render: (row: Transaction) => {
-        if (row.type === 'expense' && row.status === 'unpaid') {
-          return (
-            <Tooltip content="Unpaid expense - not yet deducted from balance">
-              <Badge variant="yellow" className="flex items-center gap-1 w-fit">
-                <Clock className="h-3 w-3"/> Unpaid
-              </Badge>
-            </Tooltip>
-          );
-        }
-        switch (row.type) {
-          case 'expense':
-            return (
-              <Tooltip content="Expense - money spent at a vendor">
-                <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3"/> Expense</Badge>
-              </Tooltip>
-            );
-          case 'income':
-            return (
-              <Tooltip content="Income - money received from a source">
-                <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3"/> Income</Badge>
-              </Tooltip>
-            );
-          case 'transfer':
-            return (
-              <Tooltip content="Transfer - money moved between payment methods">
-                <Badge variant="blue" className="flex items-center gap-1 w-fit"><ArrowRightLeft className="h-3 w-3"/> Transfer</Badge>
-              </Tooltip>
-            );
-          case 'repayment':
-            return (
-              <Tooltip content="Repayment - money received from a debtor">
-                <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3"/> Repayment</Badge>
-              </Tooltip>
-            );
-          default:
-            return row.type;
-        }
-      }
-    },
-    {
       header: 'Description',
       width: '20%',
       render: (row: Transaction) => {
@@ -411,23 +368,66 @@ const ReceiptsPage: React.FC = () => {
     render: (row: Transaction) => {
       const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
       const isTransfer = row.type === 'transfer';
-      const isIncomeOrRepayment = row.type === 'income' || row.type === 'repayment';
       return (
         <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
           <div className="inline-block">
             <MoneyDisplay 
               amount={row.amount} 
-              useSignum={!isTransfer} 
-              showSign={!isTransfer}
-              colorNegative={!isTransfer && !isUnpaid && row.amount < 0} 
-              colorPositive={(!isTransfer && row.amount > 0) || isIncomeOrRepayment}
-              colorNeutral={isUnpaid && !isTransfer}
-              colored={!isTransfer}
+              useSignum={true} 
+              showSign={true}
+              colorNegative={!isUnpaid && row.amount < 0} 
+              colorPositive={row.amount > 0}
+              colorNeutral={isUnpaid}
+              colored={true}
               className={isTransfer ? "text-font-1 font-normal" : ""}
             />
           </div>
         </Tooltip>
       );
+    }
+  });
+
+  columns.push({
+    header: 'Type',
+    width: '10%',
+    render: (row: Transaction) => {
+      if (row.type === 'expense' && row.status === 'unpaid') {
+        return (
+          <Tooltip content="Unpaid expense - money spent at a vendor by an entity. Not yet deducted from balance. A debt you owe to said entity">
+            <Badge variant="yellow" className="flex items-center gap-1 w-fit">
+              <Clock className="h-3 w-3"/> Unpaid
+            </Badge>
+          </Tooltip>
+        );
+      }
+      switch (row.type) {
+        case 'expense':
+          return (
+            <Tooltip content="Expense - money spent at a vendor">
+              <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3"/> Expense</Badge>
+            </Tooltip>
+          );
+        case 'income':
+          return (
+            <Tooltip content="Income - money received from a source">
+              <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3"/> Income</Badge>
+            </Tooltip>
+          );
+        case 'transfer':
+          return (
+            <Tooltip content="Transfer - money moved between payment methods">
+              <Badge variant="gray" className="flex items-center gap-1 w-fit text-font-1 border-font-1/20 bg-font-1/10"><ArrowRightLeft className="h-3 w-3"/> Transfer</Badge>
+            </Tooltip>
+          );
+        case 'repayment':
+          return (
+            <Tooltip content="Repayment - money received from a debtor">
+              <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3"/> Repayment</Badge>
+            </Tooltip>
+          );
+        default:
+          return row.type;
+      }
     }
   });
 
@@ -450,8 +450,8 @@ const ReceiptsPage: React.FC = () => {
         return (
           <div className="flex justify-end">
             <div 
-              className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-8"
-              style={{ minWidth: `${enabledCount * 28}px` }}
+              className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-10"
+              style={{ minWidth: `${enabledCount * 32}px` }}
             >
               <span className="text-font-2">-</span>
             </div>
@@ -465,11 +465,11 @@ const ReceiptsPage: React.FC = () => {
         visibleIndicators.push(
           row.isNonItemised ? (
             <Tooltip key="type" content="Total-only expense">
-              <Clipboard className="h-4 w-4 text-font-2"/>
+              <Clipboard className="h-5 w-5 text-font-2"/>
             </Tooltip>
           ) : (
             <Tooltip key="type" content="Detailed Expense">
-              <ClipboardList className="h-4 w-4 text-font-2"/>
+              <ClipboardList className="h-5 w-5 text-font-2"/>
             </Tooltip>
           )
         );
@@ -479,13 +479,13 @@ const ReceiptsPage: React.FC = () => {
         if ((row.unpaidDebtorCount || 0) > 0) {
           visibleIndicators.push(
             <Tooltip key="debt" content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
-              <AlertCircle className="h-4 w-4 text-red"/>
+              <AlertCircle className="h-5 w-5 text-red"/>
             </Tooltip>
           );
         } else if ((row.totalDebtorCount || 0) > 0) {
           visibleIndicators.push(
             <Tooltip key="debt" content="All debts settled">
-              <CheckCircle className="h-4 w-4 text-green"/>
+              <CheckCircle className="h-5 w-5 text-green"/>
             </Tooltip>
           );
         }
@@ -494,7 +494,7 @@ const ReceiptsPage: React.FC = () => {
       if (indicatorSettings?.tentative && row.isTentative) {
         visibleIndicators.push(
           <Tooltip key="tentative" content="Tentative Expense">
-            <HelpCircle className="h-4 w-4 text-font-2"/>
+            <HelpCircle className="h-5 w-5 text-yellow"/>
           </Tooltip>
         );
       }
@@ -502,7 +502,7 @@ const ReceiptsPage: React.FC = () => {
       if (indicatorSettings?.attachments && (row.attachmentCount || 0) > 0) {
         visibleIndicators.push(
           <Tooltip key="attachments" content={`${row.attachmentCount} attachment(s)`}>
-            <Paperclip className="h-4 w-4 text-font-2"/>
+            <Paperclip className="h-5 w-5 text-font-2"/>
           </Tooltip>
         );
       }
@@ -510,8 +510,8 @@ const ReceiptsPage: React.FC = () => {
       return (
         <div className="flex justify-end">
           <div 
-            className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-8"
-            style={{ minWidth: `${enabledCount * 28}px` }}
+            className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-10"
+            style={{ minWidth: `${enabledCount * 32}px` }}
           >
             {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-font-2">-</span>}
           </div>
@@ -564,7 +564,7 @@ const ReceiptsPage: React.FC = () => {
                   )}
                   {row.isTentative ? (
                     <Tooltip content="Tentative Expense">
-                      <HelpCircle className="h-4 w-4 text-font-2"/>
+                      <HelpCircle className="h-4 w-4 text-yellow"/>
                     </Tooltip>
                   ) : (
                     <Tooltip content="Finished Expense">

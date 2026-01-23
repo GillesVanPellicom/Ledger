@@ -279,6 +279,8 @@ const IncomeViewPage: React.FC = () => {
                       amount={transaction.amount} 
                       className="text-4xl font-bold text-font-1" 
                       colorPositive={true}
+                      useSignum={true}
+                      showSign={true}
                     />
                   </div>
 

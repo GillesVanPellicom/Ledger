@@ -209,6 +209,7 @@ const TransferViewPage: React.FC = () => {
                         className="text-2xl font-bold" 
                         colorNegative={true}
                         useSignum={true}
+                        showSign={true}
                       />
                     </div>
 
@@ -238,6 +239,7 @@ const TransferViewPage: React.FC = () => {
                         className="text-2xl font-bold" 
                         colorPositive={true}
                         useSignum={true}
+                        showSign={true}
                       />
                     </div>
                   </div>

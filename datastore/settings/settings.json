@@ -34,7 +34,7 @@
       "debt": true,
       "tentative": true,
       "type": false,
-      "attachments": false
+      "attachments": true
     }
   },
   "dev": {
