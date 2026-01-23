@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import Divider from '../ui/Divider';
 import StepperInput from '../ui/StepperInput';
+import { cn } from '../../utils/cn';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -183,7 +184,9 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
                 value={transferFrom}
                 onChange={setTransferFrom}
               />
-              <p className="text-[10px] text-font-2 text-center">Available: €{fromMethodBalance.toFixed(2)}</p>
+              <p className={cn("text-[10px] text-font-2 text-center transition-opacity", transferFrom ? "opacity-100" : "opacity-0")}>
+                Available: €{fromMethodBalance.toFixed(2)}
+              </p>
             </div>
 
             {/* Arrow */}
@@ -223,7 +226,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
 
         <div className="grid grid-cols-2 gap-4">
           <DatePicker label="Date" selected={formData.date} onChange={(date: Date | null) => date && setFormData(prev => ({ ...prev, date }))} error={errors.date} />
-          <Input label="Note" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly savings" />
+          <Input label="Note (Optional)" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly savings" />
         </div>
       </div>
     </Modal>
