@@ -105,8 +105,9 @@ export const incomeLogic = {
               PaymentMethodID: schedule.PaymentMethodID,
               Amount: schedule.ExpectedAmount ?? 0,
               Date: dateStr,
-              SourceName: schedule.SourceName,
-              Category: schedule.Category
+              Note: schedule.Note || schedule.SourceName,
+              IncomeSourceID: schedule.IncomeSourceID,
+              IncomeCategoryID: schedule.IncomeCategoryID
             });
           }
 
@@ -147,8 +148,9 @@ export const incomeLogic = {
       PaymentMethodID: paymentMethodId,
       Amount: actualAmount,
       Date: normalizeDateString(actualDate),
-      SourceName: schedule.IncomeSourceName,
-      Category: schedule.IncomeCategoryName
+      Note: schedule.Note || schedule.IncomeSourceName,
+      IncomeSourceID: schedule.IncomeSourceID,
+      IncomeCategoryID: schedule.IncomeCategoryID
     });
 
     await incomeCommitments.deletePendingIncome(

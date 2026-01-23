@@ -93,6 +93,7 @@ const ReceiptsPage: React.FC = () => {
     debtor: searchParams.get('debtor') || 'all',
     fromMethod: searchParams.get('fromMethod') || 'all',
     toMethod: searchParams.get('toMethod') || 'all',
+    method: searchParams.get('method') || 'all',
   };
 
   // Applied filters (what is shown in the table)
@@ -156,6 +157,7 @@ const ReceiptsPage: React.FC = () => {
     if (appliedFilters.debtor !== 'all') params.set('debtor', appliedFilters.debtor);
     if (appliedFilters.fromMethod !== 'all') params.set('fromMethod', appliedFilters.fromMethod);
     if (appliedFilters.toMethod !== 'all') params.set('toMethod', appliedFilters.toMethod);
+    if (appliedFilters.method !== 'all') params.set('method', appliedFilters.method);
     setSearchParams(params, { replace: true });
   }, [currentPage, pageSize, searchTerm, appliedDateRange, appliedFilters, setSearchParams]);
 
@@ -183,6 +185,7 @@ const ReceiptsPage: React.FC = () => {
     debtorFilter: appliedFilters.debtor,
     fromMethodFilter: appliedFilters.fromMethod,
     toMethodFilter: appliedFilters.toMethod,
+    methodFilter: appliedFilters.method,
     debtEnabled
   });
 
@@ -202,7 +205,7 @@ const ReceiptsPage: React.FC = () => {
   const resetFilters = () => {
     const defaultFilters = { 
       type: 'all', debt: 'all', expenseType: 'all', tentative: 'all', attachment: 'all',
-      incomeSource: 'all', incomeCategory: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all'
+      incomeSource: 'all', incomeCategory: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all', method: 'all'
     };
     const defaultDateRange: [Date | null, Date | null] = [null, null];
     
@@ -217,7 +220,7 @@ const ReceiptsPage: React.FC = () => {
   const resetPendingFilters = () => {
     const defaultFilters = { 
       type: 'all', debt: 'all', expenseType: 'all', tentative: 'all', attachment: 'all',
-      incomeSource: 'all', incomeCategory: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all'
+      incomeSource: 'all', incomeCategory: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all', method: 'all'
     };
     const defaultDateRange: [Date | null, Date | null] = [null, null];
     
@@ -236,6 +239,7 @@ const ReceiptsPage: React.FC = () => {
     appliedFilters.debtor !== 'all' ||
     appliedFilters.fromMethod !== 'all' ||
     appliedFilters.toMethod !== 'all' ||
+    appliedFilters.method !== 'all' ||
     appliedDateRange[0] !== null || 
     appliedDateRange[1] !== null || 
     searchTerm !== '';
@@ -246,11 +250,12 @@ const ReceiptsPage: React.FC = () => {
     pendingFilters.expenseType !== 'all' || 
     pendingFilters.tentative !== 'all' || 
     pendingFilters.attachment !== 'all' || 
-    pendingFilters.incomeSource !== 'all' ||
-    pendingFilters.incomeCategory !== 'all' ||
-    pendingFilters.debtor !== 'all' ||
-    pendingFilters.fromMethod !== 'all' ||
-    pendingFilters.toMethod !== 'all' ||
+    pendingFilters.incomeSource !== 'all' || 
+    pendingFilters.incomeCategory !== 'all' || 
+    pendingFilters.debtor !== 'all' || 
+    pendingFilters.fromMethod !== 'all' || 
+    pendingFilters.toMethod !== 'all' || 
+    pendingFilters.method !== 'all' ||
     pendingDateRange[0] !== null || 
     pendingDateRange[1] !== null;
 
@@ -265,6 +270,7 @@ const ReceiptsPage: React.FC = () => {
     pendingFilters.debtor !== 'all',
     pendingFilters.fromMethod !== 'all',
     pendingFilters.toMethod !== 'all',
+    pendingFilters.method !== 'all',
     pendingDateRange[0] !== null || pendingDateRange[1] !== null
   ].filter(Boolean).length;
 
@@ -369,7 +375,7 @@ const ReceiptsPage: React.FC = () => {
         if (row.type === 'expense') return row.storeName;
         if (row.type === 'repayment') return `Repayment from ${row.debtorName}`;
         if (row.type === 'income') {
-          return row.note && row.note.startsWith('[Income] ') ? row.note.substring(9) : row.note;
+          return row.debtorName || 'Income'; // debtorName field is used for SourceName in incomeQuery
         }
         if (row.type === 'transfer') return 'Transfer';
         return '';
@@ -754,6 +760,20 @@ const ReceiptsPage: React.FC = () => {
               />
             </FilterOption>
 
+            {paymentMethodsEnabled && (
+              <FilterOption 
+                title="Method" 
+                onReset={() => handlePendingFilterChange('method', 'all')}
+                isModified={pendingFilters.method !== 'all'}
+              >
+                <Combobox 
+                  options={[{value: 'all', label: 'All'}, ...methods.map(m => ({value: String(m.PaymentMethodID), label: m.PaymentMethodName}))]} 
+                  value={pendingFilters.method} 
+                  onChange={val => handlePendingFilterChange('method', val)} 
+                />
+              </FilterOption>
+            )}
+
             <FilterOption 
               title="Transaction Type" 
               onReset={() => handlePendingFilterChange('type', 'all')}
@@ -831,7 +851,7 @@ const ReceiptsPage: React.FC = () => {
                   isModified={pendingFilters.incomeSource !== 'all'}
                 >
                   <Combobox 
-                    options={[{value: 'all', label: 'All'}, ...incomeSources.map(s => ({value: s.IncomeSourceName, label: s.IncomeSourceName}))]} 
+                    options={[{value: 'all', label: 'All'}, ...incomeSources.map(s => ({value: String(s.IncomeSourceID), label: s.IncomeSourceName}))]} 
                     value={pendingFilters.incomeSource} 
                     onChange={val => handlePendingFilterChange('incomeSource', val)} 
                   />
@@ -842,7 +862,7 @@ const ReceiptsPage: React.FC = () => {
                   isModified={pendingFilters.incomeCategory !== 'all'}
                 >
                   <Combobox 
-                    options={[{value: 'all', label: 'All'}, ...incomeCategories.map(c => ({value: c.IncomeCategoryName, label: c.IncomeCategoryName}))]} 
+                    options={[{value: 'all', label: 'All'}, ...incomeCategories.map(c => ({value: String(c.IncomeCategoryID), label: c.IncomeCategoryName}))]} 
                     value={pendingFilters.incomeCategory} 
                     onChange={val => handlePendingFilterChange('incomeCategory', val)} 
                   />

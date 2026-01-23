@@ -61,6 +61,7 @@ import {
 } from "../components/ui/DropdownMenu"
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import Badge, { BadgeVariant } from '../components/ui/Badge';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -104,6 +105,7 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({isOpen, onClose, onCon
 const ReceiptViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const {settings} = useSettingsStore();
   const {showError} = useErrorStore();
   const deleteReceiptMutation = useDeleteReceipt();
@@ -270,6 +272,7 @@ const ReceiptViewPage: React.FC = () => {
         await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
       }
       refetch();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -285,6 +288,7 @@ const ReceiptViewPage: React.FC = () => {
         ['paid', paymentMethodId, id]
       );
       refetch();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -297,6 +301,7 @@ const ReceiptViewPage: React.FC = () => {
     try {
       await db.execute('UPDATE Receipts SET IsTentative = 0 WHERE ReceiptID = ?', [id]);
       refetch();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       showError(error as Error);
     } finally {

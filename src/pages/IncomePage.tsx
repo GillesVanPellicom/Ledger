@@ -110,7 +110,8 @@ const IncomePage: React.FC = () => {
     MonthOfYear: String(getMonth(getCurrentDate())),
     RequiresConfirmation: true,
     LookaheadDays: 7,
-    IsActive: true
+    IsActive: true,
+    Note: ''
   });
   const [createForPastPeriod, setCreateForPastPeriod] = useState(false);
 
@@ -134,7 +135,8 @@ const IncomePage: React.FC = () => {
         MonthOfYear: String(editingSchedule.MonthOfYear || getMonth(today)),
         RequiresConfirmation: !!editingSchedule.RequiresConfirmation,
         LookaheadDays: editingSchedule.LookaheadDays || 7,
-        IsActive: !!editingSchedule.IsActive
+        IsActive: !!editingSchedule.IsActive,
+        Note: editingSchedule.Note || ''
       });
     } else {
       setNewSchedule({
@@ -148,7 +150,8 @@ const IncomePage: React.FC = () => {
         MonthOfYear: String(getMonth(today)),
         RequiresConfirmation: true,
         LookaheadDays: 7,
-        IsActive: true
+        IsActive: true,
+        Note: ''
       });
     }
   }, [editingSchedule, paymentMethods, settings.dev?.mockTime]);
@@ -158,7 +161,8 @@ const IncomePage: React.FC = () => {
     Category: '',
     PaymentMethodID: '',
     Amount: '0',
-    Date: format(getCurrentDate(), 'yyyy-MM-dd')
+    Date: format(getCurrentDate(), 'yyyy-MM-dd'),
+    Note: ''
   });
 
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
@@ -318,7 +322,8 @@ const IncomePage: React.FC = () => {
         Category: '',
         PaymentMethodID: '',
         Amount: '0',
-        Date: format(getCurrentDate(), 'yyyy-MM-dd')
+        Date: format(getCurrentDate(), 'yyyy-MM-dd'),
+        Note: ''
       });
     },
     onError: (err) => showError(err)
@@ -494,7 +499,8 @@ const IncomePage: React.FC = () => {
                   Category: '',
                   PaymentMethodID: paymentMethods[0]?.value || '',
                   Amount: '0',
-                  Date: format(getCurrentDate(), 'yyyy-MM-dd')
+                  Date: format(getCurrentDate(), 'yyyy-MM-dd'),
+                  Note: ''
                 });
                 setIsOneTimeModalOpen(true);
               }}>
@@ -902,6 +908,12 @@ const IncomePage: React.FC = () => {
             value={oneTimeIncome.Date}
             onChange={e => setOneTimeIncome(prev => ({...prev, Date: e.target.value}))}
           />
+          <Input
+            label="Note"
+            value={oneTimeIncome.Note}
+            onChange={e => setOneTimeIncome(prev => ({...prev, Note: e.target.value}))}
+            placeholder="e.g., Birthday gift"
+          />
         </div>
       </Modal>
 
@@ -1017,6 +1029,12 @@ const IncomePage: React.FC = () => {
               max={1000}
             />
           </div>
+          <Input
+            label="Note"
+            value={newSchedule.Note}
+            onChange={e => setNewSchedule(prev => ({...prev, Note: e.target.value}))}
+            placeholder="e.g., Monthly salary"
+          />
           <div className="pt-2">
             {showCreateForPastPeriodCheckbox() && (
               <div className="flex items-start gap-3">

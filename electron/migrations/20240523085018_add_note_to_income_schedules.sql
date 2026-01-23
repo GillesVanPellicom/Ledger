@@ -1,0 +1,2 @@
+ALTER TABLE IncomeSchedules
+ADD COLUMN Note TEXT NOT NULL DEFAULT '';

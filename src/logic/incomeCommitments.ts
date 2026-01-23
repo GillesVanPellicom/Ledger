@@ -7,6 +7,8 @@ import { useSettingsStore } from '../store/useSettingsStore';
 
 export interface IncomeSchedule {
   IncomeScheduleID: number;
+  IncomeSourceID: number;
+  IncomeCategoryID: number | null;
   SourceName: string;
   Category: string | null;
   PaymentMethodID: number;
@@ -20,6 +22,7 @@ export interface IncomeSchedule {
   LookaheadDays: number | null;
   IsActive: boolean;
   CreationTimestamp: string;
+  Note: string | null;
 }
 
 export interface PendingIncome {
@@ -32,6 +35,9 @@ export interface PendingIncome {
   Category?: string;
   PaymentMethodName?: string;
   PaymentMethodID?: number;
+  Note?: string | null;
+  IncomeSourceID?: number;
+  IncomeCategoryID?: number;
 }
 
 /* ==================== Helpers ==================== */
@@ -90,7 +96,10 @@ export const incomeCommitments = {
         src.IncomeSourceName AS SourceName,
         cat.IncomeCategoryName AS Category,
         pm.PaymentMethodName,
-        s.PaymentMethodID
+        s.PaymentMethodID,
+        s.Note,
+        s.IncomeSourceID,
+        s.IncomeCategoryID
       FROM PendingIncomes p
       JOIN IncomeSchedules s ON p.IncomeScheduleID = s.IncomeScheduleID
       JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
@@ -105,10 +114,11 @@ export const incomeCommitments = {
 
   getConfirmedIncomeTopUps: async (): Promise<any[]> => {
     return await db.query(`
-      SELECT t.*, pm.PaymentMethodName
+      SELECT t.*, pm.PaymentMethodName, src.IncomeSourceName as SourceName
       FROM TopUps t
-      JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
-      WHERE t.TopUpNote LIKE '[Income]%'
+      LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
+      LEFT JOIN IncomeSources src ON t.IncomeSourceID = src.IncomeSourceID
+      WHERE t.TopUpNote NOT LIKE 'Repayment from %'
       ORDER BY t.TopUpDate DESC
     `);
   },
@@ -158,14 +168,13 @@ export const incomeCommitments = {
   getConfirmedIncomesForSchedule: async (
     schedule: IncomeSchedule
   ): Promise<{ TopUpDate: string }[]> => {
-    const notePrefix = `[Income] ${schedule.SourceName}`;
     return await db.query<{ TopUpDate: string }>(
       `
       SELECT TopUpDate
       FROM TopUps
-      WHERE TopUpNote LIKE ?
+      WHERE IncomeSourceID = ? AND (IncomeCategoryID = ? OR (IncomeCategoryID IS NULL AND ? IS NULL))
     `,
-      [`${notePrefix}%`]
+      [schedule.IncomeSourceID, schedule.IncomeCategoryID, schedule.IncomeCategoryID]
     );
   },
 
@@ -175,23 +184,22 @@ export const incomeCommitments = {
     PaymentMethodID: number;
     Amount: number;
     Date: string; // yyyy-MM-dd
-    SourceName: string;
-    Category?: string | null;
+    Note: string;
+    IncomeSourceID?: number;
+    IncomeCategoryID?: number | null;
   }) => {
-    const note = `[Income] ${data.SourceName}${
-      data.Category ? ` (${data.Category})` : ''
-    }`;
-
     return await db.execute(
       `
       INSERT INTO TopUps (
         PaymentMethodID,
         TopUpAmount,
         TopUpDate,
-        TopUpNote
-      ) VALUES (?, ?, ?, ?)
+        TopUpNote,
+        IncomeSourceID,
+        IncomeCategoryID
+      ) VALUES (?, ?, ?, ?, ?, ?)
     `,
-      [data.PaymentMethodID, data.Amount, data.Date, note]
+      [data.PaymentMethodID, data.Amount, data.Date, data.Note, data.IncomeSourceID || null, data.IncomeCategoryID || null]
     );
   },
 
@@ -256,8 +264,9 @@ export const incomeCommitments = {
         MonthOfYear,
         RequiresConfirmation,
         LookaheadDays,
-        IsActive
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        IsActive,
+        Note
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `,
       [
         assertDefined(source?.IncomeSourceID, 'Income source not found'),
@@ -269,7 +278,8 @@ export const incomeCommitments = {
         data.DayOfWeek,
         data.MonthOfYear,
         data.RequiresConfirmation ? 1 : 0,
-        data.LookaheadDays
+        data.LookaheadDays,
+        data.Note
       ]
     );
 
@@ -323,7 +333,8 @@ export const incomeCommitments = {
         MonthOfYear = ?,
         RequiresConfirmation = ?,
         LookaheadDays = ?,
-        IsActive = ?
+        IsActive = ?,
+        Note = ?
       WHERE IncomeScheduleID = ?
     `,
       [
@@ -338,6 +349,7 @@ export const incomeCommitments = {
         data.RequiresConfirmation ? 1 : 0,
         data.LookaheadDays,
         data.IsActive ? 1 : 0,
+        data.Note,
         id
       ]
     );
@@ -365,13 +377,27 @@ export const incomeCommitments = {
     PaymentMethodID: number;
     Amount: number;
     Date: string; // yyyy-MM-dd
+    Note: string;
   }) => {
+    const source = await db.queryOne<{ IncomeSourceID: number }>(
+      `SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?`,
+      [data.SourceName]
+    );
+
+    const category = data.Category
+      ? await db.queryOne<{ IncomeCategoryID: number }>(
+          `SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?`,
+          [data.Category]
+        )
+      : null;
+
     return await incomeCommitments.createTopUpFromIncome({
       PaymentMethodID: data.PaymentMethodID,
       Amount: data.Amount,
       Date: data.Date,
-      SourceName: data.SourceName,
-      Category: data.Category
+      Note: data.Note,
+      IncomeSourceID: source?.IncomeSourceID,
+      IncomeCategoryID: category?.IncomeCategoryID
     });
   }
 };

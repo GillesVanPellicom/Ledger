@@ -24,6 +24,8 @@ interface FetchTransactionsParams {
   // Transfer specific filters
   fromMethodFilter?: string;
   toMethodFilter?: string;
+  // Global method filter
+  methodFilter?: string;
 }
 
 interface FetchTransactionsResult {
@@ -48,14 +50,15 @@ export const useTransactions = (params: FetchTransactionsParams) => {
     incomeCategoryFilter,
     debtorFilter,
     fromMethodFilter,
-    toMethodFilter
+    toMethodFilter,
+    methodFilter
   } = params;
 
   return useQuery<FetchTransactionsResult>({
     queryKey: ['transactions', { 
       page, pageSize, searchTerm, startDate, endDate, typeFilter, debtEnabled, 
       debtFilter, expenseTypeFilter, tentativeFilter, attachmentFilter,
-      incomeSourceFilter, incomeCategoryFilter, debtorFilter, fromMethodFilter, toMethodFilter
+      incomeSourceFilter, incomeCategoryFilter, debtorFilter, fromMethodFilter, toMethodFilter, methodFilter
     }],
     queryFn: async () => {
       const offset = (page - 1) * pageSize;
@@ -109,7 +112,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           'income' as type,
           tu.CreationTimestamp as creationTimestamp,
           NULL as storeName,
-          NULL as debtorName,
+          src.IncomeSourceName as debtorName, -- Use debtorName field for SourceName
           NULL as isNonItemised,
           NULL as isTentative,
           NULL as attachmentCount,
@@ -122,6 +125,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as toMethodId
         FROM TopUps tu
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
+        LEFT JOIN IncomeSources src ON tu.IncomeSourceID = src.IncomeSourceID
         WHERE tu.TransferID IS NULL 
         AND NOT EXISTS (SELECT 1 FROM ReceiptDebtorPayments rdp WHERE rdp.TopUpID = tu.TopUpID)
       `;
@@ -224,6 +228,12 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         queryParams.push(format(endDate, 'yyyy-MM-dd'));
       }
 
+      // Global method filter
+      if (methodFilter && methodFilter !== 'all') {
+        whereClauses.push(`(methodId = ? OR fromMethodId = ? OR toMethodId = ?)`);
+        queryParams.push(methodFilter, methodFilter, methodFilter);
+      }
+
       // Apply type-specific filters
       if (typeFilter === 'expense') {
         if (expenseTypeFilter && expenseTypeFilter !== 'all') {
@@ -255,12 +265,14 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         }
       } else if (typeFilter === 'income') {
         if (incomeSourceFilter && incomeSourceFilter !== 'all') {
-          whereClauses.push("note LIKE ?");
-          queryParams.push(`[Income] ${incomeSourceFilter}%`);
+          // Match by IncomeSourceID
+          whereClauses.push("originalId IN (SELECT TopUpID FROM TopUps WHERE IncomeSourceID = ?)");
+          queryParams.push(incomeSourceFilter);
         }
         if (incomeCategoryFilter && incomeCategoryFilter !== 'all') {
-          whereClauses.push("note LIKE ?");
-          queryParams.push(`%(${incomeCategoryFilter})`);
+          // Match by IncomeCategoryID
+          whereClauses.push("originalId IN (SELECT TopUpID FROM TopUps WHERE IncomeCategoryID = ?)");
+          queryParams.push(incomeCategoryFilter);
         }
       } else if (typeFilter === 'repayment') {
         if (debtorFilter && debtorFilter !== 'all') {
