@@ -1,7 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useImperativeHandle } from 'react';
 import { cn } from '../../utils/cn';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import Button from './Button';
 import Input from './Input';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
@@ -41,8 +40,9 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
     const decimalSeparator = settings.formatting?.decimalSeparator || 'dot';
 
     const internalRef = useRef<HTMLInputElement>(null);
-    const combinedRef =
-      (ref as React.MutableRefObject<HTMLInputElement>) || internalRef;
+    
+    // Use useImperativeHandle to expose the internal ref to the parent ref
+    useImperativeHandle(ref, () => internalRef.current as HTMLInputElement);
 
     // Internal string state to preserve partial input
     const [inputValue, setInputValue] = useState<string>(String(value));
@@ -55,17 +55,18 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
     // Parse numeric value for stepper buttons
     const numericValue =
       typeof value === 'string'
-        ? parseFloat(value.replace(',', '.'))
+        ? Number.parseFloat(value.replace(',', '.'))
         : Number(value);
 
     const buttonBaseClasses =
-      'bg-field hover:bg-field-hover text-font-2 focus:z-10 flex items-center justify-center p-0 disabled:bg-field-disabled'; // Changed text-font-1 to text-font-2
+      'bg-field hover:bg-field-hover text-font-2 focus:z-10 flex items-center justify-center p-0 disabled:bg-field-disabled';
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let raw = e.target.value;
 
       // Accept digits + at most one dot/comma
-      if (!/^[0-9]*[.,]?[0-9]*$/.test(raw)) return;
+      // Fixed regex to avoid super-linear runtime vulnerability
+      if (!/^\d*([.,]\d*)?$/.test(raw)) return;
 
       setInputValue(raw);
     };
@@ -75,8 +76,8 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       let normalized = inputValue.replace(',', '.');
 
       // Optional: enforce min/max
-      let num = parseFloat(normalized);
-      if (!isNaN(num)) {
+      let num = Number.parseFloat(normalized);
+      if (!Number.isNaN(num)) {
         if (min !== undefined) num = Math.max(num, min);
         if (max !== undefined) num = Math.min(num, max);
         normalized = String(num);
@@ -96,18 +97,18 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
     // Display value mapping for comma/dot
     const displayValue =
       decimalSeparator === 'comma'
-        ? inputValue.replace(/\./g, ',')
+        ? inputValue.replaceAll('.', ',')
         : inputValue;
 
     // Disable scroll wheel changing value
     useEffect(() => {
       const handleWheel = (e: WheelEvent) => {
-        if (document.activeElement === combinedRef.current) {
+        if (document.activeElement === internalRef.current) {
           e.preventDefault();
         }
       };
 
-      const el = combinedRef.current;
+      const el = internalRef.current;
       if (el) {
         el.addEventListener('wheel', handleWheel, { passive: false });
       }
@@ -116,7 +117,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
           el.removeEventListener('wheel', handleWheel);
         }
       };
-    }, [combinedRef]);
+    }, []);
 
     const sizeClasses = {
       sm: 'h-8 text-xs',
@@ -142,7 +143,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
 
         <div className={cn('flex items-stretch', sizeClasses[size])}>
           <Input
-            ref={combinedRef}
+            ref={internalRef}
             type="text"
             inputMode="decimal"
             className={cn('rounded-r-none relative h-full', inputClassName)}
@@ -158,11 +159,11 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
               aria-label="Increase value"
               className={cn(
                 buttonBaseClasses,
-                'w-full h-1/2 rounded-tr-lg border border-border border-l-0 border-b-0' // Removed border-b-[0.5px]
+                'w-full h-1/2 rounded-tr-lg border border-border border-l-0 border-b-0'
               )}
               onClick={() => {
-                let num = isNaN(numericValue) ? 0 : numericValue;
-                let next = max !== undefined ? Math.min(num + 1, max) : num + 1;
+                let num = Number.isNaN(numericValue) ? 0 : numericValue;
+                let next = max === undefined ? num + 1 : Math.min(num + 1, max);
                 onChange({
                   target: { value: String(next) },
                 } as React.ChangeEvent<HTMLInputElement>);
@@ -177,11 +178,11 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
               aria-label="Decrease value"
               className={cn(
                 buttonBaseClasses,
-                'w-full h-1/2 rounded-br-lg border border-border border-l-0 border-t-[1px]' // Changed border-t-[0.5px] to border-t-[1px]
+                'w-full h-1/2 rounded-br-lg border border-border border-l-0 border-t-[1px]'
               )}
               onClick={() => {
-                let num = isNaN(numericValue) ? 0 : numericValue;
-                let next = min !== undefined ? Math.max(num - 1, min) : num - 1;
+                let num = Number.isNaN(numericValue) ? 0 : numericValue;
+                let next = min === undefined ? num - 1 : Math.max(num - 1, min);
                 onChange({
                   target: { value: String(next) },
                 } as React.ChangeEvent<HTMLInputElement>);

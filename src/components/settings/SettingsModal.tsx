@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Moon, Sun, RotateCw, Bug, CreditCard, Trash2, Info, Plug, Users, AlertTriangle, CheckCircle, AlertCircle as AlertCircleIcon, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code, PlayCircle } from 'lucide-react';
+import { Bug, Trash2, Info, Plug, AlertTriangle, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -14,7 +14,6 @@ import StepperInput from '../ui/StepperInput';
 import { format } from 'date-fns';
 import AppearanceSettings from './AppearanceSettings';
 import FormattingSettings from './FormattingSettings';
-import { wizardState } from '../../settings/wizardState';
 import { ModulesComponent } from '../../preferences/modules/ModulesComponent';
 import WizardDevTools from './WizardDevTools';
 import TabsComponent from '../ui/Tabs';
@@ -75,7 +74,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     }
   }, [settings]);
 
-  const handleUiScaleChange = (e: React.ChangeEvent<HTMLInputElement>) => setUiScale(parseInt(e.target.value, 10));
+  const handleUiScaleChange = (e: React.ChangeEvent<HTMLInputElement>) => setUiScale(Number.parseInt(e.target.value, 10));
   const handleUiScaleSave = () => {
     document.documentElement.style.fontSize = `${uiScale}%`;
     updateSettings({ uiScale });
@@ -93,7 +92,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   const handleIndicatorToggle = (key: 'debt' | 'tentative' | 'type' | 'attachments') => {
     const defaults = { debt: false, tentative: false, type: false, attachments: false };
-    const currentIndicators = { ...defaults, ...(settings.receipts?.indicators || {}) };
+    const currentIndicators = { ...defaults, ...settings.receipts?.indicators };
     const newIndicators = { ...currentIndicators, [key]: !currentIndicators[key] };
     // cast to expected shape to satisfy TS
     const typedIndicators = newIndicators as unknown as import('../../types').Settings['receipts']['indicators'];
@@ -101,7 +100,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const handlePdfToggle = (key: string) => {
-    const newPdfSettings = { ...settings.pdf, [key]: !(settings.pdf as any)[key] };
+    const newPdfSettings = { ...settings.pdf, [key]: !(settings.pdf)[key] };
     updateSettings({ pdf: newPdfSettings });
   };
 
@@ -138,8 +137,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const handleSelectDatastore = async () => {
-    if (window.electronAPI) {
-      const path = await window.electronAPI.selectDirectory();
+    if (globalThis.electronAPI) {
+      const path = await globalThis.electronAPI.selectDirectory();
       if (path) {
         setDatastorePath(path);
         updateSettings({ datastore: { folderPath: path } });
@@ -153,10 +152,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const handleResetAllSettings = async () => {
-    if (window.electronAPI) {
-      await window.electronAPI.resetSettings();
-      if (window.electronAPI.quitApp) {
-        await window.electronAPI.quitApp();
+    if (globalThis.electronAPI) {
+      await globalThis.electronAPI.resetSettings();
+      if (globalThis.electronAPI.quitApp) {
+        await globalThis.electronAPI.quitApp();
       }
     }
   };
@@ -184,7 +183,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     // Reset wizard state to force run
     updateSettings({ wizard: { askedQuestions: {} } } as any);
     // Reload the page to trigger wizard
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   const tabs = [
@@ -209,7 +208,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const indicatorDefs = [
     {
       key: 'debt',
-      header: <div className="flex flex-col items-center gap-1"><AlertTriangle className="h-5 w-5 text-yellow" /><AlertCircleIcon className="h-5 w-5 text-red" /><CheckCircle className="h-5 w-5 text-green" /></div>,
+      header: <div className="flex flex-col items-center gap-1"><AlertTriangle className="h-5 w-5 text-yellow" /><AlertCircle className="h-5 w-5 text-red" /><CheckCircle className="h-5 w-5 text-green" /></div>,
       title: 'Debt',
       desc: 'Marks items that are part of a split or debt.',
       enabled: settings.receipts?.indicators.debt ?? false,
@@ -444,7 +443,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <button onClick={() => window.electronAPI?.openBackupFolder()} className="text-xs text-blue hover:underline">Open Backup Folder</button>
+                      <button onClick={() => globalThis.electronAPI?.openBackupFolder()} className="text-xs text-blue hover:underline">Open Backup Folder</button>
                     </div>
                     <div className="flex justify-end">
                         <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp}>Backup Now</Button>
