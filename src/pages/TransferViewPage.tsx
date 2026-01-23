@@ -15,16 +15,13 @@ import {
   Pencil
 } from 'lucide-react';
 import Tooltip from '../components/ui/Tooltip';
-import Modal, {ConfirmModal} from '../components/ui/Modal';
+import {ConfirmModal} from '../components/ui/Modal';
 import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import {useErrorStore} from '../store/useErrorStore';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import StepperInput from '../components/ui/StepperInput';
-import Input from '../components/ui/Input';
-import Combobox from '../components/ui/Combobox';
-import Divider from '../components/ui/Divider';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import TransferModal from '../components/payment/TransferModal';
 
 const TransferViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -34,17 +31,8 @@ const TransferViewPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
-  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-  const [editData, setEditData] = useState({
-    FromPaymentMethodID: '',
-    ToPaymentMethodID: '',
-    Amount: '0',
-    Date: '',
-    Note: ''
-  });
-
   // Fetch transfer details
-  const {data: transfer, isLoading} = useQuery({
+  const {data: transfer, isLoading, refetch} = useQuery({
     queryKey: ['transfer', id],
     queryFn: async () => {
       const data = await db.queryOne<any>(`
@@ -57,41 +45,12 @@ const TransferViewPage: React.FC = () => {
         WHERE t.TransferID = ?
       `, [id]);
 
-      return data;
-    }
-  });
+      if (!data) return null;
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      await db.execute(
-        'UPDATE Transfers SET FromPaymentMethodID = ?, ToPaymentMethodID = ?, Amount = ?, TransferDate = ?, Note = ? WHERE TransferID = ?',
-        [data.FromPaymentMethodID, data.ToPaymentMethodID, data.Amount, data.Date, data.Note, id]
-      );
-      
-      // Also update the associated TopUps
-      const topUps = await db.query<any>('SELECT TopUpID, PaymentMethodID FROM TopUps WHERE TransferID = ?', [id]);
-      for (const tu of topUps) {
-        // One TopUp is negative (from), one is positive (to)
-        // We can distinguish them by checking which method they were originally associated with
-        if (tu.PaymentMethodID === transfer.FromPaymentMethodID) {
-          await db.execute(
-            'UPDATE TopUps SET PaymentMethodID = ?, TopUpAmount = ?, TopUpDate = ?, TopUpNote = ? WHERE TopUpID = ?',
-            [data.FromPaymentMethodID, -data.Amount, data.Date, data.Note, tu.TopUpID]
-          );
-        } else {
-          await db.execute(
-            'UPDATE TopUps SET PaymentMethodID = ?, TopUpAmount = ?, TopUpDate = ?, TopUpNote = ? WHERE TopUpID = ?',
-            [data.ToPaymentMethodID, data.Amount, data.Date, data.Note, tu.TopUpID]
-          );
-        }
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transfer', id] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      setIsEditModalOpen(false);
-    },
-    onError: (err) => showError(err)
+      // Also get the associated TopUp for the TransferModal
+      const topUp = await db.queryOne<any>('SELECT * FROM TopUps WHERE TransferID = ? AND TopUpAmount < 0', [id]);
+      return { ...data, topUp };
+    }
   });
 
   const handleDelete = async () => {
@@ -105,30 +64,6 @@ const TransferViewPage: React.FC = () => {
     } finally {
       setDeleteModalOpen(false);
     }
-  };
-
-  const openEditModal = async () => {
-    if (!transfer) return;
-
-    const pmRows = await db.query("SELECT * FROM PaymentMethods");
-    setPaymentMethods(pmRows.map((r: any) => ({ value: String(r.PaymentMethodID), label: r.PaymentMethodName })));
-
-    setEditData({
-      FromPaymentMethodID: String(transfer.FromPaymentMethodID),
-      ToPaymentMethodID: String(transfer.ToPaymentMethodID),
-      Amount: String(transfer.Amount),
-      Date: transfer.TransferDate,
-      Note: transfer.Note || ''
-    });
-    setIsEditModalOpen(true);
-  };
-
-  const handleStepperChange = (increment: boolean, step: number) => {
-    setEditData((prev: any) => {
-      const currentValue = Number.parseFloat(prev.Amount) || 0;
-      const newValue = increment ? currentValue + step : currentValue - step;
-      return {...prev, Amount: String(newValue)};
-    });
   };
 
   if (isLoading) {
@@ -163,7 +98,7 @@ const TransferViewPage: React.FC = () => {
               </Button>
             </Tooltip>
             <Tooltip content="Edit">
-              <Button variant="ghost" size="icon" onClick={openEditModal}>
+              <Button variant="ghost" size="icon" onClick={() => setIsEditModalOpen(true)}>
                 <Pencil className="h-5 w-5"/>
               </Button>
             </Tooltip>
@@ -269,63 +204,14 @@ const TransferViewPage: React.FC = () => {
         message="Are you sure you want to permanently delete this transfer? This action cannot be undone."
       />
 
-      <Modal
+      <TransferModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Edit Transfer"
-        onEnter={() => updateMutation.mutate(editData)}
-        footer={
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => updateMutation.mutate(editData)}
-              loading={updateMutation.isPending}
-            >
-              Save Changes
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Combobox
-              label="From Method"
-              options={paymentMethods}
-              value={editData.FromPaymentMethodID}
-              onChange={val => setEditData(prev => ({...prev, FromPaymentMethodID: val}))}
-            />
-            <Combobox
-              label="To Method"
-              options={paymentMethods}
-              value={editData.ToPaymentMethodID}
-              onChange={val => setEditData(prev => ({...prev, ToPaymentMethodID: val}))}
-            />
-          </div>
-          <Divider className="my-2"/>
-          <StepperInput
-            label="Amount"
-            step={1}
-            min={0}
-            value={editData.Amount}
-            onChange={e => setEditData(prev => ({...prev, Amount: e.target.value}))}
-            onIncrement={() => handleStepperChange(true, 1)}
-            onDecrement={() => handleStepperChange(false, 1)}
-          />
-          <Divider className="my-2"/>
-          <Input
-            label="Date"
-            type="date"
-            value={editData.Date}
-            onChange={e => setEditData(prev => ({...prev, Date: e.target.value}))}
-          />
-          <Input
-            type="text"
-            label="Note"
-            value={editData.Note}
-            onChange={e => setEditData(prev => ({...prev, Note: e.target.value}))}
-          />
-        </div>
-      </Modal>
+        onSave={refetch}
+        topUpToEdit={transfer.topUp}
+        paymentMethodId={String(transfer.FromPaymentMethodID)}
+        currentBalance={0} // Will be recalculated in modal
+      />
     </div>
   );
 };

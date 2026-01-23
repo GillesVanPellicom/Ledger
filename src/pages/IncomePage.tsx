@@ -13,7 +13,8 @@ import {
   FilePlus2,
   CalendarPlus,
   MoreHorizontal,
-  CreditCard
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import {Header} from '../components/ui/Header';
@@ -47,6 +48,7 @@ import {
 import ButtonGroup from '../components/ui/ButtonGroup';
 import {Tabs, TabsList, TabsTrigger} from '../components/ui/Tabs';
 import {useSettingsStore} from '../store/useSettingsStore';
+import IncomeModal from '../components/payment/IncomeModal';
 
 const dayOfMonthOptions = Array.from({length: 31}, (_, i) => ({value: String(i + 1), label: String(i + 1)}));
 const dayOfWeekOptions = [
@@ -80,7 +82,7 @@ const IncomePage: React.FC = () => {
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isDismissModalOpen, setIsDismissModalOpen] = useState(false);
-  const [isOneTimeModalOpen, setIsOneTimeModalOpen] = useState(false);
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [selectedPending, setSelectedPending] = useState<any>(null);
   const [confirmData, setConfirmData] = useState({amount: 0, date: '', paymentMethodId: ''});
 
@@ -156,15 +158,6 @@ const IncomePage: React.FC = () => {
     }
   }, [editingSchedule, paymentMethods, settings.dev?.mockTime]);
 
-  const [oneTimeIncome, setOneTimeIncome] = useState({
-    SourceName: '',
-    Category: '',
-    PaymentMethodID: '',
-    Amount: '0',
-    Date: format(getCurrentDate(), 'yyyy-MM-dd'),
-    Note: ''
-  });
-
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
   const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
 
@@ -202,16 +195,6 @@ const IncomePage: React.FC = () => {
         value: r.IncomeCategoryName,
         label: r.IncomeCategoryName
       })));
-      if (newId) {
-        db.queryOne<{
-          IncomeCategoryName: string
-        }>("SELECT IncomeCategoryName FROM IncomeCategories WHERE IncomeCategoryID = ?", [newId]).then(cat => {
-          if (cat) {
-            if (isOneTimeModalOpen) setOneTimeIncome(prev => ({...prev, Category: cat.IncomeCategoryName}));
-            if (isScheduleModalOpen) setNewSchedule(prev => ({...prev, Category: cat.IncomeCategoryName}));
-          }
-        }).catch(err => showError(err));
-      }
     }).catch(err => showError(err));
   };
 
@@ -221,16 +204,6 @@ const IncomePage: React.FC = () => {
         value: r.IncomeSourceName,
         label: r.IncomeSourceName
       })));
-      if (newId) {
-        db.queryOne<{
-          IncomeSourceName: string
-        }>("SELECT IncomeSourceName FROM IncomeSources WHERE IncomeSourceID = ?", [newId]).then(src => {
-          if (src) {
-            if (isOneTimeModalOpen) setOneTimeIncome(prev => ({...prev, SourceName: src.IncomeSourceName}));
-            if (isScheduleModalOpen) setNewSchedule(prev => ({...prev, SourceName: src.IncomeSourceName}));
-          }
-        }).catch(err => showError(err));
-      }
     }).catch(err => showError(err));
   };
 
@@ -307,24 +280,6 @@ const IncomePage: React.FC = () => {
       processSchedulesMutation.mutate();
       setIsDeleteModalOpen(false);
       setCascadeDelete(false);
-    },
-    onError: (err) => showError(err)
-  });
-
-  const createOneTimeMutation = useMutation({
-    mutationFn: (data: any) => incomeCommitments.createOneTimeIncome(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['pendingIncome']});
-      queryClient.invalidateQueries({queryKey: ['transactions']});
-      setIsOneTimeModalOpen(false);
-      setOneTimeIncome({
-        SourceName: '',
-        Category: '',
-        PaymentMethodID: '',
-        Amount: '0',
-        Date: format(getCurrentDate(), 'yyyy-MM-dd'),
-        Note: ''
-      });
     },
     onError: (err) => showError(err)
   });
@@ -475,15 +430,6 @@ const IncomePage: React.FC = () => {
     });
   };
 
-  const handleCreateOneTimeIncome = () => {
-    createOneTimeMutation.mutate({
-      ...oneTimeIncome,
-      Amount: Number.parseFloat(oneTimeIncome.Amount) || 0,
-      PaymentMethodID: Number(oneTimeIncome.PaymentMethodID) || null,
-      Category: oneTimeIncome.Category || null
-    });
-  };
-
   return (
     <div>
       <Header
@@ -492,19 +438,9 @@ const IncomePage: React.FC = () => {
         tabs={renderTabs()}
         actions={
           <div className="flex gap-2">
-            <Tooltip content="Add One-Time Income">
-              <Button variant="ghost" size="icon" onClick={() => {
-                setOneTimeIncome({
-                  SourceName: '',
-                  Category: '',
-                  PaymentMethodID: paymentMethods[0]?.value || '',
-                  Amount: '0',
-                  Date: format(getCurrentDate(), 'yyyy-MM-dd'),
-                  Note: ''
-                });
-                setIsOneTimeModalOpen(true);
-              }}>
-                <FilePlus2 className="h-5 w-5"/>
+            <Tooltip content="Add Income">
+              <Button variant="ghost" size="icon" onClick={() => setIsIncomeModalOpen(true)}>
+                <Wallet className="h-5 w-5"/>
               </Button>
             </Tooltip>
             <Tooltip content="Add New Income Schedule">
@@ -835,88 +771,15 @@ const IncomePage: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal
-        isOpen={isOneTimeModalOpen}
-        onClose={() => setIsOneTimeModalOpen(false)}
-        title="Add One-time Income"
-        onEnter={handleCreateOneTimeIncome}
-        footer={
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setIsOneTimeModalOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleCreateOneTimeIncome}
-              loading={createOneTimeMutation.isPending}
-            >
-              Confirm
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="flex items-end gap-2">
-            <Combobox
-              label="Source Name"
-              placeholder="e.g. Bonus, Tax Return"
-              options={incomeSources}
-              value={oneTimeIncome.SourceName}
-              onChange={val => setOneTimeIncome(prev => ({...prev, SourceName: val}))}
-              className="flex-1"
-            />
-            <Tooltip content="Add Source">
-              <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
-                <Plus className="h-5 w-5"/>
-              </Button>
-            </Tooltip>
-          </div>
-          <div className="flex items-end gap-2">
-            <Combobox
-              label="Category (Optional)"
-              options={incomeCategories}
-              value={oneTimeIncome.Category}
-              onChange={val => setOneTimeIncome(prev => ({...prev, Category: val}))}
-              className="flex-1"
-            />
-            <Tooltip content="Add Category">
-              <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                <Plus className="h-5 w-5"/>
-              </Button>
-            </Tooltip>
-          </div>
-          <Divider className="my-2"/>
-          <div className="grid grid-cols-2 gap-4">
-            <StepperInput
-              label="Amount"
-              step={1}
-              min={0}
-              max={10000000}
-              value={oneTimeIncome.Amount}
-              onChange={e => setOneTimeIncome(prev => ({...prev, Amount: e.target.value}))}
-              onIncrement={() => handleStepperChange(setOneTimeIncome, 'Amount', true, 1)}
-              onDecrement={() => handleStepperChange(setOneTimeIncome, 'Amount', false, 1)}
-            />
-            <Combobox
-              label="Method"
-              options={paymentMethods}
-              value={oneTimeIncome.PaymentMethodID}
-              onChange={val => setOneTimeIncome(prev => ({...prev, PaymentMethodID: val}))}
-            />
-          </div>
-          <Divider className="my-2"/>
-          <Input
-            label="Date"
-            type="date"
-            value={oneTimeIncome.Date}
-            onChange={e => setOneTimeIncome(prev => ({...prev, Date: e.target.value}))}
-          />
-          <Input
-            type="text"
-            label="Note"
-            value={oneTimeIncome.Note}
-            onChange={e => setOneTimeIncome(prev => ({...prev, Note: e.target.value}))}
-            placeholder="e.g., Birthday gift"
-          />
-        </div>
-      </Modal>
+      <IncomeModal
+        isOpen={isIncomeModalOpen}
+        onClose={() => setIsIncomeModalOpen(false)}
+        onSave={() => {
+          queryClient.invalidateQueries({queryKey: ['pendingIncome']});
+          queryClient.invalidateQueries({queryKey: ['transactions']});
+        }}
+        topUpToEdit={null}
+      />
 
       <Modal
         isOpen={isScheduleModalOpen}

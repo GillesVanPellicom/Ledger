@@ -29,7 +29,8 @@ import {
   Clock,
   Info,
   ArrowRight,
-  Landmark
+  Landmark,
+  Wallet
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -63,6 +64,7 @@ import Badge from '../components/ui/Badge';
 import Divider from '../components/ui/Divider';
 import Combobox from '../components/ui/Combobox';
 import TransferModal from '../components/payment/TransferModal';
+import IncomeModal from '../components/payment/IncomeModal';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -111,6 +113,7 @@ const ReceiptsPage: React.FC = () => {
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
 
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -730,9 +733,14 @@ const ReceiptsPage: React.FC = () => {
                 )}
               </>
             )}
-            <Tooltip content="New Transaction">
+            <Tooltip content="New Transfer">
               <Button variant="ghost" size="icon" onClick={() => setIsTransferModalOpen(true)}>
-                <Landmark className="h-5 w-5"/>
+                <ArrowRightLeft className="h-5 w-5"/>
+              </Button>
+            </Tooltip>
+            <Tooltip content="Add Income">
+              <Button variant="ghost" size="icon" onClick={() => setIsIncomeModalOpen(true)}>
+                <Wallet className="h-5 w-5"/>
               </Button>
             </Tooltip>
             <Tooltip content="New Expense">
@@ -989,6 +997,13 @@ const ReceiptsPage: React.FC = () => {
             topUpToEdit={null}
             paymentMethodId={methods[0]?.PaymentMethodID?.toString() || ''}
             currentBalance={0}
+          />
+
+          <IncomeModal
+            isOpen={isIncomeModalOpen}
+            onClose={() => setIsIncomeModalOpen(false)}
+            onSave={refetch}
+            topUpToEdit={null}
           />
 
           <ProgressModal
