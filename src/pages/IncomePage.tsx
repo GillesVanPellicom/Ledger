@@ -46,7 +46,7 @@ import {
 } from "../components/ui/DropdownMenu"
 import ButtonGroup from '../components/ui/ButtonGroup';
 import {Tabs, TabsList, TabsTrigger} from '../components/ui/Tabs';
-import { useSettingsStore } from '../store/useSettingsStore';
+import {useSettingsStore} from '../store/useSettingsStore';
 
 const dayOfMonthOptions = Array.from({length: 31}, (_, i) => ({value: String(i + 1), label: String(i + 1)}));
 const dayOfWeekOptions = [
@@ -66,7 +66,7 @@ const monthOfYearOptions = [
 const IncomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const {showError} = useErrorStore();
-  const { settings } = useSettingsStore();
+  const {settings} = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled'>('to-check');
@@ -909,6 +909,7 @@ const IncomePage: React.FC = () => {
             onChange={e => setOneTimeIncome(prev => ({...prev, Date: e.target.value}))}
           />
           <Input
+            type="text"
             label="Note"
             value={oneTimeIncome.Note}
             onChange={e => setOneTimeIncome(prev => ({...prev, Note: e.target.value}))}
@@ -1030,6 +1031,7 @@ const IncomePage: React.FC = () => {
             />
           </div>
           <Input
+            type="text"
             label="Note"
             value={newSchedule.Note}
             onChange={e => setNewSchedule(prev => ({...prev, Note: e.target.value}))}

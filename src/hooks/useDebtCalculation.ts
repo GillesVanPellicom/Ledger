@@ -21,7 +21,7 @@ export const useDebtCalculation = (entityId: string | number): UseDebtCalculatio
     queryKey: ['debt', entityId],
     queryFn: () => calculateDebts(entityId),
     enabled: !!entityId,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 0, // Ensure we always get fresh data
   });
 
   return {
@@ -38,7 +38,7 @@ export const useDebtCalculation = (entityId: string | number): UseDebtCalculatio
 
 export const useReceiptDebtCalculation = (receiptId: string | undefined, receipt: Receipt | undefined, lineItems: LineItem[] | undefined, receiptSplits: ReceiptSplit[] | undefined, payments: ReceiptDebtorPayment[] | undefined) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['receiptDebt', receiptId],
+    queryKey: ['receiptDebt', receiptId, payments?.length], // Include payments length to trigger re-fetch on payment changes
     queryFn: () => {
       if (!receiptId || !receipt || !lineItems || !receiptSplits || !payments) {
         return Promise.resolve({ debtors: [], ownShare: null });
@@ -46,6 +46,7 @@ export const useReceiptDebtCalculation = (receiptId: string | undefined, receipt
       return calculateDebtsForReceipt(receiptId, receipt, lineItems, receiptSplits, payments);
     },
     enabled: !!receiptId && !!receipt && !!lineItems && !!receiptSplits && !!payments,
+    staleTime: 0,
   });
 
   return {

@@ -46,7 +46,7 @@ const Sidenav: React.FC<SidenavProps> = ({ pendingIncomeCount }) => {
   const badgeCount = pendingIncomeCount !== undefined ? pendingIncomeCount : pendingIncomes?.length;
 
   const navItems: NavItem[] = [
-    { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts'] },
+    { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts', '/income/view'] },
   ];
 
   if (paymentMethodsEnabled) {

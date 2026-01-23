@@ -165,7 +165,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           'repayment-' || rdp.PaymentID as id,
           rdp.PaymentID as originalId,
           rdp.PaidDate as date,
-          tu.TopUpNote as note,
+          CASE WHEN tu.TopUpNote LIKE 'Repayment from %' THEN '' ELSE tu.TopUpNote END as note,
           tu.TopUpAmount as amount,
           pm.PaymentMethodName as methodName,
           tu.PaymentMethodID as methodId,

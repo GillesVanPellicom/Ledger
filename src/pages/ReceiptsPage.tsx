@@ -394,15 +394,16 @@ const ReceiptsPage: React.FC = () => {
     className: 'text-right',
     render: (row: Transaction) => {
       const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
+      const isTransfer = row.type === 'transfer';
       return (
         <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
           <div className="inline-block">
             <MoneyDisplay 
               amount={row.amount} 
-              useSignum={true} 
-              colorNegative={!isUnpaid && row.amount < 0} 
-              colorPositive={row.amount > 0}
-              colorNeutral={isUnpaid}
+              useSignum={!isTransfer} 
+              colorNegative={!isTransfer && !isUnpaid && row.amount < 0} 
+              colorPositive={!isTransfer && row.amount > 0}
+              colorNeutral={isUnpaid || isTransfer}
             />
           </div>
         </Tooltip>
@@ -584,14 +585,19 @@ const ReceiptsPage: React.FC = () => {
               <CreditCard className="mr-2 h-4 w-4" />
               Method
             </DropdownMenuItem>
-            {(row.type === 'expense' || row.type === 'repayment') && (
+            {(row.type === 'expense' || row.type === 'repayment' || row.type === 'income' || row.type === 'transfer') && (
               <DropdownMenuItem onClick={(e) => {
                 e.stopPropagation();
-                const receiptId = row.type === 'expense' ? row.originalId : row.receiptId;
-                if (receiptId) navigate(`/receipts/view/${receiptId}`);
+                if (row.type === 'expense') {
+                  navigate(`/receipts/view/${row.originalId}`);
+                } else if (row.type === 'income' || row.type === 'repayment') {
+                  navigate(`/income/view/${row.originalId}`);
+                } else if (row.type === 'transfer') {
+                  navigate(`/transfers/view/${row.originalId}`);
+                }
               }}>
                 <Eye className="mr-2 h-4 w-4" />
-                Expense
+                View Details
               </DropdownMenuItem>
             )}
             {row.type === 'repayment' && (
@@ -708,7 +714,13 @@ const ReceiptsPage: React.FC = () => {
             searchable={true}
             loading={isLoading}
             onRowClick={(row: Transaction) => {
-              if (row.type === 'expense') navigate(`/receipts/view/${row.originalId}`);
+              if (row.type === 'expense') {
+                navigate(`/receipts/view/${row.originalId}`);
+              } else if (row.type === 'income' || row.type === 'repayment') {
+                navigate(`/income/view/${row.originalId}`);
+              } else if (row.type === 'transfer') {
+                navigate(`/transfers/view/${row.originalId}`);
+              }
             }}
             selectable={true}
             onSelectionChange={setSelectedTransactionIds}

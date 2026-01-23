@@ -271,8 +271,8 @@ const ReceiptViewPage: React.FC = () => {
       if (topUpId) {
         await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
       }
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -287,8 +287,8 @@ const ReceiptViewPage: React.FC = () => {
         'UPDATE Receipts SET Status = ?, PaymentMethodID = ? WHERE ReceiptID = ?',
         ['paid', paymentMethodId, id]
       );
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -300,8 +300,8 @@ const ReceiptViewPage: React.FC = () => {
     if (!receipt) return;
     try {
       await db.execute('UPDATE Receipts SET IsTentative = 0 WHERE ReceiptID = ?', [id]);
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -814,9 +814,10 @@ const ReceiptViewPage: React.FC = () => {
       <DebtSettlementModal
         isOpen={isSettlementModalOpen}
         onClose={() => setIsSettlementModalOpen(false)}
-        onSave={() => {
-          refetch();
-          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        onSave={async () => {
+          await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
+          await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          await queryClient.invalidateQueries({ queryKey: ['receiptDebt', id] });
         }}
         debtInfo={selectedDebtForSettlement}
       />

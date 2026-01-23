@@ -6,6 +6,8 @@ import ReceiptsPage from './pages/ReceiptsPage';
 import IncomePage from './pages/IncomePage';
 import ReceiptFormPage from './pages/ReceiptFormPage';
 import ReceiptViewPage from './pages/ReceiptViewPage';
+import IncomeViewPage from './pages/IncomeViewPage';
+import TransferViewPage from './pages/TransferViewPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PaymentMethodDetailsPage from './pages/PaymentMethodDetailsPage';
@@ -72,6 +74,8 @@ export const MainApp = () => {
             <Route path="receipts/new" element={<ReceiptFormPage />} />
             <Route path="receipts/edit/:id" element={<ReceiptFormPage />} />
             <Route path="receipts/view/:id" element={<ReceiptViewPage />} />
+            <Route path="income/view/:id" element={<IncomeViewPage />} />
+            <Route path="transfers/view/:id" element={<TransferViewPage />} />
           </Route>
         </Routes>
       </Router>

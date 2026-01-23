@@ -175,14 +175,68 @@ async function seed() {
 
         if (paymentMethods.length === 0 || incomeSources.length === 0 || incomeCategories.length === 0) return;
 
+        // More varied and realistic schedules
         const schedulesToSeed = [
-            { SourceName: 'Salary', Category: 'Work', ExpectedAmount: 2500, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 1, LookaheadDays: 5, IsActive: 1 },
-            { SourceName: 'Freelance Client A', Category: 'Work', ExpectedAmount: 500, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 1, LookaheadDays: 7, IsActive: 1 },
-            { SourceName: 'Rental Income', Category: 'Investment', ExpectedAmount: 800, RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', RequiresConfirmation: 0, LookaheadDays: 3, IsActive: 1 },
-            { SourceName: 'Dividends', Category: 'Investment', ExpectedAmount: 150, RecurrenceRule: 'FREQ=QUARTERLY;INTERVAL=1', RequiresConfirmation: 0, LookaheadDays: 10, IsActive: 1 },
+            // Monthly Salary - Fixed date (25th)
+            { 
+                SourceName: 'Salary', 
+                Category: 'Work', 
+                ExpectedAmount: 3200, 
+                RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', 
+                RequiresConfirmation: 1, 
+                LookaheadDays: 5, 
+                IsActive: 1,
+                DayOfMonth: 25 
+            },
+            // Weekly Freelance - Every Friday
+            { 
+                SourceName: 'Freelance Client A', 
+                Category: 'Work', 
+                ExpectedAmount: 450, 
+                RecurrenceRule: 'FREQ=WEEKLY;INTERVAL=1', 
+                RequiresConfirmation: 1, 
+                LookaheadDays: 7, 
+                IsActive: 1,
+                DayOfWeek: 5 // Friday
+            },
+            // Quarterly Dividends - 1st of month
+            { 
+                SourceName: 'Dividends', 
+                Category: 'Investment', 
+                ExpectedAmount: 150, 
+                RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=3', 
+                RequiresConfirmation: 0, 
+                LookaheadDays: 10, 
+                IsActive: 1,
+                DayOfMonth: 1
+            },
+            // Annual Bonus - December
+            { 
+                SourceName: 'Salary', 
+                Category: 'Work', 
+                ExpectedAmount: 2000, 
+                RecurrenceRule: 'FREQ=YEARLY;INTERVAL=1', 
+                RequiresConfirmation: 1, 
+                LookaheadDays: 30, 
+                IsActive: 1,
+                MonthOfYear: 12,
+                DayOfMonth: 15
+            },
+            // Bi-weekly Rental Income
+            { 
+                SourceName: 'Rental Income', 
+                Category: 'Investment', 
+                ExpectedAmount: 800, 
+                RecurrenceRule: 'FREQ=WEEKLY;INTERVAL=2', 
+                RequiresConfirmation: 0, 
+                LookaheadDays: 3, 
+                IsActive: 1,
+                DayOfWeek: 1 // Monday
+            }
         ];
 
-        const insert = 'INSERT OR IGNORE INTO IncomeSchedules (IncomeSourceID, IncomeCategoryID, PaymentMethodID, ExpectedAmount, RecurrenceRule, RequiresConfirmation, LookaheadDays, IsActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+        const insert = 'INSERT OR IGNORE INTO IncomeSchedules (IncomeSourceID, IncomeCategoryID, PaymentMethodID, ExpectedAmount, RecurrenceRule, RequiresConfirmation, LookaheadDays, IsActive, DayOfMonth, DayOfWeek, MonthOfYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        
         for (const schedule of schedulesToSeed) {
             const source = incomeSources.find(s => s.IncomeSourceName === schedule.SourceName) || getRandomElement(incomeSources);
             const category = incomeCategories.find(c => c.IncomeCategoryName === schedule.Category) || getRandomElement(incomeCategories);
@@ -195,33 +249,15 @@ async function seed() {
                 schedule.RecurrenceRule,
                 schedule.RequiresConfirmation,
                 schedule.LookaheadDays,
-                schedule.IsActive
+                schedule.IsActive,
+                schedule.DayOfMonth || null,
+                schedule.DayOfWeek || null,
+                schedule.MonthOfYear || null
             ]);
         }
     });
 
-    await task('Seeding Pending Incomes', async () => {
-        const incomeSchedules = await getQuery(db, 'SELECT * FROM IncomeSchedules WHERE IsActive = 1');
-        if (incomeSchedules.length === 0) return;
-
-        const insert = 'INSERT INTO PendingIncomes (IncomeScheduleID, PlannedDate, Amount, Status) VALUES (?, ?, ?, ?)';
-        const today = new Date();
-        
-        for (const schedule of incomeSchedules) {
-            // Seed some pending incomes for the near future
-            for (let i = 0; i < 3; i++) { // 3 pending incomes per schedule
-                const plannedDate = new Date(today);
-                plannedDate.setDate(today.getDate() + getRandomInt(1, 30 * (i + 1))); // 1 to 90 days in future
-                
-                await runQuery(db, insert, [
-                    schedule.IncomeScheduleID,
-                    format(plannedDate, 'yyyy-MM-dd'),
-                    schedule.ExpectedAmount || (Math.random() * 1000 + 100).toFixed(2), // Use expected or random
-                    'pending'
-                ]);
-            }
-        }
-    });
+    // Removed explicit PendingIncomes seeding as requested - runtime calculation handles this
 
     await task('Generating and Inserting Products', async () => {
         const unitIds = (await getQuery(db, 'SELECT ProductUnitID FROM ProductUnits')).map(u => u.ProductUnitID);
@@ -399,6 +435,9 @@ async function seed() {
 
         const methodRoles = { 'KBC': 'affluent', 'Knab': 'going_up', 'Paypal': 'keeping_above_water', 'Argenta': 'debter' };
         const topUpNotes = ['Monthly salary', 'Bonus', 'Gift', 'Project payment', 'Stock dividend', null];
+        
+        const incomeSources = await getQuery(db, 'SELECT * FROM IncomeSources');
+        const incomeCategories = await getQuery(db, 'SELECT * FROM IncomeCategories');
 
         for (const pm of methods) {
             const roleName = methodRoles[pm.PaymentMethodName];
@@ -412,9 +451,53 @@ async function seed() {
                 const topUpAmount = getRandomInt(AVG_SPENT_PER_RECEIPT * 0.5, AVG_SPENT_PER_RECEIPT * role.topUpMultiplier);
                 const topUpDate = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
                 const topUpNote = Math.random() > 0.5 ? getRandomElement(topUpNotes) : null;
-                await runQuery(db, 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)', [pm.PaymentMethodID, topUpAmount, topUpDate, topUpNote]);
+                
+                // Assign random source and category for better data richness
+                const sourceId = Math.random() > 0.2 ? getRandomElement(incomeSources).IncomeSourceID : null;
+                const categoryId = Math.random() > 0.2 ? getRandomElement(incomeCategories).IncomeCategoryID : null;
+
+                await runQuery(db, 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, IncomeSourceID, IncomeCategoryID) VALUES (?, ?, ?, ?, ?, ?)', 
+                    [pm.PaymentMethodID, topUpAmount, topUpDate, topUpNote, sourceId, categoryId]);
             }
         }
+    });
+
+    await task('Generating Transfers', async () => {
+        const methods = await getQuery(db, 'SELECT * FROM PaymentMethods WHERE PaymentMethodName != "cash"');
+        if (methods.length < 2) return;
+
+        const insertTransfer = 'INSERT INTO Transfers (FromPaymentMethodID, ToPaymentMethodID, Amount, TransferDate, Note) VALUES (?, ?, ?, ?, ?)';
+        const insertTopUp = 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)';
+
+        await new Promise((resolve, reject) => {
+            db.serialize(() => {
+                db.run('BEGIN TRANSACTION');
+                
+                // Generate ~50 transfers
+                for (let i = 0; i < 50; i++) {
+                    const fromMethod = getRandomElement(methods);
+                    let toMethod = getRandomElement(methods);
+                    while (toMethod.PaymentMethodID === fromMethod.PaymentMethodID) {
+                        toMethod = getRandomElement(methods);
+                    }
+
+                    const amount = getRandomInt(50, 1000);
+                    const date = format(generateRandomDate(new Date(2023, 0, 1), new Date()), 'yyyy-MM-dd');
+                    const note = Math.random() > 0.5 ? 'Savings transfer' : 'Covering expenses';
+
+                    db.run(insertTransfer, [fromMethod.PaymentMethodID, toMethod.PaymentMethodID, amount, date, note], function(err) {
+                        if (err) return reject(err);
+                        const transferId = this.lastID;
+
+                        // Create corresponding TopUps
+                        db.run(insertTopUp, [fromMethod.PaymentMethodID, -amount, date, `Transfer to ${toMethod.PaymentMethodName}`, transferId]);
+                        db.run(insertTopUp, [toMethod.PaymentMethodID, amount, date, `Transfer from ${fromMethod.PaymentMethodName}`, transferId]);
+                    });
+                }
+
+                db.run('COMMIT', (err) => err ? reject(err) : resolve());
+            });
+        });
     });
 
     await task('Closing database connection', () => new Promise((resolve, reject) => {
