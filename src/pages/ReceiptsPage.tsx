@@ -10,7 +10,6 @@ import {
   AlertCircle,
   CheckCircle,
   Users,
-  AlertTriangle,
   ClipboardList,
   Clipboard,
   HelpCircle,
@@ -28,7 +27,8 @@ import {
   ArrowRightLeft,
   HandCoins,
   Clock,
-  Info
+  Info,
+  ArrowRight
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -356,13 +356,29 @@ const ReceiptsPage: React.FC = () => {
         }
         switch (row.type) {
           case 'expense':
-            return <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3"/> Expense</Badge>;
+            return (
+              <Tooltip content="Expense - money spent at a vendor">
+                <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3"/> Expense</Badge>
+              </Tooltip>
+            );
           case 'income':
-            return <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3"/> Income</Badge>;
+            return (
+              <Tooltip content="Income - money received from a source">
+                <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3"/> Income</Badge>
+              </Tooltip>
+            );
           case 'transfer':
-            return <Badge variant="blue" className="flex items-center gap-1 w-fit"><ArrowRightLeft className="h-3 w-3"/> Transfer</Badge>;
+            return (
+              <Tooltip content="Transfer - money moved between payment methods">
+                <Badge variant="blue" className="flex items-center gap-1 w-fit"><ArrowRightLeft className="h-3 w-3"/> Transfer</Badge>
+              </Tooltip>
+            );
           case 'repayment':
-            return <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3"/> Repayment</Badge>;
+            return (
+              <Tooltip content="Repayment - money received from a debtor">
+                <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3"/> Repayment</Badge>
+              </Tooltip>
+            );
           default:
             return row.type;
         }
@@ -395,15 +411,19 @@ const ReceiptsPage: React.FC = () => {
     render: (row: Transaction) => {
       const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
       const isTransfer = row.type === 'transfer';
+      const isIncomeOrRepayment = row.type === 'income' || row.type === 'repayment';
       return (
         <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
           <div className="inline-block">
             <MoneyDisplay 
               amount={row.amount} 
               useSignum={!isTransfer} 
+              showSign={!isTransfer}
               colorNegative={!isTransfer && !isUnpaid && row.amount < 0} 
-              colorPositive={!isTransfer && row.amount > 0}
-              colorNeutral={isUnpaid || isTransfer}
+              colorPositive={(!isTransfer && row.amount > 0) || isIncomeOrRepayment}
+              colorNeutral={isUnpaid && !isTransfer}
+              colored={!isTransfer}
+              className={isTransfer ? "text-font-1 font-normal" : ""}
             />
           </div>
         </Tooltip>
@@ -456,13 +476,7 @@ const ReceiptsPage: React.FC = () => {
       }
 
       if (indicatorSettings?.debt && debtEnabled) {
-        if (row.status === 'unpaid') {
-          visibleIndicators.push(
-            <Tooltip key="debt" content="Unpaid expense">
-              <AlertTriangle className="h-4 w-4 text-yellow"/>
-            </Tooltip>
-          );
-        } else if ((row.unpaidDebtorCount || 0) > 0) {
+        if ((row.unpaidDebtorCount || 0) > 0) {
           visibleIndicators.push(
             <Tooltip key="debt" content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
               <AlertCircle className="h-4 w-4 text-red"/>
@@ -534,11 +548,7 @@ const ReceiptsPage: React.FC = () => {
                     </Tooltip>
                   )}
                   {debtEnabled && (
-                    row.status === 'unpaid' ? (
-                      <Tooltip content="Unpaid expense">
-                        <AlertTriangle className="h-4 w-4 text-yellow"/>
-                      </Tooltip>
-                    ) : (row.unpaidDebtorCount || 0) > 0 ? (
+                    (row.unpaidDebtorCount || 0) > 0 ? (
                       <Tooltip content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
                         <AlertCircle className="h-4 w-4 text-red"/>
                       </Tooltip>
@@ -575,16 +585,39 @@ const ReceiptsPage: React.FC = () => {
               </>
             )}
             <DropdownMenuLabel>Go To</DropdownMenuLabel>
-            <DropdownMenuItem 
-              disabled={!row.methodId}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (row.methodId) navigate(`/payment-methods/${row.methodId}`);
-              }}
-            >
-              <CreditCard className="mr-2 h-4 w-4" />
-              Method
-            </DropdownMenuItem>
+            {row.type === 'transfer' ? (
+              <>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (row.fromMethodId) navigate(`/payment-methods/${row.fromMethodId}`);
+                  }}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Origin Method
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (row.toMethodId) navigate(`/payment-methods/${row.toMethodId}`);
+                  }}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Destination Method
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem 
+                disabled={!row.methodId}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (row.methodId) navigate(`/payment-methods/${row.methodId}`);
+                }}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Method
+              </DropdownMenuItem>
+            )}
             {(row.type === 'expense' || row.type === 'repayment' || row.type === 'income' || row.type === 'transfer') && (
               <DropdownMenuItem onClick={(e) => {
                 e.stopPropagation();
@@ -639,6 +672,8 @@ const ReceiptsPage: React.FC = () => {
   const typeFilterOptions = [
     { value: 'all', label: 'All' },
     { value: 'expense', label: 'Expenses' },
+    { value: 'paid_expense', label: 'Paid Expenses' },
+    { value: 'unpaid_expense', label: 'Unpaid Expenses' },
     { value: 'income', label: 'Income' },
     { value: 'transfer', label: 'Transfers' },
     { value: 'repayment', label: 'Repayments' },
@@ -729,7 +764,7 @@ const ReceiptsPage: React.FC = () => {
             actions={
               <ButtonGroup>
                 <Tooltip content="Filters">
-                  <Button variant="secondary" size="icon" onClick={() => setIsFilterModalOpen(true)}>
+                  <Button variant={hasActiveFilters ? "primary" : "secondary"} size="icon" onClick={() => setIsFilterModalOpen(true)}>
                     <Filter className="h-4 w-4"/>
                   </Button>
                 </Tooltip>
@@ -798,7 +833,7 @@ const ReceiptsPage: React.FC = () => {
               />
             </FilterOption>
 
-            {pendingFilters.type === 'expense' && (
+            {(pendingFilters.type === 'expense' || pendingFilters.type === 'paid_expense' || pendingFilters.type === 'unpaid_expense') && (
               <>
                 <Divider text="Expense Filters" className="my-4" />
                 

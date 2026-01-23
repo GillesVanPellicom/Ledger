@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Bug, Trash2, Info, Plug, AlertTriangle, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
+import { Bug, Trash2, Info, Plug, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -209,7 +209,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const indicatorDefs = [
     {
       key: 'debt',
-      header: <div className="flex flex-col items-center gap-1"><AlertTriangle className="h-5 w-5 text-yellow" /><AlertCircle className="h-5 w-5 text-red" /><CheckCircle className="h-5 w-5 text-green" /></div>,
+      header: <div className="flex flex-col items-center gap-1"><AlertCircle className="h-5 w-5 text-red" /><CheckCircle className="h-5 w-5 text-green" /></div>,
       title: 'Debt',
       desc: 'Marks items that are part of a split or debt.',
       enabled: settings.receipts?.indicators.debt ?? false,

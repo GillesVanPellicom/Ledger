@@ -24,7 +24,8 @@ import {
   Calendar,
   AlertTriangle,
   RotateCcw,
-  Filter
+  Filter,
+  FileText
 } from 'lucide-react';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
@@ -465,7 +466,10 @@ const ReceiptViewPage: React.FC = () => {
           <div className="xl:col-span-2 space-y-6 xl:col-start-1 xl:row-start-1">
             {receipt?.ReceiptNote && (
               <Card>
-                <div className="p-4">
+                <div className="p-4 flex items-start gap-3">
+                  <Tooltip content="Note about the contents of this page">
+                    <FileText className="h-5 w-5 text-font-2 shrink-0 mt-0.5" />
+                  </Tooltip>
                   <p className="text-base text-font-1 whitespace-pre-wrap break-words">{receipt.ReceiptNote}</p>
                 </div>
               </Card>
@@ -514,11 +518,10 @@ const ReceiptViewPage: React.FC = () => {
             ) : (
               <Card>
                 <div className="p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-font-1">Items</h3>
+                  <div className="flex justify-end items-center mb-4">
                     <ButtonGroup>
                       <Tooltip content="Filters">
-                        <Button variant="secondary" size="icon" onClick={() => setIsFilterModalOpen(true)}>
+                        <Button variant={hasActiveFilters ? "primary" : "secondary"} size="icon" onClick={() => setIsFilterModalOpen(true)}>
                           <Filter className="h-4 w-4"/>
                         </Button>
                       </Tooltip>
@@ -568,17 +571,17 @@ const ReceiptViewPage: React.FC = () => {
           {/* Right Column (Summary, Debt) */}
           <div className="col-span-1 space-y-6 xl:col-start-3">
             <Card>
-              <div className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-6">
+              <div className="p-8">
+                <div className="flex flex-col items-center gap-8">
 
                   {/* Total Amount */}
-                  <div className="sm:col-start-1 sm:row-start-1 xl:col-start-1 xl:row-start-1 2xl:col-start-1 2xl:row-start-1">
-                    <p className="text-sm text-font-2">Total Amount</p>
-                    <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} className="text-2xl font-bold text-font-1" />
+                  <div className="text-center">
+                    <p className="text-xs font-semibold text-font-2 uppercase tracking-wider mb-2">Total Amount</p>
+                    <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} className="text-4xl font-bold text-font-1" />
                   </div>
 
                   {/* Badges */}
-                  <div className="flex flex-col items-start sm:items-end xl:items-start 2xl:items-end gap-2 sm:col-start-2 sm:row-start-1 xl:col-start-1 xl:row-start-2 2xl:col-start-2 2xl:row-start-1">
+                  <div className="flex flex-wrap justify-center gap-2">
                     {receipt?.Status === 'paid' ? (
                       <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the vendor.'}>
                         <Badge variant="green">
@@ -602,7 +605,7 @@ const ReceiptViewPage: React.FC = () => {
                   </div>
 
                   {/* Rest (Attributes) */}
-                  <div className="flex flex-col gap-4 sm:col-start-1 sm:row-start-2 xl:col-start-1 xl:row-start-4 2xl:col-start-1 2xl:row-start-2">
+                  <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 pt-8 border-t border-border w-full">
                     {receipt?.StoreName && (
                       <Tooltip content="The vendor where this expense was incurred">
                         <div className="flex items-center gap-3 cursor-help">
@@ -623,7 +626,14 @@ const ReceiptViewPage: React.FC = () => {
                       <Tooltip content="The method used for this expense">
                         <div className="flex items-center gap-3 cursor-help">
                           <CreditCard className="h-5 w-5 text-font-2"/>
-                          <span className="text-sm text-font-1">{receipt.PaymentMethodName || 'N/A'}</span>
+                          {receipt.PaymentMethodID ? (
+                            <Link to={`/payment-methods/${receipt.PaymentMethodID}`} className="text-sm text-font-1 hover:underline flex items-center gap-1 group">
+                              {receipt.PaymentMethodName}
+                              <LinkIcon className="h-3.5 w-3.5 text-font-2 group-hover:text-accent" />
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-font-1">N/A</span>
+                          )}
                         </div>
                       </Tooltip>
                     )}
@@ -743,9 +753,7 @@ const ReceiptViewPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg/30 backdrop-blur-sm">
-                          <Info className="h-8 w-8 text-font-2"/>
-                          <p className="mt-2 text-sm text-font-2 font-medium">No debts owed to you for this
-                                                                                receipt.</p>
+                          <span className="text-font-2 font-medium">No debts owed to you for this receipt.</span>
                         </div>
                       </div>
                     </Card>
@@ -843,6 +851,7 @@ const ReceiptViewPage: React.FC = () => {
         onConfirm={handleMakePermanent}
         title="Make Expense Permanent"
         message="Are you sure you want to make this expense permanent? This action is irreversible."
+        confirmText="Confirm"
       />
 
       <ConfirmModal

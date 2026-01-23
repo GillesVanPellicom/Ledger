@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState} from 'react';
 import {useParams, useNavigate, Link} from 'react-router-dom';
 import {format, parseISO} from 'date-fns';
 import {db} from '../utils/db';
@@ -11,20 +11,25 @@ import {
   Calendar,
   CreditCard,
   User,
-  ArrowDownLeft,
-  HandCoins,
   Wallet,
-  Receipt
+  Receipt,
+  FileText,
+  Link as LinkIcon,
+  Pencil
 } from 'lucide-react';
-import {cn} from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
-import {ConfirmModal} from '../components/ui/Modal';
+import Modal, {ConfirmModal} from '../components/ui/Modal';
 import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import {useErrorStore} from '../store/useErrorStore';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
-import Badge from '../components/ui/Badge';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import StepperInput from '../components/ui/StepperInput';
+import Input from '../components/ui/Input';
+import Combobox from '../components/ui/Combobox';
+import Divider from '../components/ui/Divider';
+import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
+import IncomeSourceModal from '../components/income/IncomeSourceModal';
 
 const IncomeViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -32,6 +37,22 @@ const IncomeViewPage: React.FC = () => {
   const queryClient = useQueryClient();
   const {showError} = useErrorStore();
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
+  const [incomeSources, setIncomeSources] = useState<any[]>([]);
+  const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
+  const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
+
+  const [editData, setEditData] = useState({
+    SourceName: '',
+    Category: '',
+    PaymentMethodID: '',
+    Amount: '0',
+    Date: '',
+    Note: ''
+  });
 
   // Fetch transaction details
   const {data: transaction, isLoading} = useQuery({
@@ -110,6 +131,37 @@ const IncomeViewPage: React.FC = () => {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (transaction?.type === 'repayment') {
+        // For repayments, we update the TopUp and potentially the PaidDate in ReceiptDebtorPayments
+        await db.execute(
+          'UPDATE TopUps SET TopUpAmount = ?, TopUpDate = ?, TopUpNote = ?, PaymentMethodID = ? WHERE TopUpID = ?',
+          [data.Amount, data.Date, data.Note, data.PaymentMethodID, transaction.topUpId]
+        );
+        await db.execute(
+          'UPDATE ReceiptDebtorPayments SET PaidDate = ? WHERE PaymentID = ?',
+          [data.Date, transaction.id]
+        );
+      } else {
+        // For regular income
+        const sourceId = (await db.queryOne<any>('SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?', [data.SourceName]))?.IncomeSourceID;
+        const categoryId = (await db.queryOne<any>('SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?', [data.Category]))?.IncomeCategoryID;
+        
+        await db.execute(
+          'UPDATE TopUps SET TopUpAmount = ?, TopUpDate = ?, TopUpNote = ?, PaymentMethodID = ?, IncomeSourceID = ?, IncomeCategoryID = ? WHERE TopUpID = ?',
+          [data.Amount, data.Date, data.Note, data.PaymentMethodID, sourceId || null, categoryId || null, transaction?.id]
+        );
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transaction', id] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      setIsEditModalOpen(false);
+    },
+    onError: (err) => showError(err)
+  });
+
   const handleDelete = async () => {
     if (!transaction) return;
     try {
@@ -129,6 +181,39 @@ const IncomeViewPage: React.FC = () => {
     } finally {
       setDeleteModalOpen(false);
     }
+  };
+
+  const openEditModal = async () => {
+    if (!transaction) return;
+
+    // Load reference data
+    const [pmRows, catRows, srcRows] = await Promise.all([
+      db.query("SELECT * FROM PaymentMethods"),
+      db.query("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName"),
+      db.query("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName")
+    ]);
+
+    setPaymentMethods(pmRows.map((r: any) => ({ value: String(r.PaymentMethodID), label: r.PaymentMethodName })));
+    setIncomeCategories(catRows.map((r: any) => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
+    setIncomeSources(srcRows.map((r: any) => ({ value: r.IncomeSourceName, label: r.IncomeSourceName })));
+
+    setEditData({
+      SourceName: transaction.description,
+      Category: transaction.category || '',
+      PaymentMethodID: String(transaction.paymentMethodId),
+      Amount: String(transaction.amount),
+      Date: transaction.date,
+      Note: transaction.note || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleStepperChange = (increment: boolean, step: number) => {
+    setEditData((prev: any) => {
+      const currentValue = Number.parseFloat(prev.Amount) || 0;
+      const newValue = increment ? currentValue + step : currentValue - step;
+      return {...prev, Amount: String(newValue)};
+    });
   };
 
   if (isLoading) {
@@ -162,6 +247,11 @@ const IncomeViewPage: React.FC = () => {
                 <Trash2 className="h-5 w-5"/>
               </Button>
             </Tooltip>
+            <Tooltip content="Edit">
+              <Button variant="ghost" size="icon" onClick={openEditModal}>
+                <Pencil className="h-5 w-5"/>
+              </Button>
+            </Tooltip>
           </>
         }
       />
@@ -170,37 +260,33 @@ const IncomeViewPage: React.FC = () => {
           <div className="w-full max-w-4xl space-y-6">
             {transaction.note && (
               <Card>
-                <div className="p-4">
+                <div className="p-4 flex items-start gap-3">
+                  <Tooltip content="Note about the contents of this page">
+                    <FileText className="h-5 w-5 text-font-2 shrink-0 mt-0.5" />
+                  </Tooltip>
                   <p className="text-base text-font-1 whitespace-pre-wrap break-words">{transaction.note}</p>
                 </div>
               </Card>
             )}
 
             <Card>
-              <div className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="p-8">
+                <div className="flex flex-col items-center gap-8">
                   {/* Amount */}
-                  <div className="sm:col-start-1 sm:row-start-1">
-                    <p className="text-sm text-font-2">Amount</p>
+                  <div className="text-center">
+                    <p className="text-xs font-semibold text-font-2 uppercase tracking-wider mb-2">Amount</p>
                     <MoneyDisplay 
                       amount={transaction.amount} 
-                      className="text-2xl font-bold text-font-1" 
+                      className="text-4xl font-bold text-font-1" 
                       colorPositive={true}
                     />
                   </div>
 
-                  {/* Badge */}
-                  <div className="flex flex-col items-start sm:items-end gap-2 sm:col-start-2 sm:row-start-1">
-                    <Badge variant="green">
-                      {transaction.type === 'income' ? 'Income' : 'Repayment'}
-                    </Badge>
-                  </div>
-
                   {/* Details List */}
-                  <div className="flex flex-col gap-4 sm:col-start-1 sm:row-start-2">
+                  <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 pt-8 border-t border-border w-full">
                     {/* Date */}
                     <Tooltip content="The date this transaction occurred">
-                      <div className="flex items-center gap-3 cursor-help w-fit">
+                      <div className="flex items-center gap-3 cursor-help">
                         <Calendar className="h-5 w-5 text-font-2" />
                         <span className="text-sm text-font-1">{format(parseISO(transaction.date), 'MMM d, yyyy')}</span>
                       </div>
@@ -208,11 +294,12 @@ const IncomeViewPage: React.FC = () => {
 
                     {/* Payment Method */}
                     <Tooltip content="The method used for this transaction">
-                      <div className="flex items-center gap-3 cursor-help w-fit">
+                      <div className="flex items-center gap-3 cursor-help">
                         <CreditCard className="h-5 w-5 text-font-2" />
                         {transaction.paymentMethodId ? (
-                          <Link to={`/payment-methods/${transaction.paymentMethodId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1">
+                          <Link to={`/payment-methods/${transaction.paymentMethodId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1 group">
                             {transaction.method}
+                            <LinkIcon className="h-3.5 w-3.5 text-font-2 group-hover:text-accent" />
                           </Link>
                         ) : (
                           <span className="text-sm text-font-1">N/A</span>
@@ -223,7 +310,7 @@ const IncomeViewPage: React.FC = () => {
                     {/* Category (Income only) */}
                     {transaction.type === 'income' && transaction.category && (
                       <Tooltip content="The category of this income">
-                        <div className="flex items-center gap-3 cursor-help w-fit">
+                        <div className="flex items-center gap-3 cursor-help">
                           <Wallet className="h-5 w-5 text-font-2" />
                           <span className="text-sm text-font-1">{transaction.category}</span>
                         </div>
@@ -233,10 +320,11 @@ const IncomeViewPage: React.FC = () => {
                     {/* Debtor (Repayment only) */}
                     {transaction.type === 'repayment' && (
                       <Tooltip content="The person who made this repayment">
-                        <div className="flex items-center gap-3 cursor-help w-fit">
+                        <div className="flex items-center gap-3 cursor-help">
                           <User className="h-5 w-5 text-font-2" />
-                          <Link to={`/entities/${transaction.debtorId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1">
+                          <Link to={`/entities/${transaction.debtorId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1 group">
                             {transaction.debtorName}
+                            <LinkIcon className="h-3.5 w-3.5 text-font-2 group-hover:text-accent" />
                           </Link>
                         </div>
                       </Tooltip>
@@ -245,10 +333,11 @@ const IncomeViewPage: React.FC = () => {
                     {/* Receipt Link (Repayment only) */}
                     {transaction.type === 'repayment' && transaction.receiptId && (
                       <Tooltip content="The expense this repayment is associated with">
-                        <div className="flex items-center gap-3 cursor-help w-fit">
+                        <div className="flex items-center gap-3 cursor-help">
                           <Receipt className="h-5 w-5 text-font-2" />
-                          <Link to={`/receipts/view/${transaction.receiptId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1">
+                          <Link to={`/receipts/view/${transaction.receiptId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1 group">
                             {transaction.receiptStoreName || 'View Expense'}
+                            <LinkIcon className="h-3.5 w-3.5 text-font-2 group-hover:text-accent" />
                           </Link>
                         </div>
                       </Tooltip>
@@ -267,6 +356,113 @@ const IncomeViewPage: React.FC = () => {
         onConfirm={handleDelete}
         title="Delete Transaction"
         message="Are you sure you want to permanently delete this transaction? This action cannot be undone."
+      />
+
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={transaction.type === 'repayment' ? "Edit Repayment" : "Edit Income"}
+        onEnter={() => updateMutation.mutate(editData)}
+        footer={
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => updateMutation.mutate(editData)}
+              loading={updateMutation.isPending}
+            >
+              Save Changes
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {transaction.type === 'income' && (
+            <>
+              <div className="flex items-end gap-2">
+                <Combobox
+                  label="Source Name"
+                  options={incomeSources}
+                  value={editData.SourceName}
+                  onChange={val => setEditData(prev => ({...prev, SourceName: val}))}
+                  className="flex-1"
+                />
+                <Tooltip content="Add Source">
+                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
+                    <Plus className="h-5 w-5"/>
+                  </Button>
+                </Tooltip>
+              </div>
+              <div className="flex items-end gap-2">
+                <Combobox
+                  label="Category (Optional)"
+                  options={incomeCategories}
+                  value={editData.Category}
+                  onChange={val => setEditData(prev => ({...prev, Category: val}))}
+                  className="flex-1"
+                />
+                <Tooltip content="Add Category">
+                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
+                    <Plus className="h-5 w-5"/>
+                  </Button>
+                </Tooltip>
+              </div>
+              <Divider className="my-2"/>
+            </>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <StepperInput
+              label="Amount"
+              step={1}
+              min={0}
+              value={editData.Amount}
+              onChange={e => setEditData(prev => ({...prev, Amount: e.target.value}))}
+              onIncrement={() => handleStepperChange(true, 1)}
+              onDecrement={() => handleStepperChange(false, 1)}
+            />
+            <Combobox
+              label="Method"
+              options={paymentMethods}
+              value={editData.PaymentMethodID}
+              onChange={val => setEditData(prev => ({...prev, PaymentMethodID: val}))}
+            />
+          </div>
+          <Divider className="my-2"/>
+          <Input
+            label="Date"
+            type="date"
+            value={editData.Date}
+            onChange={e => setEditData(prev => ({...prev, Date: e.target.value}))}
+          />
+          <Input
+            type="text"
+            label="Note"
+            value={editData.Note}
+            onChange={e => setEditData(prev => ({...prev, Note: e.target.value}))}
+          />
+        </div>
+      </Modal>
+
+      <IncomeCategoryModal
+        isOpen={isIncomeCategoryModalOpen}
+        onClose={() => setIsIncomeCategoryModalOpen(false)}
+        onSave={() => {
+          db.query("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName").then(rows => {
+            setIncomeCategories(rows.map((r: any) => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
+          });
+        }}
+        categoryToEdit={null}
+      />
+
+      <IncomeSourceModal
+        isOpen={isIncomeSourceModalOpen}
+        onClose={() => setIsIncomeSourceModalOpen(false)}
+        onSave={() => {
+          db.query("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName").then(rows => {
+            setIncomeSources(rows.map((r: any) => ({ value: r.IncomeSourceName, label: r.IncomeSourceName })));
+          });
+        }}
+        sourceToEdit={null}
       />
     </div>
   );

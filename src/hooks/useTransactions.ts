@@ -9,7 +9,7 @@ interface FetchTransactionsParams {
   searchTerm?: string;
   startDate?: Date | null;
   endDate?: Date | null;
-  typeFilter?: string; // 'all', 'expense', 'income', 'transfer', 'repayment'
+  typeFilter?: string; // 'all', 'expense', 'income', 'transfer', 'repayment', 'paid_expense', 'unpaid_expense'
   debtEnabled?: boolean;
   // Expense specific filters
   debtFilter?: string;
@@ -194,6 +194,10 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         queries = [expenseQuery, incomeQuery, transferQuery, repaymentQuery];
       } else if (typeFilter === 'expense') {
         queries = [expenseQuery];
+      } else if (typeFilter === 'paid_expense') {
+        queries = [expenseQuery + " WHERE r.Status = 'paid'"];
+      } else if (typeFilter === 'unpaid_expense') {
+        queries = [expenseQuery + " WHERE r.Status = 'unpaid'"];
       } else if (typeFilter === 'income') {
         queries = [incomeQuery];
       } else if (typeFilter === 'transfer') {
@@ -235,7 +239,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
       }
 
       // Apply type-specific filters
-      if (typeFilter === 'expense') {
+      if (typeFilter === 'expense' || typeFilter === 'paid_expense' || typeFilter === 'unpaid_expense') {
         if (expenseTypeFilter && expenseTypeFilter !== 'all') {
           whereClauses.push(`isNonItemised = ?`);
           queryParams.push(expenseTypeFilter === 'total-only' ? 1 : 0);
