@@ -20,16 +20,27 @@ const RadioCard: React.FC<RadioCardProps> = ({
   children,
   className
 }) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div 
       className={cn(
-        "flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all duration-200 bg-field", // Added bg-field
+        "flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all duration-200 bg-field focus:outline-none focus:ring-2 focus:ring-accent", // Added bg-field and focus styles
         selected 
-          ? "border-accent ring-1 ring-accent" // Removed bg-accent/5 to keep bg-field consistent, or could be bg-accent/5 if desired, but user asked for field_color. Let's stick to bg-field base but maybe tint if selected? User said "background of radiocard component should be field_color". So let's ensure it is.
+          ? "border-accent ring-1 ring-accent" 
           : "border-border hover:border-accent/50 hover:bg-field-hover",
         className
       )}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="radio"
+      aria-checked={selected}
+      tabIndex={0}
     >
       <div className="flex items-center gap-3">
         {icon && (

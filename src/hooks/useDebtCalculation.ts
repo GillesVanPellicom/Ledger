@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { calculateDebts, ProcessedReceipt, calculateDebtsForReceipt, DebtSummary } from '../logic/debt/debtLogic';
-import { db } from '../lib/db';
+import { db } from '../utils/db';
 import { Receipt, LineItem, ReceiptSplit, ReceiptDebtorPayment } from '../types';
 
 interface DebtStats {
@@ -36,10 +36,15 @@ export const useDebtCalculation = (entityId: string | number): UseDebtCalculatio
   };
 };
 
-export const useReceiptDebtCalculation = (receiptId: string | number, receipt: Receipt, lineItems: LineItem[], receiptSplits: ReceiptSplit[], payments: ReceiptDebtorPayment[]) => {
+export const useReceiptDebtCalculation = (receiptId: string | undefined, receipt: Receipt | undefined, lineItems: LineItem[] | undefined, receiptSplits: ReceiptSplit[] | undefined, payments: ReceiptDebtorPayment[] | undefined) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['receiptDebt', receiptId],
-    queryFn: () => calculateDebtsForReceipt(receiptId, receipt, lineItems, receiptSplits, payments),
+    queryFn: () => {
+      if (!receiptId || !receipt || !lineItems || !receiptSplits || !payments) {
+        return Promise.resolve({ debtors: [], ownShare: null });
+      }
+      return calculateDebtsForReceipt(receiptId, receipt, lineItems, receiptSplits, payments);
+    },
     enabled: !!receiptId && !!receipt && !!lineItems && !!receiptSplits && !!payments,
   });
 

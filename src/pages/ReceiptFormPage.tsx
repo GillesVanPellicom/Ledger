@@ -134,7 +134,7 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const handleEntitySave = async () => {
-    const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtrorName');
+    const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
     setDebtors(debtorsData);
 
     const newDebtor = await db.queryOne<{
@@ -210,7 +210,7 @@ const ReceiptFormPage: React.FC = () => {
           setSplitType(receiptData.SplitType || 'none');
 
           if (!receiptData.IsNonItemised) {
-            const lineItemData = await db.query<any[]>(`
+            const lineItemData = await db.query<any>(`
                 SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName
                 FROM LineItems li
                          JOIN Products p ON li.ProductID = p.ProductID
@@ -219,7 +219,7 @@ const ReceiptFormPage: React.FC = () => {
                 WHERE li.ReceiptID = ?
             `, [id]);
 
-            const items: LineItem[] = lineItemData.map(li => ({...li, key: nanoid()}));
+            const items: LineItem[] = lineItemData.map((li: any) => ({...li, key: nanoid()}));
             setLineItems(items);
 
             const excludedKeys = new Set<string>();
@@ -244,13 +244,13 @@ const ReceiptFormPage: React.FC = () => {
             setPaidDebtorIds(paymentsData.map(p => p.DebtorID));
 
             if (receiptData.SplitType === 'total_split') {
-              const splitsData = await db.query<any[]>(`
+              const splitsData = await db.query<any>(`
                   SELECT rs.*, d.DebtorName
                   FROM ReceiptSplits rs
                            JOIN Debtors d ON rs.DebtorID = d.DebtorID
                   WHERE rs.ReceiptID = ?
               `, [id]);
-              setReceiptSplits(splitsData.map(s => ({...s, key: nanoid()})));
+              setReceiptSplits(splitsData.map((s: any) => ({...s, key: nanoid()})));
             }
           }
         }
@@ -1124,6 +1124,7 @@ const ReceiptFormPage: React.FC = () => {
                                       value="0"
                                       disabled={true}
                                       className="w-32 mx-auto"
+                                      onChange={() => {}}
                                     />,
                                     <div className="text-right text-font-2">
                                       <Tooltip content="You cannot remove yourself">

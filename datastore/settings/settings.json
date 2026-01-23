@@ -44,7 +44,7 @@
     }
   },
   "formatting": {
-    "decimalSeparator": "comma"
+    "decimalSeparator": "dot"
   },
   "wizard": {
     "askedQuestions": {
@@ -57,13 +57,7 @@
       "datastore": 1,
       "completion": 1
     },
-    "inProgress": false,
-    "debugConfig": {
-      "skipHello": false,
-      "autoApplyDefaults": false,
-      "verboseLogging": false,
-      "ignoreHistory": true
-    }
+    "inProgress": false
   },
   "userName": "Gilles"
 }

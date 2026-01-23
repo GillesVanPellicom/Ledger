@@ -102,8 +102,15 @@ const PaymentMethodsPage: React.FC = () => {
     setIsEditModalOpen(false);
   };
 
-  const handleStyleSave = async (methodId: number, newStyle: PaymentMethodStyle) => {
-    const newStyles = { ...settings.paymentMethodStyles, [methodId]: newStyle };
+  const handleStyleSave = async (methodId: number, newStyle: Omit<PaymentMethodStyle, "color">) => {
+    const currentStyle = settings.paymentMethodStyles?.[methodId];
+    const newStyles = { 
+      ...settings.paymentMethodStyles, 
+      [methodId]: { 
+        ...newStyle, 
+        color: currentStyle?.color || '#000000' // Default color if not present
+      } 
+    };
     await updateSettings({ ...settings, paymentMethodStyles: newStyles });
     setIsStyleModalOpen(false);
   };

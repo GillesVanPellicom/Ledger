@@ -12,6 +12,8 @@ interface SettingsState {
   applyTheme: (themeId: string) => void;
 }
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const initialSettings: Settings = {
   theme: 'system',
   themeColor: '#007AFF', // Default macOS Blue
@@ -59,6 +61,10 @@ const initialSettings: Settings = {
   },
   formatting: {
     decimalSeparator: 'dot', // 'dot' or 'comma'
+  },
+  wizard: {
+    askedQuestions: {},
+    inProgress: false,
   }
 };
 
@@ -99,14 +105,16 @@ export const useSettingsStore = create<SettingsState>()(
           let loadedSettings: Partial<Settings> = {};
           if (window.electronAPI) {
             loadedSettings = await window.electronAPI.getSettings();
+            if (isDev) console.log('[SettingsStore] Loaded from Electron:', loadedSettings);
           } else {
             const localSettings = localStorage.getItem('app-settings');
             if (localSettings) {
               loadedSettings = JSON.parse(localSettings);
+              if (isDev) console.log('[SettingsStore] Loaded from LocalStorage:', loadedSettings);
             }
           }
 
-          const currentSettings = {
+          const currentSettings: Settings = {
               ...initialSettings,
               ...loadedSettings,
               modules: {...initialSettings.modules, ...loadedSettings.modules},
@@ -114,10 +122,27 @@ export const useSettingsStore = create<SettingsState>()(
               backup: {...initialSettings.backup, ...loadedSettings.backup},
               paymentMethodStyles: {...initialSettings.paymentMethodStyles, ...loadedSettings.paymentMethodStyles},
               datastore: {...initialSettings.datastore, ...loadedSettings.datastore},
-              receipts: {...initialSettings.receipts, ...loadedSettings.receipts},
+              receipts: {
+                  ...initialSettings.receipts,
+                  ...loadedSettings.receipts,
+                  indicators: {
+                      ...initialSettings.receipts?.indicators,
+                      ...loadedSettings.receipts?.indicators
+                  }
+              } as any,
               dev: {...initialSettings.dev, ...loadedSettings.dev},
               formatting: {...initialSettings.formatting, ...loadedSettings.formatting},
+              wizard: {
+                  ...initialSettings.wizard!,
+                  ...loadedSettings.wizard,
+                  askedQuestions: {
+                      ...initialSettings.wizard!.askedQuestions,
+                      ...loadedSettings.wizard?.askedQuestions
+                  }
+              }
           };
+
+          if (isDev) console.log('[SettingsStore] Final merged settings:', currentSettings);
 
           // Apply theme immediately
           const themeId = currentSettings.theme || 'light';
@@ -131,14 +156,6 @@ export const useSettingsStore = create<SettingsState>()(
              get().applyTheme(themeId);
           }
 
-          // Apply accent color override if it exists
-          // If the theme locks the accent color, we should respect that, but we don't have easy access to theme config here without importing themes.
-          // However, the logic for locking is handled in AppearanceSettings.tsx for UI.
-          // Here we just apply what's in settings.
-          // BUT, if the theme is locked, we should probably apply the theme's accent color instead of the user's stored preference if they conflict?
-          // The requirement says: "whenever you select a theme which overrwrites one of the colorpickers, the currrently user picked color should stay selected. The overwrite should happen in the background. Once another theme without overwrite is selected the previously chosen color should take effect once again."
-          // This means we should ALWAYS apply the theme's accent color if the theme locks it, but keep the user's preference in the store.
-          
           const theme = themes[themeId] || themes.light;
           if (theme.lockedAccent) {
              document.documentElement.style.setProperty('--color-accent', theme.colors.ACCENT_COLOR);
@@ -151,14 +168,42 @@ export const useSettingsStore = create<SettingsState>()(
             loading: false,
           }, false, 'loadSettings/success');
         } catch (error) {
-          console.error("Failed to load settings:", error);
+          console.error("[SettingsStore] Failed to load settings:", error);
           set({loading: false}, false, 'loadSettings/error');
         }
       },
 
       updateSettings: async (newSettings) => {
         const currentSettings = get().settings;
-        const updatedSettings = {...currentSettings, ...newSettings};
+        if (isDev) console.log('[SettingsStore] updateSettings called with:', newSettings);
+        
+        // Deep merge for nested objects to avoid overwriting with partial data or undefined
+        const updatedSettings: Settings = {
+            ...currentSettings,
+            ...newSettings,
+            modules: { ...currentSettings.modules, ...(newSettings.modules || {}) },
+            pdf: { ...currentSettings.pdf, ...(newSettings.pdf || {}) },
+            backup: { ...currentSettings.backup, ...(newSettings.backup || {}) },
+            receipts: { 
+                ...currentSettings.receipts, 
+                ...(newSettings.receipts || {}),
+                indicators: {
+                    ...(currentSettings.receipts?.indicators || { debt: false, tentative: false, type: false, attachments: false }),
+                    ...(newSettings.receipts?.indicators || {})
+                }
+            } as any,
+            dev: { ...currentSettings.dev, ...(newSettings.dev || {}) },
+            formatting: { 
+                ...(currentSettings.formatting || { decimalSeparator: 'dot' }), 
+                ...(newSettings.formatting || {}) 
+            },
+            wizard: {
+                ...(currentSettings.wizard || { askedQuestions: {}, inProgress: false }),
+                ...(newSettings.wizard || {})
+            }
+        };
+
+        if (isDev) console.log('[SettingsStore] New merged settings to save:', updatedSettings);
 
         set({settings: updatedSettings}, false, `updateSettings/${Object.keys(newSettings).join(',')}`);
 
@@ -178,9 +223,6 @@ export const useSettingsStore = create<SettingsState>()(
 
         const theme = themes[themeId] || themes.light;
 
-        // Apply accent color logic
-        // If theme locks accent, use theme's accent.
-        // Otherwise, use the user's stored preference (newSettings.themeColor or currentSettings.themeColor).
         if (theme.lockedAccent) {
              document.documentElement.style.setProperty('--color-accent', theme.colors.ACCENT_COLOR);
         } else {
@@ -193,14 +235,16 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           if (window.electronAPI) {
             const result = await window.electronAPI.saveSettings(updatedSettings);
+            if (isDev) console.log('[SettingsStore] Electron save result:', result);
             if (!result.success) {
-              console.error('Failed to save settings, waiting for revert.');
+              console.error('[SettingsStore] Failed to save settings, waiting for revert.');
             }
           } else {
             localStorage.setItem('app-settings', JSON.stringify(updatedSettings));
+            if (isDev) console.log('[SettingsStore] Saved to LocalStorage');
           }
         } catch (error) {
-          console.error("Failed to save settings:", error);
+          console.error("[SettingsStore] Failed to save settings:", error);
         }
       },
     }),
@@ -211,6 +255,7 @@ export const useSettingsStore = create<SettingsState>()(
 // Initialize settings listener for Electron
 if (window.electronAPI) {
   window.electronAPI.onSettingsReverted((_event: any, revertedSettings: Settings) => {
+    if (isDev) console.log('[SettingsStore] Settings reverted from Electron:', revertedSettings);
     useSettingsStore.getState().setSettings(revertedSettings);
   });
 }

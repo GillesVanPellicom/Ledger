@@ -121,7 +121,8 @@ const EntityDetailsPage: React.FC = () => {
       setEntity(entityData);
 
       if (paymentMethodsEnabled) {
-        const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }[]>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
+        // Fixed: Removed array brackets from generic type
+        const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
         setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
       }
       
@@ -167,7 +168,8 @@ const EntityDetailsPage: React.FC = () => {
         WHERE r.ReceiptID = ?
       `, [r.ReceiptID]);
 
-      const lineItems = await db.query<any[]>(`
+      // Fixed: Removed array brackets from generic type
+      const lineItems = await db.query<any>(`
         SELECT li.*, p.ProductName, p.ProductBrand
         FROM LineItems li
         JOIN Products p ON li.ProductID = p.ProductID
@@ -176,10 +178,10 @@ const EntityDetailsPage: React.FC = () => {
       
       const images = await db.query<any[]>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [r.ReceiptID]);
 
-      let totalAmount = r.amount;
+      let totalAmount = r.amount || 0; // Ensure number
       if (r.type === 'to_me') {
         if (r.IsNonItemised) {
-          totalAmount = r.NonItemisedTotal;
+          totalAmount = r.NonItemisedTotal || 0; // Fixed: Handle undefined
         } else {
           totalAmount = calculateTotalWithDiscount(lineItems, receiptDetails.Discount || 0);
         }

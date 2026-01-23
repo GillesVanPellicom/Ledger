@@ -126,7 +126,7 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       // Debt Stats
       let debtStats: DebtStats = { netBalances: [], totalOwedToMe: 0, totalOwedByMe: 0 };
       if (debtEnabled) {
-        const debtors = await db.query<Debtor[]>('SELECT * FROM Debtors WHERE DebtorIsActive = 1');
+        const debtors = await db.query<Debtor>('SELECT * FROM Debtors WHERE DebtorIsActive = 1');
         let totalOwedToMe = 0;
         let totalOwedByMe = 0;
         const netBalances: { name: string, value: number, id: number }[] = [];

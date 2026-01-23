@@ -15,12 +15,13 @@ import DatePicker from '../components/ui/DatePicker';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import Tooltip from '../components/ui/Tooltip';
 import Input from '../components/ui/Input';
-import { PaymentMethod, TopUp } from '../types';
+import { PaymentMethod, TopUp, LineItem } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useQueryClient } from '@tanstack/react-query';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import { PaymentMethodStyle } from '../types';
 
 const tryParseJson = (str: string) => {
   try {
@@ -52,13 +53,6 @@ interface PageTransaction {
   };
   // Debt repayment fields
   debtorName?: string;
-}
-
-interface LineItem {
-  ReceiptID: number;
-  LineQuantity: number;
-  LineUnitPrice: number;
-  IsExcludedFromDiscount: 0 | 1;
 }
 
 interface IncomingTransferQueryResult {

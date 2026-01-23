@@ -81,7 +81,6 @@ export const Header: React.FC<HeaderProps> = ({
             gradientBackgroundEnd="var(--color-bg)"
             color="135, 94, 242"
             pointerColor="135, 94, 242"
-            interactive={false}
             containerClassName="absolute inset-0 opacity-90"
           />
         </div>

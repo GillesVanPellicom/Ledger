@@ -5,7 +5,7 @@ import Input from './Input';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface StepperInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'size'> {
   label?: string;
   error?: string;
   onIncrement?: () => void;

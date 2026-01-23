@@ -35,7 +35,7 @@ interface DataTableProps {
   selectable?: boolean;
   onSelectionChange?: (selected: any[]) => void;
   selectedIds?: any[];
-  itemKey?: string;
+  itemKey?: string | ((row: any) => string | number);
   minWidth?: string;
   disabled?: boolean;
   topRowLeft?: ReactNode;
@@ -79,6 +79,14 @@ const DataTable: React.FC<DataTableProps> = ({
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [prevTotalCount, setPrevTotalCount] = useState(totalCount);
   const [previousData, setPreviousData] = useState<any[]>([]);
+
+  // Helper to get key for a row
+  const getRowKey = (row: any) => {
+    if (typeof itemKey === 'function') {
+      return itemKey(row);
+    }
+    return row[itemKey];
+  };
 
   // Only update totalPages/totalPagesDigits when totalCount genuinely changes
   useEffect(() => {
@@ -200,7 +208,7 @@ const DataTable: React.FC<DataTableProps> = ({
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
     const newSelectedRows = new Set(selectedRows);
-    const currentIds = data.map(row => row[itemKey]);
+    const currentIds = data.map(row => getRowKey(row));
 
     if (e.target.checked) {
       currentIds.forEach(id => newSelectedRows.add(id));
@@ -226,7 +234,7 @@ const DataTable: React.FC<DataTableProps> = ({
 
   const isAllOnPageSelected = useMemo(() => {
     if (data.length === 0) return false;
-    return data.every(row => selectedRows.has(row[itemKey]));
+    return data.every(row => selectedRows.has(getRowKey(row)));
   }, [data, selectedRows, itemKey]);
 
   const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
@@ -240,20 +248,23 @@ const DataTable: React.FC<DataTableProps> = ({
   const tableContent = useMemo(() => {
     // If loading, show previousData with skeleton placeholders on new rows
     if (loading && previousData.length > 0) {
-      return previousData.map((row, rowIdx) => (
-        <tr key={row[itemKey] || rowIdx} className={cn("transition-colors opacity-50 bg-bg-2", { "bg-accent/10": selectedRows.has(row[itemKey]) }, "cursor-pointer hover:bg-field-hover")}>
-          {selectable && (
-            <td className="px-4 py-3 align-middle">
-              <SkeletonCell width="w-5" />
-            </td>
-          )}
-          {columns.map((col, colIdx) => (
-            <td key={colIdx} className={cn("px-4 py-3 align-middle", col.className)}>
-              <SkeletonCell />
-            </td>
-          ))}
-        </tr>
-      ));
+      return previousData.map((row, rowIdx) => {
+        const key = getRowKey(row) || rowIdx;
+        return (
+          <tr key={key} className={cn("transition-colors opacity-50 bg-bg-2", { "bg-accent/10": selectedRows.has(key) }, "cursor-pointer hover:bg-field-hover")}>
+            {selectable && (
+              <td className="px-4 py-3 align-middle">
+                <SkeletonCell width="w-5" />
+              </td>
+            )}
+            {columns.map((col, colIdx) => (
+              <td key={colIdx} className={cn("px-4 py-3 align-middle", col.className)}>
+                <SkeletonCell />
+              </td>
+            ))}
+          </tr>
+        );
+      });
     }
 
     // No data at all (not loading and no previous data)
@@ -272,35 +283,38 @@ const DataTable: React.FC<DataTableProps> = ({
 
     // Show current data (either newly loaded or during loading with previousData)
     const displayData = data.length > 0 ? data : previousData;
-    return displayData.map((row, rowIdx) => (
-      <tr key={row[itemKey] || rowIdx} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors bg-bg-2", { "bg-accent/10": selectedRows.has(row[itemKey]) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
-        {selectable && (
-          <td className="px-4 py-3 align-middle w-12">
-            <div className="flex items-center justify-center">
-              <Checkbox
-                id={`checkbox-${row[itemKey]}`}
-                checked={selectedRows.has(row[itemKey])}
-                onChange={(e) => handleSelectRow(e, row[itemKey])}
-                onClick={(e) => e.stopPropagation()}
-                disabled={disabled}
-              />
-            </div>
-          </td>
-        )}
-        {columns.map((col, colIdx) => {
-          const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
-          let displayContent = content;
-          if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
-            displayContent = <span className="text-font-2">-</span>; // Changed text-field-disabled to text-font-2
-          }
-          return (
-            <td key={colIdx} className={cn("px-4 py-3 text-font-1 break-words align-middle", col.className)}>
-              {displayContent}
+    return displayData.map((row, rowIdx) => {
+      const key = getRowKey(row) || rowIdx;
+      return (
+        <tr key={key} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors bg-bg-2", { "bg-accent/10": selectedRows.has(key) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
+          {selectable && (
+            <td className="px-4 py-3 align-middle w-12">
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  id={`checkbox-${key}`}
+                  checked={selectedRows.has(key)}
+                  onChange={(e) => handleSelectRow(e, key)}
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={disabled}
+                />
+              </div>
             </td>
-          );
-        })}
-      </tr>
-    ));
+          )}
+          {columns.map((col, colIdx) => {
+            const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
+            let displayContent = content;
+            if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
+              displayContent = <span className="text-font-2">-</span>; // Changed text-field-disabled to text-font-2
+            }
+            return (
+              <td key={colIdx} className={cn("px-4 py-3 text-font-1 break-words align-middle", col.className)}>
+                {displayContent}
+              </td>
+            );
+          })}
+        </tr>
+      );
+    });
   }, [loading, pageSize, data, previousData, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow, emptyStateIcon, emptyStateText]);
 
   return (

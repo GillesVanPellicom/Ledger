@@ -10,6 +10,12 @@ let mainWindow;
 let db;
 let store;
 
+const dev = process.env.NODE_ENV === 'development';
+
+if (dev) {
+  console.log("Running in development mode. Telemetry enabled.");
+}
+
 // Initialize store
 function initializeStore() {
   try {
@@ -137,7 +143,7 @@ function createWindow() {
 
   const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:5173';
 
-  if (process.env.NODE_ENV === 'development') {
+  if (dev) {
     mainWindow.loadURL(startUrl);
     mainWindow.webContents.on('did-finish-load', () => {
       setTimeout(() => mainWindow.webContents.openDevTools(), 500);
@@ -154,7 +160,7 @@ function createWindow() {
 app.on('ready', async () => {
   initializeStore();
 
-  if (process.env.NODE_ENV === 'development') {
+  if (dev) {
     await installDevTools();
   }
 

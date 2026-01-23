@@ -119,7 +119,7 @@ export function calculateDebtSummaryForForm(
  * @returns An object containing the list of processed receipts, the total debt to the entity, the total debt to the current user, and the net balance.
  */
 async function calculateDebts(entityId: string | number) {
-  const allReceiptsForEntity = await db.query<DebtReceipt[]>(`
+  const allReceiptsForEntity = await db.query<DebtReceipt>(`
     SELECT r.*, s.StoreName,
       CASE WHEN r.OwedToDebtorID = ? THEN 'to_entity' ELSE 'to_me' END as type
     FROM Receipts r
@@ -143,15 +143,15 @@ async function calculateDebts(entityId: string | number) {
   const placeholders = receiptIds.map(() => '?').join(',');
 
   const [allLineItems, allSplits, allPayments] = await Promise.all([
-    db.query<LineItem[]>(`SELECT * FROM LineItems WHERE ReceiptID IN (${placeholders})`, receiptIds),
-    db.query<ReceiptSplit[]>(`SELECT * FROM ReceiptSplits WHERE ReceiptID IN (${placeholders})`, receiptIds),
-    db.query<ReceiptDebtorPayment[]>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds),
+    db.query<LineItem>(`SELECT * FROM LineItems WHERE ReceiptID IN (${placeholders})`, receiptIds),
+    db.query<ReceiptSplit>(`SELECT * FROM ReceiptSplits WHERE ReceiptID IN (${placeholders})`, receiptIds),
+    db.query<ReceiptDebtorPayment>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds),
   ]);
 
   const processedReceipts: ProcessedReceipt[] = allReceiptsForEntity.map(r => {
     let totalAmount = 0;
     if (r.IsNonItemised) {
-      totalAmount = r.NonItemisedTotal;
+      totalAmount = r.NonItemisedTotal || 0;
     } else {
       const items = allLineItems.filter(li => li.ReceiptID === r.ReceiptID);
       totalAmount = calculateTotalWithDiscount(items, r.Discount || 0);
@@ -170,7 +170,7 @@ async function calculateDebts(entityId: string | number) {
         const splits = allSplits.filter(rs => rs.ReceiptID === r.ReceiptID);
         const debtorSplit = splits.find(rs => rs.DebtorID === Number(entityId));
         if (debtorSplit) {
-          totalShares = r.TotalShares > 0 ? r.TotalShares : calculateTotalShares(r.OwnShares || 0, splits);
+          totalShares = (r.TotalShares && r.TotalShares > 0) ? r.TotalShares : calculateTotalShares(r.OwnShares || 0, splits);
           splitPart = debtorSplit.SplitPart;
           if (totalShares > 0) {
             amount = (totalAmount * debtorSplit.SplitPart) / totalShares;
@@ -196,7 +196,7 @@ async function calculateDebts(entityId: string | number) {
     .reduce((sum, r) => sum + r.amount, 0);
 
   return {
-    receipts: processedReceipts.sort((a, b) => new Date(b.ReceiptDate).getTime() - new Date(a.ReceiptDate).getTime()),
+    receipts: processedReceipts.toSorted((a, b) => new Date(b.ReceiptDate).getTime() - new Date(a.ReceiptDate).getTime()),
     debtToEntity,
     debtToMe,
     netBalance: debtToMe - debtToEntity,
@@ -209,14 +209,14 @@ export async function calculateDebtsForReceipt(receiptId: string | number, recei
   }
 
   const totalAmount = receipt.IsNonItemised
-    ? receipt.NonItemisedTotal
+    ? (receipt.NonItemisedTotal || 0)
     : calculateTotalWithDiscount(lineItems, receipt.Discount || 0);
 
   const summary: Record<string, any> = {};
   let ownShare: any = null;
 
   if (receipt.SplitType === 'total_split' && (receiptSplits.length > 0 || (receipt.OwnShares && receipt.OwnShares > 0))) {
-    const totalShares = receipt.TotalShares > 0
+    const totalShares = (receipt.TotalShares && receipt.TotalShares > 0)
       ? receipt.TotalShares
       : calculateTotalShares(receipt.OwnShares || 0, receiptSplits);
 

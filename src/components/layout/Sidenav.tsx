@@ -10,9 +10,7 @@ import {
   Users,
   Database,
   TrendingUp,
-  Clock,
-  Calendar,
-  History
+  LucideIcon
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -20,7 +18,19 @@ import { useUIStore } from '../../store/useUIStore';
 import { useQuery } from '@tanstack/react-query';
 import { incomeCommitments } from '../../logic/incomeCommitments';
 
-const Sidenav: React.FC = () => {
+interface SidenavProps {
+  pendingIncomeCount?: number;
+}
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  activePaths: string[];
+  badge?: number;
+}
+
+const Sidenav: React.FC<SidenavProps> = ({ pendingIncomeCount }) => {
   const location = useLocation();
   const { settings } = useSettingsStore();
   const { isSidenavCollapsed, toggleSidenav, openSettingsModal } = useUIStore();
@@ -30,10 +40,12 @@ const Sidenav: React.FC = () => {
   const { data: pendingIncomes } = useQuery({
     queryKey: ['pendingIncome'],
     queryFn: () => incomeCommitments.getPendingIncomes(),
-    enabled: paymentMethodsEnabled
+    enabled: paymentMethodsEnabled && pendingIncomeCount === undefined
   });
 
-  const navItems = [
+  const badgeCount = pendingIncomeCount !== undefined ? pendingIncomeCount : pendingIncomes?.length;
+
+  const navItems: NavItem[] = [
     { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts'] },
   ];
 
@@ -43,7 +55,7 @@ const Sidenav: React.FC = () => {
       label: 'Income', 
       icon: TrendingUp, 
       activePaths: ['/income'],
-      badge: pendingIncomes?.length && pendingIncomes.length > 0 ? pendingIncomes.length : undefined
+      badge: badgeCount && badgeCount > 0 ? badgeCount : undefined
     });
   }
 

@@ -21,7 +21,9 @@ export default defineConfig(({ mode }) => ({
     //     sourceMap: false
     //   })
   ].filter(Boolean),
-
+  define: {
+    dev: JSON.stringify(process.env.NODE_ENV === 'development'),
+  },
   build: {
     sourcemap: false
   }

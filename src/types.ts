@@ -23,6 +23,8 @@ export interface Settings {
   paymentMethodStyles?: Record<string, PaymentMethodStyle>;
   debtorStyles?: Record<string, DebtorStyle>;
   theme?: string;
+  themeColor?: string;
+  headerColor?: string;
   uiScale?: number;
   receipts?: {
     indicators: {
@@ -31,7 +33,21 @@ export interface Settings {
       type: boolean;
       attachments: boolean;
     }
-  }
+  };
+  dev?: {
+    mockTime?: {
+      enabled: boolean;
+      date: string | null;
+    }
+  };
+  formatting?: {
+    decimalSeparator: 'dot' | 'comma';
+  };
+  wizard?: {
+    askedQuestions: Record<string, number>;
+    inProgress: boolean;
+    debugConfig?: any;
+  };
 }
 
 export interface Debtor {
@@ -109,6 +125,7 @@ export interface Receipt {
   NonItemisedTotal?: number;
   splitPart?: number;
   AttachmentCount?: number;
+  IsTentative?: number;
 }
 
 export interface LineItem {
@@ -139,6 +156,7 @@ export interface ReceiptSplit {
   DebtorID: number;
   DebtorName: string;
   SplitPart: number;
+  ReceiptID?: number;
 }
 
 export interface ReceiptDebtorPayment {
@@ -174,6 +192,7 @@ export interface Averages {
 export interface PaymentMethodStats {
   totalCapacity: number;
   methods: {
+    id: number;
     name: string;
     balance: number;
   }[];
@@ -208,3 +227,4 @@ export interface TopUp {
   TopUpNote: string;
   TopUpAmount: number;
 }
+

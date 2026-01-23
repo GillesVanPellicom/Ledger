@@ -42,7 +42,6 @@ import {
   calculateTotalQuantity,
   calculateTotalWithDiscount
 } from '../logic/expense';
-import {Image} from 'jspdf';
 import {useSettingsStore} from '../store/useSettingsStore';
 import {useErrorStore} from '../store/useErrorStore';
 import {useReceipt, useDeleteReceipt} from '../hooks/useReceipts';
@@ -111,7 +110,7 @@ const ReceiptViewPage: React.FC = () => {
   const {generatePdf} = usePdfGenerator();
 
   const {data, isLoading, refetch} = useReceipt(id);
-  const {receipt, lineItems: rawLineItems, images: rawImages, splits: receiptSplits, payments} = data || {};
+  const {receipt, lineItems: rawLineItems, images: rawImages, splits: receiptSplits, payments = []} = data || {};
 
   const {data: activePaymentMethods} = useActivePaymentMethods();
 
@@ -172,7 +171,7 @@ const ReceiptViewPage: React.FC = () => {
 
     const categories = Array.from(new Set(items.filter(i => i.CategoryID).map(i => JSON.stringify({
       value: i.CategoryID!.toString(),
-      label: i.CategoryName
+      label: i.CategoryName || 'Unknown'
     }))))
       .map(s => JSON.parse(s));
 
@@ -192,7 +191,7 @@ const ReceiptViewPage: React.FC = () => {
   }, [rawLineItems]);
 
   const images = useMemo(() => {
-    if (globalThis.electronAPI && settings.datastore.folderPath && rawImages) {
+    if (window.electronAPI && settings.datastore.folderPath && rawImages) {
       return rawImages.map(img => ({
         key: img.ImagePath,
         ImagePath: img.ImagePath,
@@ -366,7 +365,7 @@ const ReceiptViewPage: React.FC = () => {
       const isDebtorUnpaid = item.DebtorID && !(payments || []).some(p => p.DebtorID === item.DebtorID);
       const row: React.ReactNode[] = [
         <div key={`product-${item.LineItemID}`} className="flex items-center gap-2">
-          {receipt?.Discount > 0 && filterOptions.hasExclusions && (
+          {(receipt?.Discount || 0) > 0 && filterOptions.hasExclusions && (
             <Tooltip content={item.IsExcludedFromDiscount ? 'Excluded from discount' : 'Included in discount'}>
               <div className={cn("w-2 h-2 rounded-full", item.IsExcludedFromDiscount ? "bg-text-disabled" : "bg-green")}></div>
             </Tooltip>
@@ -479,7 +478,7 @@ const ReceiptViewPage: React.FC = () => {
             {images.length > 0 && (
               <Card>
                 <div className="p-6">
-                  <Gallery images={images.map(i => i.src) as (string | Image)[]}/>
+                  <Gallery images={images.map(i => i.src) as (string | { src: string })[]}/>
                 </div>
               </Card>
             )}
@@ -536,7 +535,7 @@ const ReceiptViewPage: React.FC = () => {
                       <MoneyDisplay amount={displaySubtotal} showSign={false} colorPositive={false} colorNegative={false} className="font-medium" />
                     </div>
                     <div className="flex items-center gap-4 text-font-2">
-                      {receipt?.Discount > 0 && filterOptions.hasExclusions ? (
+                      {(receipt?.Discount || 0) > 0 && filterOptions.hasExclusions ? (
                         <Tooltip content="Some items are excluded from this discount. You can see which items are excluded by the gray dot next to the product name.">
                           <div className="flex items-center gap-1 cursor-help">
                             <AlertTriangle className="h-4 w-4 text-yellow"/>
@@ -814,7 +813,7 @@ const ReceiptViewPage: React.FC = () => {
         isOpen={isMarkAsPaidModalOpen}
         onClose={() => setIsMarkAsPaidModalOpen(false)}
         onConfirm={handleMarkAsPaid}
-        paymentMethods={activePaymentMethods?.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })) || []}
+        paymentMethods={(activePaymentMethods || []).map(pm => ({value: pm.PaymentMethodID, label: pm.PaymentMethodName}))}
       />
 
       <ConfirmModal

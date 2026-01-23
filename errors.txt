@@ -1,0 +1,12 @@
+src/components/settings/SettingsModal.tsx(98,100): error TS2339: Property 'indicators' does not exist on type '{ indicators: { debt: boolean; tentative: boolean; type: boolean; attachments: boolean; }; } | undefined'.
+src/store/useSettingsStore.ts(157,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(partial: SettingsState | Partial<SettingsState> | ((state: SettingsState) => SettingsState | Partial<SettingsState>), replace?: false | undefined, action?: Action | undefined): void', gave the following error.
+    Type '{ modules: { debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; capitalizationProtection?: { enabled: boolean; }; }; pdf: any; backup: { ...; }; ... 10 more ...; uiScale?: number; }' is not assignable to type 'Settings'.
+      The types of 'formatting.decimalSeparator' are incompatible between these types.
+        Type '"dot" | "comma" | undefined' is not assignable to type '"dot" | "comma"'.
+          Type 'undefined' is not assignable to type '"dot" | "comma"'.
+  Overload 2 of 2, '(state: SettingsState | ((state: SettingsState) => SettingsState), replace: true, action?: Action | undefined): void', gave the following error.
+    Type '{ modules: { debt: { enabled: boolean; }; paymentMethods: { enabled: boolean; }; capitalizationProtection?: { enabled: boolean; }; }; pdf: any; backup: { ...; }; ... 10 more ...; uiScale?: number; }' is not assignable to type 'Settings'.
+      The types of 'formatting.decimalSeparator' are incompatible between these types.
+        Type '"dot" | "comma" | undefined' is not assignable to type '"dot" | "comma"'.
+          Type 'undefined' is not assignable to type '"dot" | "comma"'.

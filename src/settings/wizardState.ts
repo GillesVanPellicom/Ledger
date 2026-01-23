@@ -8,16 +8,10 @@ export interface WizardDebugConfig {
   ignoreHistory?: boolean;
 }
 
+const isDev = process.env.NODE_ENV === 'development';
+
 /**
  * wizardState provides helper methods to interact with wizard-specific persistence.
- * 
- * Design Intent:
- * - Centralize the logic for tracking asked questions and session status.
- * - Abstract the underlying storage (currently electron-store via useSettingsStore).
- * 
- * Usage:
- * - Should be used by WizardController to manage flow.
- * - Should NOT be used by individual questions (they use WizardContext).
  */
 export const wizardState = {
   /**
@@ -25,17 +19,18 @@ export const wizardState = {
    */
   getAskedQuestions: (): Record<string, number> => {
     const settings = useSettingsStore.getState().settings;
-    return (settings as any).wizard?.askedQuestions || {};
+    if (isDev) console.log('[wizardState] getAskedQuestions:', settings.wizard?.askedQuestions);
+    return settings.wizard?.askedQuestions || {};
   },
 
   /**
    * Persists that a specific version of a question has been completed.
-   * Safety: This is called immediately after 'Next' is clicked.
    */
   setQuestionAsked: (questionId: string, version: number) => {
+    if (isDev) console.log(`[wizardState] setQuestionAsked: ${questionId} v${version}`);
     const store = useSettingsStore;
     const settings = store.getState().settings;
-    const currentWizardState = (settings as any).wizard || { askedQuestions: {}, inProgress: false };
+    const currentWizardState = settings.wizard || { askedQuestions: {}, inProgress: false };
     
     const newWizardState = {
       ...currentWizardState,
@@ -45,7 +40,7 @@ export const wizardState = {
       }
     };
     
-    store.getState().updateSettings({ wizard: newWizardState } as any);
+    store.getState().updateSettings({ wizard: newWizardState });
   },
 
   /**
@@ -53,42 +48,42 @@ export const wizardState = {
    */
   isWizardInProgress: (): boolean => {
     const settings = useSettingsStore.getState().settings;
-    return (settings as any).wizard?.inProgress || false;
+    if (isDev) console.log('[wizardState] isWizardInProgress:', settings.wizard?.inProgress);
+    return settings.wizard?.inProgress || false;
   },
 
   /**
    * Sets the session status. 
-   * Design Intent: 
-   * - Set to true when WizardController mounts with questions.
-   * - Set to false only when 'Finish' is clicked or no questions remain.
    */
   setWizardInProgress: (inProgress: boolean) => {
+    if (isDev) console.log(`[wizardState] setWizardInProgress: ${inProgress}`);
     const store = useSettingsStore;
     const settings = store.getState().settings;
-    const currentWizardState = (settings as any).wizard || { askedQuestions: {}, inProgress: false };
+    const currentWizardState = settings.wizard || { askedQuestions: {}, inProgress: false };
     
     const newWizardState = {
       ...currentWizardState,
       inProgress
     };
     
-    store.getState().updateSettings({ wizard: newWizardState } as any);
+    store.getState().updateSettings({ wizard: newWizardState });
   },
 
   /**
    * Sets debug configuration for the next wizard run.
    */
   setDebugConfig: (config: WizardDebugConfig) => {
+    if (isDev) console.log('[wizardState] setDebugConfig:', config);
     const store = useSettingsStore;
     const settings = store.getState().settings;
-    const currentWizardState = (settings as any).wizard || { askedQuestions: {}, inProgress: false };
+    const currentWizardState = settings.wizard || { askedQuestions: {}, inProgress: false };
     
     const newWizardState = {
       ...currentWizardState,
       debugConfig: config
     };
     
-    store.getState().updateSettings({ wizard: newWizardState } as any);
+    store.getState().updateSettings({ wizard: newWizardState });
   },
 
   /**
@@ -96,19 +91,24 @@ export const wizardState = {
    */
   getDebugConfig: (): WizardDebugConfig => {
     const settings = useSettingsStore.getState().settings;
-    return (settings as any).wizard?.debugConfig || {};
+    return settings.wizard?.debugConfig || {};
   },
 
   /**
    * Clears the debug configuration.
    */
   clearDebugConfig: () => {
+    if (isDev) console.log('[wizardState] clearDebugConfig');
     const store = useSettingsStore;
     const settings = store.getState().settings;
-    const currentWizardState = (settings as any).wizard || { askedQuestions: {}, inProgress: false };
+    const currentWizardState = settings.wizard || { askedQuestions: {}, inProgress: false };
     
-    const { debugConfig, ...rest } = currentWizardState;
+    // We must explicitly set debugConfig to undefined because updateSettings performs a merge
+    const newWizardState = {
+      ...currentWizardState,
+      debugConfig: undefined
+    };
     
-    store.getState().updateSettings({ wizard: rest } as any);
+    store.getState().updateSettings({ wizard: newWizardState });
   }
 };

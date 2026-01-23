@@ -515,7 +515,7 @@ const IncomePage: React.FC = () => {
   };
 
   const handleStepperChange = (setter: React.Dispatch<React.SetStateAction<any>>, field: string, increment: boolean, step: number) => {
-    setter(prev => {
+    setter((prev: any) => {
       const currentValue = Number.parseFloat(prev[field]) || 0;
       const newValue = increment ? currentValue + step : currentValue - step;
       return {...prev, [field]: String(newValue)};

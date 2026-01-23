@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WizardContext } from './WizardContext';
 import { questionRegistry } from './questionRegistry';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -8,10 +8,6 @@ import { ResumeQuestion } from './questions/ResumeQuestion';
 
 /**
  * WizardQuestion defines the structure for a single preference elicitation step.
- * 
- * Design Intent:
- * - Decouple question logic (appliesWhen, apply) from UI (component).
- * - Versioning allows re-asking questions if their meaning or defaults change.
  */
 export interface WizardQuestion {
   /** Stable identifier, used for tracking if the question was asked. */
@@ -21,36 +17,39 @@ export interface WizardQuestion {
   /** Logic to determine if this question is relevant to the current user/context. */
   appliesWhen: (context: WizardContext) => boolean;
   /** The React component that renders the question UI. */
-  component: React.FC<{ context: WizardContext; onNext: () => void; onBack: () => void; isLast: boolean }>;
+  component: React.FC<{ 
+    context: WizardContext; 
+    onNext: () => void; 
+    onBack: () => void; 
+    isLast: boolean;
+    registerCanContinue?: (fn: () => boolean) => void;
+  }>;
   /** Optional side-effect to run when "Next" is clicked (e.g., complex persistence). */
   apply?: (context: WizardContext) => Promise<void> | void;
 }
 
 /**
  * WizardController is the orchestrator for the versioned preference wizard.
- * 
- * Design Intent:
- * - Ensure a "monolithic" feel while maintaining modular question definitions.
- * - Handle session recovery (Resume flow) if the app was closed unexpectedly.
- * - Act as a gatekeeper: the main app should only initialize after this finishes.
- * 
- * Safety Measures:
- * - Questions are filtered BEFORE the wizard starts to ensure only relevant/new ones are shown.
- * - Progress is persisted immediately after each step to prevent data loss on crash.
- * - 'inProgress' flag ensures we can detect interrupted sessions.
  */
 export const WizardController: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
   const { settings, updateSettings } = useSettingsStore();
   const [questions, setQuestions] = useState<WizardQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [canContinueFn, setCanContinueFn] = useState<(() => boolean) | null>(null);
+  
+  // Store the index we should jump to after Resume
+  const resumeJumpIndexRef = useRef<number | null>(null);
 
-  // Shared context provided to all questions.
-  // This allows questions to read/write settings without directly touching the global store.
   const context: WizardContext = {
     settings,
     updateSettings,
   };
+
+  // Helper to register validation function without triggering React's functional update
+  const registerCanContinue = useCallback((fn: () => boolean) => {
+    setCanContinueFn(() => fn);
+  }, []);
 
   useEffect(() => {
     const initWizard = async () => {
@@ -59,160 +58,133 @@ export const WizardController: React.FC<{ onFinish: () => void }> = ({ onFinish 
       const wasInProgress = wizardState.isWizardInProgress();
       const debugConfig = wizardState.getDebugConfig();
 
-      if (debugConfig.verboseLogging) {
-        console.log('[Wizard] Initializing with config:', debugConfig);
-        console.log('[Wizard] Previously asked:', askedQuestions);
-      }
-
-      // Filter the registry to find questions that:
-      // 1. Apply to the current context.
-      // 2. Have a version higher than what was previously asked.
-      let questionsToAsk = questionRegistry.filter((q) => {
+      // 1. Get ALL applicable questions for the full history
+      const allApplicableQuestions = questionRegistry.filter((q) => {
         if (debugConfig.skipHello && q.id === 'hello') return false;
-        if (!q.appliesWhen(context)) return false;
-        
-        // Rule: If no wizard metadata exists, show everything applicable (Welcome flow).
-        if (isFirstRun) return true;
+        return q.appliesWhen(context);
+      });
 
-        // Debug: Ignore history if configured
+      // 2. Find the first question that hasn't been completed yet
+      const firstNewQuestionIndex = allApplicableQuestions.findIndex(q => {
         if (debugConfig.ignoreHistory) return true;
-
         const lastAskedVersion = askedQuestions[q.id] || 0;
         return q.version > lastAskedVersion;
       });
 
-      if (debugConfig.verboseLogging) {
-        console.log('[Wizard] Applicable questions (before filtering):', questionsToAsk.map(q => q.id));
-      }
-
-      // Debug: Start at specific question
-      if (debugConfig.startAtQuestionId) {
-        const startIndex = questionsToAsk.findIndex(q => q.id === debugConfig.startAtQuestionId);
-        if (startIndex !== -1) {
-          // If we start at a specific question, we assume previous ones are "done" for this run.
-          // Or we just slice the array.
-          questionsToAsk = questionsToAsk.slice(startIndex);
-          if (debugConfig.verboseLogging) {
-            console.log(`[Wizard] Starting at question '${debugConfig.startAtQuestionId}', skipping ${startIndex} questions.`);
-          }
-        } else {
-            if (debugConfig.verboseLogging) {
-                console.warn(`[Wizard] Start question '${debugConfig.startAtQuestionId}' not found in applicable list.`);
-            }
-        }
-      }
-
-      if (questionsToAsk.length === 0) {
-        if (debugConfig.verboseLogging) {
-            console.log('[Wizard] No questions to ask. Finishing.');
-        }
-        // Safety: If no questions are left, ensure we aren't stuck in 'inProgress' state.
+      // If all questions are done, just finish
+      if (firstNewQuestionIndex === -1 && !debugConfig.ignoreHistory) {
         if (wasInProgress) {
             wizardState.setWizardInProgress(false);
         }
-        // Clear debug config on finish
         wizardState.clearDebugConfig();
         onFinish();
-      } else {
-        // Interruption Recovery: If the wizard was quit mid-session, prepend the Resume screen.
-        // We don't show Resume on the very first run (isFirstRun) to keep the onboarding clean.
-        // Also disable resume if we are debugging (forcing a run).
-        const isDebugRun = !!debugConfig.startAtQuestionId || debugConfig.skipHello || debugConfig.ignoreHistory;
-        
-        if (wasInProgress && !isFirstRun && !isDebugRun) {
-            if (debugConfig.verboseLogging) {
-                console.log('[Wizard] Resuming interrupted session.');
-            }
-            setQuestions([ResumeQuestion, ...questionsToAsk]);
-        } else {
-            if (debugConfig.verboseLogging) {
-                console.log('[Wizard] Starting fresh session.');
-            }
-            setQuestions(questionsToAsk);
-        }
-        
-        // Mark as in-progress immediately to catch potential crashes in the first question.
-        wizardState.setWizardInProgress(true);
-        setLoading(false);
+        return;
       }
+
+      const isDebugRun = !!debugConfig.startAtQuestionId || debugConfig.skipHello || debugConfig.ignoreHistory;
+      
+      // Determine starting index and question list
+      if (wasInProgress && !isFirstRun && !isDebugRun) {
+          // Resume flow: Show Resume screen first, then jump to where we left off
+          setQuestions([ResumeQuestion, ...allApplicableQuestions]);
+          setCurrentIndex(0);
+          resumeJumpIndexRef.current = firstNewQuestionIndex + 1; // +1 because of ResumeQuestion
+      } else {
+          // Normal flow or Upgrade flow
+          setQuestions(allApplicableQuestions);
+          
+          if (debugConfig.startAtQuestionId) {
+            const startIndex = allApplicableQuestions.findIndex(q => q.id === debugConfig.startAtQuestionId);
+            setCurrentIndex(startIndex !== -1 ? startIndex : 0);
+          } else {
+            // Start at the first new question, but allow going back
+            setCurrentIndex(firstNewQuestionIndex !== -1 ? firstNewQuestionIndex : 0);
+          }
+      }
+      
+      wizardState.setWizardInProgress(true);
+      setLoading(false);
     };
 
     initWizard();
   }, []);
 
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
+    // If a validation function is registered and it returns false, don't continue.
+    if (canContinueFn && !canContinueFn()) {
+      return;
+    }
+
     const currentQuestion = questions[currentIndex];
     const debugConfig = wizardState.getDebugConfig();
     
-    if (debugConfig.verboseLogging) {
-      console.log(`[Wizard] Completing question: ${currentQuestion.id}`);
-    }
-
-    // Execute question-specific persistence logic.
     if (currentQuestion.apply) {
       await currentQuestion.apply(context);
     }
     
-    // Safety: Persist progress IMMEDIATELY. 
-    // This ensures that if the user quits on the next screen, this step is already "done".
     if (currentQuestion.id !== 'resume') {
         wizardState.setQuestionAsked(currentQuestion.id, currentQuestion.version);
-        if (debugConfig.verboseLogging) {
-            console.log(`[Wizard] Persisted question '${currentQuestion.id}' as asked (v${currentQuestion.version}).`);
-        }
+    }
+
+    // Handle Resume jump
+    if (currentQuestion.id === 'resume' && resumeJumpIndexRef.current !== null) {
+        const jumpTo = resumeJumpIndexRef.current;
+        resumeJumpIndexRef.current = null;
+        setCurrentIndex(jumpTo);
+        return;
     }
 
     if (currentIndex < questions.length - 1) {
+      setCanContinueFn(null);
       setCurrentIndex(currentIndex + 1);
-      
-      // Auto-apply defaults if enabled
-      if (debugConfig.autoApplyDefaults) {
-         // We need to wait a tick to let the state update and render the next question?
-         // Actually, auto-applying defaults usually means skipping the UI interaction.
-         // But the `apply` logic is often tied to the component state or user interaction.
-         // The `apply` method in WizardQuestion interface takes the context.
-         // If the question has a default behavior in `apply`, we could just call it.
-         // However, most questions currently don't have an `apply` method that sets defaults without user input.
-         // They rely on the component to set state in context.
-         // Implementing true auto-apply would require refactoring questions to expose a `getDefaults` method.
-         // For now, this feature might be limited or require manual clicking 'Next'.
-         // Let's just log it for now as a limitation or future improvement.
-         if (debugConfig.verboseLogging) {
-            console.log('[Wizard] Auto-apply defaults is enabled but not fully supported for all question types yet.');
-         }
-      }
     } else {
-      // Finalization: Clear the in-progress flag before handing control back to the app.
       wizardState.setWizardInProgress(false);
       wizardState.clearDebugConfig();
-      if (debugConfig.verboseLogging) {
-        console.log('[Wizard] All questions completed. Finishing.');
-      }
       onFinish();
     }
-  };
+  }, [currentIndex, questions, canContinueFn, context, onFinish]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (currentIndex > 0) {
+      // Don't allow going back to the Resume screen once we've continued
+      if (questions[currentIndex - 1].id === 'resume') {
+          return;
+      }
+      setCanContinueFn(null);
       setCurrentIndex(currentIndex - 1);
     }
-  };
+  }, [currentIndex, questions]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const isNeutralFocus = 
+        document.activeElement === document.body || 
+        document.activeElement?.tagName === 'BUTTON' ||
+        document.activeElement?.tagName === 'DIV';
+
+      if (e.key === 'Enter' && isNeutralFocus && !loading) {
+        handleNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleNext, loading]);
 
   if (loading) return null;
 
   const CurrentQuestionComponent = questions[currentIndex].component;
   
-  // UI Logic: Calculate progress while ignoring the Resume screen in the count.
-  const isResume = questions[0].id === 'resume';
-  const totalRealSteps = isResume ? questions.length - 1 : questions.length;
-  const currentRealStep = isResume ? currentIndex : currentIndex + 1;
-  const showCounter = !isResume || currentIndex > 0;
+  const isResume = questions[currentIndex].id === 'resume';
+  const totalRealSteps = questions[0].id === 'resume' ? questions.length - 1 : questions.length;
+  const currentRealStep = questions[0].id === 'resume' ? Math.max(1, currentIndex) : currentIndex + 1;
+  const showCounter = !isResume;
 
   return (
     <WizardShell
       currentStep={currentRealStep}
       totalSteps={totalRealSteps}
-      canGoBack={currentIndex > 0}
+      canGoBack={currentIndex > 0 && questions[currentIndex - 1].id !== 'resume'}
       onBack={handleBack}
       showCounter={showCounter}
     >
@@ -221,6 +193,7 @@ export const WizardController: React.FC<{ onFinish: () => void }> = ({ onFinish 
         onNext={handleNext}
         onBack={handleBack}
         isLast={currentIndex === questions.length - 1}
+        registerCanContinue={registerCanContinue}
       />
     </WizardShell>
   );

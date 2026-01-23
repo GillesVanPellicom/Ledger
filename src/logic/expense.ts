@@ -102,7 +102,7 @@ export async function getReceipt(id: string): Promise<{
   if (!receiptData) return null;
 
   const lineItems = !receiptData.IsNonItemised
-    ? await db.query<(LineItem & { CategoryName: string; CategoryID: number })[]>(`
+    ? await db.query<(LineItem & { CategoryName: string; CategoryID: number })>(`
         SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID, c.CategoryName, c.CategoryID
         FROM LineItems li
                  JOIN Products p ON li.ProductID = p.ProductID
@@ -113,10 +113,10 @@ export async function getReceipt(id: string): Promise<{
     `, [id])
     : [];
   
-  const images = await db.query<ReceiptImage[]>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+  const images = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
   
   const splits = receiptData.SplitType === 'total_split'
-    ? await db.query<ReceiptSplit[]>(`
+    ? await db.query<ReceiptSplit>(`
         SELECT rs.*, d.DebtorName
         FROM ReceiptSplits rs
                  JOIN Debtors d ON rs.DebtorID = d.DebtorID
@@ -124,7 +124,7 @@ export async function getReceipt(id: string): Promise<{
     `, [id])
     : [];
 
-  const payments = await db.query<ReceiptDebtorPayment[]>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
+  const payments = await db.query<ReceiptDebtorPayment>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
 
   return { receipt: receiptData, lineItems, images, splits, payments };
 }

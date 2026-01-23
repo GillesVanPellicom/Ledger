@@ -40,12 +40,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
   };
 
   const loadUnits = async () => {
-    const result = await db.query<{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string }[]>('SELECT * FROM ProductUnits ORDER BY ProductUnitType');
+    const result = await db.query<{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string }>('SELECT * FROM ProductUnits ORDER BY ProductUnitType');
     setUnits(result.map(u => ({ value: u.ProductUnitID, label: `${u.ProductUnitType} (${u.ProductUnitDescription})` })));
   };
 
   const loadCategories = async () => {
-    const result = await db.query<{ CategoryID: number; CategoryName: string }[]>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
+    const result = await db.query<{ CategoryID: number; CategoryName: string }>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
     setCategories(result.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })));
   };
 

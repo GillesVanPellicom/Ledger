@@ -30,7 +30,7 @@ import DatePicker from '../components/ui/DatePicker';
 import ProgressModal from '../components/ui/ProgressModal';
 import Tooltip from '../components/ui/Tooltip';
 import BulkDebtModal from '../components/debt/BulkDebtModal';
-import {Receipt, LineItem} from '../types';
+import {Receipt, LineItem, ReceiptImage} from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { useReceipts, useDeleteReceipt } from '../hooks/useReceipts';
@@ -55,6 +55,7 @@ import MoneyDisplay from '../components/ui/MoneyDisplay';
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
   totalAmount: number;
+  images: ReceiptImage[];
 }
 
 const ReceiptsPage: React.FC = () => {

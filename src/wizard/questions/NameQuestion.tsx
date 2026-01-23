@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WizardQuestion } from '../WizardController';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -7,11 +7,19 @@ export const NameQuestion: WizardQuestion = {
   id: 'name',
   version: 1,
   appliesWhen: () => true,
-  component: ({ context, onNext }) => {
+  component: ({ context, onNext, registerCanContinue }) => {
     const [name, setName] = useState(context.settings.userName || '');
 
+    const canContinue = () => name.trim().length > 0;
+
+    useEffect(() => {
+      if (registerCanContinue) {
+        registerCanContinue(canContinue);
+      }
+    }, [name, registerCanContinue]);
+
     const handleContinue = () => {
-      if (name.trim()) {
+      if (canContinue()) {
         const capitalizedName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
         context.updateSettings({ userName: capitalizedName });
         onNext();
@@ -19,7 +27,7 @@ export const NameQuestion: WizardQuestion = {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && name.trim()) {
+      if (e.key === 'Enter') {
         handleContinue();
       }
     };
@@ -48,7 +56,7 @@ export const NameQuestion: WizardQuestion = {
         <div className="pt-6 pb-2 mt-auto w-full max-w-md mx-auto">
           <Button 
             onClick={handleContinue} 
-            disabled={!name.trim()} 
+            disabled={!canContinue()}
             className="w-full"
             size="lg"
           >

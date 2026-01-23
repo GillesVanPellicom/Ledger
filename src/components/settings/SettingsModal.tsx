@@ -92,7 +92,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   const handleIndicatorToggle = (key: 'debt' | 'tentative' | 'type' | 'attachments') => {
     const defaults = { debt: false, tentative: false, type: false, attachments: false };
-    const currentIndicators = { ...defaults, ...settings.receipts?.indicators };
+    const currentIndicators = { ...defaults, ...(settings.receipts?.indicators || {}) };
     const newIndicators = { ...currentIndicators, [key]: !currentIndicators[key] };
     // cast to expected shape to satisfy TS
     const typedIndicators = newIndicators as unknown as import('../../types').Settings['receipts']['indicators'];
@@ -137,8 +137,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const handleSelectDatastore = async () => {
-    if (globalThis.electronAPI) {
-      const path = await globalThis.electronAPI.selectDirectory();
+    if (window.electronAPI) {
+      const path = await window.electronAPI.selectDirectory();
       if (path) {
         setDatastorePath(path);
         updateSettings({ datastore: { folderPath: path } });
@@ -152,10 +152,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   };
 
   const handleResetAllSettings = async () => {
-    if (globalThis.electronAPI) {
-      await globalThis.electronAPI.resetSettings();
-      if (globalThis.electronAPI.quitApp) {
-        await globalThis.electronAPI.quitApp();
+    if (window.electronAPI) {
+      await window.electronAPI.resetSettings();
+      if (window.electronAPI.quitApp) {
+        await window.electronAPI.quitApp();
       }
     }
   };
@@ -175,7 +175,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const handleMockTimeSet = () => {
     if (mockTimeDate && mockTimeTime) {
       const newDate = new Date(`${mockTimeDate}T${mockTimeTime}`);
-      updateSettings({ dev: { ...settings.dev, mockTime: { ...settings.dev?.mockTime, date: newDate.toISOString() } } });
+      const currentMockTime = settings.dev?.mockTime || { enabled: false, date: null };
+      updateSettings({ dev: { ...settings.dev, mockTime: { ...currentMockTime, date: newDate.toISOString() } } });
     }
   };
 
@@ -183,7 +184,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     // Reset wizard state to force run
     updateSettings({ wizard: { askedQuestions: {} } } as any);
     // Reload the page to trigger wizard
-    globalThis.location.reload();
+    window.location.reload();
   };
 
   const tabs = [
@@ -443,7 +444,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <button onClick={() => globalThis.electronAPI?.openBackupFolder()} className="text-xs text-blue hover:underline">Open Backup Folder</button>
+                      <button onClick={() => window.electronAPI?.openBackupFolder()} className="text-xs text-blue hover:underline">Open Backup Folder</button>
                     </div>
                     <div className="flex justify-end">
                         <Button onClick={triggerBackup} loading={isBackingUp} disabled={isBackingUp}>Backup Now</Button>

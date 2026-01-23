@@ -138,7 +138,8 @@ const WizardDevTools: React.FC = () => {
                 <span className="text-sm font-medium text-font-1">Global Actions</span>
              </div>
              <div className="flex gap-2">
-                <Button variant="danger" size="sm" onClick={handleResetAll} icon={RotateCcw}>
+                <Button variant="danger" size="sm" onClick={handleResetAll}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
                   Reset All History
                 </Button>
              </div>
@@ -180,7 +181,8 @@ const WizardDevTools: React.FC = () => {
       <Divider />
 
       <div className="flex justify-end">
-        <Button size="lg" onClick={handleRunWizard} icon={PlayCircle}>
+        <Button size="lg" onClick={handleRunWizard}>
+          <PlayCircle className="h-5 w-5 mr-2" />
           Run Wizard with Config
         </Button>
       </div>
