@@ -475,6 +475,75 @@ const ReceiptViewPage: React.FC = () => {
               </Card>
             )}
 
+            {/* Summary Card - Moved to top for responsive layout */}
+            <div className="xl:hidden">
+              <Card>
+                <div className="p-8">
+                  <div className="flex flex-col items-center gap-8">
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-font-2 uppercase tracking-wider mb-2">Total Amount</p>
+                      <MoneyDisplay 
+                        amount={displayTotalAmount} 
+                        className="text-4xl font-bold text-font-1" 
+                        colorPositive={true}
+                        useSignum={true}
+                        showSign={true}
+                      />
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {receipt?.Status === 'paid' ? (
+                        <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the vendor.'}>
+                          <Badge variant="green">Paid to Vendor</Badge>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip content={`Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
+                          <Badge variant="red">Unpaid to {receipt?.OwedToDebtorName}</Badge>
+                        </Tooltip>
+                      )}
+                      {debtStatus && (
+                        <Tooltip content="This indicates the status of debts owed to you by others for this receipt.">
+                          <Badge variant={debtStatus.variant} className="cursor-help">{debtStatus.label}</Badge>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 pt-8 border-t border-border w-full">
+                      {receipt?.StoreName && (
+                        <Tooltip content="The vendor where this expense was incurred">
+                          <div className="flex items-center gap-3 cursor-help">
+                            <Store className="h-5 w-5 text-font-2"/>
+                            <span className="text-sm text-font-1">{receipt.StoreName}</span>
+                          </div>
+                        </Tooltip>
+                      )}
+                      {receipt?.ReceiptDate && (
+                        <Tooltip content="The date this expense was incurred">
+                          <div className="flex items-center gap-3 cursor-help">
+                            <Calendar className="h-5 w-5 text-font-2"/>
+                            <span className="text-sm text-font-1">{format(parseISO(receipt.ReceiptDate), 'MMM d, yyyy')}</span>
+                          </div>
+                        </Tooltip>
+                      )}
+                      {paymentMethodsEnabled && (
+                        <Tooltip content="The method used for this expense">
+                          <div className="flex items-center gap-3 cursor-help">
+                            <CreditCard className="h-5 w-5 text-font-2"/>
+                            {receipt.PaymentMethodID ? (
+                              <Link to={`/payment-methods/${receipt.PaymentMethodID}`} className="text-sm text-font-1 hover:underline flex items-center gap-1 group">
+                                {receipt.PaymentMethodName}
+                                <LinkIcon className="h-3.5 w-3.5 text-font-2 group-hover:text-accent" />
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-font-1">N/A</span>
+                            )}
+                          </div>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
             {!!receipt.IsTentative && (
               <InfoCard
                 variant="info"
@@ -570,14 +639,20 @@ const ReceiptViewPage: React.FC = () => {
 
           {/* Right Column (Summary, Debt) */}
           <div className="col-span-1 space-y-6 xl:col-start-3">
-            <Card>
+            <Card className="hidden xl:block">
               <div className="p-8">
                 <div className="flex flex-col items-center gap-8">
 
                   {/* Total Amount */}
                   <div className="text-center">
                     <p className="text-xs font-semibold text-font-2 uppercase tracking-wider mb-2">Total Amount</p>
-                    <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} className="text-4xl font-bold text-font-1" />
+                    <MoneyDisplay 
+                      amount={displayTotalAmount} 
+                      className="text-4xl font-bold text-font-1" 
+                      colorPositive={true}
+                      useSignum={true}
+                      showSign={true}
+                    />
                   </div>
 
                   {/* Badges */}

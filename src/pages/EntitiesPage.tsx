@@ -1,177 +1,127 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { Plus, Pencil, Eye, EyeOff, Palette, User } from 'lucide-react';
+import { Plus, Pencil, ArrowUpCircle, ArrowDownCircle, User } from 'lucide-react';
 import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
-import { Debtor, DebtorStyle } from '../types';
+import { Debtor } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import DataGrid from '../components/ui/DataGrid';
-import { cn } from '../utils/cn';
-import { useDebtCalculation } from '../hooks/useDebtCalculation';
-import * as SolidIcons from 'lucide-react';
-import EntityStyleModal from '../components/debt/EntityStyleModal';
-import PageSpinner from '../components/ui/PageSpinner';
-import Spinner from '../components/ui/Spinner';
-import { useEntities, useInvalidateEntities } from '../hooks/useEntities';
-import { useSettingsStore } from '../store/useSettingsStore';
+import { useEntities, useInvalidateReferenceData } from '../hooks/useReferenceData';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
-
-const EntityItem: React.FC<{ entity: Debtor, onEdit: (entity: Debtor) => void, onStyle: (entity: Debtor) => void }> = ({ entity, onEdit, onStyle }) => {
-  const { settings } = useSettingsStore();
-  const { stats, loading } = useDebtCalculation(entity.DebtorID);
-  
-  const style = settings.debtorStyles?.[entity.DebtorID];
-  const SymbolComponent = style?.type === 'icon' && style.symbol && (SolidIcons as any)[style.symbol];
-  // Ensure the component is a valid Lucide icon (has displayName) to avoid crashing with internal exports
-  const IconComponent = SymbolComponent && typeof SymbolComponent === 'object' && 'displayName' in SymbolComponent ? SymbolComponent : null;
-
-  return (
-    <div className={cn("flex flex-col justify-between h-full relative group", !entity.DebtorIsActive && "opacity-60")}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-font-1">{entity.DebtorName}</h3>
-        <div className="w-8 h-8 flex items-center justify-center">
-          {IconComponent ? <IconComponent className="h-8 w-8 text-font-2" /> :
-           style?.type === 'emoji' ? <span className="text-3xl">{style.symbol}</span> :
-           <User className="h-8 w-8 text-font-2" />}
-        </div>
-      </div>
-      <div className="mt-4 text-right">
-        <p className="text-xs text-font-2">Net Balance</p>
-        {loading ? (
-          <div className="flex justify-end items-center h-7">
-            <Spinner className="h-5 w-5 text-font-2" />
-          </div>
-        ) : (
-          <MoneyDisplay 
-            amount={stats.netBalance} 
-            useSignum={true} // Enabled useSignum
-            className="text-2xl font-semibold"
-          />
-        )}
-      </div>
-      <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Tooltip content="Edit Style">
-          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onStyle(entity); }}>
-            <Palette className="h-4 w-4" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Edit">
-          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onEdit(entity); }}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-        </Tooltip>
-        {!entity.DebtorIsActive && (
-          <Tooltip content="Hidden">
-            <EyeOff className="h-5 w-5 text-font-2" />
-          </Tooltip>
-        )}
-      </div>
-    </div>
-  );
-};
 
 const EntitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [showHidden, setShowHidden] = useState<boolean>(false);
-
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [pageSize, setPageSize] = useState<number>(10);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isStyleModalOpen, setIsStyleModalOpen] = useState<boolean>(false);
   const [editingEntity, setEditingEntity] = useState<Debtor | null>(null);
-  
-  const { settings, updateSettings } = useSettingsStore();
-  const invalidateEntities = useInvalidateEntities();
+  const invalidateReferenceData = useInvalidateReferenceData();
 
-  const { data: entities, isLoading } = useEntities();
+  const { data, isLoading } = useEntities({
+    page: currentPage,
+    pageSize,
+    searchTerm
+  });
 
-  const handleAdd = () => {
+  const handleAddEntity = () => {
     setEditingEntity(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (entity: Debtor) => {
+  const handleEditEntity = (entity: Debtor) => {
     setEditingEntity(entity);
     setIsModalOpen(true);
   };
-  
-  const handleStyle = (entity: Debtor) => {
-    setEditingEntity(entity);
-    setIsStyleModalOpen(true);
+
+  const handleSave = () => {
+    invalidateReferenceData();
   };
 
-  const handleRowClick = (entity: Debtor) => {
-    navigate(`/entities/${entity.DebtorID}`);
-  };
-  
-  const handleSave = () => {
-    invalidateEntities();
-    setIsModalOpen(false);
-  };
-  
-  const handleStyleSave = async (entityId: number, newStyle: DebtorStyle) => {
-    const newStyles = { ...settings.debtorStyles, [entityId]: newStyle };
-    await updateSettings({ ...settings, debtorStyles: newStyles });
-    setIsStyleModalOpen(false);
-  };
-  
-  const filteredEntities = (entities || []).filter(e => showHidden || e.DebtorIsActive);
-  
-  if (isLoading) return <PageSpinner />;
+  const columns = [
+    { 
+      header: 'Name', 
+      width: '40%',
+      render: (row: Debtor) => (
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-accent/10 text-accent">
+            <User className="h-5 w-5" />
+          </div>
+          <h3 className="text-lg font-bold text-font-1">{row.DebtorName}</h3>
+        </div>
+      )
+    },
+    { 
+      header: 'Net Balance', 
+      width: '40%',
+      render: (row: Debtor) => (
+        <div className="flex items-center gap-2">
+          <Tooltip content={row.NetBalance >= 0 ? 'Owes you' : 'You owe'}>
+            {row.NetBalance >= 0 ? 
+              <ArrowUpCircle className="h-5 w-5 text-green" /> : 
+              <ArrowDownCircle className="h-5 w-5 text-red" />}
+          </Tooltip>
+          <MoneyDisplay amount={row.NetBalance} useSignum={true} showSign={true} />
+        </div>
+      )
+    },
+    {
+      header: '',
+      width: '20%',
+      className: 'text-right',
+      render: (row: Debtor) => (
+        <div className="flex justify-end">
+          <Tooltip content="Edit Entity">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleEditEntity(row); }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+        </div>
+      )
+    }
+  ];
 
   return (
     <div>
-      <Header 
+      <Header
         title="Entities"
         actions={
-          <>
-            <Tooltip content={showHidden ? 'Hide Inactive' : 'Show Hidden'}>
-              <Button variant="ghost" size="icon" onClick={() => setShowHidden(!showHidden)}>
-                {showHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </Button>
-            </Tooltip>
-            <Tooltip content="Add Entity">
-              <Button variant="ghost" size="icon" onClick={handleAdd}>
-                <Plus className="h-5 w-5" />
-              </Button>
-            </Tooltip>
-          </>
+          <Tooltip content="Add Entity">
+            <Button variant="ghost" size="icon" onClick={handleAddEntity}>
+              <Plus className="h-5 w-5" />
+            </Button>
+          </Tooltip>
         }
       />
       <PageWrapper>
         <div className="py-6">
-          <DataGrid
-            data={filteredEntities}
-            itemKey="DebtorID"
-            onItemClick={handleRowClick}
-            renderItem={(entity) => (
-              <EntityItem
-                entity={entity}
-                onEdit={handleEdit}
-                onStyle={handleStyle}
-              />
-            )}
-            minItemWidth={280}
+          <DataTable
+            data={data?.entities || []}
+            columns={columns}
+            totalCount={data?.totalCount || 0}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onSearch={setSearchTerm}
+            searchable={true}
+            loading={isLoading}
+            onRowClick={(row: Debtor) => navigate(`/entities/${row.DebtorID}`)}
           />
-
-          <EntityModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            entityToEdit={editingEntity}
-            onSave={handleSave}
-          />
-          
-          {editingEntity && (
-            <EntityStyleModal
-              isOpen={isStyleModalOpen}
-              onClose={() => setIsStyleModalOpen(false)}
-              onSave={handleStyleSave}
-              entity={editingEntity}
-              currentStyle={settings.debtorStyles?.[editingEntity.DebtorID]}
-            />
-          )}
         </div>
       </PageWrapper>
+      <EntityModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        entityToEdit={editingEntity}
+        onSave={handleSave}
+      />
     </div>
   );
 };

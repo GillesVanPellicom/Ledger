@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../utils/db';
-import { Product, Store, Category } from '../types';
+import { Product, Store, Category, Debtor } from '../types';
 
 // --- Products ---
 
@@ -218,6 +218,54 @@ export const useIncomeSources = (params: FetchCategoriesParams) => {
   });
 };
 
+// --- Entities ---
+
+interface FetchEntitiesParams {
+  page: number;
+  pageSize: number;
+  searchTerm?: string;
+}
+
+export const useEntities = (params: FetchEntitiesParams) => {
+  return useQuery({
+    queryKey: ['entities', params],
+    queryFn: async () => {
+      const offset = (params.page - 1) * params.pageSize;
+      let query = `
+        SELECT d.*, 
+               (SELECT IFNULL(SUM(tu.TopUpAmount), 0) FROM TopUps tu JOIN ReceiptDebtorPayments rdp ON tu.TopUpID = rdp.TopUpID WHERE rdp.DebtorID = d.DebtorID) as TotalPaidToMe,
+               (SELECT IFNULL(SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) END), 0) FROM Receipts r WHERE r.OwedToDebtorID = d.DebtorID) as TotalIOwe
+        FROM Debtors d
+      `;
+      const queryParams: any[] = [];
+      
+      if (params.searchTerm) {
+        query += ` WHERE d.DebtorName LIKE ?`;
+        queryParams.push(`%${params.searchTerm}%`);
+      }
+      
+      const countQuery = `SELECT COUNT(*) as count FROM (${query})`;
+      const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
+      const totalCount = countResult ? countResult.count : 0;
+      
+      query += ` ORDER BY d.DebtorName ASC LIMIT ? OFFSET ?`;
+      queryParams.push(params.pageSize, offset);
+      
+      const entities = await db.query<any>(query, queryParams);
+      
+      // Calculate NetBalance for each entity
+      const entitiesWithBalance = entities.map((e: any) => ({
+        ...e,
+        NetBalance: e.TotalPaidToMe - e.TotalIOwe
+      }));
+
+      return { entities: entitiesWithBalance, totalCount };
+    },
+    staleTime: 0,
+    gcTime: 0,
+  });
+};
+
 // --- Mutations ---
 
 export const useInvalidateReferenceData = () => {
@@ -228,5 +276,6 @@ export const useInvalidateReferenceData = () => {
     queryClient.invalidateQueries({ queryKey: ['categories'] });
     queryClient.invalidateQueries({ queryKey: ['incomeCategories'] });
     queryClient.invalidateQueries({ queryKey: ['incomeSources'] });
+    queryClient.invalidateQueries({ queryKey: ['entities'] });
   };
 };

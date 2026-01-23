@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TransferModal from '../components/payment/TransferModal';
-import { Landmark, Pencil, Trash2, ArrowLeft, Info, ArrowRight } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, Info } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
@@ -21,7 +21,6 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useQueryClient } from '@tanstack/react-query';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
-import { PaymentMethodStyle } from '../types';
 
 const tryParseJson = (str: string) => {
   try {
@@ -464,7 +463,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
     {
       header: 'Amount',
       render: (row: PageTransaction) => (
-        <MoneyDisplay amount={row.amount} />
+        <MoneyDisplay amount={row.amount} useSignum={true} showSign={true} />
       )
     },
     {
@@ -499,11 +498,6 @@ const PaymentMethodDetailsPage: React.FC = () => {
                 <Pencil className="h-5 w-5" />
               </Button>
             </Tooltip>
-            <Tooltip content="New Transaction">
-              <Button variant="ghost" size="icon" onClick={() => openTransferModal()}>
-                <Landmark className="h-5 w-5" />
-              </Button>
-            </Tooltip>
           </>
         }
         variant="centered-box"
@@ -518,7 +512,8 @@ const PaymentMethodDetailsPage: React.FC = () => {
               </div>
               <MoneyDisplay
                 amount={balance}
-                showSign={false}
+                showSign={true}
+                useSignum={true}
                 className="text-3xl font-bold"
               />
             </div>

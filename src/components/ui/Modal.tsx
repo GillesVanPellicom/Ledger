@@ -35,10 +35,6 @@ const Modal: React.FC<ModalProps> = ({
     if (isOpen) {
       // Store previously focused element
       previousActiveElement.current = document.activeElement as HTMLElement;
-      // Blur it to prevent accidental interactions
-      if (previousActiveElement.current) {
-        previousActiveElement.current.blur();
-      }
 
       setIsRendered(true);
       focusStack.push({ id: modalId.current, onEnter });
@@ -47,13 +43,6 @@ const Modal: React.FC<ModalProps> = ({
     } else {
       setIsAnimating(false);
       focusStack.remove(modalId.current);
-      
-      // Restore focus when closing, but only if this modal was the top one
-      // (though in this effect, it's closing, so we just restore if we stored something)
-      if (previousActiveElement.current) {
-        // Optional: restore focus. Some UX patterns prefer this, others don't.
-        // previousActiveElement.current.focus();
-      }
     }
   }, [isOpen, onEnter]);
 
@@ -88,8 +77,6 @@ const Modal: React.FC<ModalProps> = ({
       }
     };
     
-    // Use capture phase to ensure we catch it before other listeners if needed, 
-    // but standard bubbling is usually fine. Let's stick to standard but ensure we stop propagation if handled.
     document.addEventListener('keydown', handleKeyDown);
     
     document.body.style.overflow = 'hidden';
@@ -141,16 +128,9 @@ const Modal: React.FC<ModalProps> = ({
         )}
         role="dialog"
         aria-modal="true"
-        // Make the modal div focusable so we can shift focus to it
         tabIndex={-1}
-        ref={(el) => {
-          // Auto-focus the modal container when it mounts if nothing inside is auto-focused
-          if (el && isAnimating && !el.contains(document.activeElement)) {
-            el.focus();
-          }
-        }}
       >
-        <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-bg-modal rounded-t-xl"> {/* Changed bg-bg-2 to bg-bg-modal */}
+        <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-bg-modal rounded-t-xl">
           <h3 className="text-lg font-semibold text-font-1">{title}</h3>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-field-hover transition-colors text-font-2">
             <X className="h-5 w-5" />
@@ -158,7 +138,7 @@ const Modal: React.FC<ModalProps> = ({
         </div>
         <div className="pl-6 pr-3 py-4 overflow-y-auto flex-1">{children}</div>
         {footer && (
-          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-bg-modal rounded-b-xl"> {/* Changed bg-bg-2 to bg-bg-modal */}
+          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-bg-modal rounded-b-xl">
             {footer}
           </div>
         )}

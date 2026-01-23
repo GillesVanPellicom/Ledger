@@ -28,7 +28,8 @@ import {
   HandCoins,
   Clock,
   Info,
-  ArrowRight
+  ArrowRight,
+  Landmark
 } from 'lucide-react';
 import {db} from '../utils/db';
 import {ConfirmModal} from '../components/ui/Modal';
@@ -61,6 +62,7 @@ import MoneyDisplay from '../components/ui/MoneyDisplay';
 import Badge from '../components/ui/Badge';
 import Divider from '../components/ui/Divider';
 import Combobox from '../components/ui/Combobox';
+import TransferModal from '../components/payment/TransferModal';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -108,6 +110,7 @@ const ReceiptsPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -393,7 +396,7 @@ const ReceiptsPage: React.FC = () => {
     render: (row: Transaction) => {
       if (row.type === 'expense' && row.status === 'unpaid') {
         return (
-          <Tooltip content="Unpaid expense - money spent at a vendor by an entity. Not yet deducted from balance. A debt you owe to said entity">
+          <Tooltip content="Unpaid expense - not yet deducted from balance">
             <Badge variant="yellow" className="flex items-center gap-1 w-fit">
               <Clock className="h-3 w-3"/> Unpaid
             </Badge>
@@ -727,6 +730,11 @@ const ReceiptsPage: React.FC = () => {
                 )}
               </>
             )}
+            <Tooltip content="New Transaction">
+              <Button variant="ghost" size="icon" onClick={() => setIsTransferModalOpen(true)}>
+                <Landmark className="h-5 w-5"/>
+              </Button>
+            </Tooltip>
             <Tooltip content="New Expense">
               <Button variant="ghost" size="icon" onClick={() => navigate('/receipts/new')}>
                 <Plus className="h-5 w-5"/>
@@ -972,6 +980,15 @@ const ReceiptsPage: React.FC = () => {
             onConfirm={handleDelete}
             title={`Delete ${transactionToDelete ? 'Transaction' : `${selectedTransactionIds.length} Transactions`}`}
             message={`Are you sure you want to permanently delete ${transactionToDelete ? 'this transaction' : `${selectedTransactionIds.length} selected transactions`}? This action cannot be undone.`}
+          />
+
+          <TransferModal
+            isOpen={isTransferModalOpen}
+            onClose={() => setIsTransferModalOpen(false)}
+            onSave={refetch}
+            topUpToEdit={null}
+            paymentMethodId={methods[0]?.PaymentMethodID?.toString() || ''}
+            currentBalance={0}
           />
 
           <ProgressModal
