@@ -97,8 +97,12 @@ const DataTable: React.FC<DataTableProps> = ({
 
   // Update previousData when data is not loading
   useEffect(() => {
-    if (!loading && data.length > 0) {
-      setPreviousData(data);
+    if (!loading) {
+      if (data.length > 0) {
+        setPreviousData(data);
+      } else {
+        setPreviousData([]); // Clear previous data if current data is empty
+      }
     }
   }, [data, loading]);
 

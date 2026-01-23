@@ -16,6 +16,14 @@ interface FetchTransactionsParams {
   expenseTypeFilter?: string;
   tentativeFilter?: string;
   attachmentFilter?: string;
+  // Income specific filters
+  incomeSourceFilter?: string;
+  incomeCategoryFilter?: string;
+  // Repayment specific filters
+  debtorFilter?: string;
+  // Transfer specific filters
+  fromMethodFilter?: string;
+  toMethodFilter?: string;
 }
 
 interface FetchTransactionsResult {
@@ -35,11 +43,20 @@ export const useTransactions = (params: FetchTransactionsParams) => {
     debtFilter,
     expenseTypeFilter,
     tentativeFilter,
-    attachmentFilter
+    attachmentFilter,
+    incomeSourceFilter,
+    incomeCategoryFilter,
+    debtorFilter,
+    fromMethodFilter,
+    toMethodFilter
   } = params;
 
   return useQuery<FetchTransactionsResult>({
-    queryKey: ['transactions', { page, pageSize, searchTerm, startDate, endDate, typeFilter, debtEnabled, debtFilter, expenseTypeFilter, tentativeFilter, attachmentFilter }],
+    queryKey: ['transactions', { 
+      page, pageSize, searchTerm, startDate, endDate, typeFilter, debtEnabled, 
+      debtFilter, expenseTypeFilter, tentativeFilter, attachmentFilter,
+      incomeSourceFilter, incomeCategoryFilter, debtorFilter, fromMethodFilter, toMethodFilter
+    }],
     queryFn: async () => {
       const offset = (page - 1) * pageSize;
       const queryParams: any[] = [];
@@ -71,7 +88,9 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           (SELECT COUNT(DISTINCT rs.DebtorID) FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID) + (SELECT COUNT(DISTINCT li.DebtorID) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID IS NOT NULL) as totalDebtorCount,
           (SELECT COUNT(DISTINCT d.DebtorID) FROM Debtors d LEFT JOIN ReceiptDebtorPayments rdp ON d.DebtorID = rdp.DebtorID AND rdp.ReceiptID = r.ReceiptID WHERE rdp.PaymentID IS NULL AND ((r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID IS NOT NULL)) OR (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID)))) as unpaidDebtorCount,
           NULL as debtorId,
-          NULL as receiptId
+          NULL as receiptId,
+          NULL as fromMethodId,
+          NULL as toMethodId
         FROM Receipts r
         JOIN Stores s ON r.StoreID = s.StoreID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
@@ -98,7 +117,9 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as totalDebtorCount,
           NULL as unpaidDebtorCount,
           NULL as debtorId,
-          NULL as receiptId
+          NULL as receiptId,
+          NULL as fromMethodId,
+          NULL as toMethodId
         FROM TopUps tu
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
         WHERE tu.TransferID IS NULL 
@@ -126,7 +147,9 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as totalDebtorCount,
           NULL as unpaidDebtorCount,
           NULL as debtorId,
-          NULL as receiptId
+          NULL as receiptId,
+          t.FromPaymentMethodID as fromMethodId,
+          t.ToPaymentMethodID as toMethodId
         FROM Transfers t
         JOIN PaymentMethods pm_from ON t.FromPaymentMethodID = pm_from.PaymentMethodID
         JOIN PaymentMethods pm_to ON t.ToPaymentMethodID = pm_to.PaymentMethodID
@@ -153,7 +176,9 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as totalDebtorCount,
           NULL as unpaidDebtorCount,
           rdp.DebtorID as debtorId,
-          rdp.ReceiptID as receiptId
+          rdp.ReceiptID as receiptId,
+          NULL as fromMethodId,
+          NULL as toMethodId
         FROM ReceiptDebtorPayments rdp
         JOIN TopUps tu ON rdp.TopUpID = tu.TopUpID
         JOIN Debtors d ON rdp.DebtorID = d.DebtorID
@@ -199,34 +224,57 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         queryParams.push(format(endDate, 'yyyy-MM-dd'));
       }
 
-      // Apply expense-specific filters if we are looking at expenses or all
-      if (typeFilter === 'all' || typeFilter === 'expense') {
+      // Apply type-specific filters
+      if (typeFilter === 'expense') {
         if (expenseTypeFilter && expenseTypeFilter !== 'all') {
-          whereClauses.push(`(type != 'expense' OR isNonItemised = ?)`);
+          whereClauses.push(`isNonItemised = ?`);
           queryParams.push(expenseTypeFilter === 'total-only' ? 1 : 0);
         }
         if (tentativeFilter && tentativeFilter !== 'all') {
-          whereClauses.push(`(type != 'expense' OR isTentative = ?)`);
+          whereClauses.push(`isTentative = ?`);
           queryParams.push(tentativeFilter === 'tentative' ? 1 : 0);
         }
         if (attachmentFilter && attachmentFilter !== 'all') {
-          whereClauses.push(`(type != 'expense' OR attachmentCount ${attachmentFilter === 'yes' ? '> 0' : '= 0'})`);
+          whereClauses.push(`attachmentCount ${attachmentFilter === 'yes' ? '> 0' : '= 0'}`);
         }
         if (debtEnabled && debtFilter && debtFilter !== 'all') {
           switch (debtFilter) {
             case 'none':
-              whereClauses.push("(type != 'expense' OR totalDebtorCount = 0)");
+              whereClauses.push("totalDebtorCount = 0");
               break;
             case 'unpaid':
-              whereClauses.push("(type != 'expense' OR unpaidDebtorCount > 0)");
+              whereClauses.push("unpaidDebtorCount > 0");
               break;
             case 'own_debt':
-              whereClauses.push("(type != 'expense' OR status = 'unpaid')");
+              whereClauses.push("status = 'unpaid'");
               break;
             case 'paid':
-              whereClauses.push("(type != 'expense' OR (totalDebtorCount > 0 AND unpaidDebtorCount = 0))");
+              whereClauses.push("(totalDebtorCount > 0 AND unpaidDebtorCount = 0)");
               break;
           }
+        }
+      } else if (typeFilter === 'income') {
+        if (incomeSourceFilter && incomeSourceFilter !== 'all') {
+          whereClauses.push("note LIKE ?");
+          queryParams.push(`[Income] ${incomeSourceFilter}%`);
+        }
+        if (incomeCategoryFilter && incomeCategoryFilter !== 'all') {
+          whereClauses.push("note LIKE ?");
+          queryParams.push(`%(${incomeCategoryFilter})`);
+        }
+      } else if (typeFilter === 'repayment') {
+        if (debtorFilter && debtorFilter !== 'all') {
+          whereClauses.push("debtorId = ?");
+          queryParams.push(debtorFilter);
+        }
+      } else if (typeFilter === 'transfer') {
+        if (fromMethodFilter && fromMethodFilter !== 'all') {
+          whereClauses.push("fromMethodId = ?");
+          queryParams.push(fromMethodFilter);
+        }
+        if (toMethodFilter && toMethodFilter !== 'all') {
+          whereClauses.push("toMethodId = ?");
+          queryParams.push(toMethodFilter);
         }
       }
 
