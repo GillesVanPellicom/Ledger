@@ -16,6 +16,7 @@ interface StepperInputProps
   value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  precision?: number;
 }
 
 const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
@@ -32,6 +33,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       value,
       onChange,
       size = 'md',
+      precision = 2,
       ...props
     },
     ref
@@ -65,7 +67,6 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       let raw = e.target.value;
 
       // Accept digits + at most one dot/comma
-      // Fixed regex to avoid super-linear runtime vulnerability
       if (!/^\d*([.,]\d*)?$/.test(raw)) return;
 
       setInputValue(raw);
@@ -75,12 +76,12 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       // Normalize input to dot internally
       let normalized = inputValue.replace(',', '.');
 
-      // Optional: enforce min/max
+      // Optional: enforce min/max and precision
       let num = Number.parseFloat(normalized);
       if (!Number.isNaN(num)) {
         if (min !== undefined) num = Math.max(num, min);
         if (max !== undefined) num = Math.min(num, max);
-        normalized = String(num);
+        normalized = num.toFixed(precision);
       }
 
       setInputValue(
@@ -133,6 +134,21 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       xl: 20,
     };
 
+    const handleStep = (increment: boolean) => {
+      let num = Number.isNaN(numericValue) ? 0 : numericValue;
+      let step = 1;
+      let next = increment ? num + step : num - step;
+      
+      if (min !== undefined) next = Math.max(next, min);
+      if (max !== undefined) next = Math.min(next, max);
+      
+      const formatted = next.toFixed(precision);
+      
+      onChange({
+        target: { value: formatted },
+      } as React.ChangeEvent<HTMLInputElement>);
+    };
+
     return (
       <div className={className}>
         {label && (
@@ -161,13 +177,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
                 buttonBaseClasses,
                 'w-full h-1/2 rounded-tr-lg border border-border border-l-0 border-b-0'
               )}
-              onClick={() => {
-                let num = Number.isNaN(numericValue) ? 0 : numericValue;
-                let next = max === undefined ? num + 1 : Math.min(num + 1, max);
-                onChange({
-                  target: { value: String(next) },
-                } as React.ChangeEvent<HTMLInputElement>);
-              }}
+              onClick={() => handleStep(true)}
               disabled={(max !== undefined && numericValue >= max) || props.disabled}
             >
               <ChevronUp size={iconSizes[size]} className="shrink-0" />
@@ -180,13 +190,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
                 buttonBaseClasses,
                 'w-full h-1/2 rounded-br-lg border border-border border-l-0 border-t-[1px]'
               )}
-              onClick={() => {
-                let num = Number.isNaN(numericValue) ? 0 : numericValue;
-                let next = min === undefined ? num - 1 : Math.max(num - 1, min);
-                onChange({
-                  target: { value: String(next) },
-                } as React.ChangeEvent<HTMLInputElement>);
-              }}
+              onClick={() => handleStep(false)}
               disabled={(min !== undefined && numericValue <= min) || props.disabled}
             >
               <ChevronDown size={iconSizes[size]} className="shrink-0" />

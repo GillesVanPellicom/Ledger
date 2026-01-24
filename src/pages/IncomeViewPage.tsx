@@ -15,21 +15,17 @@ import {
   Receipt,
   FileText,
   Link as LinkIcon,
-  Pencil
+  Pencil,
+  Plus
 } from 'lucide-react';
 import Tooltip from '../components/ui/Tooltip';
-import Modal, {ConfirmModal} from '../components/ui/Modal';
+import {ConfirmModal} from '../components/ui/Modal';
 import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import {useErrorStore} from '../store/useErrorStore';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import StepperInput from '../components/ui/StepperInput';
-import Input from '../components/ui/Input';
-import Combobox from '../components/ui/Combobox';
-import Divider from '../components/ui/Divider';
-import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
-import IncomeSourceModal from '../components/income/IncomeSourceModal';
+import IncomeModal from '../components/payment/IncomeModal';
 
 const IncomeViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -38,21 +34,6 @@ const IncomeViewPage: React.FC = () => {
   const {showError} = useErrorStore();
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
-
-  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-  const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
-  const [incomeSources, setIncomeSources] = useState<any[]>([]);
-  const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
-  const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
-
-  const [editData, setEditData] = useState({
-    SourceName: '',
-    Category: '',
-    PaymentMethodID: '',
-    Amount: '0',
-    Date: '',
-    Note: ''
-  });
 
   // Fetch transaction details
   const {data: transaction, isLoading} = useQuery({
@@ -101,11 +82,13 @@ const IncomeViewPage: React.FC = () => {
         SELECT t.*, 
                s.IncomeSourceName, 
                c.IncomeCategoryName,
-               pm.PaymentMethodName
+               pm.PaymentMethodName,
+               d.DebtorName
         FROM TopUps t
         LEFT JOIN IncomeSources s ON t.IncomeSourceID = s.IncomeSourceID
         LEFT JOIN IncomeCategories c ON t.IncomeCategoryID = c.IncomeCategoryID
         LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
+        LEFT JOIN Debtors d ON t.DebtorID = d.DebtorID
         WHERE t.TopUpID = ?
       `, [id]);
 
@@ -120,46 +103,17 @@ const IncomeViewPage: React.FC = () => {
           method: topUp.PaymentMethodName,
           paymentMethodId: topUp.PaymentMethodID,
           note: topUp.TopUpNote,
-          debtorId: null,
-          debtorName: null,
+          debtorId: topUp.DebtorID,
+          debtorName: topUp.DebtorName,
           topUpId: topUp.TopUpID,
-          receiptId: null
+          receiptId: null,
+          incomeSourceId: topUp.IncomeSourceID,
+          incomeCategoryId: topUp.IncomeCategoryID
         };
       }
       
       return null;
     }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      if (transaction?.type === 'repayment') {
-        // For repayments, we update the TopUp and potentially the PaidDate in ReceiptDebtorPayments
-        await db.execute(
-          'UPDATE TopUps SET TopUpAmount = ?, TopUpDate = ?, TopUpNote = ?, PaymentMethodID = ? WHERE TopUpID = ?',
-          [data.Amount, data.Date, data.Note, data.PaymentMethodID, transaction.topUpId]
-        );
-        await db.execute(
-          'UPDATE ReceiptDebtorPayments SET PaidDate = ? WHERE PaymentID = ?',
-          [data.Date, transaction.id]
-        );
-      } else {
-        // For regular income
-        const sourceId = (await db.queryOne<any>('SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?', [data.SourceName]))?.IncomeSourceID;
-        const categoryId = (await db.queryOne<any>('SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?', [data.Category]))?.IncomeCategoryID;
-        
-        await db.execute(
-          'UPDATE TopUps SET TopUpAmount = ?, TopUpDate = ?, TopUpNote = ?, PaymentMethodID = ?, IncomeSourceID = ?, IncomeCategoryID = ? WHERE TopUpID = ?',
-          [data.Amount, data.Date, data.Note, data.PaymentMethodID, sourceId || null, categoryId || null, transaction?.id]
-        );
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transaction', id] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      setIsEditModalOpen(false);
-    },
-    onError: (err) => showError(err)
   });
 
   const handleDelete = async () => {
@@ -181,39 +135,6 @@ const IncomeViewPage: React.FC = () => {
     } finally {
       setDeleteModalOpen(false);
     }
-  };
-
-  const openEditModal = async () => {
-    if (!transaction) return;
-
-    // Load reference data
-    const [pmRows, catRows, srcRows] = await Promise.all([
-      db.query("SELECT * FROM PaymentMethods"),
-      db.query("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName"),
-      db.query("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName")
-    ]);
-
-    setPaymentMethods(pmRows.map((r: any) => ({ value: String(r.PaymentMethodID), label: r.PaymentMethodName })));
-    setIncomeCategories(catRows.map((r: any) => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
-    setIncomeSources(srcRows.map((r: any) => ({ value: r.IncomeSourceName, label: r.IncomeSourceName })));
-
-    setEditData({
-      SourceName: transaction.description,
-      Category: transaction.category || '',
-      PaymentMethodID: String(transaction.paymentMethodId),
-      Amount: String(transaction.amount),
-      Date: transaction.date,
-      Note: transaction.note || ''
-    });
-    setIsEditModalOpen(true);
-  };
-
-  const handleStepperChange = (increment: boolean, step: number) => {
-    setEditData((prev: any) => {
-      const currentValue = Number.parseFloat(prev.Amount) || 0;
-      const newValue = increment ? currentValue + step : currentValue - step;
-      return {...prev, Amount: String(newValue)};
-    });
   };
 
   if (isLoading) {
@@ -248,7 +169,7 @@ const IncomeViewPage: React.FC = () => {
               </Button>
             </Tooltip>
             <Tooltip content="Edit">
-              <Button variant="ghost" size="icon" onClick={openEditModal}>
+              <Button variant="ghost" size="icon" onClick={() => setIsEditModalOpen(true)}>
                 <Pencil className="h-5 w-5"/>
               </Button>
             </Tooltip>
@@ -319,9 +240,9 @@ const IncomeViewPage: React.FC = () => {
                       </Tooltip>
                     )}
 
-                    {/* Debtor (Repayment only) */}
-                    {transaction.type === 'repayment' && (
-                      <Tooltip content="The person who made this repayment">
+                    {/* Debtor (Repayment or Income with Entity) */}
+                    {transaction.debtorId && (
+                      <Tooltip content={transaction.type === 'repayment' ? "The person who made this repayment" : "The entity associated with this income"}>
                         <div className="flex items-center gap-3 cursor-help">
                           <User className="h-5 w-5 text-font-2" />
                           <Link to={`/entities/${transaction.debtorId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1 group">
@@ -360,111 +281,24 @@ const IncomeViewPage: React.FC = () => {
         message="Are you sure you want to permanently delete this transaction? This action cannot be undone."
       />
 
-      <Modal
+      <IncomeModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title={transaction.type === 'repayment' ? "Edit Repayment" : "Edit Income"}
-        onEnter={() => updateMutation.mutate(editData)}
-        footer={
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => updateMutation.mutate(editData)}
-              loading={updateMutation.isPending}
-            >
-              Save Changes
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {transaction.type === 'income' && (
-            <>
-              <div className="flex items-end gap-2">
-                <Combobox
-                  label="Source Name"
-                  options={incomeSources}
-                  value={editData.SourceName}
-                  onChange={val => setEditData(prev => ({...prev, SourceName: val}))}
-                  className="flex-1"
-                />
-                <Tooltip content="Add Source">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
-              </div>
-              <div className="flex items-end gap-2">
-                <Combobox
-                  label="Category (Optional)"
-                  options={incomeCategories}
-                  value={editData.Category}
-                  onChange={val => setEditData(prev => ({...prev, Category: val}))}
-                  className="flex-1"
-                />
-                <Tooltip content="Add Category">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
-              </div>
-              <Divider className="my-2"/>
-            </>
-          )}
-          
-          <div className="grid grid-cols-2 gap-4">
-            <StepperInput
-              label="Amount"
-              step={1}
-              min={0}
-              value={editData.Amount}
-              onChange={e => setEditData(prev => ({...prev, Amount: e.target.value}))}
-              onIncrement={() => handleStepperChange(true, 1)}
-              onDecrement={() => handleStepperChange(false, 1)}
-            />
-            <Combobox
-              label="Method"
-              options={paymentMethods}
-              value={editData.PaymentMethodID}
-              onChange={val => setEditData(prev => ({...prev, PaymentMethodID: val}))}
-            />
-          </div>
-          <Divider className="my-2"/>
-          <Input
-            label="Date"
-            type="date"
-            value={editData.Date}
-            onChange={e => setEditData(prev => ({...prev, Date: e.target.value}))}
-          />
-          <Input
-            type="text"
-            label="Note"
-            value={editData.Note}
-            onChange={e => setEditData(prev => ({...prev, Note: e.target.value}))}
-          />
-        </div>
-      </Modal>
-
-      <IncomeCategoryModal
-        isOpen={isIncomeCategoryModalOpen}
-        onClose={() => setIsIncomeCategoryModalOpen(false)}
         onSave={() => {
-          db.query("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName").then(rows => {
-            setIncomeCategories(rows.map((r: any) => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
-          });
+          queryClient.invalidateQueries({ queryKey: ['transaction', id] });
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }}
-        categoryToEdit={null}
-      />
-
-      <IncomeSourceModal
-        isOpen={isIncomeSourceModalOpen}
-        onClose={() => setIsIncomeSourceModalOpen(false)}
-        onSave={() => {
-          db.query("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName").then(rows => {
-            setIncomeSources(rows.map((r: any) => ({ value: r.IncomeSourceName, label: r.IncomeSourceName })));
-          });
-        }}
-        sourceToEdit={null}
+        forceSingleMode={true}
+        topUpToEdit={transaction?.type === 'income' ? {
+          TopUpID: transaction.id,
+          TopUpDate: transaction.date,
+          TopUpAmount: transaction.amount,
+          TopUpNote: transaction.note || '',
+          IncomeSourceID: transaction.incomeSourceId,
+          IncomeCategoryID: transaction.incomeCategoryId,
+          DebtorID: transaction.debtorId,
+          PaymentMethodID: transaction.paymentMethodId
+        } as any : null}
       />
     </div>
   );

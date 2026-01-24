@@ -19,6 +19,7 @@ interface FetchTransactionsParams {
   // Income specific filters
   incomeSourceFilter?: string;
   incomeCategoryFilter?: string;
+  incomeEntityFilter?: string;
   // Repayment specific filters
   debtorFilter?: string;
   // Transfer specific filters
@@ -48,6 +49,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
     attachmentFilter,
     incomeSourceFilter,
     incomeCategoryFilter,
+    incomeEntityFilter,
     debtorFilter,
     fromMethodFilter,
     toMethodFilter,
@@ -58,7 +60,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
     queryKey: ['transactions', { 
       page, pageSize, searchTerm, startDate, endDate, typeFilter, debtEnabled, 
       debtFilter, expenseTypeFilter, tentativeFilter, attachmentFilter,
-      incomeSourceFilter, incomeCategoryFilter, debtorFilter, fromMethodFilter, toMethodFilter, methodFilter
+      incomeSourceFilter, incomeCategoryFilter, incomeEntityFilter, debtorFilter, fromMethodFilter, toMethodFilter, methodFilter
     }],
     queryFn: async () => {
       const offset = (page - 1) * pageSize;
@@ -119,7 +121,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as status,
           NULL as totalDebtorCount,
           NULL as unpaidDebtorCount,
-          NULL as debtorId,
+          tu.DebtorID as debtorId,
           NULL as receiptId,
           NULL as fromMethodId,
           NULL as toMethodId
@@ -277,6 +279,11 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           // Match by IncomeCategoryID
           whereClauses.push("originalId IN (SELECT TopUpID FROM TopUps WHERE IncomeCategoryID = ?)");
           queryParams.push(incomeCategoryFilter);
+        }
+        if (incomeEntityFilter && incomeEntityFilter !== 'all') {
+          // Match by DebtorID
+          whereClauses.push("debtorId = ?");
+          queryParams.push(incomeEntityFilter);
         }
       } else if (typeFilter === 'repayment') {
         if (debtorFilter && debtorFilter !== 'all') {

@@ -14,7 +14,8 @@ import {
   CalendarPlus,
   MoreHorizontal,
   CreditCard,
-  Wallet
+  Wallet,
+  User
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import {Header} from '../components/ui/Header';
@@ -93,6 +94,7 @@ const IncomePage: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
   const [incomeSources, setIncomeSources] = useState<any[]>([]);
+  const [entities, setEntities] = useState<any[]>([]);
 
   const getCurrentDate = () => {
     if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
@@ -103,6 +105,7 @@ const IncomePage: React.FC = () => {
 
   const [newSchedule, setNewSchedule] = useState({
     SourceName: '',
+    DebtorName: '',
     Category: '',
     PaymentMethodID: '',
     ExpectedAmount: '0',
@@ -128,6 +131,7 @@ const IncomePage: React.FC = () => {
     if (editingSchedule) {
       setNewSchedule({
         SourceName: editingSchedule.SourceName || '',
+        DebtorName: entities.find(e => e.id === editingSchedule.DebtorID)?.label || '',
         Category: editingSchedule.Category || '',
         PaymentMethodID: String(editingSchedule.PaymentMethodID),
         ExpectedAmount: String(editingSchedule.ExpectedAmount || '0'),
@@ -143,6 +147,7 @@ const IncomePage: React.FC = () => {
     } else {
       setNewSchedule({
         SourceName: '',
+        DebtorName: '',
         Category: '',
         PaymentMethodID: paymentMethods[0]?.value || '',
         ExpectedAmount: '0',
@@ -156,7 +161,7 @@ const IncomePage: React.FC = () => {
         Note: ''
       });
     }
-  }, [editingSchedule, paymentMethods, settings.dev?.mockTime]);
+  }, [editingSchedule, paymentMethods, entities, settings.dev?.mockTime]);
 
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
   const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
@@ -182,6 +187,14 @@ const IncomePage: React.FC = () => {
         setIncomeSources(rows.map((r: any) => ({
           value: r.IncomeSourceName,
           label: r.IncomeSourceName
+        })));
+      }).catch(err => showError(err));
+
+      db.query("SELECT * FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName").then(rows => {
+        setEntities(rows.map((r: any) => ({
+          value: r.DebtorName,
+          label: r.DebtorName,
+          id: r.DebtorID
         })));
       }).catch(err => showError(err));
     };
@@ -470,7 +483,20 @@ const IncomePage: React.FC = () => {
                       accessor: 'PlannedDate',
                       render: (row) => format(parseISO(row.PlannedDate), 'MMM d, yyyy')
                     },
-                    {header: 'Source', accessor: 'SourceName'},
+                    {
+                      header: 'Source', 
+                      accessor: 'SourceName',
+                      render: (row) => (
+                        <div className="flex items-center gap-2">
+                          {row.SourceName}
+                          {row.DebtorID && (
+                            <Tooltip content="Associated with an entity.">
+                              <User className="h-3 w-3 text-accent" />
+                            </Tooltip>
+                          )}
+                        </div>
+                      )
+                    },
                     {header: 'Category', accessor: 'Category'},
                     {header: 'Method', accessor: 'PaymentMethodName'},
                     {
@@ -538,6 +564,15 @@ const IncomePage: React.FC = () => {
                                 <CreditCard className="mr-2 h-4 w-4"/>
                                 Method
                               </DropdownMenuItem>
+                              {row.DebtorID && (
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/entities/${row.DebtorID}`);
+                                }}>
+                                  <User className="mr-2 h-4 w-4"/>
+                                  Entity
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator/>
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuItem onClick={(e) => {
@@ -578,7 +613,20 @@ const IncomePage: React.FC = () => {
                     setIsScheduleModalOpen(true);
                   }}
                   columns={[
-                    {header: 'Source', accessor: 'SourceName'},
+                    {
+                      header: 'Source', 
+                      accessor: 'SourceName',
+                      render: (row) => (
+                        <div className="flex items-center gap-2">
+                          {row.SourceName}
+                          {row.DebtorID && (
+                            <Tooltip content="Associated with an entity.">
+                              <User className="h-3 w-3 text-accent" />
+                            </Tooltip>
+                          )}
+                        </div>
+                      )
+                    },
                     {header: 'Category', accessor: 'Category'},
                     {header: 'Method', accessor: 'PaymentMethodName'},
                     {
@@ -626,6 +674,15 @@ const IncomePage: React.FC = () => {
                               <CreditCard className="mr-2 h-4 w-4"/>
                               Method
                             </DropdownMenuItem>
+                            {row.DebtorID && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/entities/${row.DebtorID}`);
+                              }}>
+                                <User className="mr-2 h-4 w-4"/>
+                                Entity
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator/>
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={(e) => {
@@ -814,6 +871,24 @@ const IncomePage: React.FC = () => {
               </Button>
             </Tooltip>
           </div>
+          
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Entity (Optional)</label>
+                <Tooltip content="Associate this income with an entity for extra context. Note: This does NOT settle any outstanding debts. To settle debt, please use the Repayment feature on the Entity page.">
+                  <Info className="h-4 w-4 text-gray-400 cursor-help"/>
+                </Tooltip>
+              </div>
+              <Combobox
+                placeholder="Select an entity..."
+                options={entities}
+                value={newSchedule.DebtorName}
+                onChange={val => setNewSchedule(prev => ({...prev, DebtorName: val}))}
+              />
+            </div>
+          </div>
+
           <div className="flex items-end gap-2">
             <Combobox
               label="Category (Optional)"

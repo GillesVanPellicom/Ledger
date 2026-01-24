@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
@@ -28,8 +28,9 @@ interface IncomeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  topUpToEdit: TopUp | null;
+  topUpToEdit: (TopUp & { IncomeSourceID?: number; IncomeCategoryID?: number; DebtorID?: number; PaymentMethodID?: number }) | null;
   paymentMethodId?: string;
+  forceSingleMode?: boolean;
 }
 
 const dayOfMonthOptions = Array.from({length: 31}, (_, i) => ({value: String(i + 1), label: String(i + 1)}));
@@ -47,7 +48,7 @@ const monthOfYearOptions = [
   {value: '9', label: 'October'}, {value: '10', label: 'November'}, {value: '11', label: 'December'}
 ];
 
-const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topUpToEdit, paymentMethodId }) => {
+const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topUpToEdit, paymentMethodId, forceSingleMode }) => {
   const { settings } = useSettingsStore();
   const { showError } = useErrorStore();
   const queryClient = useQueryClient();
@@ -59,22 +60,24 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
   const [incomeSources, setIncomeSources] = useState<any[]>([]);
+  const [entities, setEntities] = useState<any[]>([]);
   
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
   const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
 
-  const getCurrentDate = () => {
+  const getCurrentDate = useCallback(() => {
     if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
       return startOfDay(parseISO(settings.dev.mockTime.date));
     }
     return startOfToday();
-  };
+  }, [settings.dev?.mockTime]);
 
   const [formData, setFormData] = useState({ 
     amount: '0', 
     date: getCurrentDate(), 
     notes: '',
     sourceName: '',
+    debtorName: '',
     category: '',
     paymentMethodId: paymentMethodId || '',
     // Schedule specific
@@ -88,48 +91,78 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
     createForPastPeriod: false
   });
 
-  const fetchReferenceData = async () => {
-    const [pmRows, catRows, srcRows] = await Promise.all([
+  const fetchReferenceData = useCallback(async () => {
+    const [pmRows, catRows, srcRows, entRows] = await Promise.all([
       db.query<PaymentMethod>("SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1"),
       db.query<any>("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName"),
-      db.query<any>("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName")
+      db.query<any>("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName"),
+      db.query<any>("SELECT * FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName")
     ]);
     setPaymentMethods(pmRows);
     setIncomeCategories(catRows.map(r => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
     setIncomeSources(srcRows.map(r => ({ value: r.IncomeSourceName, label: r.IncomeSourceName })));
+    setEntities(entRows.map(r => ({ value: r.DebtorName, label: r.DebtorName })));
     
-    if (!formData.paymentMethodId && pmRows.length > 0) {
-        setFormData(prev => ({ ...prev, paymentMethodId: String(pmRows[0].PaymentMethodID) }));
-    }
-  };
+    return { pmRows, catRows, srcRows, entRows };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
-      fetchReferenceData();
-      if (topUpToEdit) {
-        // Editing logic
-      } else {
-        const today = getCurrentDate();
-        setFormData({ 
-          amount: '0', 
-          date: today, 
-          notes: '',
-          sourceName: '',
-          category: '',
-          paymentMethodId: paymentMethodId || '',
-          recurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-          dayOfMonth: String(getDate(today)),
-          dayOfWeek: String(getDay(today)),
-          monthOfYear: String(getMonth(today)),
-          requiresConfirmation: true,
-          lookaheadDays: 7,
-          isActive: true,
-          createForPastPeriod: false
-        });
-      }
-      setErrors({});
+      const initialize = async () => {
+        const { pmRows, catRows, srcRows, entRows } = await fetchReferenceData();
+        
+        if (forceSingleMode) {
+          setMode('single');
+        }
+
+        if (topUpToEdit) {
+          const sourceName = srcRows.find((s: any) => s.IncomeSourceID === topUpToEdit.IncomeSourceID)?.IncomeSourceName || '';
+          const categoryName = catRows.find((c: any) => c.IncomeCategoryID === topUpToEdit.IncomeCategoryID)?.IncomeCategoryName || '';
+          const debtorName = entRows.find((d: any) => d.DebtorID === topUpToEdit.DebtorID)?.DebtorName || '';
+
+          setFormData({
+            amount: String(topUpToEdit.TopUpAmount),
+            date: parseISO(topUpToEdit.TopUpDate),
+            notes: topUpToEdit.TopUpNote || '',
+            sourceName,
+            category: categoryName,
+            debtorName,
+            paymentMethodId: String(topUpToEdit.PaymentMethodID),
+            recurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
+            dayOfMonth: String(getDate(getCurrentDate())),
+            dayOfWeek: String(getDay(getCurrentDate())),
+            monthOfYear: String(getMonth(getCurrentDate())),
+            requiresConfirmation: true,
+            lookaheadDays: 7,
+            isActive: true,
+            createForPastPeriod: false
+          });
+        } else {
+          const today = getCurrentDate();
+          setFormData({ 
+            amount: '0', 
+            date: today, 
+            notes: '',
+            sourceName: '',
+            debtorName: '',
+            category: '',
+            paymentMethodId: paymentMethodId || (pmRows.length > 0 ? String(pmRows[0].PaymentMethodID) : ''),
+            recurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
+            dayOfMonth: String(getDate(today)),
+            dayOfWeek: String(getDay(today)),
+            monthOfYear: String(getMonth(today)),
+            requiresConfirmation: true,
+            lookaheadDays: 7,
+            isActive: true,
+            createForPastPeriod: false
+          });
+        }
+        setErrors({});
+      };
+      
+      initialize();
     }
-  }, [isOpen, topUpToEdit, paymentMethodId]);
+  }, [isOpen, topUpToEdit, paymentMethodId, forceSingleMode, fetchReferenceData, getCurrentDate]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -149,20 +182,31 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
 
     try {
       if (mode === 'single') {
-        const transactionDetails = {
-          type: 'deposit',
-          amount: Number(formData.amount),
-          date: format(formData.date, 'yyyy-MM-dd'),
-          note: formData.notes,
-          from: formData.paymentMethodId,
-          sourceName: formData.sourceName,
-          category: formData.category
-        };
-        await window.electronAPI.createTransaction(transactionDetails);
+        if (topUpToEdit) {
+          const sourceId = (await db.queryOne<any>('SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?', [formData.sourceName]))?.IncomeSourceID;
+          const categoryId = (await db.queryOne<any>('SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?', [formData.category]))?.IncomeCategoryID;
+          const debtorId = (await db.queryOne<any>('SELECT DebtorID FROM Debtors WHERE DebtorName = ?', [formData.debtorName]))?.DebtorID;
+
+          await db.execute(
+            'UPDATE TopUps SET TopUpAmount = ?, TopUpDate = ?, TopUpNote = ?, PaymentMethodID = ?, IncomeSourceID = ?, IncomeCategoryID = ?, DebtorID = ? WHERE TopUpID = ?',
+            [Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, Number(formData.paymentMethodId), sourceId || null, categoryId || null, debtorId || null, topUpToEdit.TopUpID]
+          );
+        } else {
+          await incomeCommitments.createOneTimeIncome({
+            SourceName: formData.sourceName,
+            Category: formData.category || null,
+            DebtorName: formData.debtorName || null,
+            PaymentMethodID: Number(formData.paymentMethodId),
+            Amount: Number(formData.amount),
+            Date: format(formData.date, 'yyyy-MM-dd'),
+            Note: formData.notes
+          });
+        }
       } else {
         const scheduleData = {
           SourceName: formData.sourceName,
           Category: formData.category,
+          DebtorName: formData.debtorName,
           PaymentMethodID: Number(formData.paymentMethodId),
           ExpectedAmount: Number(formData.amount),
           RecurrenceRule: formData.recurrenceRule,
@@ -275,16 +319,18 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
         <div className="space-y-6">
           {errors.form && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{errors.form}</div>}
           
-          <div className="flex flex-col items-center gap-4">
-            <ButtonGroup variant="toggle" fullWidth>
-              <Tooltip content="Record a one-time income that has already occurred or is expected on a specific date.">
-                <Button active={mode === 'single'} onClick={() => setMode('single')}>Single</Button>
-              </Tooltip>
-              <Tooltip content="Create a recurring income schedule that will automatically generate reminders or deposits.">
-                <Button active={mode === 'schedule'} onClick={() => setMode('schedule')}>Schedule</Button>
-              </Tooltip>
-            </ButtonGroup>
-          </div>
+          {!forceSingleMode && (
+            <div className="flex flex-col items-center gap-4">
+              <ButtonGroup variant="toggle" fullWidth>
+                <Tooltip content="Record a one-time income that has already occurred or is expected on a specific date.">
+                  <Button active={mode === 'single'} onClick={() => setMode('single')}>Single</Button>
+                </Tooltip>
+                <Tooltip content="Create a recurring income schedule that will automatically generate reminders or deposits.">
+                  <Button active={mode === 'schedule'} onClick={() => setMode('schedule')}>Schedule</Button>
+                </Tooltip>
+              </ButtonGroup>
+            </div>
+          )}
 
           <div className="flex flex-col items-center py-4">
             <div className="w-full max-w-md space-y-4">
@@ -304,6 +350,24 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                   </Button>
                 </Tooltip>
               </div>
+              
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-sm font-medium text-font-1">Entity (Optional)</label>
+                    <Tooltip content="Associate this income with an entity for extra context. Note: This does NOT settle any outstanding debts. To settle debt, please use the Repayment feature on the Entity page.">
+                      <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                    </Tooltip>
+                  </div>
+                  <Combobox
+                    placeholder="Select an entity..."
+                    options={entities}
+                    value={formData.debtorName}
+                    onChange={val => setFormData(prev => ({...prev, debtorName: val}))}
+                  />
+                </div>
+              </div>
+
               <div className="flex items-end gap-2">
                 <Combobox
                   label="Category (Optional)"

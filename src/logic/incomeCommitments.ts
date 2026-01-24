@@ -8,6 +8,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 export interface IncomeSchedule {
   IncomeScheduleID: number;
   IncomeSourceID: number;
+  DebtorID: number | null;
   IncomeCategoryID: number | null;
   SourceName: string;
   Category: string | null;
@@ -38,6 +39,7 @@ export interface PendingIncome {
   Note?: string | null;
   IncomeSourceID?: number;
   IncomeCategoryID?: number;
+  DebtorID?: number | null;
 }
 
 /* ==================== Helpers ==================== */
@@ -99,7 +101,8 @@ export const incomeCommitments = {
         s.PaymentMethodID,
         s.Note,
         s.IncomeSourceID,
-        s.IncomeCategoryID
+        s.IncomeCategoryID,
+        s.DebtorID
       FROM PendingIncomes p
       JOIN IncomeSchedules s ON p.IncomeScheduleID = s.IncomeScheduleID
       JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
@@ -172,9 +175,15 @@ export const incomeCommitments = {
       `
       SELECT TopUpDate
       FROM TopUps
-      WHERE IncomeSourceID = ? AND (IncomeCategoryID = ? OR (IncomeCategoryID IS NULL AND ? IS NULL))
+      WHERE IncomeSourceID = ? 
+        AND (IncomeCategoryID = ? OR (IncomeCategoryID IS NULL AND ? IS NULL))
+        AND (DebtorID = ? OR (DebtorID IS NULL AND ? IS NULL))
     `,
-      [schedule.IncomeSourceID, schedule.IncomeCategoryID, schedule.IncomeCategoryID]
+      [
+        schedule.IncomeSourceID, 
+        schedule.IncomeCategoryID, schedule.IncomeCategoryID,
+        schedule.DebtorID, schedule.DebtorID
+      ]
     );
   },
 
@@ -187,6 +196,7 @@ export const incomeCommitments = {
     Note: string;
     IncomeSourceID?: number;
     IncomeCategoryID?: number | null;
+    DebtorID?: number | null;
   }) => {
     return await db.execute(
       `
@@ -196,10 +206,19 @@ export const incomeCommitments = {
         TopUpDate,
         TopUpNote,
         IncomeSourceID,
-        IncomeCategoryID
-      ) VALUES (?, ?, ?, ?, ?, ?)
+        IncomeCategoryID,
+        DebtorID
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
-      [data.PaymentMethodID, data.Amount, data.Date, data.Note, data.IncomeSourceID || null, data.IncomeCategoryID || null]
+      [
+        data.PaymentMethodID, 
+        data.Amount, 
+        data.Date, 
+        data.Note, 
+        data.IncomeSourceID || null, 
+        data.IncomeCategoryID || null,
+        data.DebtorID || null
+      ]
     );
   },
 
@@ -251,10 +270,18 @@ export const incomeCommitments = {
         )
       : null;
 
+    const debtor = data.DebtorName
+      ? await db.queryOne<{ DebtorID: number }>(
+          `SELECT DebtorID FROM Debtors WHERE DebtorName = ?`,
+          [data.DebtorName]
+        )
+      : null;
+
     const result = await db.execute(
       `
       INSERT INTO IncomeSchedules (
         IncomeSourceID,
+        DebtorID,
         IncomeCategoryID,
         PaymentMethodID,
         ExpectedAmount,
@@ -266,10 +293,11 @@ export const incomeCommitments = {
         LookaheadDays,
         IsActive,
         Note
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `,
       [
         assertDefined(source?.IncomeSourceID, 'Income source not found'),
+        debtor?.DebtorID ?? null,
         category?.IncomeCategoryID ?? null,
         data.PaymentMethodID,
         data.ExpectedAmount,
@@ -319,11 +347,19 @@ export const incomeCommitments = {
         )
       : null;
 
+    const debtor = data.DebtorName
+      ? await db.queryOne<{ DebtorID: number }>(
+          `SELECT DebtorID FROM Debtors WHERE DebtorName = ?`,
+          [data.DebtorName]
+        )
+      : null;
+
     return await db.execute(
       `
       UPDATE IncomeSchedules
       SET
         IncomeSourceID = ?,
+        DebtorID = ?,
         IncomeCategoryID = ?,
         PaymentMethodID = ?,
         ExpectedAmount = ?,
@@ -339,6 +375,7 @@ export const incomeCommitments = {
     `,
       [
         assertDefined(source?.IncomeSourceID, 'Income source not found'),
+        debtor?.DebtorID ?? null,
         category?.IncomeCategoryID ?? null,
         data.PaymentMethodID,
         data.ExpectedAmount,
@@ -374,6 +411,7 @@ export const incomeCommitments = {
   createOneTimeIncome: async (data: {
     SourceName: string;
     Category: string | null;
+    DebtorName?: string | null;
     PaymentMethodID: number;
     Amount: number;
     Date: string; // yyyy-MM-dd
@@ -391,13 +429,21 @@ export const incomeCommitments = {
         )
       : null;
 
+    const debtor = data.DebtorName
+      ? await db.queryOne<{ DebtorID: number }>(
+          `SELECT DebtorID FROM Debtors WHERE DebtorName = ?`,
+          [data.DebtorName]
+        )
+      : null;
+
     return await incomeCommitments.createTopUpFromIncome({
       PaymentMethodID: data.PaymentMethodID,
       Amount: data.Amount,
       Date: data.Date,
       Note: data.Note,
       IncomeSourceID: source?.IncomeSourceID,
-      IncomeCategoryID: category?.IncomeCategoryID
+      IncomeCategoryID: category?.IncomeCategoryID,
+      DebtorID: debtor?.DebtorID
     });
   }
 };

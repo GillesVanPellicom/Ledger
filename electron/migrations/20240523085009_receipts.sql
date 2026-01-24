@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS Receipts (
     ReceiptID INTEGER PRIMARY KEY AUTOINCREMENT,
-    StoreID INTEGER NOT NULL,
+    StoreID INTEGER,
     ReceiptDate TEXT NOT NULL,
     ReceiptNote TEXT,
     PaymentMethodID INTEGER,

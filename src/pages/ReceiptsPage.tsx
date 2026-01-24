@@ -94,6 +94,7 @@ const ReceiptsPage: React.FC = () => {
     attachment: searchParams.get('attachment') || 'all',
     incomeSource: searchParams.get('incomeSource') || 'all',
     incomeCategory: searchParams.get('incomeCategory') || 'all',
+    incomeEntity: searchParams.get('incomeEntity') || 'all',
     debtor: searchParams.get('debtor') || 'all',
     fromMethod: searchParams.get('fromMethod') || 'all',
     toMethod: searchParams.get('toMethod') || 'all',
@@ -160,6 +161,7 @@ const ReceiptsPage: React.FC = () => {
     if (appliedFilters.attachment !== 'all') params.set('attachment', appliedFilters.attachment);
     if (appliedFilters.incomeSource !== 'all') params.set('incomeSource', appliedFilters.incomeSource);
     if (appliedFilters.incomeCategory !== 'all') params.set('incomeCategory', appliedFilters.incomeCategory);
+    if (appliedFilters.incomeEntity !== 'all') params.set('incomeEntity', appliedFilters.incomeEntity);
     if (appliedFilters.debtor !== 'all') params.set('debtor', appliedFilters.debtor);
     if (appliedFilters.fromMethod !== 'all') params.set('fromMethod', appliedFilters.fromMethod);
     if (appliedFilters.toMethod !== 'all') params.set('toMethod', appliedFilters.toMethod);
@@ -188,6 +190,7 @@ const ReceiptsPage: React.FC = () => {
     attachmentFilter: appliedFilters.attachment,
     incomeSourceFilter: appliedFilters.incomeSource,
     incomeCategoryFilter: appliedFilters.incomeCategory,
+    incomeEntityFilter: appliedFilters.incomeEntity,
     debtorFilter: appliedFilters.debtor,
     fromMethodFilter: appliedFilters.fromMethod,
     toMethodFilter: appliedFilters.toMethod,
@@ -211,7 +214,7 @@ const ReceiptsPage: React.FC = () => {
   const resetFilters = () => {
     const defaultFilters = { 
       type: 'all', debt: 'all', expenseType: 'all', tentative: 'all', attachment: 'all',
-      incomeSource: 'all', incomeCategory: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all', method: 'all'
+      incomeSource: 'all', incomeCategory: 'all', incomeEntity: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all', method: 'all'
     };
     const defaultDateRange: [Date | null, Date | null] = [null, null];
     
@@ -226,7 +229,7 @@ const ReceiptsPage: React.FC = () => {
   const resetPendingFilters = () => {
     const defaultFilters = { 
       type: 'all', debt: 'all', expenseType: 'all', tentative: 'all', attachment: 'all',
-      incomeSource: 'all', incomeCategory: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all', method: 'all'
+      incomeSource: 'all', incomeCategory: 'all', incomeEntity: 'all', debtor: 'all', fromMethod: 'all', toMethod: 'all', method: 'all'
     };
     const defaultDateRange: [Date | null, Date | null] = [null, null];
     
@@ -242,6 +245,7 @@ const ReceiptsPage: React.FC = () => {
     appliedFilters.attachment !== 'all' || 
     appliedFilters.incomeSource !== 'all' ||
     appliedFilters.incomeCategory !== 'all' ||
+    appliedFilters.incomeEntity !== 'all' ||
     appliedFilters.debtor !== 'all' ||
     appliedFilters.fromMethod !== 'all' ||
     appliedFilters.toMethod !== 'all' ||
@@ -258,6 +262,7 @@ const ReceiptsPage: React.FC = () => {
     pendingFilters.attachment !== 'all' || 
     pendingFilters.incomeSource !== 'all' || 
     pendingFilters.incomeCategory !== 'all' || 
+    pendingFilters.incomeEntity !== 'all' || 
     pendingFilters.debtor !== 'all' || 
     pendingFilters.fromMethod !== 'all' || 
     pendingFilters.toMethod !== 'all' || 
@@ -273,6 +278,7 @@ const ReceiptsPage: React.FC = () => {
     pendingFilters.attachment !== 'all',
     pendingFilters.incomeSource !== 'all',
     pendingFilters.incomeCategory !== 'all',
+    pendingFilters.incomeEntity !== 'all',
     pendingFilters.debtor !== 'all',
     pendingFilters.fromMethod !== 'all',
     pendingFilters.toMethod !== 'all',
@@ -639,11 +645,14 @@ const ReceiptsPage: React.FC = () => {
                 View Details
               </DropdownMenuItem>
             )}
-            {row.type === 'repayment' && (
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                if (row.debtorId) navigate(`/entities/${row.debtorId}`);
-              }}>
+            {(row.type === 'repayment' || row.type === 'income') && (
+              <DropdownMenuItem 
+                disabled={!row.debtorId}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (row.debtorId) navigate(`/entities/${row.debtorId}`);
+                }}
+              >
                 <User className="mr-2 h-4 w-4" />
                 Entity
               </DropdownMenuItem>
@@ -928,6 +937,17 @@ const ReceiptsPage: React.FC = () => {
                     options={[{value: 'all', label: 'All'}, ...incomeCategories.map(c => ({value: String(c.IncomeCategoryID), label: c.IncomeCategoryName}))]} 
                     value={pendingFilters.incomeCategory} 
                     onChange={val => handlePendingFilterChange('incomeCategory', val)} 
+                  />
+                </FilterOption>
+                <FilterOption 
+                  title="Entity" 
+                  onReset={() => handlePendingFilterChange('incomeEntity', 'all')}
+                  isModified={pendingFilters.incomeEntity !== 'all'}
+                >
+                  <Combobox 
+                    options={[{value: 'all', label: 'All'}, ...debtors.map(d => ({value: String(d.DebtorID), label: d.DebtorName}))]} 
+                    value={pendingFilters.incomeEntity} 
+                    onChange={val => handlePendingFilterChange('incomeEntity', val)}
                   />
                 </FilterOption>
               </>
