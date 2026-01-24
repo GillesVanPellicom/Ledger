@@ -33,7 +33,8 @@ import {
   Wallet,
   Calendar,
   CalendarPlus,
-  X
+  X,
+  Check
 } from 'lucide-react';
 import {db} from '../utils/db';
 import Modal, {ConfirmModal} from '../components/ui/Modal';
@@ -930,10 +931,11 @@ const ReceiptsPage: React.FC = () => {
         return (
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Month</label>
-            <Select
+            <Combobox
               options={dayOfMonthOptions}
               value={newSchedule.DayOfMonth}
-              onChange={e => setNewSchedule(prev => ({...prev, DayOfMonth: e.target.value}))}
+              onChange={val => setNewSchedule(prev => ({...prev, DayOfMonth: val}))}
+              showSearch={false}
             />
           </div>
         );
@@ -941,30 +943,33 @@ const ReceiptsPage: React.FC = () => {
         return (
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Week</label>
-            <Select
+            <Combobox
               options={dayOfWeekOptions}
               value={newSchedule.DayOfWeek}
-              onChange={e => setNewSchedule(prev => ({...prev, DayOfWeek: e.target.value}))}
+              onChange={val => setNewSchedule(prev => ({...prev, DayOfWeek: val}))}
+              showSearch={false}
             />
           </div>
         );
       case 'YEARLY':
         return (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2 flex flex-col">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
-              <Select
+              <Combobox
                 options={monthOfYearOptions}
                 value={newSchedule.MonthOfYear}
-                onChange={e => setNewSchedule(prev => ({...prev, MonthOfYear: e.target.value}))}
+                onChange={val => setNewSchedule(prev => ({...prev, MonthOfYear: val}))}
+                showSearch={false}
               />
             </div>
-            <div className="flex flex-col">
+            <div className="col-span-1 flex flex-col">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day</label>
-              <Select
+              <Combobox
                 options={dayOfMonthOptions.slice(0, newSchedule.MonthOfYear === '1' ? 28 : 31)}
                 value={newSchedule.DayOfMonth}
-                onChange={e => setNewSchedule(prev => ({...prev, DayOfMonth: e.target.value}))}
+                onChange={val => setNewSchedule(prev => ({...prev, DayOfMonth: val}))}
+                showSearch={false}
               />
             </div>
           </div>
@@ -1156,7 +1161,7 @@ const ReceiptsPage: React.FC = () => {
                               setIsConfirmModalOpen(true);
                             }}
                           >
-                            <CheckCircle className="h-4 w-4"/>
+                            <Check className="h-4 w-4"/>
                           </Button>
                         </Tooltip>
                         <Tooltip content="Dismiss">
@@ -1316,6 +1321,21 @@ const ReceiptsPage: React.FC = () => {
                           e.stopPropagation();
                           setEditingSchedule(row);
                           setIsScheduleModalOpen(true);
+                          setNewSchedule({
+                            SourceName: row.SourceName || '',
+                            DebtorName: entities.find(e => e.id === row.DebtorID)?.label || '',
+                            Category: row.Category || '',
+                            PaymentMethodID: String(row.PaymentMethodID),
+                            ExpectedAmount: String(row.ExpectedAmount || '0'),
+                            RecurrenceRule: row.RecurrenceRule || 'FREQ=MONTHLY;INTERVAL=1',
+                            DayOfMonth: String(row.DayOfMonth || getDate(getCurrentDate())),
+                            DayOfWeek: String(row.DayOfWeek || getDay(getCurrentDate())),
+                            MonthOfYear: String(row.MonthOfYear || getMonth(getCurrentDate())),
+                            RequiresConfirmation: !!row.RequiresConfirmation,
+                            LookaheadDays: row.LookaheadDays || 7,
+                            IsActive: !!row.IsActive,
+                            Note: row.Note || ''
+                          });
                         }}>
                           <Edit className="mr-2 h-4 w-4"/>
                           Edit
@@ -1535,7 +1555,7 @@ const ReceiptsPage: React.FC = () => {
                   <Combobox 
                     options={[{value: 'all', label: 'All'}, ...methods.map(m => ({value: String(m.PaymentMethodID), label: m.PaymentMethodName}))]} 
                     value={pendingFilters.toMethod} 
-                    onChange={val => handlePendingFilterChange('toMethod', val)}
+                    onChange={val => handlePendingFilterChange('toMethod', val)} 
                   />
                 </FilterOption>
               </>
@@ -1777,7 +1797,7 @@ const ReceiptsPage: React.FC = () => {
                       <Info className="h-4 w-4 text-gray-400 cursor-help"/>
                     </Tooltip>
                   </div>
-                  <Select
+                  <Combobox
                     options={[
                       {value: 'FREQ=DAILY;INTERVAL=1', label: 'Daily'},
                       {value: 'FREQ=WEEKLY;INTERVAL=1', label: 'Weekly'},
@@ -1785,7 +1805,8 @@ const ReceiptsPage: React.FC = () => {
                       {value: 'FREQ=YEARLY;INTERVAL=1', label: 'Yearly'},
                     ]}
                     value={newSchedule.RecurrenceRule}
-                    onChange={e => setNewSchedule(prev => ({...prev, RecurrenceRule: e.target.value}))}
+                    onChange={val => setNewSchedule(prev => ({...prev, RecurrenceRule: val}))}
+                    showSearch={false}
                   />
                 </div>
                 {renderRecurrenceDetails()}
@@ -1800,7 +1821,7 @@ const ReceiptsPage: React.FC = () => {
                 <StepperInput
                   value={String(newSchedule.LookaheadDays)}
                   onChange={e => setNewSchedule(prev => ({
-                    ...prev, LookaheadDays: Number.parseInt(e.target.value) || 0
+                    ...prev, lookaheadDays: Number.parseInt(e.target.value) || 0
                   }))}
                   onIncrement={() => setNewSchedule(prev => ({
                     ...prev,
@@ -1812,6 +1833,7 @@ const ReceiptsPage: React.FC = () => {
                   }))}
                   min={1}
                   max={1000}
+                  precision={0}
                 />
               </div>
               <Input

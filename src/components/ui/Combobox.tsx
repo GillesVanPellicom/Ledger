@@ -21,6 +21,7 @@ interface ComboboxProps {
   disabled?: boolean;
   label?: string;
   error?: string;
+  showSearch?: boolean;
 }
 
 const Combobox: React.FC<ComboboxProps> = ({
@@ -34,6 +35,7 @@ const Combobox: React.FC<ComboboxProps> = ({
   disabled = false,
   label,
   error,
+  showSearch = true,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,14 +105,15 @@ const Combobox: React.FC<ComboboxProps> = ({
       setActiveIndex(index >= 0 ? index : 0);
       
       // Focus input after a short delay to ensure rendering is complete
-      // Using requestAnimationFrame for better timing than setTimeout
-      requestAnimationFrame(() => {
-        inputRef.current?.focus();
-      });
+      if (showSearch) {
+        requestAnimationFrame(() => {
+          inputRef.current?.focus();
+        });
+      }
     } else {
       setSearchTerm('');
     }
-  }, [isOpen, value, options]);
+  }, [isOpen, value, options, showSearch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -189,19 +192,23 @@ const Combobox: React.FC<ComboboxProps> = ({
       style={popoverStyle}
       className="rounded-xl bg-field shadow-xl border border-border outline-none animate-in fade-in-0 zoom-in-95 flex flex-col"
     >
-      <div className="p-2 relative shrink-0">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-font-2" />
-        <Input
-          ref={inputRef}
-          type="text"
-          placeholder={searchPlaceholder}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full h-9 pl-8"
-          autoComplete="off"
-        />
-      </div>
-      <Divider className="shrink-0" />
+      {showSearch && (
+        <>
+          <div className="p-2 relative shrink-0">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-font-2" />
+            <Input
+              ref={inputRef}
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-9 pl-8"
+              autoComplete="off"
+            />
+          </div>
+          <Divider className="shrink-0" />
+        </>
+      )}
       <div ref={listRef} className="max-h-60 overflow-auto p-1">
         {filteredOptions.length > 0 ? (
           filteredOptions.map((option, index) => (

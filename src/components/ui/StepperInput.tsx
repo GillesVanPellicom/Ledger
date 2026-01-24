@@ -42,16 +42,19 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
     const decimalSeparator = settings.formatting?.decimalSeparator || 'dot';
 
     const internalRef = useRef<HTMLInputElement>(null);
+    const onChangeRef = useRef(onChange);
     
-    // Use useImperativeHandle to expose the internal ref to the parent ref
+    useEffect(() => {
+      onChangeRef.current = onChange;
+    }, [onChange]);
+
     useImperativeHandle(ref, () => internalRef.current as HTMLInputElement);
 
-    // Internal string state to preserve partial input
     const [inputValue, setInputValue] = useState<string>('');
 
     const formatValue = useCallback((val: string | number) => {
       const num = typeof val === 'string' ? Number.parseFloat(val.replace(',', '.')) : Number(val);
-      if (Number.isNaN(num)) return String(val);
+      if (Number.isNaN(num)) return '';
       
       let clamped = num;
       if (min !== undefined) clamped = Math.max(clamped, min);
@@ -61,13 +64,21 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       return decimalSeparator === 'comma' ? formatted.replace('.', ',') : formatted;
     }, [precision, min, max, decimalSeparator]);
 
-    // Sync with external value if it changes (e.g., parent resets or programmatic update)
+    // Sync with external value
     useEffect(() => {
       const formatted = formatValue(value);
       setInputValue(formatted);
+      
+      const normalizedFormatted = formatted.replace(',', '.');
+      const normalizedValue = String(value).replace(',', '.');
+      
+      if (normalizedFormatted !== normalizedValue && normalizedFormatted !== '') {
+        onChangeRef.current({
+          target: { value: normalizedFormatted },
+        } as React.ChangeEvent<HTMLInputElement>);
+      }
     }, [value, formatValue]);
 
-    // Parse numeric value for stepper buttons and disabled state
     const numericValue =
       typeof value === 'string'
         ? Number.parseFloat(value.replace(',', '.'))
@@ -78,10 +89,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let raw = e.target.value;
-
-      // Accept digits + at most one dot/comma
-      if (!/^\d*([.,]\d*)?$/.test(raw)) return;
-
+      if (!/^-?\d*([.,]\d*)?$/.test(raw)) return;
       setInputValue(raw);
     };
 
@@ -89,15 +97,12 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       const formatted = formatValue(inputValue);
       setInputValue(formatted);
 
-      // Trigger parent's onChange with normalized value (dot)
       const normalized = formatted.replace(',', '.');
-      const syntheticEvent = {
+      onChangeRef.current({
         target: { value: normalized },
-      } as React.ChangeEvent<HTMLInputElement>;
-      onChange(syntheticEvent);
+      } as React.ChangeEvent<HTMLInputElement>);
     };
 
-    // Disable scroll wheel changing value
     useEffect(() => {
       const handleWheel = (e: WheelEvent) => {
         if (document.activeElement === internalRef.current) {
@@ -149,7 +154,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       
       const formatted = next.toFixed(precision);
       
-      onChange({
+      onChangeRef.current({
         target: { value: formatted },
       } as React.ChangeEvent<HTMLInputElement>);
     };

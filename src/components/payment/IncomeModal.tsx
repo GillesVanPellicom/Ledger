@@ -7,7 +7,6 @@ import { db } from '../../utils/db';
 import { format, getDate, getDay, getMonth, parseISO, startOfDay, startOfToday, subMonths, isBefore } from 'date-fns';
 import { PaymentMethod, TopUp } from '../../types';
 import Combobox from '../ui/Combobox';
-import Select from '../ui/Select';
 import { useQueryClient } from '@tanstack/react-query';
 import Divider from '../ui/Divider';
 import StepperInput from '../ui/StepperInput';
@@ -91,6 +90,8 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
     createForPastPeriod: false
   });
 
+  const initializedRef = useRef<number | null | undefined>(undefined);
+
   const fetchReferenceData = useCallback(async () => {
     const [pmRows, catRows, srcRows, entRows] = await Promise.all([
       db.query<PaymentMethod>("SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1"),
@@ -115,7 +116,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
           setMode('single');
         }
 
-        if (topUpToEdit) {
+        if (topUpToEdit && initializedRef.current !== topUpToEdit.TopUpID) {
           const sourceName = srcRows.find((s: any) => s.IncomeSourceID === topUpToEdit.IncomeSourceID)?.IncomeSourceName || '';
           const categoryName = catRows.find((c: any) => c.IncomeCategoryID === topUpToEdit.IncomeCategoryID)?.IncomeCategoryName || '';
           const debtorName = entRows.find((d: any) => d.DebtorID === topUpToEdit.DebtorID)?.DebtorName || '';
@@ -137,7 +138,8 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
             isActive: true,
             createForPastPeriod: false
           });
-        } else {
+          initializedRef.current = topUpToEdit.TopUpID;
+        } else if (!topUpToEdit) {
           const today = getCurrentDate();
           setFormData({ 
             amount: '0', 
@@ -156,11 +158,14 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
             isActive: true,
             createForPastPeriod: false
           });
+          initializedRef.current = null;
         }
         setErrors({});
       };
       
       initialize();
+    } else {
+      initializedRef.current = undefined;
     }
   }, [isOpen, topUpToEdit, paymentMethodId, forceSingleMode, fetchReferenceData, getCurrentDate]);
 
@@ -244,36 +249,40 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
     switch (type) {
       case 'MONTHLY':
         return (
-          <Select
+          <Combobox
             label="Day of Month"
             options={dayOfMonthOptions}
             value={formData.dayOfMonth}
-            onChange={e => setFormData(prev => ({...prev, dayOfMonth: e.target.value}))}
+            onChange={val => setFormData(prev => ({...prev, dayOfMonth: val}))}
+            showSearch={false}
           />
         );
       case 'WEEKLY':
         return (
-          <Select
+          <Combobox
             label="Day of Week"
             options={dayOfWeekOptions}
             value={formData.dayOfWeek}
-            onChange={e => setFormData(prev => ({...prev, dayOfWeek: e.target.value}))}
+            onChange={val => setFormData(prev => ({...prev, dayOfWeek: val}))}
+            showSearch={false}
           />
         );
       case 'YEARLY':
         return (
           <div className="grid grid-cols-2 gap-4">
-            <Select
+            <Combobox
               label="Month"
               options={monthOfYearOptions}
               value={formData.monthOfYear}
-              onChange={e => setFormData(prev => ({...prev, monthOfYear: e.target.value}))}
+              onChange={val => setFormData(prev => ({...prev, monthOfYear: val}))}
+              showSearch={false}
             />
-            <Select
+            <Combobox
               label="Day"
               options={dayOfMonthOptions.slice(0, formData.monthOfYear === '1' ? 28 : 31)}
               value={formData.dayOfMonth}
-              onChange={e => setFormData(prev => ({...prev, dayOfMonth: e.target.value}))}
+              onChange={val => setFormData(prev => ({...prev, dayOfMonth: val}))}
+              showSearch={false}
             />
           </div>
         );
@@ -420,7 +429,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                       <Info className="h-4 w-4 text-font-2 cursor-help"/>
                     </Tooltip>
                   </div>
-                  <Select
+                  <Combobox
                     options={[
                       {value: 'FREQ=DAILY;INTERVAL=1', label: 'Daily'},
                       {value: 'FREQ=WEEKLY;INTERVAL=1', label: 'Weekly'},
@@ -428,7 +437,8 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                       {value: 'FREQ=YEARLY;INTERVAL=1', label: 'Yearly'},
                     ]}
                     value={formData.recurrenceRule}
-                    onChange={e => setFormData(prev => ({...prev, recurrenceRule: e.target.value}))}
+                    onChange={val => setFormData(prev => ({...prev, recurrenceRule: val}))}
+                    showSearch={false}
                   />
                 </div>
                 {renderRecurrenceDetails()}
@@ -456,6 +466,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                   }))}
                   min={1}
                   max={1000}
+                  precision={0}
                 />
               </div>
 
@@ -466,7 +477,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                     checked={formData.requiresConfirmation}
                     onChange={e => setFormData(prev => ({ ...prev, requiresConfirmation: e.target.checked }))}
                   />
-                  <Tooltip content="If enabled, you must confirm each occurrence before it's deposited.">
+                  <Tooltip content={`If enabled, you must confirm each occurrence before it's deposited. Must be confirmed in tab "To Check"`}>
                     <Info className="h-4 w-4 text-font-2 cursor-help"/>
                   </Tooltip>
                 </div>

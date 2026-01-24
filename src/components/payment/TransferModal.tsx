@@ -26,13 +26,13 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
   const [formData, setFormData] = useState({ amount: '0', date: new Date(), notes: '' });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [transferFrom, setTransferFrom] = useState<string>(paymentMethodId);
+  const [transferFrom, setTransferFrom] = useState<string>('');
   const [transferTo, setTransferTo] = useState<string>('');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [methodBalances, setMethodBalances] = useState<Record<string, number>>({});
   const queryClient = useQueryClient();
 
-  const fromMethodBalance = methodBalances[transferFrom] || 0;
+  const fromMethodBalance = transferFrom ? (methodBalances[transferFrom] || 0) : 0;
 
   // Initialize and fetch methods
   useEffect(() => {
@@ -72,37 +72,26 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
           }
         } else {
           setFormData({ amount: '0', date: new Date(), notes: '' });
-          setTransferFrom(paymentMethodId);
-          
-          const otherMethods = methods.filter(m => String(m.PaymentMethodID) !== paymentMethodId);
-          if (otherMethods.length > 0) {
-            setTransferTo(String(otherMethods[0].PaymentMethodID));
-          }
+          setTransferFrom('');
+          setTransferTo('');
         }
         setErrors({});
       };
       init();
     }
-  }, [isOpen, topUpToEdit, paymentMethodId]);
-
-  // Ensure amount is within range
-  useEffect(() => {
-    const amount = Number(formData.amount);
-    if (amount > fromMethodBalance || amount < 0) {
-      setFormData(prev => ({ ...prev, amount: '0' }));
-    }
-  }, [fromMethodBalance, formData.amount]);
+  }, [isOpen, topUpToEdit]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
     const amount = Number(formData.amount);
+    if (!transferFrom) newErrors.transferFrom = 'Please select an origin account.';
+    if (!transferTo) newErrors.transferTo = 'Please select a destination account.';
+    if (transferFrom && transferTo && transferFrom === transferTo) newErrors.transferTo = 'Origin and destination must be different.';
     if (!formData.amount || amount <= 0) newErrors.amount = 'Amount must be greater than 0.';
-    if (amount > fromMethodBalance) {
+    if (transferFrom && amount > fromMethodBalance) {
       newErrors.amount = `Insufficient funds. Max: €${fromMethodBalance.toFixed(2)}`;
     }
     if (!formData.date) newErrors.date = 'Date is required.';
-    if (!transferTo) newErrors.transferTo = 'Please select a destination account.';
-    if (transferFrom === transferTo) newErrors.transferTo = 'Origin and destination must be different.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -183,14 +172,16 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
                 options={topUpToEdit ? methodOptions : originOptions}
                 value={transferFrom}
                 onChange={setTransferFrom}
+                error={errors.transferFrom}
+                placeholder="Select origin..."
               />
-              <p className={cn("text-[10px] text-font-2 text-center transition-opacity", transferFrom ? "opacity-100" : "opacity-0")}>
+              <p className={cn("text-[10px] text-font-2 text-center transition-opacity", transferFrom ? "opacity-100" : "opacity-0 invisible")}>
                 Available: €{fromMethodBalance.toFixed(2)}
               </p>
             </div>
 
             {/* Arrow */}
-            <div className="p-4 rounded-full bg-bg-2 text-font-2 mt-2">
+            <div className="text-font-2 mt-2">
               <ArrowRight className="h-12 w-12" />
             </div>
 
@@ -202,21 +193,24 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
                 value={transferTo}
                 onChange={setTransferTo}
                 error={errors.transferTo}
+                placeholder="Select destination..."
               />
               <div className="h-4" />
             </div>
           </div>
 
           {/* Amount */}
-          <div className="w-64 mt-6">
+          <div className="w-64 mt-6 flex flex-col items-center">
             <StepperInput
               label="Amount"
+              className="w-full"
+              inputClassName="text-center"
               value={formData.amount}
               onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
               onIncrement={() => setFormData(prev => ({ ...prev, amount: String(Number(prev.amount) + 1) }))}
               onDecrement={() => setFormData(prev => ({ ...prev, amount: String(Math.max(0, Number(prev.amount) - 1)) }))}
               min={0}
-              max={fromMethodBalance}
+              max={fromMethodBalance || undefined}
               error={errors.amount}
             />
           </div>
