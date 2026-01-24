@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useImperativeHandle } from 'react';
+import React, { useRef, useState, useEffect, useImperativeHandle, useCallback } from 'react';
 import { cn } from '../../utils/cn';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import Input from './Input';
@@ -47,14 +47,27 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
     useImperativeHandle(ref, () => internalRef.current as HTMLInputElement);
 
     // Internal string state to preserve partial input
-    const [inputValue, setInputValue] = useState<string>(String(value));
+    const [inputValue, setInputValue] = useState<string>('');
 
-    // Sync with external value if it changes (e.g., parent resets)
+    const formatValue = useCallback((val: string | number) => {
+      const num = typeof val === 'string' ? Number.parseFloat(val.replace(',', '.')) : Number(val);
+      if (Number.isNaN(num)) return String(val);
+      
+      let clamped = num;
+      if (min !== undefined) clamped = Math.max(clamped, min);
+      if (max !== undefined) clamped = Math.min(clamped, max);
+      
+      const formatted = clamped.toFixed(precision);
+      return decimalSeparator === 'comma' ? formatted.replace('.', ',') : formatted;
+    }, [precision, min, max, decimalSeparator]);
+
+    // Sync with external value if it changes (e.g., parent resets or programmatic update)
     useEffect(() => {
-      setInputValue(String(value));
-    }, [value]);
+      const formatted = formatValue(value);
+      setInputValue(formatted);
+    }, [value, formatValue]);
 
-    // Parse numeric value for stepper buttons
+    // Parse numeric value for stepper buttons and disabled state
     const numericValue =
       typeof value === 'string'
         ? Number.parseFloat(value.replace(',', '.'))
@@ -73,33 +86,16 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
     };
 
     const handleBlur = () => {
-      // Normalize input to dot internally
-      let normalized = inputValue.replace(',', '.');
-
-      // Optional: enforce min/max and precision
-      let num = Number.parseFloat(normalized);
-      if (!Number.isNaN(num)) {
-        if (min !== undefined) num = Math.max(num, min);
-        if (max !== undefined) num = Math.min(num, max);
-        normalized = num.toFixed(precision);
-      }
-
-      setInputValue(
-        decimalSeparator === 'comma' ? normalized.replace('.', ',') : normalized
-      );
+      const formatted = formatValue(inputValue);
+      setInputValue(formatted);
 
       // Trigger parent's onChange with normalized value (dot)
+      const normalized = formatted.replace(',', '.');
       const syntheticEvent = {
         target: { value: normalized },
       } as React.ChangeEvent<HTMLInputElement>;
       onChange(syntheticEvent);
     };
-
-    // Display value mapping for comma/dot
-    const displayValue =
-      decimalSeparator === 'comma'
-        ? inputValue.replaceAll('.', ',')
-        : inputValue;
 
     // Disable scroll wheel changing value
     useEffect(() => {
@@ -135,6 +131,15 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
     };
 
     const handleStep = (increment: boolean) => {
+      if (increment && onIncrement) {
+        onIncrement();
+        return;
+      }
+      if (!increment && onDecrement) {
+        onDecrement();
+        return;
+      }
+
       let num = Number.isNaN(numericValue) ? 0 : numericValue;
       let step = 1;
       let next = increment ? num + step : num - step;
@@ -163,7 +168,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
             type="text"
             inputMode="decimal"
             className={cn('rounded-r-none relative h-full', inputClassName)}
-            value={displayValue}
+            value={inputValue}
             onChange={handleChange}
             onBlur={handleBlur}
             {...props}
