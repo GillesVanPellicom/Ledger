@@ -1,19 +1,19 @@
-CREATE TABLE IF NOT EXISTS ReceiptDebtorPayments (
-    PaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
-    ReceiptID INTEGER NOT NULL,
-    DebtorID INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS ExpenseEntityPayments (
+    ExpenseEntityPaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ExpenseID INTEGER NOT NULL,
+    EntityID INTEGER NOT NULL,
     PaidDate TEXT NOT NULL,
-    TopUpID INTEGER,
+    IncomeID INTEGER,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE,
-    FOREIGN KEY (DebtorID) REFERENCES Debtors (DebtorID),
-    FOREIGN KEY (TopUpID) REFERENCES TopUps (TopUpID) ON DELETE SET NULL
+    FOREIGN KEY (ExpenseID) REFERENCES Expenses (ExpenseID) ON DELETE CASCADE,
+    FOREIGN KEY (EntityID) REFERENCES Entities (EntityID),
+    FOREIGN KEY (IncomeID) REFERENCES Income (IncomeID) ON DELETE SET NULL
 );
 
-CREATE TRIGGER trigger_receiptdebtorpayments_updated_at AFTER UPDATE ON ReceiptDebtorPayments
+CREATE TRIGGER trigger_expenseentitypayments_updated_at AFTER UPDATE ON ExpenseEntityPayments
 BEGIN
-    UPDATE ReceiptDebtorPayments SET UpdatedAt = CURRENT_TIMESTAMP WHERE PaymentID = NEW.PaymentID;
+    UPDATE ExpenseEntityPayments SET UpdatedAt = CURRENT_TIMESTAMP WHERE ExpenseEntityPaymentID = NEW.ExpenseEntityPaymentID;
 END;
 
-CREATE INDEX IF NOT EXISTS idx_receiptdebtorpayments_receipt_id ON ReceiptDebtorPayments (ReceiptID);
+CREATE INDEX IF NOT EXISTS idx_expenseentitypayments_expense_id ON ExpenseEntityPayments (ExpenseID);

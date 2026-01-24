@@ -43,12 +43,12 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
         const balances: Record<string, number> = {};
         for (const m of methods) {
           const receipts = await db.queryOne<{ total: number }>(`
-            SELECT SUM(CASE WHEN IsNonItemised = 1 THEN NonItemisedTotal ELSE (SELECT SUM(LineQuantity * LineUnitPrice) FROM LineItems WHERE ReceiptID = Receipts.ReceiptID) END) as total
-            FROM Receipts WHERE PaymentMethodID = ?
+            SELECT SUM(CASE WHEN IsNonItemised = 1 THEN NonItemisedTotal ELSE (SELECT SUM(LineQuantity * LineUnitPrice) FROM ExpenseLineItems WHERE ExpenseID = Expenses.ExpenseID) END) as total
+            FROM Expenses WHERE PaymentMethodID = ?
           `, [m.PaymentMethodID]);
           
           const topups = await db.queryOne<{ total: number }>(`
-            SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?
+            SELECT SUM(IncomeAmount) as total FROM Income WHERE PaymentMethodID = ?
           `, [m.PaymentMethodID]);
 
           balances[String(m.PaymentMethodID)] = (m.PaymentMethodFunds || 0) + (topups?.total || 0) - (receipts?.total || 0);
@@ -59,13 +59,13 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
         
         if (topUpToEdit) {
           setFormData({ 
-            amount: String(Math.abs(topUpToEdit.TopUpAmount)), 
-            date: new Date(topUpToEdit.TopUpDate), 
-            notes: topUpToEdit.TopUpNote || '' 
+            amount: String(Math.abs(topUpToEdit.IncomeAmount)), 
+            date: new Date(topUpToEdit.IncomeDate), 
+            notes: topUpToEdit.IncomeNote || '' 
           });
           setTransferFrom(String(topUpToEdit.PaymentMethodID));
           if (topUpToEdit.TransferID) {
-            const otherTu = await db.queryOne<TopUp>('SELECT * FROM TopUps WHERE TransferID = ? AND TopUpID != ?', [topUpToEdit.TransferID, topUpToEdit.TopUpID]);
+            const otherTu = await db.queryOne<TopUp>('SELECT * FROM Income WHERE TransferID = ? AND IncomeID != ?', [topUpToEdit.TransferID, topUpToEdit.IncomeID]);
             if (otherTu) {
               setTransferTo(String(otherTu.PaymentMethodID));
             }
@@ -112,11 +112,11 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
         
         // Update associated TopUps
         await db.execute(
-          'UPDATE TopUps SET PaymentMethodID = ?, TopUpAmount = ?, TopUpDate = ?, TopUpNote = ? WHERE TransferID = ? AND TopUpAmount < 0',
+          'UPDATE Income SET PaymentMethodID = ?, IncomeAmount = ?, IncomeDate = ?, IncomeNote = ? WHERE TransferID = ? AND IncomeAmount < 0',
           [transferFrom, -Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, topUpToEdit.TransferID]
         );
         await db.execute(
-          'UPDATE TopUps SET PaymentMethodID = ?, TopUpAmount = ?, TopUpDate = ?, TopUpNote = ? WHERE TransferID = ? AND TopUpAmount > 0',
+          'UPDATE Income SET PaymentMethodID = ?, IncomeAmount = ?, IncomeDate = ?, IncomeNote = ? WHERE TransferID = ? AND IncomeAmount > 0',
           [transferTo, Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, topUpToEdit.TransferID]
         );
       } else {

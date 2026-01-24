@@ -6,13 +6,13 @@ import { useSettingsStore } from '../store/useSettingsStore';
 /* ==================== Types ==================== */
 
 export interface IncomeSchedule {
-  IncomeScheduleID: number;
+  ScheduleID: number;
   Type: 'income' | 'expense';
   IncomeSourceID: number | null;
-  StoreID: number | null;
-  DebtorID: number | null;
+  VendorID: number | null;
+  EntityID: number | null;
   IncomeCategoryID: number | null;
-  CategoryID: number | null;
+  ProductCategoryID: number | null;
   SourceName: string;
   Category: string | null;
   PaymentMethodID: number;
@@ -30,8 +30,8 @@ export interface IncomeSchedule {
 }
 
 export interface PendingIncome {
-  PendingIncomeID: number;
-  IncomeScheduleID: number | null;
+  SchedulePendingID: number;
+  ScheduleID: number | null;
   PlannedDate: string; // yyyy-MM-dd
   Amount: number | null;
   Status: 'pending' | 'confirmed' | 'rejected';
@@ -42,10 +42,10 @@ export interface PendingIncome {
   PaymentMethodID?: number;
   Note?: string | null;
   IncomeSourceID?: number | null;
-  StoreID?: number | null;
+  VendorID?: number | null;
   IncomeCategoryID?: number | null;
-  CategoryID?: number | null;
-  DebtorID?: number | null;
+  ProductCategoryID?: number | null;
+  EntityID?: number | null;
 }
 
 /* ==================== Helpers ==================== */
@@ -78,19 +78,19 @@ export const incomeCommitments = {
       SELECT 
         s.*, 
         CASE 
-          WHEN s.Type = 'expense' THEN st.StoreName
+          WHEN s.Type = 'expense' THEN st.VendorName
           ELSE src.IncomeSourceName 
         END AS SourceName,
         CASE 
-          WHEN s.Type = 'expense' THEN c.CategoryName
+          WHEN s.Type = 'expense' THEN c.ProductCategoryName
           ELSE cat.IncomeCategoryName 
         END AS Category,
         pm.PaymentMethodName
-      FROM IncomeSchedules s
+      FROM Schedules s
       LEFT JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
-      LEFT JOIN Stores st ON s.StoreID = st.StoreID
+      LEFT JOIN Vendors st ON s.VendorID = st.VendorID
       LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
-      LEFT JOIN Categories c ON s.CategoryID = c.CategoryID
+      LEFT JOIN ProductCategories c ON s.ProductCategoryID = c.ProductCategoryID
       LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
     `);
 
@@ -111,27 +111,27 @@ export const incomeCommitments = {
         p.*, 
         s.Type,
         CASE 
-          WHEN s.Type = 'expense' THEN st.StoreName
+          WHEN s.Type = 'expense' THEN st.VendorName
           ELSE src.IncomeSourceName 
         END AS SourceName,
         CASE 
-          WHEN s.Type = 'expense' THEN c.CategoryName
+          WHEN s.Type = 'expense' THEN c.ProductCategoryName
           ELSE cat.IncomeCategoryName 
         END AS Category,
         pm.PaymentMethodName,
         s.PaymentMethodID,
         s.Note,
         s.IncomeSourceID,
-        s.StoreID,
+        s.VendorID,
         s.IncomeCategoryID,
-        s.CategoryID,
-        s.DebtorID
-      FROM PendingIncomes p
-      JOIN IncomeSchedules s ON p.IncomeScheduleID = s.IncomeScheduleID
+        s.ProductCategoryID,
+        s.EntityID
+      FROM SchedulesPending p
+      JOIN Schedules s ON p.ScheduleID = s.ScheduleID
       LEFT JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
-      LEFT JOIN Stores st ON s.StoreID = st.StoreID
+      LEFT JOIN Vendors st ON s.VendorID = st.VendorID
       LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
-      LEFT JOIN Categories c ON s.CategoryID = c.CategoryID
+      LEFT JOIN ProductCategories c ON s.ProductCategoryID = c.ProductCategoryID
       LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
       WHERE p.Status = 'pending'
       ORDER BY p.PlannedDate ASC
@@ -143,11 +143,11 @@ export const incomeCommitments = {
   getConfirmedIncomeTopUps: async (): Promise<any[]> => {
     return await db.query(`
       SELECT t.*, pm.PaymentMethodName, src.IncomeSourceName as SourceName
-      FROM TopUps t
+      FROM Income t
       LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
       LEFT JOIN IncomeSources src ON t.IncomeSourceID = src.IncomeSourceID
-      WHERE t.TopUpNote NOT LIKE 'Repayment from %'
-      ORDER BY t.TopUpDate DESC
+      WHERE t.IncomeNote NOT LIKE 'Repayment from %'
+      ORDER BY t.IncomeDate DESC
     `);
   },
 
@@ -156,32 +156,32 @@ export const incomeCommitments = {
       db.query<any>(`
         SELECT 
           rdp.PaidDate,
-          d.DebtorID,
-          d.DebtorName,
+          d.EntityID as DebtorID,
+          d.EntityName as DebtorName,
           pm.PaymentMethodName,
-          t.TopUpAmount,
+          t.IncomeAmount as TopUpAmount,
           t.PaymentMethodID,
-          rdp.ReceiptID
-        FROM ReceiptDebtorPayments rdp
-        JOIN Debtors d ON rdp.DebtorID = d.DebtorID
-        JOIN TopUps t ON rdp.TopUpID = t.TopUpID
+          rdp.ExpenseID as ReceiptID
+        FROM ExpenseEntityPayments rdp
+        JOIN Entities d ON rdp.EntityID = d.EntityID
+        JOIN Income t ON rdp.IncomeID = t.IncomeID
         JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
         ORDER BY rdp.PaidDate DESC
       `),
       db.query<any>(`
         SELECT
-          r.ReceiptDate as PaidDate,
-          d.DebtorID,
-          d.DebtorName,
+          r.ExpenseDate as PaidDate,
+          d.EntityID as DebtorID,
+          d.EntityName as DebtorName,
           pm.PaymentMethodName,
           r.NonItemisedTotal as TopUpAmount,
           r.PaymentMethodID,
-          r.ReceiptID
-        FROM Receipts r
-        JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
+          r.ExpenseID as ReceiptID
+        FROM Expenses r
+        JOIN Entities d ON r.OwedToEntityID = d.EntityID
         JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-        WHERE r.Status = 'paid' AND r.OwedToDebtorID IS NOT NULL
-        ORDER BY r.ReceiptDate DESC
+        WHERE r.Status = 'paid' AND r.OwedToEntityID IS NOT NULL
+        ORDER BY r.ExpenseDate DESC
       `)
     ]);
 
@@ -200,26 +200,26 @@ export const incomeCommitments = {
       // For expenses, we check Receipts table
       // Assuming non-itemised receipts for scheduled expenses
       return await db.query<{ TopUpDate: string }>(`
-        SELECT ReceiptDate as TopUpDate
-        FROM Receipts
-        WHERE StoreID = ?
+        SELECT ExpenseDate as TopUpDate
+        FROM Expenses
+        WHERE VendorID = ?
           AND PaymentMethodID = ?
           AND IsNonItemised = 1
           AND ABS(NonItemisedTotal - ?) < 0.01
-      `, [schedule.StoreID, schedule.PaymentMethodID, schedule.ExpectedAmount]);
+      `, [schedule.VendorID, schedule.PaymentMethodID, schedule.ExpectedAmount]);
     } else {
       return await db.query<{ TopUpDate: string }>(
         `
-        SELECT TopUpDate
-        FROM TopUps
+        SELECT IncomeDate as TopUpDate
+        FROM Income
         WHERE IncomeSourceID = ? 
           AND (IncomeCategoryID = ? OR (IncomeCategoryID IS NULL AND ? IS NULL))
-          AND (DebtorID = ? OR (DebtorID IS NULL AND ? IS NULL))
+          AND (EntityID = ? OR (EntityID IS NULL AND ? IS NULL))
       `,
         [
           schedule.IncomeSourceID, 
           schedule.IncomeCategoryID, schedule.IncomeCategoryID,
-          schedule.DebtorID, schedule.DebtorID
+          schedule.EntityID, schedule.EntityID
         ]
       );
     }
@@ -234,18 +234,18 @@ export const incomeCommitments = {
     Note: string;
     IncomeSourceID?: number | null;
     IncomeCategoryID?: number | null;
-    DebtorID?: number | null;
+    EntityID?: number | null;
   }) => {
     return await db.execute(
       `
-      INSERT INTO TopUps (
+      INSERT INTO Income (
         PaymentMethodID,
-        TopUpAmount,
-        TopUpDate,
-        TopUpNote,
+        IncomeAmount,
+        IncomeDate,
+        IncomeNote,
         IncomeSourceID,
         IncomeCategoryID,
-        DebtorID
+        EntityID
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
       [
@@ -255,7 +255,7 @@ export const incomeCommitments = {
         data.Note, 
         data.IncomeSourceID || null, 
         data.IncomeCategoryID || null,
-        data.DebtorID || null
+        data.EntityID || null
       ]
     );
   },
@@ -265,16 +265,16 @@ export const incomeCommitments = {
     Amount: number;
     Date: string; // yyyy-MM-dd
     Note: string;
-    StoreID: number;
-    CategoryID?: number | null;
+    VendorID: number;
+    ProductCategoryID?: number | null;
   }) => {
     // Create a non-itemised receipt
     return await db.execute(
       `
-      INSERT INTO Receipts (
-        StoreID,
-        ReceiptDate,
-        ReceiptNote,
+      INSERT INTO Expenses (
+        VendorID,
+        ExpenseDate,
+        ExpenseNote,
         PaymentMethodID,
         Status,
         IsNonItemised,
@@ -283,7 +283,7 @@ export const incomeCommitments = {
       ) VALUES (?, ?, ?, ?, 'paid', 1, ?, 0)
       `,
       [
-        data.StoreID,
+        data.VendorID,
         data.Date,
         data.Note,
         data.PaymentMethodID,
@@ -298,21 +298,21 @@ export const incomeCommitments = {
   },
 
   createPendingIncome: async (data: {
-    IncomeScheduleID: number;
+    ScheduleID: number;
     PlannedDate: string; // yyyy-MM-dd
     Amount: number | null;
   }) => {
     try {
       return await db.execute(
         `
-        INSERT INTO PendingIncomes (
-          IncomeScheduleID,
+        INSERT INTO SchedulesPending (
+          ScheduleID,
           PlannedDate,
           Amount,
           Status
         ) VALUES (?, ?, ?, 'pending')
       `,
-        [data.IncomeScheduleID, data.PlannedDate, data.Amount]
+        [data.ScheduleID, data.PlannedDate, data.Amount]
       );
     } catch (err: any) {
       // Assume unique constraint violation → idempotent behavior
@@ -325,7 +325,7 @@ export const incomeCommitments = {
 
   deletePendingIncome: async (id: number) => {
     return await db.execute(
-      `DELETE FROM PendingIncomes WHERE PendingIncomeID = ?`,
+      `DELETE FROM SchedulesPending WHERE SchedulePendingID = ?`,
       [id]
     );
   },
@@ -335,10 +335,10 @@ export const incomeCommitments = {
   createSchedule: async (data: any) => {
     const type = data.Type || 'income';
     let sourceId = null;
-    let storeId = null;
+    let vendorId = null;
     let categoryId = null;
     let incomeCategoryId = null;
-    let debtorId = null;
+    let entityId = null;
 
     if (type === 'income') {
       const source = await db.queryOne<{ IncomeSourceID: number }>(
@@ -356,42 +356,42 @@ export const incomeCommitments = {
       }
 
       if (data.DebtorName) {
-        const debtor = await db.queryOne<{ DebtorID: number }>(
-          `SELECT DebtorID FROM Debtors WHERE DebtorName = ?`,
+        const debtor = await db.queryOne<{ EntityID: number }>(
+          `SELECT EntityID FROM Entities WHERE EntityName = ?`,
           [data.DebtorName]
         );
-        debtorId = debtor?.DebtorID ?? null;
+        entityId = debtor?.EntityID ?? null;
       }
     } else {
       // Expense
-      const store = await db.queryOne<{ StoreID: number }>(
-        `SELECT StoreID FROM Stores WHERE StoreName = ?`,
+      const store = await db.queryOne<{ VendorID: number }>(
+        `SELECT VendorID FROM Vendors WHERE VendorName = ?`,
         [data.SourceName] // SourceName holds StoreName for expenses in the UI form
       );
-      storeId = assertDefined(store?.StoreID, 'Store not found');
+      vendorId = assertDefined(store?.VendorID, 'Store not found');
 
       if (data.Category) {
         // Assuming general Categories table for expenses
         // We might need to look up by name or create if not exists? 
         // For now assume it exists or we pass ID. The UI passes name.
         // Let's try to find it.
-        const category = await db.queryOne<{ CategoryID: number }>(
-            `SELECT CategoryID FROM Categories WHERE CategoryName = ?`,
+        const category = await db.queryOne<{ ProductCategoryID: number }>(
+            `SELECT ProductCategoryID FROM ProductCategories WHERE ProductCategoryName = ?`,
             [data.Category]
         );
-        categoryId = category?.CategoryID ?? null;
+        categoryId = category?.ProductCategoryID ?? null;
       }
     }
 
     const result = await db.execute(
       `
-      INSERT INTO IncomeSchedules (
+      INSERT INTO Schedules (
         Type,
         IncomeSourceID,
-        StoreID,
-        DebtorID,
+        VendorID,
+        EntityID,
         IncomeCategoryID,
-        CategoryID,
+        ProductCategoryID,
         PaymentMethodID,
         ExpectedAmount,
         RecurrenceRule,
@@ -407,8 +407,8 @@ export const incomeCommitments = {
       [
         type,
         sourceId,
-        storeId,
-        debtorId,
+        vendorId,
+        entityId,
         incomeCategoryId,
         categoryId,
         data.PaymentMethodID,
@@ -427,7 +427,7 @@ export const incomeCommitments = {
 
     if (data.CreateForPastPeriod) {
       const schedule = await db.queryOne<IncomeSchedule>(
-        `SELECT * FROM IncomeSchedules WHERE IncomeScheduleID = ?`,
+        `SELECT * FROM Schedules WHERE ScheduleID = ?`,
         [newScheduleId]
       );
       if (schedule) {
@@ -435,7 +435,7 @@ export const incomeCommitments = {
         const occurrences = calculateOccurrences(schedule, subMonths(today, 1), today);
         if (occurrences.length > 0) {
           await incomeCommitments.createPendingIncome({
-            IncomeScheduleID: newScheduleId,
+            ScheduleID: newScheduleId,
             PlannedDate: format(occurrences[0], 'yyyy-MM-dd'),
             Amount: schedule.ExpectedAmount
           });
@@ -449,10 +449,10 @@ export const incomeCommitments = {
   updateSchedule: async (id: number, data: any) => {
     const type = data.Type || 'income';
     let sourceId = null;
-    let storeId = null;
+    let vendorId = null;
     let categoryId = null;
     let incomeCategoryId = null;
-    let debtorId = null;
+    let entityId = null;
 
     if (type === 'income') {
       const source = await db.queryOne<{ IncomeSourceID: number }>(
@@ -470,38 +470,38 @@ export const incomeCommitments = {
       }
 
       if (data.DebtorName) {
-        const debtor = await db.queryOne<{ DebtorID: number }>(
-          `SELECT DebtorID FROM Debtors WHERE DebtorName = ?`,
+        const debtor = await db.queryOne<{ EntityID: number }>(
+          `SELECT EntityID FROM Entities WHERE EntityName = ?`,
           [data.DebtorName]
         );
-        debtorId = debtor?.DebtorID ?? null;
+        entityId = debtor?.EntityID ?? null;
       }
     } else {
-      const store = await db.queryOne<{ StoreID: number }>(
-        `SELECT StoreID FROM Stores WHERE StoreName = ?`,
+      const store = await db.queryOne<{ VendorID: number }>(
+        `SELECT VendorID FROM Vendors WHERE VendorName = ?`,
         [data.SourceName]
       );
-      storeId = assertDefined(store?.StoreID, 'Store not found');
+      vendorId = assertDefined(store?.VendorID, 'Store not found');
 
       if (data.Category) {
-        const category = await db.queryOne<{ CategoryID: number }>(
-            `SELECT CategoryID FROM Categories WHERE CategoryName = ?`,
+        const category = await db.queryOne<{ ProductCategoryID: number }>(
+            `SELECT ProductCategoryID FROM ProductCategories WHERE ProductCategoryName = ?`,
             [data.Category]
         );
-        categoryId = category?.CategoryID ?? null;
+        categoryId = category?.ProductCategoryID ?? null;
       }
     }
 
     return await db.execute(
       `
-      UPDATE IncomeSchedules
+      UPDATE Schedules
       SET
         Type = ?,
         IncomeSourceID = ?,
-        StoreID = ?,
-        DebtorID = ?,
+        VendorID = ?,
+        EntityID = ?,
         IncomeCategoryID = ?,
-        CategoryID = ?,
+        ProductCategoryID = ?,
         PaymentMethodID = ?,
         ExpectedAmount = ?,
         RecurrenceRule = ?,
@@ -512,13 +512,13 @@ export const incomeCommitments = {
         LookaheadDays = ?,
         IsActive = ?,
         Note = ?
-      WHERE IncomeScheduleID = ?
+      WHERE ScheduleID = ?
     `,
       [
         type,
         sourceId,
-        storeId,
-        debtorId,
+        vendorId,
+        entityId,
         incomeCategoryId,
         categoryId,
         data.PaymentMethodID,
@@ -539,13 +539,13 @@ export const incomeCommitments = {
   deleteSchedule: async (id: number, hardDelete: boolean) => {
     if (hardDelete) {
       await db.execute(
-        `DELETE FROM PendingIncomes WHERE IncomeScheduleID = ?`,
+        `DELETE FROM SchedulesPending WHERE ScheduleID = ?`,
         [id]
       );
     }
 
     return await db.execute(
-      `UPDATE IncomeSchedules SET IsActive = 0 WHERE IncomeScheduleID = ?`,
+      `UPDATE Schedules SET IsActive = 0 WHERE ScheduleID = ?`,
       [id]
     );
   },
@@ -574,8 +574,8 @@ export const incomeCommitments = {
       : null;
 
     const debtor = data.DebtorName
-      ? await db.queryOne<{ DebtorID: number }>(
-          `SELECT DebtorID FROM Debtors WHERE DebtorName = ?`,
+      ? await db.queryOne<{ EntityID: number }>(
+          `SELECT EntityID FROM Entities WHERE EntityName = ?`,
           [data.DebtorName]
         )
       : null;
@@ -587,7 +587,7 @@ export const incomeCommitments = {
       Note: data.Note,
       IncomeSourceID: source?.IncomeSourceID,
       IncomeCategoryID: category?.IncomeCategoryID,
-      DebtorID: debtor?.DebtorID
+      EntityID: debtor?.EntityID
     });
   }
 };

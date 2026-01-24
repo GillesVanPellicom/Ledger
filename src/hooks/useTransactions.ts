@@ -69,46 +69,46 @@ export const useTransactions = (params: FetchTransactionsParams) => {
       // 1. Expenses (Receipts)
       let expenseQuery = `
         SELECT 
-          'expense-' || r.ReceiptID as id,
-          r.ReceiptID as originalId,
-          r.ReceiptDate as date,
-          r.ReceiptNote as note,
+          'expense-' || r.ExpenseID as id,
+          r.ExpenseID as originalId,
+          r.ExpenseDate as date,
+          r.ExpenseNote as note,
           CASE 
             WHEN r.IsNonItemised = 1 THEN -r.NonItemisedTotal
             ELSE -(
-              (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) -
-              IFNULL((SELECT SUM(li_d.LineQuantity * li_d.LineUnitPrice) FROM LineItems li_d WHERE li_d.ReceiptID = r.ReceiptID AND (li_d.IsExcludedFromDiscount = 0 OR li_d.IsExcludedFromDiscount IS NULL)), 0) * r.Discount / 100
+              (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID) -
+              IFNULL((SELECT SUM(li_d.LineQuantity * li_d.LineUnitPrice) FROM ExpenseLineItems li_d WHERE li_d.ExpenseID = r.ExpenseID AND (li_d.IsExcludedFromDiscount = 0 OR li_d.IsExcludedFromDiscount IS NULL)), 0) * r.Discount / 100
             )
           END as amount,
           pm.PaymentMethodName as methodName,
           r.PaymentMethodID as methodId,
           'expense' as type,
           r.CreationTimestamp as creationTimestamp,
-          s.StoreName as storeName,
+          s.VendorName as storeName,
           NULL as debtorName,
           r.IsNonItemised as isNonItemised,
           r.IsTentative as isTentative,
-          (SELECT COUNT(*) FROM ReceiptImages ri WHERE ri.ReceiptID = r.ReceiptID) as attachmentCount,
+          (SELECT COUNT(*) FROM ExpenseImages ri WHERE ri.ExpenseID = r.ExpenseID) as attachmentCount,
           r.Status as status,
-          (SELECT COUNT(DISTINCT rs.DebtorID) FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID) + (SELECT COUNT(DISTINCT li.DebtorID) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID IS NOT NULL) as totalDebtorCount,
-          (SELECT COUNT(DISTINCT d.DebtorID) FROM Debtors d LEFT JOIN ReceiptDebtorPayments rdp ON d.DebtorID = rdp.DebtorID AND rdp.ReceiptID = r.ReceiptID WHERE rdp.PaymentID IS NULL AND ((r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID IS NOT NULL)) OR (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID)))) as unpaidDebtorCount,
+          (SELECT COUNT(DISTINCT rs.EntityID) FROM ExpenseSplits rs WHERE rs.ExpenseID = r.ExpenseID) + (SELECT COUNT(DISTINCT li.EntityID) FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID AND li.EntityID IS NOT NULL) as totalDebtorCount,
+          (SELECT COUNT(DISTINCT d.EntityID) FROM Entities d LEFT JOIN ExpenseEntityPayments rdp ON d.EntityID = rdp.EntityID AND rdp.ExpenseID = r.ExpenseID WHERE rdp.ExpenseEntityPaymentID IS NULL AND ((r.SplitType = 'line_item' AND d.EntityID IN (SELECT li.EntityID FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID AND li.EntityID IS NOT NULL)) OR (r.SplitType = 'total_split' AND d.EntityID IN (SELECT rs.EntityID FROM ExpenseSplits rs WHERE rs.ExpenseID = r.ExpenseID)))) as unpaidDebtorCount,
           NULL as debtorId,
           NULL as receiptId,
           NULL as fromMethodId,
           NULL as toMethodId
-        FROM Receipts r
-        JOIN Stores s ON r.StoreID = s.StoreID
+        FROM Expenses r
+        JOIN Vendors s ON r.VendorID = s.VendorID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
       `;
 
       // 2. Incomes (TopUps that are not transfers and not repayments)
       let incomeQuery = `
         SELECT 
-          'income-' || tu.TopUpID as id,
-          tu.TopUpID as originalId,
-          tu.TopUpDate as date,
-          tu.TopUpNote as note,
-          tu.TopUpAmount as amount,
+          'income-' || tu.IncomeID as id,
+          tu.IncomeID as originalId,
+          tu.IncomeDate as date,
+          tu.IncomeNote as note,
+          tu.IncomeAmount as amount,
           pm.PaymentMethodName as methodName,
           tu.PaymentMethodID as methodId,
           'income' as type,
@@ -121,15 +121,15 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as status,
           NULL as totalDebtorCount,
           NULL as unpaidDebtorCount,
-          tu.DebtorID as debtorId,
+          tu.EntityID as debtorId,
           NULL as receiptId,
           NULL as fromMethodId,
           NULL as toMethodId
-        FROM TopUps tu
+        FROM Income tu
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
         LEFT JOIN IncomeSources src ON tu.IncomeSourceID = src.IncomeSourceID
         WHERE tu.TransferID IS NULL 
-        AND NOT EXISTS (SELECT 1 FROM ReceiptDebtorPayments rdp WHERE rdp.TopUpID = tu.TopUpID)
+        AND NOT EXISTS (SELECT 1 FROM ExpenseEntityPayments rdp WHERE rdp.IncomeID = tu.IncomeID)
       `;
 
       // 3. Transfers
@@ -164,30 +164,30 @@ export const useTransactions = (params: FetchTransactionsParams) => {
       // 4. Repayments
       let repaymentQuery = `
         SELECT 
-          'repayment-' || rdp.PaymentID as id,
-          rdp.PaymentID as originalId,
+          'repayment-' || rdp.ExpenseEntityPaymentID as id,
+          rdp.ExpenseEntityPaymentID as originalId,
           rdp.PaidDate as date,
-          CASE WHEN tu.TopUpNote LIKE 'Repayment from %' THEN '' ELSE tu.TopUpNote END as note,
-          tu.TopUpAmount as amount,
+          CASE WHEN tu.IncomeNote LIKE 'Repayment from %' THEN '' ELSE tu.IncomeNote END as note,
+          tu.IncomeAmount as amount,
           pm.PaymentMethodName as methodName,
           tu.PaymentMethodID as methodId,
           'repayment' as type,
           rdp.CreationTimestamp as creationTimestamp,
           NULL as storeName,
-          d.DebtorName as debtorName,
+          d.EntityName as debtorName,
           NULL as isNonItemised,
           NULL as isTentative,
           NULL as attachmentCount,
           NULL as status,
           NULL as totalDebtorCount,
           NULL as unpaidDebtorCount,
-          rdp.DebtorID as debtorId,
-          rdp.ReceiptID as receiptId,
+          rdp.EntityID as debtorId,
+          rdp.ExpenseID as receiptId,
           NULL as fromMethodId,
           NULL as toMethodId
-        FROM ReceiptDebtorPayments rdp
-        JOIN TopUps tu ON rdp.TopUpID = tu.TopUpID
-        JOIN Debtors d ON rdp.DebtorID = d.DebtorID
+        FROM ExpenseEntityPayments rdp
+        JOIN Income tu ON rdp.IncomeID = tu.IncomeID
+        JOIN Entities d ON rdp.EntityID = d.EntityID
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
       `;
 
@@ -272,12 +272,12 @@ export const useTransactions = (params: FetchTransactionsParams) => {
       } else if (typeFilter === 'income') {
         if (incomeSourceFilter && incomeSourceFilter !== 'all') {
           // Match by IncomeSourceID
-          whereClauses.push("originalId IN (SELECT TopUpID FROM TopUps WHERE IncomeSourceID = ?)");
+          whereClauses.push("originalId IN (SELECT IncomeID FROM Income WHERE IncomeSourceID = ?)");
           queryParams.push(incomeSourceFilter);
         }
         if (incomeCategoryFilter && incomeCategoryFilter !== 'all') {
           // Match by IncomeCategoryID
-          whereClauses.push("originalId IN (SELECT TopUpID FROM TopUps WHERE IncomeCategoryID = ?)");
+          whereClauses.push("originalId IN (SELECT IncomeID FROM Income WHERE IncomeCategoryID = ?)");
           queryParams.push(incomeCategoryFilter);
         }
         if (incomeEntityFilter && incomeEntityFilter !== 'all') {

@@ -54,6 +54,7 @@ export interface Debtor {
   DebtorID: number;
   DebtorName: string;
   DebtorIsActive: boolean;
+  NetBalance: number;
 }
 
 export interface DebtorStyle {
@@ -226,6 +227,12 @@ export interface TopUp {
   TopUpDate: string;
   TopUpNote: string;
   TopUpAmount: number;
+  PaymentMethodID: number;
+  TransferID?: number;
+  IncomeID?: number;
+  IncomeDate?: string;
+  IncomeNote?: string;
+  IncomeAmount?: number;
 }
 
 export interface Transaction {
@@ -248,4 +255,6 @@ export interface Transaction {
   status?: string;
   totalDebtorCount?: number;
   unpaidDebtorCount?: number;
+  incomeSourceId?: number;
+  incomeCategoryId?: number;
 }

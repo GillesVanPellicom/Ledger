@@ -17,10 +17,10 @@ export const useProducts = (params: FetchProductsParams) => {
     queryFn: async () => {
       const offset = (params.page - 1) * params.pageSize;
       let query = `
-        SELECT p.*, u.ProductUnitType, c.CategoryName
+        SELECT p.*, u.ProductUnitType, c.ProductCategoryName as CategoryName
         FROM Products p
         LEFT JOIN ProductUnits u ON p.ProductUnitID = u.ProductUnitID
-        LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+        LEFT JOIN ProductCategories c ON p.ProductCategoryID = c.ProductCategoryID
         WHERE p.ProductIsActive = 1
       `;
       const queryParams: any[] = [];
@@ -42,7 +42,7 @@ export const useProducts = (params: FetchProductsParams) => {
         }
       }
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType, c.CategoryName', 'SELECT p.ProductID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT p.*, u.ProductUnitType, c.ProductCategoryName as CategoryName', 'SELECT p.ProductID')})`;
       const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
       const totalCount = countResult ? countResult.count : 0;
       
@@ -72,19 +72,19 @@ export const useStores = (params: FetchStoresParams) => {
     queryKey: ['stores', params],
     queryFn: async () => {
       const offset = (params.page - 1) * params.pageSize;
-      let query = `SELECT * FROM Stores`;
+      let query = `SELECT * FROM Vendors`;
       const queryParams: any[] = [];
       
       if (params.searchTerm) {
-        query += ` WHERE StoreName LIKE ?`;
+        query += ` WHERE VendorName LIKE ?`;
         queryParams.push(`%${params.searchTerm}%`);
       }
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT StoreID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT VendorID')})`;
       const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
       const totalCount = countResult ? countResult.count : 0;
       
-      query += ` ORDER BY StoreName ASC LIMIT ? OFFSET ?`;
+      query += ` ORDER BY VendorName ASC LIMIT ? OFFSET ?`;
       queryParams.push(params.pageSize, offset);
       
       const stores = await db.query<Store>(query, queryParams);
@@ -100,7 +100,7 @@ export const useActiveStores = () => {
   return useQuery({
     queryKey: ['stores', 'active'],
     queryFn: async () => {
-      return await db.query<Store>('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
+      return await db.query<Store>('SELECT VendorID as StoreID, VendorName as StoreName FROM Vendors WHERE VendorIsActive = 1 ORDER BY VendorName');
     },
     staleTime: 0,
     gcTime: 0,
@@ -121,19 +121,19 @@ export const useCategories = (params: FetchCategoriesParams) => {
     queryKey: ['categories', params],
     queryFn: async () => {
       const offset = (params.page - 1) * params.pageSize;
-      let query = `SELECT * FROM Categories`;
+      let query = `SELECT * FROM ProductCategories`;
       const queryParams: any[] = [];
       
       if (params.searchTerm) {
-        query += ` WHERE CategoryName LIKE ?`;
+        query += ` WHERE ProductCategoryName LIKE ?`;
         queryParams.push(`%${params.searchTerm}%`);
       }
       
-      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT CategoryID')})`;
+      const countQuery = `SELECT COUNT(*) as count FROM (${query.replace('SELECT *', 'SELECT ProductCategoryID')})`;
       const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
       const totalCount = countResult ? countResult.count : 0;
       
-      query += ` ORDER BY CategoryName ASC LIMIT ? OFFSET ?`;
+      query += ` ORDER BY ProductCategoryName ASC LIMIT ? OFFSET ?`;
       queryParams.push(params.pageSize, offset);
       
       const categories = await db.query<Category>(query, queryParams);
@@ -149,7 +149,7 @@ export const useActiveCategories = () => {
   return useQuery({
     queryKey: ['categories', 'active'],
     queryFn: async () => {
-      return await db.query<Category>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
+      return await db.query<Category>('SELECT ProductCategoryID as CategoryID, ProductCategoryName as CategoryName FROM ProductCategories WHERE ProductCategoryIsActive = 1 ORDER BY ProductCategoryName');
     },
     staleTime: 0,
     gcTime: 0,
@@ -232,15 +232,15 @@ export const useEntities = (params: FetchEntitiesParams) => {
     queryFn: async () => {
       const offset = (params.page - 1) * params.pageSize;
       let query = `
-        SELECT d.*, 
-               (SELECT IFNULL(SUM(tu.TopUpAmount), 0) FROM TopUps tu JOIN ReceiptDebtorPayments rdp ON tu.TopUpID = rdp.TopUpID WHERE rdp.DebtorID = d.DebtorID) as TotalPaidToMe,
-               (SELECT IFNULL(SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM LineItems li WHERE li.ReceiptID = r.ReceiptID) END), 0) FROM Receipts r WHERE r.OwedToDebtorID = d.DebtorID) as TotalIOwe
-        FROM Debtors d
+        SELECT d.EntityID as DebtorID, d.EntityName as DebtorName, d.EntityIsActive as DebtorIsActive, d.CreationTimestamp, d.UpdatedAt,
+               (SELECT IFNULL(SUM(tu.IncomeAmount), 0) FROM Income tu JOIN ExpenseEntityPayments rdp ON tu.IncomeID = rdp.IncomeID WHERE rdp.EntityID = d.EntityID) as TotalPaidToMe,
+               (SELECT IFNULL(SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE (SELECT SUM(li.LineQuantity * li.LineUnitPrice) FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID) END), 0) FROM Expenses r WHERE r.OwedToEntityID = d.EntityID) as TotalIOwe
+        FROM Entities d
       `;
       const queryParams: any[] = [];
       
       if (params.searchTerm) {
-        query += ` WHERE d.DebtorName LIKE ?`;
+        query += ` WHERE d.EntityName LIKE ?`;
         queryParams.push(`%${params.searchTerm}%`);
       }
       
@@ -248,7 +248,7 @@ export const useEntities = (params: FetchEntitiesParams) => {
       const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
       const totalCount = countResult ? countResult.count : 0;
       
-      query += ` ORDER BY d.DebtorName ASC LIMIT ? OFFSET ?`;
+      query += ` ORDER BY d.EntityName ASC LIMIT ? OFFSET ?`;
       queryParams.push(params.pageSize, offset);
       
       const entities = await db.query<any>(query, queryParams);

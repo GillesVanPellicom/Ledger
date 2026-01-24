@@ -44,26 +44,26 @@ export const useReceipts = (params: FetchReceiptsParams) => {
       const offset = (page - 1) * pageSize;
 
       let subQuerySelect = `
-        SELECT r.ReceiptID,
-               r.ReceiptDate,
-               r.ReceiptNote,
+        SELECT r.ExpenseID as ReceiptID,
+               r.ExpenseDate as ReceiptDate,
+               r.ExpenseNote as ReceiptNote,
                r.Discount,
                r.IsNonItemised,
                r.IsTentative,
                r.NonItemisedTotal,
                r.PaymentMethodID,
-               s.StoreName,
+               s.VendorName as StoreName,
                pm.PaymentMethodName,
-               (SELECT COUNT(*) FROM ReceiptImages ri WHERE ri.ReceiptID = r.ReceiptID) as AttachmentCount,
+               (SELECT COUNT(*) FROM ExpenseImages ri WHERE ri.ExpenseID = r.ExpenseID) as AttachmentCount,
                CASE
                    WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
                    ELSE (
                        (SELECT SUM(li.LineQuantity * li.LineUnitPrice)
-                        FROM LineItems li
-                        WHERE li.ReceiptID = r.ReceiptID) -
+                        FROM ExpenseLineItems li
+                        WHERE li.ExpenseID = r.ExpenseID) -
                        IFNULL((SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
-                               FROM LineItems li_discountable
-                               WHERE li_discountable.ReceiptID = r.ReceiptID
+                               FROM ExpenseLineItems li_discountable
+                               WHERE li_discountable.ExpenseID = r.ExpenseID
                                  AND (li_discountable.IsExcludedFromDiscount = 0 OR
                                       li_discountable.IsExcludedFromDiscount IS NULL)), 0) * r.Discount / 100
                        )
@@ -74,28 +74,28 @@ export const useReceipts = (params: FetchReceiptsParams) => {
         subQuerySelect += `,
           r.Status,
           (
-            SELECT COUNT(DISTINCT d.DebtorID)
-            FROM Debtors d
+            SELECT COUNT(DISTINCT d.EntityID)
+            FROM Entities d
             WHERE (
-              (r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID IS NOT NULL)) OR
-              (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID))
+              (r.SplitType = 'line_item' AND d.EntityID IN (SELECT li.EntityID FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID AND li.EntityID IS NOT NULL)) OR
+              (r.SplitType = 'total_split' AND d.EntityID IN (SELECT rs.EntityID FROM ExpenseSplits rs WHERE rs.ExpenseID = r.ExpenseID))
             )
           ) as TotalDebtorCount,
           (
-            SELECT COUNT(DISTINCT d.DebtorID)
-            FROM Debtors d
-            LEFT JOIN ReceiptDebtorPayments rdp ON d.DebtorID = rdp.DebtorID AND rdp.ReceiptID = r.ReceiptID
-            WHERE rdp.PaymentID IS NULL AND (
-              (r.SplitType = 'line_item' AND d.DebtorID IN (SELECT li.DebtorID FROM LineItems li WHERE li.ReceiptID = r.ReceiptID AND li.DebtorID IS NOT NULL)) OR
-              (r.SplitType = 'total_split' AND d.DebtorID IN (SELECT rs.DebtorID FROM ReceiptSplits rs WHERE rs.ReceiptID = r.ReceiptID))
+            SELECT COUNT(DISTINCT d.EntityID)
+            FROM Entities d
+            LEFT JOIN ExpenseEntityPayments rdp ON d.EntityID = rdp.EntityID AND rdp.ExpenseID = r.ExpenseID
+            WHERE rdp.ExpenseEntityPaymentID IS NULL AND (
+              (r.SplitType = 'line_item' AND d.EntityID IN (SELECT li.EntityID FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID AND li.EntityID IS NOT NULL)) OR
+              (r.SplitType = 'total_split' AND d.EntityID IN (SELECT rs.EntityID FROM ExpenseSplits rs WHERE rs.ExpenseID = r.ExpenseID))
             )
           ) as UnpaidDebtorCount
         `;
       }
 
       let subQueryFrom = `
-        FROM Receipts r
-        JOIN Stores s ON r.StoreID = s.StoreID
+        FROM Expenses r
+        JOIN Vendors s ON r.VendorID = s.VendorID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
       `;
 
@@ -106,19 +106,19 @@ export const useReceipts = (params: FetchReceiptsParams) => {
         const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
         keywords.forEach(keyword => {
           subQueryWhereClauses.push(`(
-            LOWER(s.StoreName) LIKE ? OR 
-            LOWER(r.ReceiptNote) LIKE ?
+            LOWER(s.VendorName) LIKE ? OR 
+            LOWER(r.ExpenseNote) LIKE ?
           )`);
           queryParams.push(`%${keyword}%`, `%${keyword}%`);
         });
       }
 
       if (startDate) {
-        subQueryWhereClauses.push(`r.ReceiptDate >= ?`);
+        subQueryWhereClauses.push(`r.ExpenseDate >= ?`);
         queryParams.push(format(startDate, 'yyyy-MM-dd'));
       }
       if (endDate) {
-        subQueryWhereClauses.push(`r.ReceiptDate <= ?`);
+        subQueryWhereClauses.push(`r.ExpenseDate <= ?`);
         queryParams.push(format(endDate, 'yyyy-MM-dd'));
       }
 

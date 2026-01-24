@@ -33,7 +33,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
   useEffect(() => {
     if (isOpen) {
       const fetchDebtors = async () => {
-        const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+        const debtorsData = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
         setDebtors(debtorsData);
       };
       fetchDebtors();
@@ -69,15 +69,15 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
 
   const startBulkUpdate = async () => {
     const receiptsWithDebt = await db.query<{ ReceiptID: number }>(`
-        SELECT DISTINCT ReceiptID
-        FROM (SELECT ReceiptID
-              FROM LineItems
-              WHERE ReceiptID IN (${receiptIds.join(',')})
-                AND DebtorID IS NOT NULL
+        SELECT DISTINCT ExpenseID as ReceiptID
+        FROM (SELECT ExpenseID
+              FROM ExpenseLineItems
+              WHERE ExpenseID IN (${receiptIds.join(',')})
+                AND EntityID IS NOT NULL
               UNION
-              SELECT ReceiptID
-              FROM ReceiptSplits
-              WHERE ReceiptID IN (${receiptIds.join(',')}))
+              SELECT ExpenseID
+              FROM ExpenseSplits
+              WHERE ExpenseID IN (${receiptIds.join(',')}))
     `);
     const conflicting = receiptsWithDebt.map(r => r.ReceiptID);
 
@@ -110,16 +110,16 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
 
     for (const receiptId of targetReceiptIds) {
       await db.execute(
-        'UPDATE Receipts SET SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?',
+        'UPDATE Expenses SET SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ExpenseID = ?',
         ['total_split', ownShares, totalShares, receiptId]
       );
       updateProgress();
 
-      await db.execute('DELETE FROM ReceiptSplits WHERE ReceiptID = ?', [receiptId]);
+      await db.execute('DELETE FROM ExpenseSplits WHERE ExpenseID = ?', [receiptId]);
       updateProgress();
 
       for (const split of receiptSplits) {
-        await db.execute('INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
+        await db.execute('INSERT INTO ExpenseSplits (ExpenseID, EntityID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
         updateProgress();
       }
     }

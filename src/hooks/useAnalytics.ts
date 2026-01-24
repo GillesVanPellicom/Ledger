@@ -6,7 +6,7 @@ export const useAvailableYears = () => {
   return useQuery({
     queryKey: ['analytics', 'years'],
     queryFn: async () => {
-      const result = await db.query<{ year: string }>("SELECT DISTINCT STRFTIME('%Y', ReceiptDate) as year FROM Receipts ORDER BY year DESC");
+      const result = await db.query<{ year: string }>("SELECT DISTINCT STRFTIME('%Y', ExpenseDate) as year FROM Expenses ORDER BY year DESC");
       return result.map(r => r.year);
     },
     staleTime: 1000 * 60 * 60, // 1 hour
@@ -17,16 +17,16 @@ export const useCategoryAnalytics = (year: string, month: string | null, week: s
   return useQuery({
     queryKey: ['analytics', 'category', year, month, week],
     queryFn: async () => {
-      let dateFilter = `STRFTIME('%Y', r.ReceiptDate) = ?`;
+      let dateFilter = `STRFTIME('%Y', r.ExpenseDate) = ?`;
       const params: any[] = [year];
 
       if (month && month !== 'all') {
-        dateFilter += ` AND STRFTIME('%m', r.ReceiptDate) = ?`;
+        dateFilter += ` AND STRFTIME('%m', r.ExpenseDate) = ?`;
         params.push(month.padStart(2, '0'));
       }
 
       if (week && week !== 'all') {
-        dateFilter += ` AND STRFTIME('%W', r.ReceiptDate) = ?`;
+        dateFilter += ` AND STRFTIME('%W', r.ExpenseDate) = ?`;
         params.push(week.padStart(2, '0'));
       }
 
@@ -34,13 +34,13 @@ export const useCategoryAnalytics = (year: string, month: string | null, week: s
       const totalQueryPart = `SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END)`;
 
       const categoryResult = await db.query<{ CategoryName: string, total: number, count: number }>(`
-        SELECT c.CategoryName, ${totalQueryPart} as total, COUNT(DISTINCT r.ReceiptID) as count
-        FROM Receipts r 
-        LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID 
+        SELECT c.ProductCategoryName as CategoryName, ${totalQueryPart} as total, COUNT(DISTINCT r.ExpenseID) as count
+        FROM Expenses r 
+        LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID 
         LEFT JOIN Products p ON li.ProductID = p.ProductID
-        LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+        LEFT JOIN ProductCategories c ON p.ProductCategoryID = c.ProductCategoryID
         WHERE ${dateFilter} AND ${baseWhere} 
-        GROUP BY c.CategoryName 
+        GROUP BY c.ProductCategoryName 
         ORDER BY total DESC
       `, params);
       
@@ -61,24 +61,24 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
   return useQuery({
     queryKey: ['analytics', 'data', selectedYear, paymentMethodsEnabled, debtEnabled],
     queryFn: async () => {
-      const yearFilter = `STRFTIME('%Y', r.ReceiptDate) = ?`;
+      const yearFilter = `STRFTIME('%Y', r.ExpenseDate) = ?`;
       const baseWhere = `r.IsTentative = 0`;
 
-      const itemlessCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Receipts r WHERE r.IsNonItemised = 1 AND ${yearFilter}`, [selectedYear]);
+      const itemlessCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Expenses r WHERE r.IsNonItemised = 1 AND ${yearFilter}`, [selectedYear]);
       const hasItemlessReceipts = itemlessCheck ? itemlessCheck.count > 0 : false;
 
-      const itemisedCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Receipts r WHERE r.IsNonItemised = 0 AND ${yearFilter}`, [selectedYear]);
+      const itemisedCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Expenses r WHERE r.IsNonItemised = 0 AND ${yearFilter}`, [selectedYear]);
       const onlyNonItemised = itemisedCheck ? itemisedCheck.count === 0 : true;
 
-      const tentativeCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Receipts r WHERE r.IsTentative = 1 AND ${yearFilter}`, [selectedYear]);
+      const tentativeCheck = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM Expenses r WHERE r.IsTentative = 1 AND ${yearFilter}`, [selectedYear]);
       const hasTentativeReceipts = tentativeCheck ? tentativeCheck.count > 0 : false;
 
       const totalQueryPart = `SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END)`;
 
       // Monthly Spending
-      const monthlyResult = await db.query<{ month: string, total: number }>(`SELECT STRFTIME('%m', r.ReceiptDate) as month, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE ${yearFilter} AND ${baseWhere} GROUP BY month ORDER BY month ASC`, [selectedYear]);
-      const prevYearMonthlyResult = await db.query<{ month: string, total: number }>(`SELECT STRFTIME('%m', r.ReceiptDate) as month, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y', r.ReceiptDate) = ? AND ${baseWhere} GROUP BY month`, [(parseInt(selectedYear) - 1).toString()]);
-      const prevDecResult = await db.queryOne<{ total: number }>(`SELECT ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE STRFTIME('%Y-%m', r.ReceiptDate) = ? AND ${baseWhere}`, [`${parseInt(selectedYear) - 1}-12`]);
+      const monthlyResult = await db.query<{ month: string, total: number }>(`SELECT STRFTIME('%m', r.ExpenseDate) as month, ${totalQueryPart} as total FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID WHERE ${yearFilter} AND ${baseWhere} GROUP BY month ORDER BY month ASC`, [selectedYear]);
+      const prevYearMonthlyResult = await db.query<{ month: string, total: number }>(`SELECT STRFTIME('%m', r.ExpenseDate) as month, ${totalQueryPart} as total FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID WHERE STRFTIME('%Y', r.ExpenseDate) = ? AND ${baseWhere} GROUP BY month`, [(parseInt(selectedYear) - 1).toString()]);
+      const prevDecResult = await db.queryOne<{ total: number }>(`SELECT ${totalQueryPart} as total FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID WHERE STRFTIME('%Y-%m', r.ExpenseDate) = ? AND ${baseWhere}`, [`${parseInt(selectedYear) - 1}-12`]);
       const prevDecTotal = prevDecResult?.total || 0;
 
       const monthlySpending: MonthlySpending[] = Array(12).fill(0).map((_, i) => {
@@ -90,18 +90,18 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       });
 
       // Store Spending
-      const storeResult = await db.query<{ StoreName: string, total: number }>(`SELECT s.StoreName, ${totalQueryPart} as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID JOIN Stores s ON r.StoreID = s.StoreID WHERE ${yearFilter} AND ${baseWhere} GROUP BY s.StoreName ORDER BY total DESC`, [selectedYear]);
+      const storeResult = await db.query<{ StoreName: string, total: number }>(`SELECT s.VendorName as StoreName, ${totalQueryPart} as total FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID JOIN Vendors s ON r.VendorID = s.VendorID WHERE ${yearFilter} AND ${baseWhere} GROUP BY s.VendorName ORDER BY total DESC`, [selectedYear]);
       const storeSpending: StoreSpending[] = storeResult.map(s => ({ name: s.StoreName, value: s.total }));
 
       const uncategorizedCountResult = await db.queryOne<{ count: number }>(`
         SELECT COUNT(*) as count
         FROM Products p
-        WHERE p.CategoryID IS NULL
+        WHERE p.ProductCategoryID IS NULL
       `);
       const hasUncategorizedProducts = (uncategorizedCountResult?.count || 0) > 0;
 
       // Averages
-      const averagesResult = await db.queryOne<{ receiptCount: number, totalItems: number, totalSpent: number }>(`SELECT COUNT(DISTINCT r.ReceiptID) as receiptCount, SUM(li.LineQuantity) as totalItems, SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as totalSpent FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE ${yearFilter} AND ${baseWhere}`, [selectedYear]);
+      const averagesResult = await db.queryOne<{ receiptCount: number, totalItems: number, totalSpent: number }>(`SELECT COUNT(DISTINCT r.ExpenseID) as receiptCount, SUM(li.LineQuantity) as totalItems, SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as totalSpent FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID WHERE ${yearFilter} AND ${baseWhere}`, [selectedYear]);
       const averages: Averages = averagesResult && averagesResult.receiptCount > 0 ? {
         avgPerReceipt: averagesResult.totalSpent / averagesResult.receiptCount,
         avgItemsPerReceipt: averagesResult.totalItems / averagesResult.receiptCount,
@@ -114,8 +114,8 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
         const methods = await db.query<{ PaymentMethodID: number, PaymentMethodName: string, PaymentMethodFunds: number, IsActive: number }>('SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1');
         let totalCapacity = 0;
         const methodDetails = await Promise.all(methods.map(async (method) => {
-          const expensesResult = await db.queryOne<{ total: number }>(`SELECT SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as total FROM Receipts r LEFT JOIN LineItems li ON r.ReceiptID = li.ReceiptID WHERE r.PaymentMethodID = ? AND ${baseWhere}`, [method.PaymentMethodID]);
-          const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?', [method.PaymentMethodID]);
+          const expensesResult = await db.queryOne<{ total: number }>(`SELECT SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END) as total FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID WHERE r.PaymentMethodID = ? AND ${baseWhere}`, [method.PaymentMethodID]);
+          const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(IncomeAmount) as total FROM Income WHERE PaymentMethodID = ?', [method.PaymentMethodID]);
           const balance = (method.PaymentMethodFunds || 0) + (topupsResult?.total || 0) - (expensesResult?.total || 0);
           totalCapacity += balance;
           return { id: method.PaymentMethodID, name: method.PaymentMethodName, balance };
@@ -126,7 +126,7 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       // Debt Stats
       let debtStats: DebtStats = { netBalances: [], totalOwedToMe: 0, totalOwedByMe: 0 };
       if (debtEnabled) {
-        const debtors = await db.query<Debtor>('SELECT * FROM Debtors WHERE DebtorIsActive = 1');
+        const debtors = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1');
         let totalOwedToMe = 0;
         let totalOwedByMe = 0;
         const netBalances: { name: string, value: number, id: number }[] = [];

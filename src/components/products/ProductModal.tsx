@@ -45,7 +45,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
   };
 
   const loadCategories = async () => {
-    const result = await db.query<{ CategoryID: number; CategoryName: string }>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
+    const result = await db.query<{ CategoryID: number; CategoryName: string }>('SELECT ProductCategoryID as CategoryID, ProductCategoryName as CategoryName FROM ProductCategories WHERE ProductCategoryIsActive = 1 ORDER BY ProductCategoryName');
     setCategories(result.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })));
   };
 
@@ -108,10 +108,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
 
       let result;
       if (productToEdit) {
-        await db.execute('UPDATE Products SET ProductName = ?, ProductBrand = ?, ProductSize = ?, ProductUnitID = ?, CategoryID = ? WHERE ProductID = ?', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID, productToEdit.ProductID]);
+        await db.execute('UPDATE Products SET ProductName = ?, ProductBrand = ?, ProductSize = ?, ProductUnitID = ?, ProductCategoryID = ? WHERE ProductID = ?', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID, productToEdit.ProductID]);
         result = { lastID: productToEdit.ProductID };
       } else {
-        result = await db.execute('INSERT INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, CategoryID) VALUES (?, ?, ?, ?, ?)', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID]);
+        result = await db.execute('INSERT INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, ProductCategoryID) VALUES (?, ?, ?, ?, ?)', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID]);
       }
       
       if (shouldSelect && onSaveAndSelect) {

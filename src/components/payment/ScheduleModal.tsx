@@ -23,6 +23,7 @@ import { incomeLogic } from '../../logic/incomeLogic';
 import { parseRecurrenceRule, calculateOccurrences } from '../../logic/incomeScheduling';
 import Checkbox from '../ui/Checkbox';
 import { cn } from '../../utils/cn';
+import CategoryModal from '../categories/CategoryModal';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -57,11 +58,13 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
   
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
+  const [productCategories, setProductCategories] = useState<any[]>([]);
   const [incomeSources, setIncomeSources] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [entities, setEntities] = useState<any[]>([]);
   
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
+  const [isProductCategoryModalOpen, setIsProductCategoryModalOpen] = useState(false);
   const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
@@ -93,20 +96,22 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
   const initializedRef = useRef<number | null | undefined>(undefined);
 
   const fetchReferenceData = useCallback(async () => {
-    const [pmRows, catRows, srcRows, entRows, storeRows] = await Promise.all([
+    const [pmRows, catRows, prodCatRows, srcRows, entRows, storeRows] = await Promise.all([
       db.query<PaymentMethod>("SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName"),
       db.query<any>("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName"),
+      db.query<any>("SELECT ProductCategoryID as CategoryID, ProductCategoryName as CategoryName FROM ProductCategories WHERE ProductCategoryIsActive = 1 ORDER BY ProductCategoryName"),
       db.query<any>("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName"),
-      db.query<any>("SELECT * FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName"),
-      db.query<Store>("SELECT * FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName")
+      db.query<any>("SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName"),
+      db.query<Store>("SELECT VendorID as StoreID, VendorName as StoreName FROM Vendors WHERE VendorIsActive = 1 ORDER BY VendorName")
     ]);
     setPaymentMethods(pmRows);
     setIncomeCategories(catRows.map(r => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
+    setProductCategories(prodCatRows.map(r => ({ value: r.CategoryName, label: r.CategoryName })));
     setIncomeSources(srcRows.map(r => ({ value: r.IncomeSourceName, label: r.IncomeSourceName })));
     setEntities(entRows.map(r => ({ value: r.DebtorName, label: r.DebtorName })));
     setStores(storeRows.map(r => ({ value: r.StoreName, label: r.StoreName })));
     
-    return { pmRows, catRows, srcRows, entRows, storeRows };
+    return { pmRows, catRows, prodCatRows, srcRows, entRows, storeRows };
   }, []);
 
   useEffect(() => {
@@ -114,13 +119,13 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
       const initialize = async () => {
         const { pmRows, entRows } = await fetchReferenceData();
         
-        if (scheduleToEdit && initializedRef.current !== scheduleToEdit.IncomeScheduleID) {
+        if (scheduleToEdit && initializedRef.current !== scheduleToEdit.ScheduleID) {
           setType(scheduleToEdit.Type || 'income');
           
           // Find debtor name if ID exists
           let debtorName = '';
-          if (scheduleToEdit.DebtorID) {
-             const debtor = entRows.find((d: any) => d.DebtorID === scheduleToEdit.DebtorID);
+          if (scheduleToEdit.EntityID) {
+             const debtor = entRows.find((d: any) => d.DebtorID === scheduleToEdit.EntityID);
              if (debtor) debtorName = debtor.DebtorName;
           }
 
@@ -140,7 +145,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
             isActive: scheduleToEdit.IsActive,
             createForPastPeriod: false
           });
-          initializedRef.current = scheduleToEdit.IncomeScheduleID;
+          initializedRef.current = scheduleToEdit.ScheduleID;
         } else if (!scheduleToEdit) {
           const today = getCurrentDate();
           setFormData({ 
@@ -211,7 +216,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
       };
 
       if (scheduleToEdit) {
-        await incomeCommitments.updateSchedule(scheduleToEdit.IncomeScheduleID, scheduleData);
+        await incomeCommitments.updateSchedule(scheduleToEdit.ScheduleID, scheduleData);
       } else {
         await incomeCommitments.createSchedule(scheduleData);
       }
@@ -481,22 +486,20 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                 </Tooltip>
               </div>
 
-              {type === 'income' && (
-                <div className="flex items-end gap-2">
-                  <Combobox
-                    label="Category"
-                    options={incomeCategories}
-                    value={formData.category}
-                    onChange={val => setFormData(prev => ({...prev, category: val}))}
-                    className="flex-1"
-                  />
-                  <Tooltip content="Add Category">
-                    <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                      <Plus className="h-5 w-5"/>
-                    </Button>
-                  </Tooltip>
-                </div>
-              )}
+              <div className="flex items-end gap-2">
+                <Combobox
+                  label="Category"
+                  options={type === 'income' ? incomeCategories : productCategories}
+                  value={formData.category}
+                  onChange={val => setFormData(prev => ({...prev, category: val}))}
+                  className="flex-1"
+                />
+                <Tooltip content="Add Category">
+                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => type === 'income' ? setIsIncomeCategoryModalOpen(true) : setIsProductCategoryModalOpen(true)}>
+                    <Plus className="h-5 w-5"/>
+                  </Button>
+                </Tooltip>
+              </div>
               
               <Input label="Note" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly salary" />
             </div>
@@ -507,6 +510,13 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
       <IncomeCategoryModal
         isOpen={isIncomeCategoryModalOpen}
         onClose={() => setIsIncomeCategoryModalOpen(false)}
+        onSave={fetchReferenceData}
+        categoryToEdit={null}
+      />
+
+      <CategoryModal
+        isOpen={isProductCategoryModalOpen}
+        onClose={() => setIsProductCategoryModalOpen(false)}
         onSave={fetchReferenceData}
         categoryToEdit={null}
       />

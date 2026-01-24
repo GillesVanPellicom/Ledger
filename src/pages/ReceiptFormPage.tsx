@@ -121,7 +121,7 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const fetchStores = async () => {
-    const storeData = await db.query<Store>('SELECT StoreID, StoreName FROM Stores WHERE StoreIsActive = 1 ORDER BY StoreName');
+    const storeData = await db.query<Store>('SELECT VendorID as StoreID, VendorName as StoreName FROM Vendors WHERE VendorIsActive = 1 ORDER BY VendorName');
     setStores(storeData.map(s => ({value: String(s.StoreID), label: s.StoreName})));
   };
 
@@ -134,12 +134,12 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const handleEntitySave = async () => {
-    const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+    const debtorsData = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
     setDebtors(debtorsData);
 
     const newDebtor = await db.queryOne<{
       DebtorID: number
-    }>('SELECT DebtorID FROM Debtors ORDER BY DebtorID DESC LIMIT 1');
+    }>('SELECT EntityID as DebtorID FROM Entities ORDER BY EntityID DESC LIMIT 1');
     if (newDebtor) {
       setPaidById(String(newDebtor.DebtorID));
     }
@@ -185,24 +185,24 @@ const ReceiptFormPage: React.FC = () => {
       }
 
       if (debtEnabled) {
-        const debtorsData = await db.query<Debtor>('SELECT DebtorID, DebtorName FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName');
+        const debtorsData = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
         setDebtors(debtorsData);
       }
 
       if (isEditing) {
-        const receiptData = await db.queryOne<any>('SELECT * FROM Receipts WHERE ReceiptID = ?', [id]);
+        const receiptData = await db.queryOne<any>('SELECT * FROM Expenses WHERE ExpenseID = ?', [id]);
         if (receiptData) {
           setInitialIsTentative(receiptData.IsTentative === 1);
           setReceiptFormat(receiptData.IsNonItemised ? 'item-less' : 'itemised');
           if (receiptData.IsNonItemised) {
             setNonItemisedTotal(receiptData.NonItemisedTotal);
           }
-          setPaidById(receiptData.Status === 'unpaid' ? String(receiptData.OwedToDebtorID) : 'me');
+          setPaidById(receiptData.Status === 'unpaid' ? String(receiptData.OwedToEntityID) : 'me');
           setFormData(prev => ({
             ...prev,
-            storeId: String(receiptData.StoreID),
-            receiptDate: parseISO(receiptData.ReceiptDate),
-            note: receiptData.ReceiptNote || '',
+            storeId: String(receiptData.VendorID),
+            receiptDate: parseISO(receiptData.ExpenseDate),
+            note: receiptData.ExpenseNote || '',
             paymentMethodId: String(receiptData.PaymentMethodID),
             ownShares: receiptData.OwnShares || 0,
             discount: receiptData.Discount || 0,
@@ -211,12 +211,13 @@ const ReceiptFormPage: React.FC = () => {
 
           if (!receiptData.IsNonItemised) {
             const lineItemData = await db.query<any>(`
-                SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName
-                FROM LineItems li
+                SELECT li.ExpenseLineItemID as LineItemID, li.ExpenseID as ReceiptID, li.ProductID, li.LineQuantity, li.LineUnitPrice, li.EntityID as DebtorID, li.IsExcludedFromDiscount, li.CreationTimestamp, li.UpdatedAt,
+                       p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.EntityName as DebtorName
+                FROM ExpenseLineItems li
                          JOIN Products p ON li.ProductID = p.ProductID
                          LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-                         LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-                WHERE li.ReceiptID = ?
+                         LEFT JOIN Entities d ON li.EntityID = d.EntityID
+                WHERE li.ExpenseID = ?
             `, [id]);
 
             const items: LineItem[] = lineItemData.map((li: any) => ({...li, key: nanoid()}));
@@ -234,21 +235,22 @@ const ReceiptFormPage: React.FC = () => {
             }
           }
 
-          const imageData = await db.query<ReceiptImage>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+          const imageData = await db.query<ReceiptImage>('SELECT ExpenseImageID as ImageID, ExpenseID as ReceiptID, ImagePath, CreationTimestamp, UpdatedAt FROM ExpenseImages WHERE ExpenseID = ?', [id]);
           setImages(imageData.map(img => ({...img, key: nanoid()})));
 
           if (debtEnabled) {
             const paymentsData = await db.query<{
               DebtorID: number
-            }>('SELECT DebtorID FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
+            }>('SELECT EntityID as DebtorID FROM ExpenseEntityPayments WHERE ExpenseID = ?', [id]);
             setPaidDebtorIds(paymentsData.map(p => p.DebtorID));
 
             if (receiptData.SplitType === 'total_split') {
               const splitsData = await db.query<any>(`
-                  SELECT rs.*, d.DebtorName
-                  FROM ReceiptSplits rs
-                           JOIN Debtors d ON rs.DebtorID = d.DebtorID
-                  WHERE rs.ReceiptID = ?
+                  SELECT rs.ExpenseSplitID as SplitID, rs.ExpenseID as ReceiptID, rs.EntityID as DebtorID, rs.SplitPart, rs.CreationTimestamp, rs.UpdatedAt,
+                         d.EntityName as DebtorName
+                  FROM ExpenseSplits rs
+                           JOIN Entities d ON rs.EntityID = d.EntityID
+                  WHERE rs.ExpenseID = ?
               `, [id]);
               setReceiptSplits(splitsData.map((s: any) => ({...s, key: nanoid()})));
             }
@@ -587,15 +589,15 @@ const ReceiptFormPage: React.FC = () => {
       let receiptId = id;
 
       const receiptPayload = {
-        StoreID: formData.storeId,
-        ReceiptDate: format(formData.receiptDate, 'yyyy-MM-dd'),
-        ReceiptNote: formData.note,
+        VendorID: formData.storeId,
+        ExpenseDate: format(formData.receiptDate, 'yyyy-MM-dd'),
+        ExpenseNote: formData.note,
         PaymentMethodID: paidById === 'me' ? formData.paymentMethodId : null,
         SplitType: splitType,
         OwnShares: splitType === 'total_split' ? (formData.ownShares || 0) : null,
         TotalShares: splitType === 'total_split' ? totalShares : null,
         Status: paidById === 'me' ? 'paid' : 'unpaid',
-        OwedToDebtorID: paidById === 'me' ? null : paidById,
+        OwedToEntityID: paidById === 'me' ? null : paidById,
         Discount: receiptFormat === 'item-less' ? 0 : formData.discount,
         IsNonItemised: receiptFormat === 'item-less' ? 1 : 0,
         NonItemisedTotal: receiptFormat === 'item-less' ? nonItemisedTotal : null,
@@ -604,44 +606,44 @@ const ReceiptFormPage: React.FC = () => {
 
       if (isEditing) {
         await db.execute(
-          `UPDATE Receipts
-           SET StoreID          = ?,
-               ReceiptDate      = ?,
-               ReceiptNote      = ?,
+          `UPDATE Expenses
+           SET VendorID          = ?,
+               ExpenseDate      = ?,
+               ExpenseNote      = ?,
                PaymentMethodID  = ?,
                SplitType        = ?,
                OwnShares        = ?,
                TotalShares      = ?,
                Status           = ?,
-               OwedToDebtorID   = ?,
+               OwedToEntityID   = ?,
                Discount         = ?,
                IsNonItemised    = ?,
                NonItemisedTotal = ?,
                IsTentative      = ?
-           WHERE ReceiptID = ?`,
+           WHERE ExpenseID = ?`,
           [...Object.values(receiptPayload), id]
         );
 
-        await db.execute('DELETE FROM LineItems WHERE ReceiptID = ?', [id]);
-        await db.execute('DELETE FROM ReceiptSplits WHERE ReceiptID = ?', [id]);
+        await db.execute('DELETE FROM ExpenseLineItems WHERE ExpenseID = ?', [id]);
+        await db.execute('DELETE FROM ExpenseSplits WHERE ExpenseID = ?', [id]);
 
-        const existingImages = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+        const existingImages = await db.query<ReceiptImage>('SELECT ImagePath FROM ExpenseImages WHERE ExpenseID = ?', [id]);
         const imagesToKeep = images.filter(img => !img.file).map(img => img.ImagePath);
         const imagesToDelete = existingImages.filter(img => !imagesToKeep.includes(img.ImagePath));
         if (imagesToDelete.length > 0) {
           const placeholders = imagesToDelete.map(() => '?').join(',');
           await db.execute(`DELETE
-                            FROM ReceiptImages
-                            WHERE ReceiptID = ?
+                            FROM ExpenseImages
+                            WHERE ExpenseID = ?
                               AND ImagePath IN (${placeholders})`, [id, ...imagesToDelete.map(i => i.ImagePath)]);
         }
 
         receiptId = id;
       } else {
         const result = await db.execute(
-          `INSERT INTO Receipts
-           (StoreID, ReceiptDate, ReceiptNote, PaymentMethodID, SplitType, OwnShares,
-            TotalShares, Status, OwedToDebtorID, Discount, IsNonItemised, NonItemisedTotal, IsTentative)
+          `INSERT INTO Expenses
+           (VendorID, ExpenseDate, ExpenseNote, PaymentMethodID, SplitType, OwnShares,
+            TotalShares, Status, OwedToEntityID, Discount, IsNonItemised, NonItemisedTotal, IsTentative)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           Object.values(receiptPayload)
         );
@@ -650,14 +652,14 @@ const ReceiptFormPage: React.FC = () => {
 
       if (receiptFormat === 'itemised') {
         for (const item of lineItems) {
-          await db.execute('INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)',
+          await db.execute('INSERT INTO ExpenseLineItems (ExpenseID, ProductID, LineQuantity, LineUnitPrice, EntityID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)',
             [receiptId, item.ProductID, item.LineQuantity, item.LineUnitPrice, item.DebtorID || null, excludedLineItemKeys.has(item.key) ? 1 : 0]);
         }
       }
 
       if (splitType === 'total_split') {
         for (const split of receiptSplits) {
-          await db.execute('INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
+          await db.execute('INSERT INTO ExpenseSplits (ExpenseID, EntityID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
         }
       }
 
@@ -665,7 +667,7 @@ const ReceiptFormPage: React.FC = () => {
         const newImages = images.filter(img => img.file);
         for (const image of newImages) {
           const imagePathToSave = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);
-          await db.execute('INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)', [receiptId, imagePathToSave]);
+          await db.execute('INSERT INTO ExpenseImages (ExpenseID, ImagePath) VALUES (?, ?)', [receiptId, imagePathToSave]);
         }
       }
 

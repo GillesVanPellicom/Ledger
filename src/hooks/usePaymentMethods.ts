@@ -24,8 +24,8 @@ export const usePaymentMethodBalance = (methodId: number, initialFunds: number) 
   return useQuery({
     queryKey: ['paymentMethodBalance', methodId],
     queryFn: async () => {
-      const expensesResult = await db.queryOne<{ total: number }>('SELECT SUM(li.LineQuantity * li.LineUnitPrice) as total FROM LineItems li JOIN Receipts r ON li.ReceiptID = r.ReceiptID WHERE r.PaymentMethodID = ? AND r.IsTentative = 0', [methodId]);
-      const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(TopUpAmount) as total FROM TopUps WHERE PaymentMethodID = ?', [methodId]);
+      const expensesResult = await db.queryOne<{ total: number }>('SELECT SUM(li.LineQuantity * li.LineUnitPrice) as total FROM ExpenseLineItems li JOIN Expenses r ON li.ExpenseID = r.ExpenseID WHERE r.PaymentMethodID = ? AND r.IsTentative = 0', [methodId]);
+      const topupsResult = await db.queryOne<{ total: number }>('SELECT SUM(IncomeAmount) as total FROM Income WHERE PaymentMethodID = ?', [methodId]);
       const expenses = expensesResult?.total || 0;
       const topups = topupsResult?.total || 0;
       return initialFunds + topups - expenses;

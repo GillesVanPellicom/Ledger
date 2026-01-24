@@ -87,13 +87,13 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
       const finalNote = note.trim() ? note.trim() : systemNote;
 
       const topUpResult = await db.execute(
-        'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
+        'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote) VALUES (?, ?, ?, ?)',
         [paymentMethodId, debtInfo!.amount, format(paidDate, 'yyyy-MM-dd'), finalNote]
       );
       const topUpId = topUpResult.lastID;
 
       await db.execute(
-        'INSERT INTO ReceiptDebtorPayments (ReceiptID, DebtorID, PaidDate, TopUpID) VALUES (?, ?, ?, ?)',
+        'INSERT INTO ExpenseEntityPayments (ExpenseID, EntityID, PaidDate, IncomeID) VALUES (?, ?, ?, ?)',
         [debtInfo!.receiptId, debtInfo!.debtorId, format(paidDate, 'yyyy-MM-dd'), topUpId]
       );
       

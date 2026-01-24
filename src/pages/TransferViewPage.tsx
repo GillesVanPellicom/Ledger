@@ -48,7 +48,7 @@ const TransferViewPage: React.FC = () => {
       if (!data) return null;
 
       // Also get the associated TopUp for the TransferModal
-      const topUp = await db.queryOne<any>('SELECT * FROM TopUps WHERE TransferID = ? AND TopUpAmount < 0', [id]);
+      const topUp = await db.queryOne<any>('SELECT * FROM Income WHERE TransferID = ? AND IncomeAmount < 0', [id]);
       return { ...data, topUp };
     }
   });

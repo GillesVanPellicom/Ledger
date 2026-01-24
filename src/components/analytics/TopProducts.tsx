@@ -44,7 +44,7 @@ const TopProducts: React.FC = () => {
   // Fetch available years
   useEffect(() => {
     const fetchYears = async () => {
-      const result = await db.query<{ year: string }>("SELECT DISTINCT STRFTIME('%Y', ReceiptDate) as year FROM Receipts ORDER BY year DESC");
+      const result = await db.query<{ year: string }>("SELECT DISTINCT STRFTIME('%Y', ExpenseDate) as year FROM Expenses ORDER BY year DESC");
       const years = result.map(r => parseInt(r.year));
       if (years.length > 0) {
         setAvailableYears(years);
@@ -96,8 +96,8 @@ const TopProducts: React.FC = () => {
             pu.ProductUnitType,
             SUM(li.LineQuantity) as totalQty,
             SUM(li.LineQuantity * li.LineUnitPrice) as totalSpent
-          FROM LineItems li
-          JOIN Receipts r ON li.ReceiptID = r.ReceiptID
+          FROM ExpenseLineItems li
+          JOIN Expenses r ON li.ExpenseID = r.ExpenseID
           JOIN Products p ON li.ProductID = p.ProductID
           LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
         `;
@@ -105,7 +105,7 @@ const TopProducts: React.FC = () => {
         const params: any[] = [];
         
         if (dateRange[0] !== 'all') {
-          query += ` WHERE r.ReceiptDate >= ? AND r.ReceiptDate <= ?`;
+          query += ` WHERE r.ExpenseDate >= ? AND r.ExpenseDate <= ?`;
           params.push(format(dateRange[0] as Date, 'yyyy-MM-dd'), format(dateRange[1] as Date, 'yyyy-MM-dd'));
         }
 

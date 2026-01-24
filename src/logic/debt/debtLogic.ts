@@ -120,13 +120,14 @@ export function calculateDebtSummaryForForm(
  */
 async function calculateDebts(entityId: string | number) {
   const allReceiptsForEntity = await db.query<DebtReceipt>(`
-    SELECT r.*, s.StoreName,
-      CASE WHEN r.OwedToDebtorID = ? THEN 'to_entity' ELSE 'to_me' END as type
-    FROM Receipts r
-    JOIN Stores s ON r.StoreID = s.StoreID
-    WHERE (r.OwedToDebtorID = ? OR
-          (r.SplitType = 'line_item' AND r.ReceiptID IN (SELECT li.ReceiptID FROM LineItems li WHERE li.DebtorID = ?)) OR
-          (r.SplitType = 'total_split' AND r.ReceiptID IN (SELECT rs.ReceiptID FROM ReceiptSplits rs WHERE rs.DebtorID = ?)))
+    SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
+           s.VendorName as StoreName,
+      CASE WHEN r.OwedToEntityID = ? THEN 'to_entity' ELSE 'to_me' END as type
+    FROM Expenses r
+    JOIN Vendors s ON r.VendorID = s.VendorID
+    WHERE (r.OwedToEntityID = ? OR
+          (r.SplitType = 'line_item' AND r.ExpenseID IN (SELECT li.ExpenseID FROM ExpenseLineItems li WHERE li.EntityID = ?)) OR
+          (r.SplitType = 'total_split' AND r.ExpenseID IN (SELECT rs.ExpenseID FROM ExpenseSplits rs WHERE rs.EntityID = ?)))
           AND r.IsTentative = 0
   `, [entityId, entityId, entityId, entityId]);
 
@@ -143,9 +144,9 @@ async function calculateDebts(entityId: string | number) {
   const placeholders = receiptIds.map(() => '?').join(',');
 
   const [allLineItems, allSplits, allPayments] = await Promise.all([
-    db.query<LineItem>(`SELECT * FROM LineItems WHERE ReceiptID IN (${placeholders})`, receiptIds),
-    db.query<ReceiptSplit>(`SELECT * FROM ReceiptSplits WHERE ReceiptID IN (${placeholders})`, receiptIds),
-    db.query<ReceiptDebtorPayment>(`SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID IN (${placeholders})`, receiptIds),
+    db.query<LineItem>(`SELECT ExpenseLineItemID as LineItemID, ExpenseID as ReceiptID, ProductID, LineQuantity, LineUnitPrice, EntityID as DebtorID, IsExcludedFromDiscount, CreationTimestamp, UpdatedAt FROM ExpenseLineItems WHERE ExpenseID IN (${placeholders})`, receiptIds),
+    db.query<ReceiptSplit>(`SELECT ExpenseSplitID as SplitID, ExpenseID as ReceiptID, EntityID as DebtorID, SplitPart, CreationTimestamp, UpdatedAt FROM ExpenseSplits WHERE ExpenseID IN (${placeholders})`, receiptIds),
+    db.query<ReceiptDebtorPayment>(`SELECT ExpenseEntityPaymentID as PaymentID, ExpenseID as ReceiptID, EntityID as DebtorID, PaidDate, IncomeID as TopUpID, CreationTimestamp, UpdatedAt FROM ExpenseEntityPayments WHERE ExpenseID IN (${placeholders})`, receiptIds),
   ]);
 
   const processedReceipts: ProcessedReceipt[] = allReceiptsForEntity.map(r => {

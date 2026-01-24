@@ -44,12 +44,12 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
     try {
       if (entityToEdit) {
         await db.execute(
-          'UPDATE Debtors SET DebtorName = ?, DebtorIsActive = ? WHERE DebtorID = ?',
+          'UPDATE Entities SET EntityName = ?, EntityIsActive = ? WHERE EntityID = ?',
           [name.trim(), isActive ? 1 : 0, entityToEdit.DebtorID]
         );
       } else {
         await db.execute(
-          'INSERT INTO Debtors (DebtorName, DebtorIsActive) VALUES (?, ?)',
+          'INSERT INTO Entities (EntityName, EntityIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
       }

@@ -116,7 +116,7 @@ const EntityDetailsPage: React.FC = () => {
   const fetchDetails = useCallback(async () => {
     setLoading(true);
     try {
-      const entityData = await db.queryOne<Debtor>('SELECT * FROM Debtors WHERE DebtorID = ?', [id]);
+      const entityData = await db.queryOne<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName, EntityIsActive as DebtorIsActive, CreationTimestamp, UpdatedAt FROM Entities WHERE EntityID = ?', [id]);
       setEntity(entityData);
 
       if (paymentMethodsEnabled) {
@@ -160,22 +160,24 @@ const EntityDetailsPage: React.FC = () => {
     for (let i = 0; i < receiptsToProcess.length; i++) {
       const r = receiptsToProcess[i];
       const receiptDetails = await db.queryOne<any>(`
-        SELECT r.*, s.StoreName, pm.PaymentMethodName
-        FROM Receipts r
-        JOIN Stores s ON r.StoreID = s.StoreID
+        SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
+               s.VendorName as StoreName, pm.PaymentMethodName
+        FROM Expenses r
+        JOIN Vendors s ON r.VendorID = s.VendorID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-        WHERE r.ReceiptID = ?
+        WHERE r.ExpenseID = ?
       `, [r.ReceiptID]);
 
       // Fixed: Removed array brackets from generic type
       const lineItems = await db.query<any>(`
-        SELECT li.*, p.ProductName, p.ProductBrand
-        FROM LineItems li
+        SELECT li.ExpenseLineItemID as LineItemID, li.ExpenseID as ReceiptID, li.ProductID, li.LineQuantity, li.LineUnitPrice, li.EntityID as DebtorID, li.IsExcludedFromDiscount, li.CreationTimestamp, li.UpdatedAt,
+               p.ProductName, p.ProductBrand
+        FROM ExpenseLineItems li
         JOIN Products p ON li.ProductID = p.ProductID
-        WHERE li.ReceiptID = ?
+        WHERE li.ExpenseID = ?
       `, [r.ReceiptID]);
       
-      const images = await db.query<any[]>('SELECT * FROM ReceiptImages WHERE ReceiptID = ?', [r.ReceiptID]);
+      const images = await db.query<any[]>('SELECT ExpenseImageID as ImageID, ExpenseID as ReceiptID, ImagePath, CreationTimestamp, UpdatedAt FROM ExpenseImages WHERE ExpenseID = ?', [r.ReceiptID]);
 
       let totalAmount = r.amount || 0; // Ensure number
       if (r.type === 'to_me') {
@@ -238,7 +240,7 @@ const EntityDetailsPage: React.FC = () => {
     if (!receiptToMarkAsPaid) return;
     try {
       await db.execute(
-        'UPDATE Receipts SET Status = ?, PaymentMethodID = ? WHERE ReceiptID = ?',
+        'UPDATE Expenses SET Status = ?, PaymentMethodID = ? WHERE ExpenseID = ?',
         ['paid', paymentMethodId, receiptToMarkAsPaid.ReceiptID]
       );
       refetchDebt(); // Refetch debt data
@@ -255,13 +257,13 @@ const EntityDetailsPage: React.FC = () => {
     if (!receiptId) return;
     try {
       if (type === 'to_me') {
-        const payment = await db.queryOne<{ TopUpID: number }>('SELECT TopUpID FROM ReceiptDebtorPayments WHERE ReceiptID = ? AND DebtorID = ?', [receiptId, id]);
-        await db.execute('DELETE FROM ReceiptDebtorPayments WHERE ReceiptID = ? AND DebtorID = ?', [receiptId, id]);
+        const payment = await db.queryOne<{ TopUpID: number }>('SELECT IncomeID as TopUpID FROM ExpenseEntityPayments WHERE ExpenseID = ? AND EntityID = ?', [receiptId, id]);
+        await db.execute('DELETE FROM ExpenseEntityPayments WHERE ExpenseID = ? AND EntityID = ?', [receiptId, id]);
         if (payment && payment.TopUpID) {
-          await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [payment.TopUpID]);
+          await db.execute('DELETE FROM Income WHERE IncomeID = ?', [payment.TopUpID]);
         }
       } else {
-        await db.execute('UPDATE Receipts SET Status = ?, PaymentMethodID = NULL WHERE ReceiptID = ?', ['unpaid', receiptId]);
+        await db.execute('UPDATE Expenses SET Status = ?, PaymentMethodID = NULL WHERE ExpenseID = ?', ['unpaid', receiptId]);
       }
       refetchDebt(); // Refetch debt data
     } catch (error) {

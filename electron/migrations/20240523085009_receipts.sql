@@ -1,12 +1,12 @@
-CREATE TABLE IF NOT EXISTS Receipts (
-    ReceiptID INTEGER PRIMARY KEY AUTOINCREMENT,
-    StoreID INTEGER,
-    ReceiptDate TEXT NOT NULL,
-    ReceiptNote TEXT,
+CREATE TABLE IF NOT EXISTS Expenses (
+    ExpenseID INTEGER PRIMARY KEY AUTOINCREMENT,
+    VendorID INTEGER,
+    ExpenseDate TEXT NOT NULL,
+    ExpenseNote TEXT,
     PaymentMethodID INTEGER,
     Discount REAL DEFAULT 0,
     Status TEXT DEFAULT 'paid', -- 'paid' or 'unpaid'
-    OwedToDebtorID INTEGER,
+    OwedToEntityID INTEGER,
     SplitType TEXT DEFAULT 'none', -- 'none', 'total_split', 'line_item'
     OwnShares REAL,
     TotalShares REAL,
@@ -15,14 +15,14 @@ CREATE TABLE IF NOT EXISTS Receipts (
     IsTentative INTEGER DEFAULT 0,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (StoreID) REFERENCES Stores (StoreID),
+    FOREIGN KEY (VendorID) REFERENCES Vendors (VendorID),
     FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID),
-    FOREIGN KEY (OwedToDebtorID) REFERENCES Debtors (DebtorID)
+    FOREIGN KEY (OwedToEntityID) REFERENCES Entities (EntityID)
 );
 
-CREATE TRIGGER trigger_receipts_updated_at AFTER UPDATE ON Receipts
+CREATE TRIGGER trigger_expenses_updated_at AFTER UPDATE ON Expenses
 BEGIN
-    UPDATE Receipts SET UpdatedAt = CURRENT_TIMESTAMP WHERE ReceiptID = NEW.ReceiptID;
+    UPDATE Expenses SET UpdatedAt = CURRENT_TIMESTAMP WHERE ExpenseID = NEW.ExpenseID;
 END;
 
-CREATE INDEX IF NOT EXISTS idx_receipts_date ON Receipts (ReceiptDate);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON Expenses (ExpenseDate);

@@ -42,8 +42,8 @@ export const incomeLogic = {
         /* -------- 1. Collect processed dates -------- */
 
         const existingPending = await db.query<{ PlannedDate: string }>(
-          'SELECT PlannedDate FROM PendingIncomes WHERE IncomeScheduleID = ?',
-          [schedule.IncomeScheduleID]
+          'SELECT PlannedDate FROM SchedulesPending WHERE ScheduleID = ?',
+          [schedule.ScheduleID]
         );
 
         const confirmedIncomes =
@@ -96,7 +96,7 @@ export const incomeLogic = {
 
           if (schedule.RequiresConfirmation) {
             await incomeCommitments.createPendingIncome({
-              IncomeScheduleID: schedule.IncomeScheduleID,
+              ScheduleID: schedule.ScheduleID,
               PlannedDate: dateStr,
               Amount: schedule.ExpectedAmount
             });
@@ -107,8 +107,8 @@ export const incomeLogic = {
                  Amount: schedule.ExpectedAmount ?? 0,
                  Date: dateStr,
                  Note: schedule.Note || schedule.SourceName,
-                 StoreID: schedule.StoreID!,
-                 CategoryID: schedule.CategoryID
+                 VendorID: schedule.VendorID!,
+                 ProductCategoryID: schedule.ProductCategoryID
                });
             } else {
               await incomeCommitments.createTopUpFromIncome({
@@ -118,7 +118,7 @@ export const incomeLogic = {
                 Note: schedule.Note || schedule.SourceName,
                 IncomeSourceID: schedule.IncomeSourceID,
                 IncomeCategoryID: schedule.IncomeCategoryID,
-                DebtorID: schedule.DebtorID
+                EntityID: schedule.EntityID
               });
             }
           }
@@ -127,7 +127,7 @@ export const incomeLogic = {
         }
       } catch (err) {
         console.error(
-          `Failed processing IncomeScheduleID=${schedule.IncomeScheduleID}`,
+          `Failed processing ScheduleID=${schedule.ScheduleID}`,
           err
         );
         // Continue with next schedule
@@ -144,13 +144,13 @@ export const incomeLogic = {
     const schedule = await db.queryOne<any>(
       `
       SELECT s.*, 
-        CASE WHEN s.Type = 'expense' THEN st.StoreName ELSE src.IncomeSourceName END as SourceName
-      FROM IncomeSchedules s
+        CASE WHEN s.Type = 'expense' THEN st.VendorName ELSE src.IncomeSourceName END as SourceName
+      FROM Schedules s
       LEFT JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
-      LEFT JOIN Stores st ON s.StoreID = st.StoreID
-      WHERE s.IncomeScheduleID = ?
+      LEFT JOIN Vendors st ON s.VendorID = st.VendorID
+      WHERE s.ScheduleID = ?
     `,
-      [pending.IncomeScheduleID]
+      [pending.ScheduleID]
     );
 
     if (!schedule) {
@@ -163,8 +163,8 @@ export const incomeLogic = {
         Amount: actualAmount,
         Date: normalizeDateString(actualDate),
         Note: schedule.Note || schedule.SourceName,
-        StoreID: schedule.StoreID,
-        CategoryID: schedule.CategoryID
+        VendorID: schedule.VendorID,
+        ProductCategoryID: schedule.ProductCategoryID
       });
     } else {
       await incomeCommitments.createTopUpFromIncome({
@@ -174,12 +174,12 @@ export const incomeLogic = {
         Note: schedule.Note || schedule.SourceName,
         IncomeSourceID: schedule.IncomeSourceID,
         IncomeCategoryID: schedule.IncomeCategoryID,
-        DebtorID: schedule.DebtorID
+        EntityID: schedule.EntityID
       });
     }
 
     await incomeCommitments.deletePendingIncome(
-      pending.PendingIncomeID
+      pending.SchedulePendingID
     );
   },
 

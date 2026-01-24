@@ -66,7 +66,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
       db.query<PaymentMethod>("SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName"),
       db.query<any>("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName"),
       db.query<any>("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName"),
-      db.query<any>("SELECT * FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName")
+      db.query<any>("SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName")
     ]);
     setPaymentMethods(pmRows);
     setIncomeCategories(catRows.map(r => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
@@ -81,21 +81,21 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
       const initialize = async () => {
         const { pmRows, catRows, srcRows, entRows } = await fetchReferenceData();
         
-        if (topUpToEdit && initializedRef.current !== topUpToEdit.TopUpID) {
+        if (topUpToEdit && initializedRef.current !== topUpToEdit.IncomeID) {
           const sourceName = srcRows.find((s: any) => s.IncomeSourceID === topUpToEdit.IncomeSourceID)?.IncomeSourceName || '';
           const categoryName = catRows.find((c: any) => c.IncomeCategoryID === topUpToEdit.IncomeCategoryID)?.IncomeCategoryName || '';
-          const debtorName = entRows.find((d: any) => d.DebtorID === topUpToEdit.DebtorID)?.DebtorName || '';
+          const debtorName = entRows.find((d: any) => d.DebtorID === topUpToEdit.EntityID)?.DebtorName || '';
 
           setFormData({
-            amount: String(topUpToEdit.TopUpAmount),
-            date: parseISO(topUpToEdit.TopUpDate),
-            notes: topUpToEdit.TopUpNote || '',
+            amount: String(topUpToEdit.IncomeAmount),
+            date: parseISO(topUpToEdit.IncomeDate),
+            notes: topUpToEdit.IncomeNote || '',
             sourceName,
             category: categoryName,
             debtorName,
             paymentMethodId: String(topUpToEdit.PaymentMethodID),
           });
-          initializedRef.current = topUpToEdit.TopUpID;
+          initializedRef.current = topUpToEdit.IncomeID;
         } else if (!topUpToEdit) {
           const today = getCurrentDate();
           setFormData({ 
@@ -138,11 +138,11 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
       if (topUpToEdit) {
         const sourceId = (await db.queryOne<any>('SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?', [formData.sourceName]))?.IncomeSourceID;
         const categoryId = (await db.queryOne<any>('SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?', [formData.category]))?.IncomeCategoryID;
-        const debtorId = (await db.queryOne<any>('SELECT DebtorID FROM Debtors WHERE DebtorName = ?', [formData.debtorName]))?.DebtorID;
+        const debtorId = (await db.queryOne<any>('SELECT EntityID FROM Entities WHERE EntityName = ?', [formData.debtorName]))?.EntityID;
 
         await db.execute(
-          'UPDATE TopUps SET TopUpAmount = ?, TopUpDate = ?, TopUpNote = ?, PaymentMethodID = ?, IncomeSourceID = ?, IncomeCategoryID = ?, DebtorID = ? WHERE TopUpID = ?',
-          [Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, Number(formData.paymentMethodId), sourceId || null, categoryId || null, debtorId || null, topUpToEdit.TopUpID]
+          'UPDATE Income SET IncomeAmount = ?, IncomeDate = ?, IncomeNote = ?, PaymentMethodID = ?, IncomeSourceID = ?, IncomeCategoryID = ?, EntityID = ? WHERE IncomeID = ?',
+          [Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, Number(formData.paymentMethodId), sourceId || null, categoryId || null, debtorId || null, topUpToEdit.IncomeID]
         );
       } else {
         await incomeCommitments.createOneTimeIncome({

@@ -1,17 +1,17 @@
-CREATE TABLE IF NOT EXISTS ReceiptSplits (
-    SplitID INTEGER PRIMARY KEY AUTOINCREMENT,
-    ReceiptID INTEGER NOT NULL,
-    DebtorID INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS ExpenseSplits (
+    ExpenseSplitID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ExpenseID INTEGER NOT NULL,
+    EntityID INTEGER NOT NULL,
     SplitPart REAL NOT NULL,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE,
-    FOREIGN KEY (DebtorID) REFERENCES Debtors (DebtorID)
+    FOREIGN KEY (ExpenseID) REFERENCES Expenses (ExpenseID) ON DELETE CASCADE,
+    FOREIGN KEY (EntityID) REFERENCES Entities (EntityID)
 );
 
-CREATE TRIGGER trigger_receiptsplits_updated_at AFTER UPDATE ON ReceiptSplits
+CREATE TRIGGER trigger_expensesplits_updated_at AFTER UPDATE ON ExpenseSplits
 BEGIN
-    UPDATE ReceiptSplits SET UpdatedAt = CURRENT_TIMESTAMP WHERE SplitID = NEW.SplitID;
+    UPDATE ExpenseSplits SET UpdatedAt = CURRENT_TIMESTAMP WHERE ExpenseSplitID = NEW.ExpenseSplitID;
 END;
 
-CREATE INDEX IF NOT EXISTS idx_receiptsplits_receipt_id ON ReceiptSplits (ReceiptID);
+CREATE INDEX IF NOT EXISTS idx_expensesplits_expense_id ON ExpenseSplits (ExpenseID);

@@ -138,16 +138,16 @@ const PaymentMethodDetailsPage: React.FC = () => {
       }
 
       const receiptsData = await db.query<ReceiptQueryResult>(`
-        SELECT r.ReceiptID as id, r.ReceiptDate as date, s.StoreName as name, r.ReceiptNote as note, r.Discount,
+        SELECT r.ExpenseID as id, r.ExpenseDate as date, s.VendorName as name, r.ExpenseNote as note, r.Discount,
                r.IsNonItemised, r.NonItemisedTotal, 'receipt' as type, r.CreationTimestamp as creationTimestamp
-        FROM Receipts r
-        JOIN Stores s ON r.StoreID = s.StoreID
+        FROM Expenses r
+        JOIN Vendors s ON r.VendorID = s.VendorID
         WHERE r.PaymentMethodID = ?
       `, [id]);
 
       const receiptIds = receiptsData.map(r => r.id);
       const allLineItems = receiptIds.length > 0
-        ? await db.query<LineItem>(`SELECT * FROM LineItems WHERE ReceiptID IN (${receiptIds.map(() => '?').join(',')})`, receiptIds)
+        ? await db.query<LineItem>(`SELECT ExpenseLineItemID as LineItemID, ExpenseID as ReceiptID, ProductID, LineQuantity, LineUnitPrice, EntityID as DebtorID, IsExcludedFromDiscount, CreationTimestamp, UpdatedAt FROM ExpenseLineItems WHERE ExpenseID IN (${receiptIds.map(() => '?').join(',')})`, receiptIds)
         : [];
 
       interface TopUpQueryResult {
@@ -160,14 +160,14 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
       const topupsData = await db.query<TopUpQueryResult>(`
         SELECT
-          tu.TopUpID as id,
-          tu.TopUpDate as date,
-          tu.TopUpNote as note,
-          tu.TopUpAmount as amount,
+          tu.IncomeID as id,
+          tu.IncomeDate as date,
+          tu.IncomeNote as note,
+          tu.IncomeAmount as amount,
           tu.CreationTimestamp as creationTimestamp
-        FROM TopUps tu
+        FROM Income tu
         WHERE tu.PaymentMethodID = ? AND tu.TransferID IS NULL AND NOT EXISTS (
-          SELECT 1 FROM ReceiptDebtorPayments rdp WHERE rdp.TopUpID = tu.TopUpID
+          SELECT 1 FROM ExpenseEntityPayments rdp WHERE rdp.IncomeID = tu.IncomeID
         )
       `, [id]);
 
@@ -203,15 +203,15 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
       const debtRepaymentsData = await db.query<DebtRepaymentQueryResult>(`
         SELECT
-          rdp.PaymentID as id,
+          rdp.ExpenseEntityPaymentID as id,
           rdp.PaidDate as date,
-          tu.TopUpNote as note,
-          tu.TopUpAmount as amount,
+          tu.IncomeNote as note,
+          tu.IncomeAmount as amount,
           rdp.CreationTimestamp as creationTimestamp,
-          d.DebtorName as debtorName
-        FROM ReceiptDebtorPayments rdp
-        JOIN TopUps tu ON rdp.TopUpID = tu.TopUpID
-        JOIN Debtors d ON rdp.DebtorID = d.DebtorID
+          d.EntityName as debtorName
+        FROM ExpenseEntityPayments rdp
+        JOIN Income tu ON rdp.IncomeID = tu.IncomeID
+        JOIN Entities d ON rdp.EntityID = d.EntityID
         WHERE tu.PaymentMethodID = ?
       `, [id]);
 
@@ -314,9 +314,9 @@ const PaymentMethodDetailsPage: React.FC = () => {
     if (!itemToDelete) return;
     try {
       if (itemToDelete.type === 'receipt') {
-        await db.execute('DELETE FROM Receipts WHERE ReceiptID = ?', [itemToDelete.id]);
+        await db.execute('DELETE FROM Expenses WHERE ExpenseID = ?', [itemToDelete.id]);
       } else if (itemToDelete.type === 'deposit' || itemToDelete.type === 'debt_repayment') {
-        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [itemToDelete.id]);
+        await db.execute('DELETE FROM Income WHERE IncomeID = ?', [itemToDelete.id]);
       } else if (itemToDelete.type === 'transfer_in' || itemToDelete.type === 'transfer_out') {
         await db.execute('DELETE FROM Transfers WHERE TransferID = ?', [itemToDelete.id]);
       }

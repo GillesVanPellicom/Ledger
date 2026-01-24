@@ -113,7 +113,7 @@ const ReceiptsPage: React.FC = () => {
   useEffect(() => {
     const loadReferenceData = async () => {
       const [debtorsData, methodsData, sourcesData, categoriesData] = await Promise.all([
-        db.query<Debtor>('SELECT * FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName'),
+        db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName'),
         db.query<PaymentMethod>('SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName'),
         db.query<any>('SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName'),
         db.query<any>('SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName'),
@@ -217,7 +217,7 @@ const ReceiptsPage: React.FC = () => {
         if (tx.type === 'expense') {
           await deleteReceiptMutation.mutateAsync([tx.originalId]);
         } else if (tx.type === 'income' || tx.type === 'repayment') {
-          await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [tx.originalId]);
+          await db.execute('DELETE FROM Income WHERE IncomeID = ?', [tx.originalId]);
         } else if (tx.type === 'transfer') {
           await db.execute('DELETE FROM Transfers WHERE TransferID = ?', [tx.originalId]);
         }
@@ -242,19 +242,21 @@ const ReceiptsPage: React.FC = () => {
     const expenseIds = selectedExpenses.map(t => t.originalId);
     const placeholders = expenseIds.map(() => '?').join(',');
     const receiptsData: (Receipt & { lineItems: LineItem[], totalAmount: number })[] = await db.query(`
-      SELECT r.*, s.StoreName, pm.PaymentMethodName
-      FROM Receipts r
-      JOIN Stores s ON r.StoreID = s.StoreID
+      SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
+             s.VendorName as StoreName, pm.PaymentMethodName
+      FROM Expenses r
+      JOIN Vendors s ON r.VendorID = s.VendorID
       LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-      WHERE r.ReceiptID IN (${placeholders})
-      ORDER BY r.ReceiptDate DESC
+      WHERE r.ExpenseID IN (${placeholders})
+      ORDER BY r.ExpenseDate DESC
     `, expenseIds);
     const lineItemsData: LineItem[] = await db.query(`
-      SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
-      FROM LineItems li
+      SELECT li.ExpenseLineItemID as LineItemID, li.ExpenseID as ReceiptID, li.ProductID, li.LineQuantity, li.LineUnitPrice, li.EntityID as DebtorID, li.IsExcludedFromDiscount, li.CreationTimestamp, li.UpdatedAt,
+             p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType
+      FROM ExpenseLineItems li
       JOIN Products p ON li.ProductID = p.ProductID
       LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-      WHERE li.ReceiptID IN (${placeholders})
+      WHERE li.ExpenseID IN (${placeholders})
     `, expenseIds);
     const fullReceipts: FullReceipt[] = receiptsData.map(receipt => {
       const items = lineItemsData.filter(li => li.ReceiptID === receipt.ReceiptID);
@@ -767,7 +769,7 @@ const ReceiptsPage: React.FC = () => {
                   header: 'Source', accessor: 'SourceName', render: (row) => (
                     <div className="flex items-center gap-2">
                       {row.SourceName}
-                      {row.DebtorID && (
+                      {row.EntityID && (
                         <Tooltip content="Associated with an entity.">
                           <User className="h-3 w-3 text-accent" />
                         </Tooltip>
@@ -821,8 +823,8 @@ const ReceiptsPage: React.FC = () => {
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/payment-methods/${row.PaymentMethodID}`); }}>
                             <CreditCard className="mr-2 h-4 w-4" /> Method
                           </DropdownMenuItem>
-                          {row.DebtorID && (
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.DebtorID}`); }}>
+                          {row.EntityID && (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.EntityID}`); }}>
                               <User className="mr-2 h-4 w-4" /> Entity
                             </DropdownMenuItem>
                           )}
@@ -830,7 +832,7 @@ const ReceiptsPage: React.FC = () => {
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={(e) => {
                             e.stopPropagation();
-                            const schedule = schedules?.find(s => s.IncomeScheduleID === row.IncomeScheduleID);
+                            const schedule = schedules?.find(s => s.ScheduleID === row.ScheduleID);
                             if (schedule) {
                               setEditingSchedule(schedule);
                               setIsScheduleModalOpen(true);
@@ -866,7 +868,7 @@ const ReceiptsPage: React.FC = () => {
                   header: 'Source', accessor: 'SourceName', render: (row) => (
                     <div className="flex items-center gap-2">
                       {row.SourceName}
-                      {row.DebtorID && (
+                      {row.EntityID && (
                         <Tooltip content="Associated with an entity.">
                           <User className="h-3 w-3 text-accent" />
                         </Tooltip>
@@ -909,8 +911,8 @@ const ReceiptsPage: React.FC = () => {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/payment-methods/${row.PaymentMethodID}`); }}>
                           <CreditCard className="mr-2 h-4 w-4" /> Method
                         </DropdownMenuItem>
-                        {row.DebtorID && (
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.DebtorID}`); }}>
+                        {row.EntityID && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.EntityID}`); }}>
                             <User className="mr-2 h-4 w-4" /> Entity
                           </DropdownMenuItem>
                         )}
@@ -925,7 +927,7 @@ const ReceiptsPage: React.FC = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600" onClick={(e) => {
                           e.stopPropagation();
-                          setScheduleToDelete(row.IncomeScheduleID);
+                          setScheduleToDelete(row.ScheduleID);
                           setCascadeDelete(false);
                           setIsDeleteScheduleModalOpen(true);
                         }}>
@@ -1071,7 +1073,7 @@ const ReceiptsPage: React.FC = () => {
               </div>
             </div>
           </Modal>
-          <ConfirmModal isOpen={isDismissModalOpen} onClose={() => setIsDismissModalOpen(false)} onConfirm={() => { if (selectedPending) { rejectMutation.mutate(selectedPending.PendingIncomeID); setIsDismissModalOpen(false); } }} title="Dismiss Income" message={`Are you sure you want to dismiss ${selectedPending?.SourceName}? This occurrence will be ignored.`} confirmText="Dismiss" />
+          <ConfirmModal isOpen={isDismissModalOpen} onClose={() => setIsDismissModalOpen(false)} onConfirm={() => { if (selectedPending) { rejectMutation.mutate(selectedPending.SchedulePendingID); setIsDismissModalOpen(false); } }} title="Dismiss Income" message={`Are you sure you want to dismiss ${selectedPending?.SourceName}? This occurrence will be ignored.`} confirmText="Dismiss" />
           <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title="Confirm Income" onEnter={handleConfirmIncome} footer={
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>

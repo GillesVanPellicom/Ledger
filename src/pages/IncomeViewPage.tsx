@@ -42,37 +42,37 @@ const IncomeViewPage: React.FC = () => {
       // First check if it's a repayment (exists in ReceiptDebtorPayments)
       const repayment = await db.queryOne<any>(`
         SELECT rdp.*, 
-               tu.TopUpAmount, 
-               tu.TopUpDate, 
-               tu.TopUpNote, 
+               tu.IncomeAmount, 
+               tu.IncomeDate, 
+               tu.IncomeNote, 
                tu.PaymentMethodID,
                pm.PaymentMethodName,
-               d.DebtorName,
-               s.StoreName as ReceiptStoreName
-        FROM ReceiptDebtorPayments rdp
-        JOIN TopUps tu ON rdp.TopUpID = tu.TopUpID
-        JOIN Debtors d ON rdp.DebtorID = d.DebtorID
+               d.EntityName as DebtorName,
+               s.VendorName as ReceiptStoreName
+        FROM ExpenseEntityPayments rdp
+        JOIN Income tu ON rdp.IncomeID = tu.IncomeID
+        JOIN Entities d ON rdp.EntityID = d.EntityID
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
-        LEFT JOIN Receipts r ON rdp.ReceiptID = r.ReceiptID
-        LEFT JOIN Stores s ON r.StoreID = s.StoreID
-        WHERE rdp.PaymentID = ?
+        LEFT JOIN Expenses r ON rdp.ExpenseID = r.ExpenseID
+        LEFT JOIN Vendors s ON r.VendorID = s.VendorID
+        WHERE rdp.ExpenseEntityPaymentID = ?
       `, [id]);
 
       if (repayment) {
         return {
-          id: repayment.PaymentID,
+          id: repayment.ExpenseEntityPaymentID,
           type: 'repayment',
-          date: repayment.TopUpDate,
-          amount: repayment.TopUpAmount,
+          date: repayment.IncomeDate,
+          amount: repayment.IncomeAmount,
           description: `Repayment from ${repayment.DebtorName}`,
           category: null,
           method: repayment.PaymentMethodName,
           paymentMethodId: repayment.PaymentMethodID,
-          note: repayment.TopUpNote,
-          debtorId: repayment.DebtorID,
+          note: repayment.IncomeNote,
+          debtorId: repayment.EntityID,
           debtorName: repayment.DebtorName,
-          topUpId: repayment.TopUpID,
-          receiptId: repayment.ReceiptID,
+          topUpId: repayment.IncomeID,
+          receiptId: repayment.ExpenseID,
           receiptStoreName: repayment.ReceiptStoreName
         };
       }
@@ -83,29 +83,29 @@ const IncomeViewPage: React.FC = () => {
                s.IncomeSourceName, 
                c.IncomeCategoryName,
                pm.PaymentMethodName,
-               d.DebtorName
-        FROM TopUps t
+               d.EntityName as DebtorName
+        FROM Income t
         LEFT JOIN IncomeSources s ON t.IncomeSourceID = s.IncomeSourceID
         LEFT JOIN IncomeCategories c ON t.IncomeCategoryID = c.IncomeCategoryID
         LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
-        LEFT JOIN Debtors d ON t.DebtorID = d.DebtorID
-        WHERE t.TopUpID = ?
+        LEFT JOIN Entities d ON t.EntityID = d.EntityID
+        WHERE t.IncomeID = ?
       `, [id]);
 
       if (topUp) {
         return {
-          id: topUp.TopUpID,
+          id: topUp.IncomeID,
           type: 'income',
-          date: topUp.TopUpDate,
-          amount: topUp.TopUpAmount,
+          date: topUp.IncomeDate,
+          amount: topUp.IncomeAmount,
           description: topUp.IncomeSourceName || 'Income',
           category: topUp.IncomeCategoryName,
           method: topUp.PaymentMethodName,
           paymentMethodId: topUp.PaymentMethodID,
-          note: topUp.TopUpNote,
-          debtorId: topUp.DebtorID,
+          note: topUp.IncomeNote,
+          debtorId: topUp.EntityID,
           debtorName: topUp.DebtorName,
-          topUpId: topUp.TopUpID,
+          topUpId: topUp.IncomeID,
           receiptId: null,
           incomeSourceId: topUp.IncomeSourceID,
           incomeCategoryId: topUp.IncomeCategoryID
@@ -120,12 +120,12 @@ const IncomeViewPage: React.FC = () => {
     if (!transaction) return;
     try {
       if (transaction.type === 'repayment') {
-        await db.execute('DELETE FROM ReceiptDebtorPayments WHERE PaymentID = ?', [transaction.id]);
+        await db.execute('DELETE FROM ExpenseEntityPayments WHERE ExpenseEntityPaymentID = ?', [transaction.id]);
         if (transaction.topUpId) {
-            await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [transaction.topUpId]);
+            await db.execute('DELETE FROM Income WHERE IncomeID = ?', [transaction.topUpId]);
         }
       } else {
-        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [transaction.id]);
+        await db.execute('DELETE FROM Income WHERE IncomeID = ?', [transaction.id]);
       }
       
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -288,15 +288,14 @@ const IncomeViewPage: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['transaction', id] });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }}
-        forceSingleMode={true}
         topUpToEdit={transaction?.type === 'income' ? {
-          TopUpID: transaction.id,
-          TopUpDate: transaction.date,
-          TopUpAmount: transaction.amount,
-          TopUpNote: transaction.note || '',
+          IncomeID: transaction.id,
+          IncomeDate: transaction.date,
+          IncomeAmount: transaction.amount,
+          IncomeNote: transaction.note || '',
           IncomeSourceID: transaction.incomeSourceId,
           IncomeCategoryID: transaction.incomeCategoryId,
-          DebtorID: transaction.debtorId,
+          EntityID: transaction.debtorId,
           PaymentMethodID: transaction.paymentMethodId
         } as any : null}
       />

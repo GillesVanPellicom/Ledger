@@ -1,19 +1,25 @@
-CREATE TABLE IF NOT EXISTS TopUps (
-    TopUpID INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS Income (
+    IncomeID INTEGER PRIMARY KEY AUTOINCREMENT,
     PaymentMethodID INTEGER NOT NULL,
-    TopUpAmount REAL NOT NULL,
-    TopUpDate TEXT NOT NULL,
-    TopUpNote TEXT,
+    IncomeAmount REAL NOT NULL,
+    IncomeDate TEXT NOT NULL,
+    IncomeNote TEXT,
     TransferID INTEGER,
+    IncomeSourceID INTEGER,
+    IncomeCategoryID INTEGER,
+    EntityID INTEGER,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID) ON DELETE CASCADE,
-    FOREIGN KEY (TransferID) REFERENCES Transfers (TransferID) ON DELETE CASCADE
+    FOREIGN KEY (TransferID) REFERENCES Transfers (TransferID) ON DELETE CASCADE,
+    FOREIGN KEY (IncomeSourceID) REFERENCES IncomeSources (IncomeSourceID),
+    FOREIGN KEY (IncomeCategoryID) REFERENCES IncomeCategories (IncomeCategoryID),
+    FOREIGN KEY (EntityID) REFERENCES Entities (EntityID)
 );
 
-CREATE TRIGGER trigger_topups_updated_at AFTER UPDATE ON TopUps
+CREATE TRIGGER trigger_income_updated_at AFTER UPDATE ON Income
 BEGIN
-    UPDATE TopUps SET UpdatedAt = CURRENT_TIMESTAMP WHERE TopUpID = NEW.TopUpID;
+    UPDATE Income SET UpdatedAt = CURRENT_TIMESTAMP WHERE IncomeID = NEW.IncomeID;
 END;
 
-CREATE INDEX IF NOT EXISTS idx_topups_transfer_id ON TopUps (TransferID);
+CREATE INDEX IF NOT EXISTS idx_income_transfer_id ON Income (TransferID);

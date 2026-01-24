@@ -131,7 +131,7 @@ const IncomePage: React.FC = () => {
     if (editingSchedule) {
       setNewSchedule({
         SourceName: editingSchedule.SourceName || '',
-        DebtorName: entities.find(e => e.id === editingSchedule.DebtorID)?.label || '',
+        DebtorName: entities.find(e => e.id === editingSchedule.EntityID)?.label || '',
         Category: editingSchedule.Category || '',
         PaymentMethodID: String(editingSchedule.PaymentMethodID),
         ExpectedAmount: String(editingSchedule.ExpectedAmount || '0'),
@@ -190,7 +190,7 @@ const IncomePage: React.FC = () => {
         })));
       }).catch(err => showError(err));
 
-      db.query("SELECT * FROM Debtors WHERE DebtorIsActive = 1 ORDER BY DebtorName").then(rows => {
+      db.query("SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName").then(rows => {
         setEntities(rows.map((r: any) => ({
           value: r.DebtorName,
           label: r.DebtorName,
@@ -345,7 +345,7 @@ const IncomePage: React.FC = () => {
       CreateForPastPeriod: createForPastPeriod,
     };
     if (editingSchedule) {
-      updateScheduleMutation.mutate({id: editingSchedule.IncomeScheduleID, data});
+      updateScheduleMutation.mutate({id: editingSchedule.ScheduleID, data});
     } else {
       createScheduleMutation.mutate(data);
     }
@@ -489,7 +489,7 @@ const IncomePage: React.FC = () => {
                       render: (row) => (
                         <div className="flex items-center gap-2">
                           {row.SourceName}
-                          {row.DebtorID && (
+                          {row.EntityID && (
                             <Tooltip content="Associated with an entity.">
                               <User className="h-3 w-3 text-accent" />
                             </Tooltip>
@@ -564,10 +564,10 @@ const IncomePage: React.FC = () => {
                                 <CreditCard className="mr-2 h-4 w-4"/>
                                 Method
                               </DropdownMenuItem>
-                              {row.DebtorID && (
+                              {row.EntityID && (
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/entities/${row.DebtorID}`);
+                                  navigate(`/entities/${row.EntityID}`);
                                 }}>
                                   <User className="mr-2 h-4 w-4"/>
                                   Entity
@@ -577,7 +577,7 @@ const IncomePage: React.FC = () => {
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
-                                const schedule = schedules?.find(s => s.IncomeScheduleID === row.IncomeScheduleID);
+                                const schedule = schedules?.find(s => s.ScheduleID === row.ScheduleID);
                                 if (schedule) {
                                   setEditingSchedule(schedule);
                                   setIsScheduleModalOpen(true);
@@ -619,7 +619,7 @@ const IncomePage: React.FC = () => {
                       render: (row) => (
                         <div className="flex items-center gap-2">
                           {row.SourceName}
-                          {row.DebtorID && (
+                          {row.EntityID && (
                             <Tooltip content="Associated with an entity.">
                               <User className="h-3 w-3 text-accent" />
                             </Tooltip>
@@ -674,10 +674,10 @@ const IncomePage: React.FC = () => {
                               <CreditCard className="mr-2 h-4 w-4"/>
                               Method
                             </DropdownMenuItem>
-                            {row.DebtorID && (
+                            {row.EntityID && (
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/entities/${row.DebtorID}`);
+                                navigate(`/entities/${row.EntityID}`);
                               }}>
                                 <User className="mr-2 h-4 w-4"/>
                                 Entity
@@ -697,7 +697,7 @@ const IncomePage: React.FC = () => {
                               className="text-red-600"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setScheduleToDelete(row.IncomeScheduleID);
+                                setScheduleToDelete(row.ScheduleID);
                                 setCascadeDelete(false);
                                 setIsDeleteModalOpen(true);
                               }}
@@ -769,7 +769,7 @@ const IncomePage: React.FC = () => {
         onClose={() => setIsDismissModalOpen(false)}
         onConfirm={() => {
           if (selectedPending) {
-            rejectMutation.mutate(selectedPending.PendingIncomeID);
+            rejectMutation.mutate(selectedPending.SchedulePendingID);
             setIsDismissModalOpen(false);
           }
         }}

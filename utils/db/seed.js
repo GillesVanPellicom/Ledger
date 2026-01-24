@@ -136,18 +136,18 @@ async function seed() {
         for (const unit of productUnits) await runQuery(db, insert, [unit.type, unit.description]);
     });
 
-    await task('Seeding Stores', async () => {
-        const insert = 'INSERT OR IGNORE INTO Stores (StoreName) VALUES (?)';
+    await task('Seeding Vendors', async () => {
+        const insert = 'INSERT OR IGNORE INTO Vendors (VendorName) VALUES (?)';
         for (const store of stores) await runQuery(db, insert, [store]);
     });
 
-    await task('Seeding Debtors', async () => {
-        const insert = 'INSERT OR IGNORE INTO Debtors (DebtorName) VALUES (?)';
+    await task('Seeding Entities', async () => {
+        const insert = 'INSERT OR IGNORE INTO Entities (EntityName) VALUES (?)';
         for (const debtor of debtors) await runQuery(db, insert, [debtor]);
     });
 
-    await task('Seeding Categories', async () => {
-        const insert = 'INSERT OR IGNORE INTO Categories (CategoryName) VALUES (?)';
+    await task('Seeding Product Categories', async () => {
+        const insert = 'INSERT OR IGNORE INTO ProductCategories (ProductCategoryName) VALUES (?)';
         for (const cat of categories) await runQuery(db, insert, [cat]);
     });
 
@@ -168,7 +168,7 @@ async function seed() {
         for (const source of incomeSources) await runQuery(db, insert, [source]);
     });
 
-    await task('Seeding Income Schedules', async () => {
+    await task('Seeding Schedules', async () => {
         const paymentMethods = await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods');
         const incomeSources = await getQuery(db, 'SELECT * FROM IncomeSources');
         const incomeCategories = await getQuery(db, 'SELECT * FROM IncomeCategories');
@@ -235,7 +235,7 @@ async function seed() {
             }
         ];
 
-        const insert = 'INSERT OR IGNORE INTO IncomeSchedules (IncomeSourceID, IncomeCategoryID, PaymentMethodID, ExpectedAmount, RecurrenceRule, RequiresConfirmation, LookaheadDays, IsActive, DayOfMonth, DayOfWeek, MonthOfYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const insert = 'INSERT OR IGNORE INTO Schedules (IncomeSourceID, IncomeCategoryID, PaymentMethodID, ExpectedAmount, RecurrenceRule, RequiresConfirmation, LookaheadDays, IsActive, DayOfMonth, DayOfWeek, MonthOfYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         
         for (const schedule of schedulesToSeed) {
             const source = incomeSources.find(s => s.IncomeSourceName === schedule.SourceName) || getRandomElement(incomeSources);
@@ -261,8 +261,8 @@ async function seed() {
 
     await task('Generating and Inserting Products', async () => {
         const unitIds = (await getQuery(db, 'SELECT ProductUnitID FROM ProductUnits')).map(u => u.ProductUnitID);
-        const categoryIds = (await getQuery(db, 'SELECT CategoryID FROM Categories')).map(c => c.CategoryID);
-        const insert = 'INSERT OR IGNORE INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, CategoryID) VALUES (?, ?, ?, ?, ?)';
+        const categoryIds = (await getQuery(db, 'SELECT ProductCategoryID FROM ProductCategories')).map(c => c.ProductCategoryID);
+        const insert = 'INSERT OR IGNORE INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, ProductCategoryID) VALUES (?, ?, ?, ?, ?)';
         for (let i = 0; i < 10000; i++) {
             const name = getRandomElement(productNames).toLowerCase();
             const brand = getRandomElement(brands);
@@ -271,23 +271,23 @@ async function seed() {
         }
     });
 
-    await task('Generating Receipts with Line Items and Debt', async () => {
+    await task('Generating Expenses with Line Items and Debt', async () => {
         if (!fs.existsSync(receiptImgPath)) {
             fs.mkdirSync(receiptImgPath, { recursive: true });
         }
-        const storeIds = (await getQuery(db, 'SELECT StoreID FROM Stores')).map(s => s.StoreID);
+        const storeIds = (await getQuery(db, 'SELECT VendorID FROM Vendors')).map(s => s.VendorID);
         const productIds = (await getQuery(db, 'SELECT ProductID FROM Products')).map(p => p.ProductID);
         const paymentMethodIds = (await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods')).map(pm => pm.PaymentMethodID);
-        const debtorIds = (await getQuery(db, 'SELECT DebtorID FROM Debtors')).map(d => d.DebtorID);
+        const debtorIds = (await getQuery(db, 'SELECT EntityID FROM Entities')).map(d => d.EntityID);
         const seedImages = fs.readdirSync(seedImgPath).filter(f => f.endsWith('.webp'));
 
         if (productIds.length === 0) throw new Error('No products found. Cannot create receipts.');
 
-        const insertReceipt = 'INSERT INTO Receipts (ReceiptDate, StoreID, ReceiptNote, PaymentMethodID, SplitType, Status, OwedToDebtorID, IsNonItemised, NonItemisedTotal, IsTentative, OwnShares, TotalShares, Discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const insertLineItem = 'INSERT INTO LineItems (ReceiptID, ProductID, LineQuantity, LineUnitPrice, DebtorID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)';
-        const insertReceiptSplit = 'INSERT INTO ReceiptSplits (ReceiptID, DebtorID, SplitPart) VALUES (?, ?, ?)';
-        const insertPayment = 'INSERT INTO ReceiptDebtorPayments (ReceiptID, DebtorID, PaidDate) VALUES (?, ?, ?)';
-        const insertImage = 'INSERT INTO ReceiptImages (ReceiptID, ImagePath) VALUES (?, ?)';
+        const insertReceipt = 'INSERT INTO Expenses (ExpenseDate, VendorID, ExpenseNote, PaymentMethodID, SplitType, Status, OwedToEntityID, IsNonItemised, NonItemisedTotal, IsTentative, OwnShares, TotalShares, Discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const insertLineItem = 'INSERT INTO ExpenseLineItems (ExpenseID, ProductID, LineQuantity, LineUnitPrice, EntityID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)';
+        const insertReceiptSplit = 'INSERT INTO ExpenseSplits (ExpenseID, EntityID, SplitPart) VALUES (?, ?, ?)';
+        const insertPayment = 'INSERT INTO ExpenseEntityPayments (ExpenseID, EntityID, PaidDate) VALUES (?, ?, ?)';
+        const insertImage = 'INSERT INTO ExpenseImages (ExpenseID, ImagePath) VALUES (?, ?)';
 
         const paymentMethods = await getQuery(db, 'SELECT * FROM PaymentMethods');
         const pmMap = {};
@@ -350,7 +350,7 @@ async function seed() {
                         
                         if (isNonItemised) {
                             const total = (Math.random() * 100 + 5).toFixed(2);
-                            db.run('UPDATE Receipts SET NonItemisedTotal = ? WHERE ReceiptID = ?', [total, receiptId]);
+                            db.run('UPDATE Expenses SET NonItemisedTotal = ? WHERE ExpenseID = ?', [total, receiptId]);
                         } else {
                             const numItems = getRandomInt(1, 25);
                             const lineItemsToInsert = [];
@@ -389,7 +389,7 @@ async function seed() {
                                 });
                                 
                                 const currentTotalShares = calculateTotalShares(ownSharePart, splits);
-                                db.run('UPDATE Receipts SET OwnShares = ?, TotalShares = ? WHERE ReceiptID = ?', [ownSharePart, currentTotalShares, receiptId]);
+                                db.run('UPDATE Expenses SET OwnShares = ?, TotalShares = ? WHERE ExpenseID = ?', [ownSharePart, currentTotalShares, receiptId]);
                             }
 
                             const hasExclusions = hasDiscount && Math.random() < 0.3;
@@ -419,11 +419,11 @@ async function seed() {
         });
     });
 
-    await task('Generating Role-Based Top-Ups', async () => {
+    await task('Generating Role-Based Income', async () => {
         const methods = await getQuery(db, 'SELECT * FROM PaymentMethods WHERE PaymentMethodName != "cash"');
-        const totalSpendingResult = await getQuery(db, 'SELECT SUM(LineQuantity * LineUnitPrice) as total FROM LineItems');
+        const totalSpendingResult = await getQuery(db, 'SELECT SUM(LineQuantity * LineUnitPrice) as total FROM ExpenseLineItems');
         const TOTAL_SPENT = totalSpendingResult[0].total || 0;
-        const NUM_RECEIPTS = (await getQuery(db, 'SELECT COUNT(*) as count FROM Receipts'))[0].count;
+        const NUM_RECEIPTS = (await getQuery(db, 'SELECT COUNT(*) as count FROM Expenses'))[0].count;
         const AVG_SPENT_PER_RECEIPT = TOTAL_SPENT / NUM_RECEIPTS;
 
         const roles = {
@@ -456,7 +456,7 @@ async function seed() {
                 const sourceId = Math.random() > 0.2 ? getRandomElement(incomeSources).IncomeSourceID : null;
                 const categoryId = Math.random() > 0.2 ? getRandomElement(incomeCategories).IncomeCategoryID : null;
 
-                await runQuery(db, 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, IncomeSourceID, IncomeCategoryID) VALUES (?, ?, ?, ?, ?, ?)', 
+                await runQuery(db, 'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, IncomeSourceID, IncomeCategoryID) VALUES (?, ?, ?, ?, ?, ?)', 
                     [pm.PaymentMethodID, topUpAmount, topUpDate, topUpNote, sourceId, categoryId]);
             }
         }
@@ -467,7 +467,7 @@ async function seed() {
         if (methods.length < 2) return;
 
         const insertTransfer = 'INSERT INTO Transfers (FromPaymentMethodID, ToPaymentMethodID, Amount, TransferDate, Note) VALUES (?, ?, ?, ?, ?)';
-        const insertTopUp = 'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)';
+        const insertTopUp = 'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, TransferID) VALUES (?, ?, ?, ?, ?)';
 
         await new Promise((resolve, reject) => {
             db.serialize(() => {

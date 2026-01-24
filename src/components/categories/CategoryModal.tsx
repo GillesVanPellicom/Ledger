@@ -44,13 +44,13 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, 
     try {
       if (categoryToEdit) {
         await db.execute(
-          'UPDATE Categories SET CategoryName = ?, CategoryIsActive = ? WHERE CategoryID = ?',
+          'UPDATE ProductCategories SET ProductCategoryName = ?, ProductCategoryIsActive = ? WHERE ProductCategoryID = ?',
           [name.trim(), isActive ? 1 : 0, categoryToEdit.CategoryID]
         );
         onSave();
       } else {
         const result = await db.execute(
-          'INSERT INTO Categories (CategoryName, CategoryIsActive) VALUES (?, ?)',
+          'INSERT INTO ProductCategories (ProductCategoryName, ProductCategoryIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
         onSave(result.lastID);

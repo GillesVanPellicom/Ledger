@@ -44,13 +44,13 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
     try {
       if (storeToEdit) {
         await db.execute(
-          'UPDATE Stores SET StoreName = ?, StoreIsActive = ? WHERE StoreID = ?',
+          'UPDATE Vendors SET VendorName = ?, VendorIsActive = ? WHERE VendorID = ?',
           [name.trim(), isActive ? 1 : 0, storeToEdit.StoreID]
         );
         onSave();
       } else {
         const result = await db.execute(
-          'INSERT INTO Stores (StoreName, StoreIsActive) VALUES (?, ?)',
+          'INSERT INTO Vendors (VendorName, VendorIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
         onSave(result.lastID);

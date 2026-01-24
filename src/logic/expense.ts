@@ -91,40 +91,43 @@ export async function getReceipt(id: string): Promise<{
   payments: ReceiptDebtorPayment[];
 } | null> {
   const receiptData = await db.queryOne<Receipt>(`
-    SELECT r.*, s.StoreName, pm.PaymentMethodName, d.DebtorName as OwedToDebtorName
-    FROM Receipts r
-             JOIN Stores s ON r.StoreID = s.StoreID
+    SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
+           s.VendorName as StoreName, pm.PaymentMethodName, d.EntityName as OwedToDebtorName
+    FROM Expenses r
+             JOIN Vendors s ON r.VendorID = s.VendorID
              LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-             LEFT JOIN Debtors d ON r.OwedToDebtorID = d.DebtorID
-    WHERE r.ReceiptID = ?
+             LEFT JOIN Entities d ON r.OwedToEntityID = d.EntityID
+    WHERE r.ExpenseID = ?
   `, [id]);
 
   if (!receiptData) return null;
 
   const lineItems = !receiptData.IsNonItemised
     ? await db.query<(LineItem & { CategoryName: string; CategoryID: number })>(`
-        SELECT li.*, p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.DebtorName, d.DebtorID, c.CategoryName, c.CategoryID
-        FROM LineItems li
+        SELECT li.ExpenseLineItemID as LineItemID, li.ExpenseID as ReceiptID, li.ProductID, li.LineQuantity, li.LineUnitPrice, li.EntityID as DebtorID, li.IsExcludedFromDiscount, li.CreationTimestamp, li.UpdatedAt,
+               p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.EntityName as DebtorName, d.EntityID as DebtorID, c.ProductCategoryName as CategoryName, c.ProductCategoryID as CategoryID
+        FROM ExpenseLineItems li
                  JOIN Products p ON li.ProductID = p.ProductID
                  LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
-                 LEFT JOIN Debtors d ON li.DebtorID = d.DebtorID
-                 LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
-        WHERE li.ReceiptID = ?
+                 LEFT JOIN Entities d ON li.EntityID = d.EntityID
+                 LEFT JOIN ProductCategories c ON p.ProductCategoryID = c.ProductCategoryID
+        WHERE li.ExpenseID = ?
     `, [id])
     : [];
   
-  const images = await db.query<ReceiptImage>('SELECT ImagePath FROM ReceiptImages WHERE ReceiptID = ?', [id]);
+  const images = await db.query<ReceiptImage>('SELECT ExpenseImageID as ImageID, ExpenseID as ReceiptID, ImagePath, CreationTimestamp, UpdatedAt FROM ExpenseImages WHERE ExpenseID = ?', [id]);
   
   const splits = receiptData.SplitType === 'total_split'
     ? await db.query<ReceiptSplit>(`
-        SELECT rs.*, d.DebtorName
-        FROM ReceiptSplits rs
-                 JOIN Debtors d ON rs.DebtorID = d.DebtorID
-        WHERE rs.ReceiptID = ?
+        SELECT rs.ExpenseSplitID as SplitID, rs.ExpenseID as ReceiptID, rs.EntityID as DebtorID, rs.SplitPart, rs.CreationTimestamp, rs.UpdatedAt,
+               d.EntityName as DebtorName
+        FROM ExpenseSplits rs
+                 JOIN Entities d ON rs.EntityID = d.EntityID
+        WHERE rs.ExpenseID = ?
     `, [id])
     : [];
 
-  const payments = await db.query<ReceiptDebtorPayment>('SELECT * FROM ReceiptDebtorPayments WHERE ReceiptID = ?', [id]);
+  const payments = await db.query<ReceiptDebtorPayment>('SELECT ExpenseEntityPaymentID as PaymentID, ExpenseID as ReceiptID, EntityID as DebtorID, PaidDate, IncomeID as TopUpID, CreationTimestamp, UpdatedAt FROM ExpenseEntityPayments WHERE ExpenseID = ?', [id]);
 
   return { receipt: receiptData, lineItems, images, splits, payments };
 }
@@ -136,5 +139,5 @@ export async function getReceipt(id: string): Promise<{
 export async function deleteReceipts(ids: number[]): Promise<void> {
   if (ids.length === 0) return;
   const placeholders = ids.map(() => '?').join(',');
-  await db.execute(`DELETE FROM Receipts WHERE ReceiptID IN (${placeholders})`, ids);
+  await db.execute(`DELETE FROM Expenses WHERE ExpenseID IN (${placeholders})`, ids);
 }

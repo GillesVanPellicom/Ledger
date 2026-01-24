@@ -268,9 +268,9 @@ const ReceiptViewPage: React.FC = () => {
     const {paymentId, topUpId} = unsettleConfirmation;
     if (!paymentId) return;
     try {
-      await db.execute('DELETE FROM ReceiptDebtorPayments WHERE PaymentID = ?', [paymentId]);
+      await db.execute('DELETE FROM ExpenseEntityPayments WHERE ExpenseEntityPaymentID = ?', [paymentId]);
       if (topUpId) {
-        await db.execute('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId]);
+        await db.execute('DELETE FROM Income WHERE IncomeID = ?', [topUpId]);
       }
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -285,7 +285,7 @@ const ReceiptViewPage: React.FC = () => {
     if (!receipt || !paymentMethodId) return;
     try {
       await db.execute(
-        'UPDATE Receipts SET Status = ?, PaymentMethodID = ? WHERE ReceiptID = ?',
+        'UPDATE Expenses SET Status = ?, PaymentMethodID = ? WHERE ExpenseID = ?',
         ['paid', paymentMethodId, id]
       );
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
@@ -300,7 +300,7 @@ const ReceiptViewPage: React.FC = () => {
   const handleMakePermanent = async () => {
     if (!receipt) return;
     try {
-      await db.execute('UPDATE Receipts SET IsTentative = 0 WHERE ReceiptID = ?', [id]);
+      await db.execute('UPDATE Expenses SET IsTentative = 0 WHERE ExpenseID = ?', [id]);
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {

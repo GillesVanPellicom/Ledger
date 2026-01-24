@@ -1,15 +1,15 @@
-CREATE TABLE IF NOT EXISTS ReceiptImages (
-    ImageID INTEGER PRIMARY KEY AUTOINCREMENT,
-    ReceiptID INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS ExpenseImages (
+    ExpenseImageID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ExpenseID INTEGER NOT NULL,
     ImagePath TEXT NOT NULL,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (ReceiptID) REFERENCES Receipts (ReceiptID) ON DELETE CASCADE
+    FOREIGN KEY (ExpenseID) REFERENCES Expenses (ExpenseID) ON DELETE CASCADE
 );
 
-CREATE TRIGGER trigger_receiptimages_updated_at AFTER UPDATE ON ReceiptImages
+CREATE TRIGGER trigger_expenseimages_updated_at AFTER UPDATE ON ExpenseImages
 BEGIN
-    UPDATE ReceiptImages SET UpdatedAt = CURRENT_TIMESTAMP WHERE ImageID = NEW.ImageID;
+    UPDATE ExpenseImages SET UpdatedAt = CURRENT_TIMESTAMP WHERE ExpenseImageID = NEW.ExpenseImageID;
 END;
 
-CREATE INDEX IF NOT EXISTS idx_receiptimages_receipt_id ON ReceiptImages (ReceiptID);
+CREATE INDEX IF NOT EXISTS idx_expenseimages_expense_id ON ExpenseImages (ExpenseID);
