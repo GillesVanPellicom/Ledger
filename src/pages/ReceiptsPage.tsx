@@ -27,6 +27,7 @@ import Divider from '../components/ui/Divider';
 import Combobox from '../components/ui/Combobox';
 import TransferModal from '../components/payment/TransferModal';
 import IncomeModal from '../components/payment/IncomeModal';
+import ScheduleModal from '../components/payment/ScheduleModal';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { incomeCommitments } from '../logic/incomeCommitments';
 import { incomeLogic } from '../logic/incomeLogic';
@@ -47,25 +48,6 @@ interface FullReceipt extends Receipt {
   totalAmount: number;
   images: ReceiptImage[];
 }
-
-const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
-const dayOfWeekOptions = [
-  { value: '1', label: 'Monday' },
-  { value: '2', label: 'Tuesday' },
-  { value: '3', label: 'Wednesday' },
-  { value: '4', label: 'Thursday' },
-  { value: '5', label: 'Friday' },
-  { value: '6', label: 'Saturday' },
-  { value: '0', label: 'Sunday' }
-];
-const monthOfYearOptions = [
-  { value: '0', label: 'January' }, { value: '1', label: 'February' },
-  { value: '2', label: 'March' }, { value: '3', label: 'April' },
-  { value: '4', label: 'May' }, { value: '5', label: 'June' },
-  { value: '6', label: 'July' }, { value: '7', label: 'August' },
-  { value: '8', label: 'September' }, { value: '9', label: 'October' },
-  { value: '10', label: 'November' }, { value: '11', label: 'December' }
-];
 
 const ReceiptsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -101,6 +83,7 @@ const ReceiptsPage: React.FC = () => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -109,7 +92,6 @@ const ReceiptsPage: React.FC = () => {
   const [entities, setEntities] = useState<any[]>([]);
 
   // Income Page States
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isDismissModalOpen, setIsDismissModalOpen] = useState(false);
@@ -127,23 +109,6 @@ const ReceiptsPage: React.FC = () => {
     }
     return startOfToday();
   };
-
-  const [newSchedule, setNewSchedule] = useState({
-    SourceName: '',
-    DebtorName: '',
-    Category: '',
-    PaymentMethodID: '',
-    ExpectedAmount: '0',
-    RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-    DayOfMonth: String(getDate(getCurrentDate())),
-    DayOfWeek: String(getDay(getCurrentDate())),
-    MonthOfYear: String(getMonth(getCurrentDate())),
-    RequiresConfirmation: true,
-    LookaheadDays: 7,
-    IsActive: true,
-    Note: ''
-  });
-  const [createForPastPeriod, setCreateForPastPeriod] = useState(false);
 
   useEffect(() => {
     const loadReferenceData = async () => {
@@ -224,26 +189,6 @@ const ReceiptsPage: React.FC = () => {
     mutationFn: (id: number) => incomeLogic.rejectPendingIncome(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
-    },
-    onError: (err) => showError(err)
-  });
-  const updateScheduleMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: any }) => incomeCommitments.updateSchedule(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
-      setIsScheduleModalOpen(false);
-      setEditingSchedule(null);
-      processSchedulesMutation.mutate();
-    },
-    onError: (err) => showError(err)
-  });
-  const createScheduleMutation = useMutation({
-    mutationFn: (data: any) => incomeCommitments.createSchedule(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
-      setIsScheduleModalOpen(false);
-      processSchedulesMutation.mutate();
     },
     onError: (err) => showError(err)
   });
@@ -638,93 +583,11 @@ const ReceiptsPage: React.FC = () => {
     );
   };
 
-  // Income Page Helpers
-  const handleSaveSchedule = () => {
-    if (newSchedule.MonthOfYear === '1' && Number.parseInt(newSchedule.DayOfMonth) > 28) {
-      showError(new Error("February cannot have more than 28 days."));
-      return;
-    }
-    const data = {
-      ...newSchedule,
-      ExpectedAmount: Number.parseFloat(String(newSchedule.ExpectedAmount)) || null,
-      LookaheadDays: Number.parseInt(String(newSchedule.LookaheadDays)) || 0,
-      PaymentMethodID: Number(newSchedule.PaymentMethodID) || null,
-      DayOfMonth: Number(newSchedule.DayOfMonth) || null,
-      DayOfWeek: Number(newSchedule.DayOfWeek) || null,
-      MonthOfYear: Number(newSchedule.MonthOfYear) || null,
-      CreateForPastPeriod: createForPastPeriod,
-    };
-    if (editingSchedule) {
-      updateScheduleMutation.mutate({ id: editingSchedule.IncomeScheduleID, data });
-    } else {
-      createScheduleMutation.mutate(data);
-    }
-  };
-
-  const renderRecurrenceDetails = () => {
-    const { type } = parseRecurrenceRule(newSchedule.RecurrenceRule);
-    switch (type) {
-      case 'MONTHLY':
-        return (
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Month</label>
-            <Combobox options={dayOfMonthOptions} value={newSchedule.DayOfMonth} onChange={val => setNewSchedule(prev => ({ ...prev, DayOfMonth: val }))} showSearch={false} />
-          </div>
-        );
-      case 'WEEKLY':
-        return (
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Week</label>
-            <Combobox options={dayOfWeekOptions} value={newSchedule.DayOfWeek} onChange={val => setNewSchedule(prev => ({ ...prev, DayOfWeek: val }))} showSearch={false} />
-          </div>
-        );
-      case 'YEARLY':
-        return (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2 flex flex-col">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
-              <Combobox options={monthOfYearOptions} value={newSchedule.MonthOfYear} onChange={val => setNewSchedule(prev => ({ ...prev, MonthOfYear: val }))} showSearch={false} />
-            </div>
-            <div className="col-span-1 flex flex-col">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day</label>
-              <Combobox options={dayOfMonthOptions.slice(0, newSchedule.MonthOfYear === '1' ? 28 : 31)} value={newSchedule.DayOfMonth} onChange={val => setNewSchedule(prev => ({ ...prev, DayOfMonth: val }))} showSearch={false} />
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const showCreateForPastPeriodCheckbox = () => {
-    if (editingSchedule) return false;
-    try {
-      const today = getCurrentDate();
-      const oneMonthAgo = subMonths(today, 1);
-      const occurrences = calculateOccurrences(
-        { ...newSchedule, CreationTimestamp: new Date().toISOString() } as any,
-        oneMonthAgo,
-        today
-      );
-      return occurrences.some(occ => isBefore(occ, today));
-    } catch (e) {
-      return false;
-    }
-  };
-
   const paginatedData = (data: any[] | undefined) => {
     if (!data) return [];
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
     return data.slice(start, end);
-  };
-
-  const handleStepperChange = (setter: React.Dispatch<React.SetStateAction<any>>, field: string, increment: boolean, step: number) => {
-    setter((prev: any) => {
-      const currentValue = Number.parseFloat(prev[field]) || 0;
-      const newValue = increment ? currentValue + step : currentValue - step;
-      return { ...prev, [field]: String(newValue) };
-    });
   };
 
   const handleConfirmIncome = () => {
@@ -832,6 +695,11 @@ const ReceiptsPage: React.FC = () => {
               <ArrowRightLeft className="h-5 w-5" />
             </Button>
           </Tooltip>
+          <Tooltip content="Add Schedule">
+            <Button variant="ghost" size="icon" onClick={() => setIsScheduleModalOpen(true)}>
+              <Calendar className="h-5 w-5" />
+            </Button>
+          </Tooltip>
           <Tooltip content="Add Income">
             <Button variant="ghost" size="icon" onClick={() => setIsIncomeModalOpen(true)}>
               <Wallet className="h-5 w-5" />
@@ -910,6 +778,13 @@ const ReceiptsPage: React.FC = () => {
                 { header: 'Category', accessor: 'Category' },
                 { header: 'Method', accessor: 'PaymentMethodName' },
                 { header: 'Expected Amount', accessor: 'Amount', render: (row) => row.Amount ? `€${row.Amount.toFixed(2)}` : '-' },
+                {
+                  header: 'Type', render: (row) => (
+                    <Badge variant={row.Type === 'expense' ? 'red' : 'green'}>
+                      {row.Type === 'expense' ? 'Expense' : 'Income'}
+                    </Badge>
+                  )
+                },
                 {
                   header: '', width: '10%', className: 'text-right', render: (row) => (
                     <div className="flex items-center justify-end gap-2">
@@ -1004,6 +879,13 @@ const ReceiptsPage: React.FC = () => {
                 { header: 'Expected Amount', accessor: 'Amount', render: (row) => row.Amount ? `€${row.Amount.toFixed(2)}` : '-' },
                 { header: 'Recurrence', accessor: 'RecurrenceRule', render: (row) => humanizeRecurrenceRule(row) },
                 {
+                  header: 'Type', render: (row) => (
+                    <Badge variant={row.Type === 'expense' ? 'red' : 'green'}>
+                      {row.Type === 'expense' ? 'Expense' : 'Income'}
+                    </Badge>
+                  )
+                },
+                {
                   header: 'Status', render: (row) => (
                     <span className={cn(
                       "px-2 py-0.5 rounded-full text-xs font-medium",
@@ -1038,21 +920,6 @@ const ReceiptsPage: React.FC = () => {
                           e.stopPropagation();
                           setEditingSchedule(row);
                           setIsScheduleModalOpen(true);
-                          setNewSchedule({
-                            SourceName: row.SourceName || '',
-                            DebtorName: entities.find(e => e.id === row.DebtorID)?.label || '',
-                            Category: row.Category || '',
-                            PaymentMethodID: String(row.PaymentMethodID),
-                            ExpectedAmount: String(row.ExpectedAmount || '0'),
-                            RecurrenceRule: row.RecurrenceRule || 'FREQ=MONTHLY;INTERVAL=1',
-                            DayOfMonth: String(row.DayOfMonth || getDate(getCurrentDate())),
-                            DayOfWeek: String(row.DayOfWeek || getDay(getCurrentDate())),
-                            MonthOfYear: String(row.MonthOfYear || getMonth(getCurrentDate())),
-                            RequiresConfirmation: !!row.RequiresConfirmation,
-                            LookaheadDays: row.LookaheadDays || 7,
-                            IsActive: !!row.IsActive,
-                            Note: row.Note || ''
-                          });
                         }}>
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
@@ -1182,6 +1049,7 @@ const ReceiptsPage: React.FC = () => {
           <ConfirmModal isOpen={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setTransactionToDelete(null); }} onConfirm={handleDelete} title={`Delete ${transactionToDelete ? 'Transaction' : `${selectedTransactionIds.length} Transactions`}`} message={`Are you sure you want to permanently delete ${transactionToDelete ? 'this transaction' : `${selectedTransactionIds.length} selected transactions`}? This action cannot be undone.`} />
           <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} onSave={refetch} topUpToEdit={null} paymentMethodId={methods[0]?.PaymentMethodID?.toString() || ''} currentBalance={0} />
           <IncomeModal isOpen={isIncomeModalOpen} onClose={() => setIsIncomeModalOpen(false)} onSave={refetch} topUpToEdit={null} />
+          <ScheduleModal isOpen={isScheduleModalOpen} onClose={() => setIsScheduleModalOpen(false)} onSave={refetch} scheduleToEdit={editingSchedule} />
           <ProgressModal isOpen={isGeneratingPdf} progress={pdfProgress} title="Generating PDF Report..." />
           {/* Income Modals */}
           <Modal isOpen={isDeleteScheduleModalOpen} onClose={() => { setIsDeleteScheduleModalOpen(false); setCascadeDelete(false); }} title="Delete Schedule" className="max-w-lg" footer={
@@ -1217,104 +1085,6 @@ const ReceiptsPage: React.FC = () => {
               <StepperInput label="Amount" step={1} value={String(confirmData.amount)} onChange={e => setConfirmData(prev => ({ ...prev, amount: Number.parseFloat(e.target.value) }))} onIncrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) + 1 }))} onDecrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) - 1 }))} />
               <Input label="Date" type="date" value={confirmData.date} onChange={e => setConfirmData(prev => ({ ...prev, date: e.target.value }))} />
               <Combobox label="Method" options={methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))} value={confirmData.paymentMethodId} onChange={val => setConfirmData(prev => ({ ...prev, paymentMethodId: val }))} />
-            </div>
-          </Modal>
-          <Modal isOpen={isScheduleModalOpen} onClose={() => setIsScheduleModalOpen(false)} title={editingSchedule ? "Edit Income Schedule" : "Add Income Schedule"} onEnter={handleSaveSchedule} footer={
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setIsScheduleModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleSaveSchedule} loading={createScheduleMutation.isPending || updateScheduleMutation.isPending}>
-                Confirm
-              </Button>
-            </div>
-          }>
-            <div className="space-y-4">
-              <div className="flex items-end gap-2">
-                <Combobox label="Source Name" placeholder="e.g. Salary, Rent" options={incomeSources} value={newSchedule.SourceName} onChange={val => setNewSchedule(prev => ({ ...prev, SourceName: val }))} className="flex-1" />
-                <Tooltip content="Add Source">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </Tooltip>
-              </div>
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Entity (Optional)</label>
-                    <Tooltip content="Associate this income with an entity for extra context. Note: This does NOT settle any outstanding debts. To settle debt, please use the Repayment feature on the Entity page.">
-                      <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                    </Tooltip>
-                  </div>
-                  <Combobox placeholder="Select an entity..." options={entities} value={newSchedule.DebtorName} onChange={val => setNewSchedule(prev => ({ ...prev, DebtorName: val }))} />
-                </div>
-              </div>
-              <div className="flex items-end gap-2">
-                <Combobox label="Category (Optional)" options={incomeCategories} value={newSchedule.Category} onChange={val => setNewSchedule(prev => ({ ...prev, Category: val }))} className="flex-1" />
-                <Tooltip content="Add Category">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </Tooltip>
-              </div>
-              <Divider className="my-2" />
-              <div className="grid grid-cols-2 gap-4">
-                <StepperInput label="Expected Amount" step={1} min={0} max={10000000} value={newSchedule.ExpectedAmount} onChange={e => setNewSchedule(prev => ({ ...prev, ExpectedAmount: e.target.value }))} onIncrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', true, 1)} onDecrement={() => handleStepperChange(setNewSchedule, 'ExpectedAmount', false, 1)} />
-                <Combobox label="Method" options={methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))} value={newSchedule.PaymentMethodID} onChange={val => setNewSchedule(prev => ({ ...prev, PaymentMethodID: val }))} />
-              </div>
-              <Divider className="my-2" />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Recurrence</label>
-                    <Tooltip content="How often this income is expected.">
-                      <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                    </Tooltip>
-                  </div>
-                  <Combobox options={[
-                    { value: 'FREQ=DAILY;INTERVAL=1', label: 'Daily' },
-                    { value: 'FREQ=WEEKLY;INTERVAL=1', label: 'Weekly' },
-                    { value: 'FREQ=MONTHLY;INTERVAL=1', label: 'Monthly' },
-                    { value: 'FREQ=YEARLY;INTERVAL=1', label: 'Yearly' },
-                  ]} value={newSchedule.RecurrenceRule} onChange={val => setNewSchedule(prev => ({ ...prev, RecurrenceRule: val }))} showSearch={false} />
-                </div>
-                {renderRecurrenceDetails()}
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lookahead Days</label>
-                  <Tooltip content="How many days in advance to generate a 'To Check' item.">
-                    <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                  </Tooltip>
-                </div>
-                <StepperInput value={String(newSchedule.LookaheadDays)} onChange={e => setNewSchedule(prev => ({ ...prev, LookaheadDays: Number.parseInt(e.target.value) || 0 }))} onIncrement={() => setNewSchedule(prev => ({ ...prev, LookaheadDays: (prev.LookaheadDays || 0) + 1 }))} onDecrement={() => setNewSchedule(prev => ({ ...prev, LookaheadDays: Math.max(1, (prev.LookaheadDays || 0) - 1) }))} min={1} max={1000} precision={0} />
-              </div>
-              <Input type="text" label="Note" value={newSchedule.Note} onChange={e => setNewSchedule(prev => ({ ...prev, Note: e.target.value }))} placeholder="e.g., Monthly salary" />
-              <div className="pt-2">
-                {showCreateForPastPeriodCheckbox() && (
-                  <div className="flex items-start gap-3">
-                    <Checkbox id="createForPastPeriod" checked={createForPastPeriod} onChange={e => setCreateForPastPeriod(e.target.checked)} />
-                    <div className="grid gap-1.5 leading-none">
-                      <label htmlFor="createForPastPeriod" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Create for current period
-                      </label>
-                      <p className="text-xs text-gray-500">The scheduled date for the current period is in the past. Check this to create a "To Check" item for it anyway.</p>
-                    </div>
-                  </div>
-                )}
-                <Divider className="my-4" />
-              </div>
-              <div className="flex items-start gap-3">
-                <Checkbox id="requiresConfirmation" checked={newSchedule.RequiresConfirmation} onChange={e => setNewSchedule(prev => ({ ...prev, RequiresConfirmation: e.target.checked }))} />
-                <div className="grid gap-1.5 leading-none">
-                  <label htmlFor="requiresConfirmation" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Requires manual confirmation
-                  </label>
-                  <p className="text-xs text-gray-500">If enabled, you must confirm each occurrence before it's deposited.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Checkbox id="isActive" checked={newSchedule.IsActive} onChange={e => setNewSchedule(prev => ({ ...prev, IsActive: e.target.checked }))} />
-                <label htmlFor="isActive" className="text-sm font-medium leading-none">Schedule is active</label>
-              </div>
             </div>
           </Modal>
           <IncomeCategoryModal isOpen={isIncomeCategoryModalOpen} onClose={() => setIsIncomeCategoryModalOpen(false)} onSave={() => {

@@ -60,16 +60,16 @@ export const incomeLogic = {
           parseISO(schedule.CreationTimestamp)
         );
 
-        const lastKnownDate = Array.from(processedDates).reduce<Date>(
-          (latest, current) => {
-            const d = startOfDay(parseISO(current));
-            return isAfter(d, latest) ? d : latest;
-          },
-          creationDate
-        );
+        // Find the latest processed date to start generating from there
+        // If no processed dates, start from creation date or 3 months ago (whichever is later)
+        // Actually, we should calculate occurrences from the beginning (or a reasonable past) 
+        // and filter out those already in processedDates.
+        // But to optimize, we can start checking from the last processed date.
         
-        let rangeStartDate = subMonths(lastKnownDate, 3); // Look back 3 months
+        // However, if we missed an occurrence in the past (e.g. app was closed), we need to catch it.
+        // So we should look back a bit.
         
+        let rangeStartDate = subMonths(today, 3); 
         if (isBefore(rangeStartDate, creationDate)) {
           rangeStartDate = creationDate;
         }
@@ -101,15 +101,26 @@ export const incomeLogic = {
               Amount: schedule.ExpectedAmount
             });
           } else if (!isAfter(occurrence, today)) {
-            await incomeCommitments.createTopUpFromIncome({
-              PaymentMethodID: schedule.PaymentMethodID,
-              Amount: schedule.ExpectedAmount ?? 0,
-              Date: dateStr,
-              Note: schedule.Note || schedule.SourceName,
-              IncomeSourceID: schedule.IncomeSourceID,
-              IncomeCategoryID: schedule.IncomeCategoryID,
-              DebtorID: schedule.DebtorID
-            });
+            if (schedule.Type === 'expense') {
+               await incomeCommitments.createExpenseFromSchedule({
+                 PaymentMethodID: schedule.PaymentMethodID,
+                 Amount: schedule.ExpectedAmount ?? 0,
+                 Date: dateStr,
+                 Note: schedule.Note || schedule.SourceName,
+                 StoreID: schedule.StoreID!,
+                 CategoryID: schedule.CategoryID
+               });
+            } else {
+              await incomeCommitments.createTopUpFromIncome({
+                PaymentMethodID: schedule.PaymentMethodID,
+                Amount: schedule.ExpectedAmount ?? 0,
+                Date: dateStr,
+                Note: schedule.Note || schedule.SourceName,
+                IncomeSourceID: schedule.IncomeSourceID,
+                IncomeCategoryID: schedule.IncomeCategoryID,
+                DebtorID: schedule.DebtorID
+              });
+            }
           }
 
           processedDates.add(dateStr);
@@ -132,10 +143,11 @@ export const incomeLogic = {
   ) => {
     const schedule = await db.queryOne<any>(
       `
-      SELECT s.*, src.IncomeSourceName, cat.IncomeCategoryName
+      SELECT s.*, 
+        CASE WHEN s.Type = 'expense' THEN st.StoreName ELSE src.IncomeSourceName END as SourceName
       FROM IncomeSchedules s
-      JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
-      LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
+      LEFT JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
+      LEFT JOIN Stores st ON s.StoreID = st.StoreID
       WHERE s.IncomeScheduleID = ?
     `,
       [pending.IncomeScheduleID]
@@ -145,15 +157,26 @@ export const incomeLogic = {
       throw new Error('Schedule not found for pending income.');
     }
 
-    await incomeCommitments.createTopUpFromIncome({
-      PaymentMethodID: paymentMethodId,
-      Amount: actualAmount,
-      Date: normalizeDateString(actualDate),
-      Note: schedule.Note || schedule.IncomeSourceName,
-      IncomeSourceID: schedule.IncomeSourceID,
-      IncomeCategoryID: schedule.IncomeCategoryID,
-      DebtorID: schedule.DebtorID
-    });
+    if (schedule.Type === 'expense') {
+      await incomeCommitments.createExpenseFromSchedule({
+        PaymentMethodID: paymentMethodId,
+        Amount: actualAmount,
+        Date: normalizeDateString(actualDate),
+        Note: schedule.Note || schedule.SourceName,
+        StoreID: schedule.StoreID,
+        CategoryID: schedule.CategoryID
+      });
+    } else {
+      await incomeCommitments.createTopUpFromIncome({
+        PaymentMethodID: paymentMethodId,
+        Amount: actualAmount,
+        Date: normalizeDateString(actualDate),
+        Note: schedule.Note || schedule.SourceName,
+        IncomeSourceID: schedule.IncomeSourceID,
+        IncomeCategoryID: schedule.IncomeCategoryID,
+        DebtorID: schedule.DebtorID
+      });
+    }
 
     await incomeCommitments.deletePendingIncome(
       pending.PendingIncomeID
