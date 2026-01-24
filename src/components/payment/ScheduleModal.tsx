@@ -14,6 +14,7 @@ import { Plus, Info } from 'lucide-react';
 import IncomeCategoryModal from '../categories/IncomeCategoryModal';
 import IncomeSourceModal from '../income/IncomeSourceModal';
 import StoreModal from '../stores/StoreModal';
+import EntityModal from '../debt/EntityModal';
 import ButtonGroup from '../ui/ButtonGroup';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useErrorStore } from '../../store/useErrorStore';
@@ -63,6 +64,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
   const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
 
   const getCurrentDate = useCallback(() => {
     if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
@@ -314,23 +316,44 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
           {errors.form && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{errors.form}</div>}
           {errors.date && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{errors.date}</div>}
           
-          <div className="flex flex-col gap-4">
-            {!scheduleToEdit && (
-              <div className="flex justify-center">
-                 <ButtonGroup variant="toggle" className="w-full max-w-xs">
-                  <Tooltip content="Income Schedule">
-                    <Button active={type === 'income'} onClick={() => setType('income')}>Income</Button>
-                  </Tooltip>
-                  <Tooltip content="Expense Schedule">
-                    <Button active={type === 'expense'} onClick={() => setType('expense')}>Expense</Button>
-                  </Tooltip>
-                </ButtonGroup>
-              </div>
-            )}
-          </div>
-
           <div className="flex flex-col items-center py-4">
-            <div className="w-full max-w-md space-y-4">
+            <div className="w-full max-w-md space-y-6">
+              
+              {/* 1. Toggle */}
+              {!scheduleToEdit && (
+                <div className="flex justify-center w-full">
+                   <ButtonGroup variant="toggle" className="w-full" fullWidth>
+                    <Tooltip content="Income Schedule">
+                      <Button active={type === 'income'} onClick={() => setType('income')}>Income</Button>
+                    </Tooltip>
+                    <Tooltip content="Expense Schedule">
+                      <Button active={type === 'expense'} onClick={() => setType('expense')}>Expense</Button>
+                    </Tooltip>
+                  </ButtonGroup>
+                </div>
+              )}
+
+              {/* 2. Amount / Method */}
+              <div className="grid grid-cols-2 gap-4">
+                <StepperInput
+                  label="Amount"
+                  value={formData.amount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                  onIncrement={() => setFormData(prev => ({ ...prev, amount: String(Number(prev.amount) + 1) }))}
+                  onDecrement={() => setFormData(prev => ({ ...prev, amount: String(Math.max(0, Number(prev.amount) - 1)) }))}
+                  min={0}
+                  error={errors.amount}
+                />
+                <Combobox
+                  label="Method"
+                  options={methodOptions}
+                  value={formData.paymentMethodId}
+                  onChange={val => setFormData(prev => ({...prev, paymentMethodId: val}))}
+                  error={errors.paymentMethodId}
+                />
+              </div>
+
+              {/* 3. Source / Store */}
               <div className="flex items-end gap-2">
                 <Combobox
                   label={type === 'income' ? "Source Name" : "Store Name"}
@@ -347,149 +370,135 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                   </Button>
                 </Tooltip>
               </div>
+
+              {/* 4. Scheduling Details */}
+              <Divider text="Scheduling Details" />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-sm font-medium text-font-1">Recurrence</label>
+                    <Tooltip content={`How often this ${type} is expected.`}>
+                      <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                    </Tooltip>
+                  </div>
+                  <Combobox
+                    options={[
+                      {value: 'FREQ=DAILY;INTERVAL=1', label: 'Daily'},
+                      {value: 'FREQ=WEEKLY;INTERVAL=1', label: 'Weekly'},
+                      {value: 'FREQ=MONTHLY;INTERVAL=1', label: 'Monthly'},
+                      {value: 'FREQ=YEARLY;INTERVAL=1', label: 'Yearly'},
+                    ]}
+                    value={formData.recurrenceRule}
+                    onChange={val => setFormData(prev => ({...prev, recurrenceRule: val}))}
+                    showSearch={false}
+                  />
+                </div>
+                {renderRecurrenceDetails()}
+              </div>
               
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-sm font-medium text-font-1">Lookahead Days</label>
+                  <Tooltip content="How many days in advance to generate a 'To Check' item.">
+                    <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                  </Tooltip>
+                </div>
+                <StepperInput
+                  value={String(formData.lookaheadDays)}
+                  onChange={e => setFormData(prev => ({
+                    ...prev, lookaheadDays: Number.parseInt(e.target.value) || 0
+                  }))}
+                  onIncrement={() => setFormData(prev => ({
+                    ...prev,
+                    lookaheadDays: (prev.lookaheadDays || 0) + 1
+                  }))}
+                  onDecrement={() => setFormData(prev => ({
+                    ...prev,
+                    lookaheadDays: Math.max(1, (prev.lookaheadDays || 0) - 1)
+                  }))}
+                  min={1}
+                  max={1000}
+                  precision={0}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    label="Requires manual confirmation"
+                    checked={formData.requiresConfirmation}
+                    onChange={e => setFormData(prev => ({ ...prev, requiresConfirmation: e.target.checked }))}
+                  />
+                  <Tooltip content={`If enabled, you must confirm each occurrence before it's deposited. Must be confirmed in tab "To Check"`}>
+                    <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                  </Tooltip>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    label="Schedule is active"
+                    checked={formData.isActive}
+                    onChange={e => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                  />
+                  <Tooltip content="Whether this schedule should currently generate reminders or deposits.">
+                    <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                  </Tooltip>
+                </div>
+                <div className={cn("flex items-center gap-2 transition-opacity", showCreateForPastPeriodCheckbox() ? "opacity-100" : "opacity-0 pointer-events-none")}>
+                  <Checkbox
+                    label="Create for current period"
+                    checked={formData.createForPastPeriod}
+                    onChange={e => setFormData(prev => ({ ...prev, createForPastPeriod: e.target.checked }))}
+                  />
+                  <Tooltip content="The scheduled date for the current period is in the past. Check this to create a 'To Check' item for it anyway.">
+                    <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                  </Tooltip>
+                </div>
+              </div>
+
+              {/* 5. Optional Details */}
+              <Divider text="Optional Details" />
+              
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-sm font-medium text-font-1">Entity</label>
+                    <Tooltip content="Associate this income with an entity for extra context.">
+                      <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                    </Tooltip>
+                  </div>
+                  <Combobox
+                    placeholder="Select an entity..."
+                    options={entities}
+                    value={formData.debtorName}
+                    onChange={val => setFormData(prev => ({...prev, debtorName: val}))}
+                  />
+                </div>
+                <Tooltip content="Add Entity">
+                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)}>
+                    <Plus className="h-5 w-5"/>
+                  </Button>
+                </Tooltip>
+              </div>
+
               {type === 'income' && (
                 <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1 mb-1">
-                      <label className="text-sm font-medium text-font-1">Entity (Optional)</label>
-                      <Tooltip content="Associate this income with an entity for extra context.">
-                        <Info className="h-4 w-4 text-font-2 cursor-help"/>
-                      </Tooltip>
-                    </div>
-                    <Combobox
-                      placeholder="Select an entity..."
-                      options={entities}
-                      value={formData.debtorName}
-                      onChange={val => setFormData(prev => ({...prev, debtorName: val}))}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-end gap-2">
-                <Combobox
-                  label="Category (Optional)"
-                  options={type === 'income' ? incomeCategories : []} // TODO: Add expense categories
-                  value={formData.category}
-                  onChange={val => setFormData(prev => ({...prev, category: val}))}
-                  className="flex-1"
-                  disabled={type === 'expense'} 
-                  placeholder={type === 'expense' ? "Not supported yet" : "Select a category"}
-                />
-                {type === 'income' && (
+                  <Combobox
+                    label="Category"
+                    options={incomeCategories}
+                    value={formData.category}
+                    onChange={val => setFormData(prev => ({...prev, category: val}))}
+                    className="flex-1"
+                  />
                   <Tooltip content="Add Category">
                     <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
                       <Plus className="h-5 w-5"/>
                     </Button>
                   </Tooltip>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Combobox
-                  label="Method"
-                  options={methodOptions}
-                  value={formData.paymentMethodId}
-                  onChange={val => setFormData(prev => ({...prev, paymentMethodId: val}))}
-                  error={errors.paymentMethodId}
-                />
-                <StepperInput
-                  label="Amount"
-                  value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                  onIncrement={() => setFormData(prev => ({ ...prev, amount: String(Number(prev.amount) + 1) }))}
-                  onDecrement={() => setFormData(prev => ({ ...prev, amount: String(Math.max(0, Number(prev.amount) - 1)) }))}
-                  min={0}
-                  error={errors.amount}
-                />
-              </div>
-              <Input label="Note (Optional)" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly salary" />
-            </div>
-          </div>
-
-          <Divider />
-
-          <div className="space-y-6 max-w-md mx-auto">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-sm font-medium text-font-1">Recurrence</label>
-                  <Tooltip content={`How often this ${type} is expected.`}>
-                    <Info className="h-4 w-4 text-font-2 cursor-help"/>
-                  </Tooltip>
                 </div>
-                <Combobox
-                  options={[
-                    {value: 'FREQ=DAILY;INTERVAL=1', label: 'Daily'},
-                    {value: 'FREQ=WEEKLY;INTERVAL=1', label: 'Weekly'},
-                    {value: 'FREQ=MONTHLY;INTERVAL=1', label: 'Monthly'},
-                    {value: 'FREQ=YEARLY;INTERVAL=1', label: 'Yearly'},
-                  ]}
-                  value={formData.recurrenceRule}
-                  onChange={val => setFormData(prev => ({...prev, recurrenceRule: val}))}
-                  showSearch={false}
-                />
-              </div>
-              {renderRecurrenceDetails()}
-            </div>
-            
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-sm font-medium text-font-1">Lookahead Days</label>
-                <Tooltip content="How many days in advance to generate a 'To Check' item.">
-                  <Info className="h-4 w-4 text-font-2 cursor-help"/>
-                </Tooltip>
-              </div>
-              <StepperInput
-                value={String(formData.lookaheadDays)}
-                onChange={e => setFormData(prev => ({
-                  ...prev, lookaheadDays: Number.parseInt(e.target.value) || 0
-                }))}
-                onIncrement={() => setFormData(prev => ({
-                  ...prev,
-                  lookaheadDays: (prev.lookaheadDays || 0) + 1
-                }))}
-                onDecrement={() => setFormData(prev => ({
-                  ...prev,
-                  lookaheadDays: Math.max(1, (prev.lookaheadDays || 0) - 1)
-                }))}
-                min={1}
-                max={1000}
-                precision={0}
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  label="Requires manual confirmation"
-                  checked={formData.requiresConfirmation}
-                  onChange={e => setFormData(prev => ({ ...prev, requiresConfirmation: e.target.checked }))}
-                />
-                <Tooltip content={`If enabled, you must confirm each occurrence before it's deposited. Must be confirmed in tab "To Check"`}>
-                  <Info className="h-4 w-4 text-font-2 cursor-help"/>
-                </Tooltip>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  label="Schedule is active"
-                  checked={formData.isActive}
-                  onChange={e => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                />
-                <Tooltip content="Whether this schedule should currently generate reminders or deposits.">
-                  <Info className="h-4 w-4 text-font-2 cursor-help"/>
-                </Tooltip>
-              </div>
-              <div className={cn("flex items-center gap-2 transition-opacity", showCreateForPastPeriodCheckbox() ? "opacity-100" : "opacity-0 pointer-events-none")}>
-                <Checkbox
-                  label="Create for current period"
-                  checked={formData.createForPastPeriod}
-                  onChange={e => setFormData(prev => ({ ...prev, createForPastPeriod: e.target.checked }))}
-                />
-                <Tooltip content="The scheduled date for the current period is in the past. Check this to create a 'To Check' item for it anyway.">
-                  <Info className="h-4 w-4 text-font-2 cursor-help"/>
-                </Tooltip>
-              </div>
+              )}
+              
+              <Input label="Note" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly salary" />
             </div>
           </div>
         </div>
@@ -514,6 +523,13 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
         onClose={() => setIsStoreModalOpen(false)}
         onSave={fetchReferenceData}
         storeToEdit={null}
+      />
+
+      <EntityModal
+        isOpen={isEntityModalOpen}
+        onClose={() => setIsEntityModalOpen(false)}
+        onSave={fetchReferenceData}
+        entityToEdit={null}
       />
     </>
   );

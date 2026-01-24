@@ -14,6 +14,7 @@ import Tooltip from '../ui/Tooltip';
 import { Plus, Info } from 'lucide-react';
 import IncomeCategoryModal from '../categories/IncomeCategoryModal';
 import IncomeSourceModal from '../income/IncomeSourceModal';
+import EntityModal from '../debt/EntityModal';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { incomeCommitments } from '../../logic/incomeCommitments';
 
@@ -39,6 +40,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
   
   const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
   const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
+  const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
 
   const getCurrentDate = useCallback(() => {
     if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
@@ -186,6 +188,27 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
           
           <div className="flex flex-col items-center py-4">
             <div className="w-full max-w-md space-y-4">
+              {/* 1. Amount / Method */}
+              <div className="grid grid-cols-2 gap-4">
+                <StepperInput
+                  label="Amount"
+                  value={formData.amount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                  onIncrement={() => setFormData(prev => ({ ...prev, amount: String(Number(prev.amount) + 1) }))}
+                  onDecrement={() => setFormData(prev => ({ ...prev, amount: String(Math.max(0, Number(prev.amount) - 1)) }))}
+                  min={0}
+                  error={errors.amount}
+                />
+                <Combobox
+                  label="Method"
+                  options={methodOptions}
+                  value={formData.paymentMethodId}
+                  onChange={val => setFormData(prev => ({...prev, paymentMethodId: val}))}
+                  error={errors.paymentMethodId}
+                />
+              </div>
+
+              {/* 2. Source */}
               <div className="flex items-end gap-2">
                 <Combobox
                   label="Source Name"
@@ -202,11 +225,20 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                   </Button>
                 </Tooltip>
               </div>
-              
+
+              {/* 3. Date */}
+              <div className="grid grid-cols-1 gap-4">
+                <DatePicker label="Date" selected={formData.date} onChange={(date: Date | null) => date && setFormData(prev => ({ ...prev, date }))} error={errors.date} />
+              </div>
+
+              {/* 4. Divider */}
+              <Divider text="Optional Details" />
+
+              {/* 5. Entity */}
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-1 mb-1">
-                    <label className="text-sm font-medium text-font-1">Entity (Optional)</label>
+                    <label className="text-sm font-medium text-font-1">Entity</label>
                     <Tooltip content="Associate this income with an entity for extra context. Note: This does NOT settle any outstanding debts. To settle debt, please use the Repayment feature on the Entity page.">
                       <Info className="h-4 w-4 text-font-2 cursor-help"/>
                     </Tooltip>
@@ -218,11 +250,17 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                     onChange={val => setFormData(prev => ({...prev, debtorName: val}))}
                   />
                 </div>
+                <Tooltip content="Add Entity">
+                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)}>
+                    <Plus className="h-5 w-5"/>
+                  </Button>
+                </Tooltip>
               </div>
 
+              {/* 6. Category */}
               <div className="flex items-end gap-2">
                 <Combobox
-                  label="Category (Optional)"
+                  label="Category"
                   options={incomeCategories}
                   value={formData.category}
                   onChange={val => setFormData(prev => ({...prev, category: val}))}
@@ -234,32 +272,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                   </Button>
                 </Tooltip>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Combobox
-                  label="Method"
-                  options={methodOptions}
-                  value={formData.paymentMethodId}
-                  onChange={val => setFormData(prev => ({...prev, paymentMethodId: val}))}
-                  error={errors.paymentMethodId}
-                />
-                <StepperInput
-                  label="Amount"
-                  value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                  onIncrement={() => setFormData(prev => ({ ...prev, amount: String(Number(prev.amount) + 1) }))}
-                  onDecrement={() => setFormData(prev => ({ ...prev, amount: String(Math.max(0, Number(prev.amount) - 1)) }))}
-                  min={0}
-                  error={errors.amount}
-                />
-              </div>
-              <Input label="Note (Optional)" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Birthday gift" />
+
+              {/* 7. Note */}
+              <Input label="Note" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Birthday gift" />
             </div>
-          </div>
-
-          <Divider />
-
-          <div className="grid grid-cols-1 gap-4 max-w-md mx-auto">
-            <DatePicker label="Date" selected={formData.date} onChange={(date: Date | null) => date && setFormData(prev => ({ ...prev, date }))} error={errors.date} />
           </div>
         </div>
       </Modal>
@@ -276,6 +292,13 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
         onClose={() => setIsIncomeSourceModalOpen(false)}
         onSave={fetchReferenceData}
         sourceToEdit={null}
+      />
+
+      <EntityModal
+        isOpen={isEntityModalOpen}
+        onClose={() => setIsEntityModalOpen(false)}
+        onSave={fetchReferenceData}
+        entityToEdit={null}
       />
     </>
   );
