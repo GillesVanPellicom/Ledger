@@ -10,7 +10,8 @@ import {
   Users,
   Database,
   TrendingUp,
-  LucideIcon
+  LucideIcon,
+  Home
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -46,18 +47,14 @@ const Sidenav: React.FC<SidenavProps> = ({ pendingIncomeCount }) => {
   const badgeCount = pendingIncomeCount !== undefined ? pendingIncomeCount : pendingIncomes?.length;
 
   const navItems: NavItem[] = [
-    { path: '/', label: 'Expenses', icon: Receipt, activePaths: ['/', '/receipts', '/income/view'] },
-  ];
-
-  if (paymentMethodsEnabled) {
-    navItems.push({ 
-      path: '/income', 
-      label: 'Income', 
-      icon: TrendingUp, 
-      activePaths: ['/income'],
+    { 
+      path: '/', 
+      label: 'Home', 
+      icon: Home, 
+      activePaths: ['/', '/receipts', '/income/view'],
       badge: badgeCount && badgeCount > 0 ? badgeCount : undefined
-    });
-  }
+    },
+  ];
 
   navItems.push(
     { path: '/reference-data', label: 'Reference Data', icon: Database, activePaths: ['/reference-data'] },
