@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths, startOfDay } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
-import { Plus, Trash, FileDown, AlertCircle, CheckCircle, Users, ClipboardList, Clipboard, HelpCircle, RotateCcw, Filter, Paperclip, MoreHorizontal, Eye, CreditCard, User, Edit, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, HandCoins, Clock, Info, Wallet, Calendar, CalendarPlus, X, Check } from 'lucide-react';
+import { Plus, Trash, FileDown, AlertCircle, CheckCircle, ClipboardList, Clipboard, HelpCircle, RotateCcw, Filter, Paperclip, MoreHorizontal, Eye, CreditCard, User, Edit, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, HandCoins, Clock, Info, Wallet, Calendar, X, Check } from 'lucide-react';
 import { db } from '../utils/db';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import DatePicker from '../components/ui/DatePicker';
@@ -38,6 +38,7 @@ import IncomeSourceModal from '../components/income/IncomeSourceModal';
 import Input from '../components/ui/Input';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
+import { useReceiptsStore } from '../store/useReceiptsStore';
 
 import type { Receipt, LineItem, ReceiptImage, Transaction, Debtor, PaymentMethod } from '../types';
 
@@ -67,7 +68,6 @@ const monthOfYearOptions = [
 ];
 
 const ReceiptsPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showError } = useErrorStore();
@@ -75,39 +75,25 @@ const ReceiptsPage: React.FC = () => {
   const deleteReceiptMutation = useDeleteReceipt();
   const { generatePdf, isGenerating: isGeneratingPdf, progress: pdfProgress } = usePdfGenerator();
 
+  const {
+    activeTab, setActiveTab,
+    currentPage, setCurrentPage,
+    pageSize, setPageSize,
+    searchTerm, setSearchTerm,
+    appliedDateRange, setDateRange,
+    appliedFilters, setFilters,
+    resetFilters
+  } = useReceiptsStore();
+
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const indicatorSettings = settings.receipts?.indicators;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'to-check' | 'scheduled'>((searchParams.get('tab') as any) || 'overview');
-  const [currentPage, setCurrentPage] = useState<number>(Number(searchParams.get('page')) || 1);
-  const [searchTerm, setSearchTerm] = useState<string>(searchParams.get('search') || '');
-  const [pageSize, setPageSize] = useState<number>(Number(searchParams.get('pageSize')) || 10);
-
-  const initialDateRange: [Date | null, Date | null] = [
-    searchParams.get('startDate') ? parseISO(searchParams.get('startDate')!) : null,
-    searchParams.get('endDate') ? parseISO(searchParams.get('endDate')!) : null,
-  ];
-
-  const initialFilters = {
-    type: searchParams.get('type') || 'all',
-    debt: searchParams.get('debt') || 'all',
-    expenseType: searchParams.get('expenseType') || 'all',
-    tentative: searchParams.get('tentative') || 'all',
-    attachment: searchParams.get('attachment') || 'all',
-    incomeSource: searchParams.get('incomeSource') || 'all',
-    incomeCategory: searchParams.get('incomeCategory') || 'all',
-    incomeEntity: searchParams.get('incomeEntity') || 'all',
-    debtor: searchParams.get('debtor') || 'all',
-    fromMethod: searchParams.get('fromMethod') || 'all',
-    toMethod: searchParams.get('toMethod') || 'all',
-    method: searchParams.get('method') || 'all',
-  };
-
-  const [appliedDateRange, setAppliedDateRange] = useState<[Date | null, Date | null]>(initialDateRange);
-  const [appliedFilters, setAppliedFilters] = useState(initialFilters);
-  const [pendingDateRange, setPendingDateRange] = useState<[Date | null, Date | null]>(initialDateRange);
-  const [pendingFilters, setPendingFilters] = useState(initialFilters);
+  const [pendingDateRange, setPendingDateRange] = useState<[Date | null, Date | null]>([
+    appliedDateRange[0] ? parseISO(appliedDateRange[0]) : null,
+    appliedDateRange[1] ? parseISO(appliedDateRange[1]) : null,
+  ]);
+  const [pendingFilters, setPendingFilters] = useState(appliedFilters);
 
   const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -177,31 +163,11 @@ const ReceiptsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('tab', activeTab);
-    if (currentPage !== 1) params.set('page', String(currentPage));
-    if (pageSize !== 10) params.set('pageSize', String(pageSize));
-    if (searchTerm) params.set('search', searchTerm);
-    if (appliedDateRange[0]) params.set('startDate', appliedDateRange[0].toISOString());
-    if (appliedDateRange[1]) params.set('endDate', appliedDateRange[1].toISOString());
-    if (appliedFilters.type !== 'all') params.set('type', appliedFilters.type);
-    if (appliedFilters.debt !== 'all') params.set('debt', appliedFilters.debt);
-    if (appliedFilters.expenseType !== 'all') params.set('expenseType', appliedFilters.expenseType);
-    if (appliedFilters.tentative !== 'all') params.set('tentative', appliedFilters.tentative);
-    if (appliedFilters.attachment !== 'all') params.set('attachment', appliedFilters.attachment);
-    if (appliedFilters.incomeSource !== 'all') params.set('incomeSource', appliedFilters.incomeSource);
-    if (appliedFilters.incomeCategory !== 'all') params.set('incomeCategory', appliedFilters.incomeCategory);
-    if (appliedFilters.incomeEntity !== 'all') params.set('incomeEntity', appliedFilters.incomeEntity);
-    if (appliedFilters.debtor !== 'all') params.set('debtor', appliedFilters.debtor);
-    if (appliedFilters.fromMethod !== 'all') params.set('fromMethod', appliedFilters.fromMethod);
-    if (appliedFilters.toMethod !== 'all') params.set('toMethod', appliedFilters.toMethod);
-    if (appliedFilters.method !== 'all') params.set('method', appliedFilters.method);
-    setSearchParams(params, { replace: true });
-  }, [activeTab, currentPage, pageSize, searchTerm, appliedDateRange, appliedFilters, setSearchParams]);
-
-  useEffect(() => {
     if (isFilterModalOpen) {
-      setPendingDateRange(appliedDateRange);
+      setPendingDateRange([
+        appliedDateRange[0] ? parseISO(appliedDateRange[0]) : null,
+        appliedDateRange[1] ? parseISO(appliedDateRange[1]) : null,
+      ]);
       setPendingFilters(appliedFilters);
     }
   }, [isFilterModalOpen, appliedDateRange, appliedFilters]);
@@ -210,8 +176,8 @@ const ReceiptsPage: React.FC = () => {
     page: currentPage,
     pageSize,
     searchTerm,
-    startDate: appliedDateRange[0],
-    endDate: appliedDateRange[1],
+    startDate: appliedDateRange[0] ? parseISO(appliedDateRange[0]) : null,
+    endDate: appliedDateRange[1] ? parseISO(appliedDateRange[1]) : null,
     typeFilter: appliedFilters.type,
     debtFilter: appliedFilters.debt,
     expenseTypeFilter: appliedFilters.expenseType,
@@ -618,9 +584,8 @@ const ReceiptsPage: React.FC = () => {
 
   const typeFilterOptions = [
     { value: 'all', label: 'All' },
-    { value: 'expense', label: 'Expenses' },
-    { value: 'paid_expense', label: 'Paid Expenses' },
-    { value: 'unpaid_expense', label: 'Unpaid Expenses' },
+    { value: 'paid_expense', label: 'Expenses' },
+    { value: 'unpaid_expense', label: 'Unpaid' },
     { value: 'income', label: 'Income' },
     { value: 'transfer', label: 'Transfers' },
     { value: 'repayment', label: 'Repayments' },
@@ -772,14 +737,18 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const applyFilters = () => {
-    setAppliedFilters(pendingFilters);
-    setAppliedDateRange(pendingDateRange);
+    setFilters(pendingFilters);
+    setDateRange([
+      pendingDateRange[0] ? pendingDateRange[0].toISOString() : null,
+      pendingDateRange[1] ? pendingDateRange[1].toISOString() : null,
+    ]);
     setCurrentPage(1);
     setIsFilterModalOpen(false);
   };
 
-  const resetFilters = () => {
-    const defaultFilters = {
+  const handleResetFilters = () => {
+    resetFilters();
+    setPendingFilters({
       type: 'all',
       debt: 'all',
       expenseType: 'all',
@@ -791,19 +760,13 @@ const ReceiptsPage: React.FC = () => {
       debtor: 'all',
       fromMethod: 'all',
       toMethod: 'all',
-      method: 'all'
-    };
-    const defaultDateRange: [Date | null, Date | null] = [null, null];
-    setAppliedFilters(defaultFilters);
-    setAppliedDateRange(defaultDateRange);
-    setPendingFilters(defaultFilters);
-    setPendingDateRange(defaultDateRange);
-    setSearchTerm('');
-    setCurrentPage(1);
+      method: 'all',
+    });
+    setPendingDateRange([null, null]);
   };
 
   const resetPendingFilters = () => {
-    const defaultFilters = {
+    setPendingFilters({
       type: 'all',
       debt: 'all',
       expenseType: 'all',
@@ -815,11 +778,9 @@ const ReceiptsPage: React.FC = () => {
       debtor: 'all',
       fromMethod: 'all',
       toMethod: 'all',
-      method: 'all'
-    };
-    const defaultDateRange: [Date | null, Date | null] = [null, null];
-    setPendingFilters(defaultFilters);
-    setPendingDateRange(defaultDateRange);
+      method: 'all',
+    });
+    setPendingDateRange([null, null]);
   };
 
   const hasActiveFilters = appliedFilters.type !== 'all' || appliedFilters.debt !== 'all' || appliedFilters.expenseType !== 'all' || appliedFilters.tentative !== 'all' || appliedFilters.attachment !== 'all' || appliedFilters.incomeSource !== 'all' || appliedFilters.incomeCategory !== 'all' || appliedFilters.incomeEntity !== 'all' || appliedFilters.debtor !== 'all' || appliedFilters.fromMethod !== 'all' || appliedFilters.toMethod !== 'all' || appliedFilters.method !== 'all' || appliedDateRange[0] !== null || appliedDateRange[1] !== null || searchTerm !== '';
@@ -918,7 +879,7 @@ const ReceiptsPage: React.FC = () => {
                     </Button>
                   </Tooltip>
                   <Tooltip content="Reset Filters">
-                    <Button variant="secondary" size="icon" onClick={resetFilters} disabled={!hasActiveFilters}>
+                    <Button variant="secondary" size="icon" onClick={handleResetFilters} disabled={!hasActiveFilters}>
                       <RotateCcw className="h-4 w-4" />
                     </Button>
                   </Tooltip>
@@ -1123,17 +1084,18 @@ const ReceiptsPage: React.FC = () => {
             <FilterOption title="Date Range" onReset={() => setPendingDateRange([null, null])} isModified={pendingDateRange[0] !== null || pendingDateRange[1] !== null}>
               <DatePicker selectsRange startDate={pendingDateRange[0]} endDate={pendingDateRange[1]} onChange={(update: any) => setPendingDateRange(update)} isClearable={true} placeholderText="Filter by date range" />
             </FilterOption>
-            {paymentMethodsEnabled && (
-              <FilterOption title="Method" onReset={() => handlePendingFilterChange('method', 'all')} isModified={pendingFilters.method !== 'all'}>
-                <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
-              </FilterOption>
-            )}
             <FilterOption title="Transaction Type" onReset={() => handlePendingFilterChange('type', 'all')} isModified={pendingFilters.type !== 'all'}>
               <Combobox options={typeFilterOptions} value={pendingFilters.type} onChange={val => handlePendingFilterChange('type', val)} />
             </FilterOption>
-            {(pendingFilters.type === 'expense' || pendingFilters.type === 'paid_expense' || pendingFilters.type === 'unpaid_expense') && (
+
+            {pendingFilters.type === 'paid_expense' && (
               <>
                 <Divider text="Expense Filters" className="my-4" />
+                {paymentMethodsEnabled && (
+                  <FilterOption title="Method" onReset={() => handlePendingFilterChange('method', 'all')} isModified={pendingFilters.method !== 'all'}>
+                    <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
+                  </FilterOption>
+                )}
                 {debtEnabled && (
                   <FilterOption title="Debt Status" onReset={() => handlePendingFilterChange('debt', 'all')} isModified={pendingFilters.debt !== 'all'}>
                     <Combobox options={debtFilterOptions} value={pendingFilters.debt} onChange={val => handlePendingFilterChange('debt', val)} />
@@ -1150,9 +1112,35 @@ const ReceiptsPage: React.FC = () => {
                 </FilterOption>
               </>
             )}
+
+            {pendingFilters.type === 'unpaid_expense' && (
+              <>
+                <Divider text="Unpaid Filters" className="my-4" />
+                {debtEnabled && (
+                  <FilterOption title="Debt Status" onReset={() => handlePendingFilterChange('debt', 'all')} isModified={pendingFilters.debt !== 'all'}>
+                    <Combobox options={debtFilterOptions} value={pendingFilters.debt} onChange={val => handlePendingFilterChange('debt', val)} />
+                  </FilterOption>
+                )}
+                <FilterOption title="Expense Format" onReset={() => handlePendingFilterChange('expenseType', 'all')} isModified={pendingFilters.expenseType !== 'all'}>
+                  <Combobox options={expenseTypeFilterOptions} value={pendingFilters.expenseType} onChange={val => handlePendingFilterChange('expenseType', val)} />
+                </FilterOption>
+                <FilterOption title="Status" onReset={() => handlePendingFilterChange('tentative', 'all')} isModified={pendingFilters.tentative !== 'all'}>
+                  <Combobox options={tentativeFilterOptions} value={pendingFilters.tentative} onChange={val => handlePendingFilterChange('tentative', val)} />
+                </FilterOption>
+                <FilterOption title="Attachments" onReset={() => handlePendingFilterChange('attachment', 'all')} isModified={pendingFilters.attachment !== 'all'}>
+                  <Combobox options={attachmentFilterOptions} value={pendingFilters.attachment} onChange={val => handlePendingFilterChange('attachment', val)} />
+                </FilterOption>
+              </>
+            )}
+
             {pendingFilters.type === 'income' && (
               <>
                 <Divider text="Income Filters" className="my-4" />
+                {paymentMethodsEnabled && (
+                  <FilterOption title="Method" onReset={() => handlePendingFilterChange('method', 'all')} isModified={pendingFilters.method !== 'all'}>
+                    <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
+                  </FilterOption>
+                )}
                 <FilterOption title="Source" onReset={() => handlePendingFilterChange('incomeSource', 'all')} isModified={pendingFilters.incomeSource !== 'all'}>
                   <Combobox options={[{ value: 'all', label: 'All' }, ...incomeSources.map(s => ({ value: String(s.IncomeSourceID), label: s.IncomeSourceName }))]} value={pendingFilters.incomeSource} onChange={val => handlePendingFilterChange('incomeSource', val)} />
                 </FilterOption>
@@ -1164,14 +1152,21 @@ const ReceiptsPage: React.FC = () => {
                 </FilterOption>
               </>
             )}
+
             {pendingFilters.type === 'repayment' && (
               <>
                 <Divider text="Repayment Filters" className="my-4" />
+                {paymentMethodsEnabled && (
+                  <FilterOption title="Method" onReset={() => handlePendingFilterChange('method', 'all')} isModified={pendingFilters.method !== 'all'}>
+                    <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
+                  </FilterOption>
+                )}
                 <FilterOption title="Entity" onReset={() => handlePendingFilterChange('debtor', 'all')} isModified={pendingFilters.debtor !== 'all'}>
                   <Combobox options={[{ value: 'all', label: 'All' }, ...debtors.map(d => ({ value: String(d.DebtorID), label: d.DebtorName }))]} value={pendingFilters.debtor} onChange={val => handlePendingFilterChange('debtor', val)} />
                 </FilterOption>
               </>
             )}
+
             {pendingFilters.type === 'transfer' && (
               <>
                 <Divider text="Transfer Filters" className="my-4" />
