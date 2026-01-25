@@ -68,7 +68,8 @@ const initialSettings: Settings = {
     inProgress: false,
   },
   notifications: {
-    position: 'bottom-right',
+    position: 'top-center',
+    duration: 4000,
   }
 };
 
@@ -237,7 +238,7 @@ export const useSettingsStore = create<SettingsState>()(
                 ...(newSettings.wizard || {})
             },
             notifications: {
-                ...(currentSettings.notifications || { position: 'bottom-right' }),
+                ...(currentSettings.notifications || { position: 'top-center', duration: 4000 }),
                 ...(newSettings.notifications || {})
             }
         };

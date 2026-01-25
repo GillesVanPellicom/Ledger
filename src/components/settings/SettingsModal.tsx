@@ -349,7 +349,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
                 {appearanceActiveTab === 'notifications' && (
                   <div>
-                    <SectionTitle title="Notification Position" tooltip="Choose where notifications appear on the screen." />
                     <NotificationControls />
                   </div>
                 )}
@@ -529,7 +528,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 mr-4">
                               <div className="p-2 rounded-lg bg-red/20 text-red">
-                                <Trash2 className="h-6 w-6" />
+                                <Bug className="h-6 w-6" />
                               </div>
                               <div>
                                 <p className="font-medium text-font-1">Reset All Settings</p>

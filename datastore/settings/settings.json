@@ -61,7 +61,9 @@
   },
   "userName": "Gilles",
   "notifications": {
-    "position": "top-center"
+    "position": "top-center",
+    "duration": 4000,
+    "attentionGrabber": false
   },
   "uiScale": 100
 }
