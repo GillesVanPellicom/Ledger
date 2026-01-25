@@ -10,7 +10,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development ELECTRON_START_URL=http://localhost:5173 electron .\"",
+    "electron:dev": "concurrently \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development ELECTRON_START_URL=http://localhost:5173 electron . --trace-warnings\"",
     "electron:build:win": "vite build && electron-builder --win --x64",
     "electron:build:mac": "vite build && electron-builder --mac",
     "postinstall": "electron-builder install-app-deps",

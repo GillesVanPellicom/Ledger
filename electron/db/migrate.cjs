@@ -10,6 +10,8 @@ async function runMigrations(db) {
   const appliedMigrations = await getAppliedMigrations(db);
   const allMigrations = await getAllMigrationFiles();
 
+  let migrationsApplied = false;
+
   for (const migrationFile of allMigrations) {
     const version = migrationFile.split('_')[0];
     const filePath = path.join(MIGRATIONS_DIR, migrationFile);
@@ -26,7 +28,12 @@ async function runMigrations(db) {
     } else {
       console.log(`Applying migration ${version}...`);
       await applyMigration(db, version, sql, checksum);
+      migrationsApplied = true; // Mark that at least one migration ran
     }
+  }
+
+  if (migrationsApplied) {
+    console.log(`No schema changes detected, not running migrations.`);
   }
 }
 

@@ -62,6 +62,10 @@ const initialSettings: Settings = {
   },
   formatting: {
     decimalSeparator: 'dot', // 'dot' or 'comma'
+    dateFormat: 'international',
+    shortenYear: false,
+    timeFormat: 'international',
+    showSeconds: false,
   },
   wizard: {
     askedQuestions: {},
@@ -230,7 +234,13 @@ export const useSettingsStore = create<SettingsState>()(
             } as any,
             dev: { ...currentSettings.dev, ...(newSettings.dev || {}) },
             formatting: { 
-                ...(currentSettings.formatting || { decimalSeparator: 'dot' }), 
+                ...(currentSettings.formatting || { 
+                  decimalSeparator: 'dot',
+                  dateFormat: 'international',
+                  shortenYear: false,
+                  timeFormat: 'international',
+                  showSeconds: false
+                }),
                 ...(newSettings.formatting || {}) 
             } as any,
             wizard: {

@@ -107,7 +107,6 @@ function connectDatabase(dbPath) {
 
         try {
           await runMigrations(db);
-          console.log('Migrations run successfully');
           console.log(`Connected to database: ${dbPath}`);
           dbConnectionError = null;
           resolve({success: true});

@@ -42,6 +42,10 @@ export interface Settings {
   };
   formatting?: {
     decimalSeparator: 'dot' | 'comma';
+    dateFormat: 'international' | 'american';
+    shortenYear: boolean;
+    timeFormat: 'international' | 'american';
+    showSeconds: boolean;
   };
   wizard?: {
     askedQuestions: Record<string, number>;

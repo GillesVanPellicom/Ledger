@@ -22,6 +22,8 @@ import ButtonGroup from '../components/ui/ButtonGroup';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../components/ui/DropdownMenu";
 import { cn } from '../utils/cn';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import DateDisplay from '../components/ui/DateDisplay';
+import TimeDisplay from '../components/ui/TimeDisplay';
 import Badge from '../components/ui/Badge';
 import Divider from '../components/ui/Divider';
 import Combobox from '../components/ui/Combobox';
@@ -268,7 +270,7 @@ const ReceiptsPage: React.FC = () => {
   };
 
   const columns: any[] = [
-    { header: 'Date', width: '12%', render: (row: Transaction) => format(new Date(row.date), 'dd/MM/yyyy') },
+    { header: 'Date', width: '12%', render: (row: Transaction) => <DateDisplay date={row.date} /> },
     {
       header: 'Description', width: '20%', render: (row: Transaction) => {
         if (row.type === 'expense') return row.storeName;
@@ -767,7 +769,7 @@ const ReceiptsPage: React.FC = () => {
               emptyStateText="No pending items to review."
               emptyStateIcon={<CheckCircle className="h-10 w-10 opacity-50 text-green-500" />}
               columns={[
-                { header: 'Planned Date', accessor: 'PlannedDate', render: (row) => format(parseISO(row.PlannedDate), 'MMM d, yyyy') },
+                { header: 'Planned Date', accessor: 'PlannedDate', render: (row) => <DateDisplay date={row.PlannedDate} /> },
                 {
                   header: 'Source', accessor: 'SourceName', render: (row) => (
                     <div className="flex items-center gap-2">

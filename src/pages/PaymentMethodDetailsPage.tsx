@@ -21,6 +21,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useQueryClient } from '@tanstack/react-query';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import DateDisplay from '../components/ui/DateDisplay';
 import { calculatePaymentMethodBalance } from '../logic/paymentLogic';
 
 const tryParseJson = (str: string) => {
@@ -462,7 +463,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
   };
 
   const columns = [
-    { header: 'Date', render: (row: PageTransaction) => format(new Date(row.date), 'dd/MM/yyyy') },
+    { header: 'Date', render: (row: PageTransaction) => <DateDisplay date={row.date} /> },
     { header: 'Name', accessor: 'name' },
     { header: 'Details', render: (row: PageTransaction) => renderDetails(row) },
     { header: 'Note', render: (row: PageTransaction) => renderNote(row) },

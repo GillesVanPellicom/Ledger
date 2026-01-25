@@ -44,7 +44,11 @@
     }
   },
   "formatting": {
-    "decimalSeparator": "comma"
+    "decimalSeparator": "comma",
+    "dateFormat": "international",
+    "shortenYear": false,
+    "timeFormat": "international",
+    "showSeconds": false
   },
   "wizard": {
     "askedQuestions": {
