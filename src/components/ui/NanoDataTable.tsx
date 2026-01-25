@@ -19,7 +19,7 @@ const NanoDataTable: React.FC<NanoDataTableProps> = ({
 }) => {
   return (
     <div className={cn("overflow-x-auto", className)}>
-      <table className="w-full text-sm">
+      <table className="w-full text-sm border-collapse">
         <thead className="text-left text-font-2">
           <tr>
             {headers.map((header, index) => (
@@ -29,7 +29,7 @@ const NanoDataTable: React.FC<NanoDataTableProps> = ({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border border-y border-border">
+        <tbody className="divide-y divide-border border-y border-border bg-bg-2">
           {rows.length === 0 ? (
             <tr>
               <td colSpan={headers.length} className="p-4 py-8 text-center text-font-2">

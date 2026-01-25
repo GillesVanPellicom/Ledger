@@ -9,7 +9,7 @@ import VisibilityCard from '../ui/VisibilityCard';
 interface EntityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (newEntityId?: number, name?: string) => void;
   entityToEdit: Debtor | null;
 }
 
@@ -47,13 +47,14 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
           'UPDATE Entities SET EntityName = ?, EntityIsActive = ? WHERE EntityID = ?',
           [name.trim(), isActive ? 1 : 0, entityToEdit.DebtorID]
         );
+        onSave(entityToEdit.DebtorID, name.trim());
       } else {
-        await db.execute(
+        const result = await db.execute(
           'INSERT INTO Entities (EntityName, EntityIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
+        onSave(result.lastID, name.trim());
       }
-      onSave();
       onClose();
     } catch (err: any) {
       if (err.message && err.message.includes('UNIQUE constraint failed')) {

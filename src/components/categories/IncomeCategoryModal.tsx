@@ -8,7 +8,7 @@ import VisibilityCard from '../ui/VisibilityCard';
 interface IncomeCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newCategoryId?: number) => void;
+  onSave: (newCategoryId?: number, name?: string) => void;
   categoryToEdit: any | null;
 }
 
@@ -46,13 +46,13 @@ const IncomeCategoryModal: React.FC<IncomeCategoryModalProps> = ({ isOpen, onClo
           'UPDATE IncomeCategories SET IncomeCategoryName = ?, IncomeCategoryIsActive = ? WHERE IncomeCategoryID = ?',
           [name.trim(), isActive ? 1 : 0, categoryToEdit.IncomeCategoryID]
         );
-        onSave();
+        onSave(categoryToEdit.IncomeCategoryID, name.trim());
       } else {
         const result = await db.execute(
           'INSERT INTO IncomeCategories (IncomeCategoryName, IncomeCategoryIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
-        onSave(result.lastID);
+        onSave(result.lastID, name.trim());
       }
       onClose();
     } catch (err: any) {

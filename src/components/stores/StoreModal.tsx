@@ -34,7 +34,7 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      setError('Store name is required.');
+      setError('Vendor name is required.');
       return;
     }
 
@@ -58,9 +58,9 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
       onClose();
     } catch (err: any) {
       if (err.message && err.message.includes('UNIQUE constraint failed')) {
-        setError('This store name already exists.');
+        setError('This vendor name already exists.');
       } else {
-        setError(err.message || 'Failed to save store');
+        setError(err.message || 'Failed to save vendor');
       }
       throw err;
     } finally {
@@ -72,18 +72,18 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={storeToEdit ? 'Edit Store' : 'Add New Store'}
+      title={storeToEdit ? 'Edit Vendor' : 'Add New Vendor'}
       onEnter={handleSubmit}
       isDatabaseTransaction
-      successToastMessage={storeToEdit ? 'Store updated successfully' : 'Store created successfully'}
-      errorToastMessage="Failed to save store"
-      loadingMessage="Saving store..."
+      successToastMessage={storeToEdit ? 'Vendor updated successfully' : 'Vendor created successfully'}
+      errorToastMessage="Failed to save vendor"
+      loadingMessage="Saving vendor..."
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <div className="space-y-4">
         {error && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{error}</div>}
         <Input
-          label="Store Name"
+          label="Vendor Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g., Aldi"
@@ -91,7 +91,7 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
         <VisibilityCard 
           isActive={isActive}
           onToggle={() => setIsActive(!isActive)}
-          entityName="store"
+          entityName="vendor"
         />
       </div>
     </Modal>

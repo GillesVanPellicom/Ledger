@@ -1,6 +1,6 @@
 import React, { forwardRef, SelectHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../utils/cn';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 
 interface Option {
   value: string | number;
@@ -70,7 +70,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({
             title={addTooltip}
             className="flex items-center justify-center w-10 h-10 border border-border border-l bg-field hover:bg-field-hover text-font-2 hover:text-font-1 rounded-r-lg transition-all shrink-0"
           >
-            <LucideIcons.Plus className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
           </button>
         )}
       </div>
@@ -80,9 +80,6 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({
     </div>
   );
 });
-
-// Import LucideIcons inside the component to avoid circular dependency or missing imports
-import * as LucideIcons from 'lucide-react';
 
 Select.displayName = "Select";
 

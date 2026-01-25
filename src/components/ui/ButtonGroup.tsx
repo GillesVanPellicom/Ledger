@@ -62,7 +62,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
           if (variant === 'toggle') {
              const isActive = props.active || props.className?.includes('bg-field') || props.className?.includes('bg-bg-2') || props.className?.includes('bg-gray-100');
              activeClasses = isActive 
-               ? 'bg-field text-font-1 shadow-sm hover:bg-field-hover z-20' 
+               ? 'bg-field text-font-1 shadow-sm hover:bg-field-hover z-20 ring-2 ring-accent ring-inset'
                : 'bg-transparent text-font-2 hover:bg-field-hover z-10';
           }
 

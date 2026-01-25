@@ -35,7 +35,6 @@ import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/d
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import ButtonGroup from '../components/ui/ButtonGroup';
 import { toast } from 'sonner';
-import Select from '../components/ui/Select';
 
 const ReceiptFormPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -102,7 +101,7 @@ const ReceiptFormPage: React.FC = () => {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.storeId) newErrors.storeId = 'Store is required.';
+    if (!formData.storeId) newErrors.storeId = 'Vendor is required.';
     if (!formData.receiptDate) newErrors.receiptDate = 'Date is required.';
     if (!paidById) newErrors.paidById = 'Paid by is required.';
     if (receiptFormat === 'itemised' && lineItems.length === 0) newErrors.lineItems = 'At least one line item is required.';
@@ -135,15 +134,19 @@ const ReceiptFormPage: React.FC = () => {
     setIsStoreModalOpen(false);
   };
 
-  const handleEntitySave = async () => {
+  const handleEntitySave = async (newId?: number) => {
     const debtorsData = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
     setDebtors(debtorsData);
 
-    const newDebtor = await db.queryOne<{
-      DebtorID: number
-    }>('SELECT EntityID as DebtorID FROM Entities ORDER BY EntityID DESC LIMIT 1');
-    if (newDebtor) {
-      setPaidById(String(newDebtor.DebtorID));
+    if (newId) {
+      setPaidById(String(newId));
+    } else {
+      const newDebtor = await db.queryOne<{
+        DebtorID: number
+      }>('SELECT EntityID as DebtorID FROM Entities ORDER BY EntityID DESC LIMIT 1');
+      if (newDebtor) {
+        setPaidById(String(newDebtor.DebtorID));
+      }
     }
 
     setIsEntityModalOpen(false);
@@ -780,14 +783,16 @@ const ReceiptFormPage: React.FC = () => {
             <div className="relative p-6 space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-1">
-                  <Select
-                    label="Store"
+                  <Combobox
+                    label="Vendor"
                     variant="add"
                     onAdd={() => setIsStoreModalOpen(true)}
                     options={stores}
                     value={formData.storeId}
-                    onChange={(e) => handleFormChange('storeId', e.target.value)}
-                    placeholder="Select a store"
+                    onChange={(value) => handleFormChange('storeId', value)}
+                    placeholder="Select a vendor..."
+                    searchPlaceholder="Search vendor..."
+                    noResultsText="No vendors found."
                     error={errors.storeId}
                   />
                 </div>
@@ -799,14 +804,16 @@ const ReceiptFormPage: React.FC = () => {
                 <div className={cn("grid grid-cols-2 gap-6 col-span-2 items-end", !paymentMethodsEnabled && "grid-cols-1")}>
                   {debtEnabled && (
                     <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
-                      <Select
+                      <Combobox
                         label="Paid by"
                         variant="add"
                         onAdd={() => setIsEntityModalOpen(true)}
                         options={paidByOptions}
                         value={paidById}
-                        onChange={(e) => handlePaidByChange(e.target.value)}
+                        onChange={(value) => handlePaidByChange(value)}
                         placeholder="Select who paid"
+                        searchPlaceholder="Search entity..."
+                        noResultsText="No entities found."
                         disabled={hasSettledDebts}
                         error={errors.paidById}
                       />
@@ -815,14 +822,16 @@ const ReceiptFormPage: React.FC = () => {
 
                   {paymentMethodsEnabled && (
                     <div>
-                      <Select
+                      <Combobox
                         label="Payment Method"
                         variant="add"
                         onAdd={() => setIsPaymentMethodModalOpen(true)}
                         options={paymentMethods}
                         value={formData.paymentMethodId}
-                        onChange={(e) => handleFormChange('paymentMethodId', e.target.value)}
+                        onChange={(value) => handleFormChange('paymentMethodId', value)}
                         placeholder="Select a method"
+                        searchPlaceholder="Search methods..."
+                        noResultsText="No methods found."
                         disabled={paidById !== 'me'}
                       />
                     </div>
@@ -1050,7 +1059,7 @@ const ReceiptFormPage: React.FC = () => {
                               ) : (
                                 <span className="text-sm">Discount ({formData.discount || 0}%)</span>
                               )}
-                              <span className="font-medium">-<MoneyDisplay amount={subtotal - total} showSign={false} colorPositive={false} colorNegative={false} /></span>
+                              <span className="font-medium">-<MoneyDisplay amount={discountAmount} showSign={false} colorPositive={false} colorNegative={false} /></span>
                             </div>
                             <div className="flex items-center gap-4 text-lg font-bold text-font-1">
                               <span>Total</span>

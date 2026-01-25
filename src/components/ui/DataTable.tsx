@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, ReactNode, useLayoutEffect } from 'react';
-import { ChevronLeft, ChevronRight, Search, FileSearch, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, FileSearch, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Input from './Input';
 import Select from './Select';
@@ -43,6 +43,8 @@ interface DataTableProps {
   middleRowLeft?: ReactNode;
   middleRowRight?: ReactNode;
   actions?: ReactNode;
+  showMonthSeparators?: boolean;
+  dateAccessor?: string;
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -73,6 +75,8 @@ const DataTable: React.FC<DataTableProps> = ({
   middleRowLeft,
   middleRowRight,
   actions,
+  showMonthSeparators = false,
+  dateAccessor = "date",
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pageInput, setPageInput] = useState(String(currentPage));
@@ -293,9 +297,44 @@ const DataTable: React.FC<DataTableProps> = ({
 
     // Show current data (either newly loaded or during loading with previousData)
     const displayData = data.length > 0 ? data : previousData;
-    return displayData.map((row, rowIdx) => {
+    const rows: React.ReactNode[] = [];
+    
+    displayData.forEach((row, rowIdx) => {
       const key = getRowKey(row) || rowIdx;
-      return (
+      
+      if (showMonthSeparators && rowIdx > 0) {
+        const currentDateStr = row[dateAccessor];
+        const prevDateStr = displayData[rowIdx - 1][dateAccessor];
+        
+        if (currentDateStr && prevDateStr) {
+          const currentDate = new Date(currentDateStr);
+          const prevDate = new Date(prevDateStr);
+          
+          const currentMonthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+          const prevMonthName = prevDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+          
+          if (currentMonthName !== prevMonthName) {
+            rows.push(
+              <tr key={`month-sep-${rowIdx}`} className="bg-field-disabled/30 select-none pointer-events-none h-8">
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-1">
+                  <div className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-font-2 opacity-70">
+                    <div className="flex items-center gap-1.5">
+                      <ArrowUp className="h-3 w-3" />
+                      {prevMonthName}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {currentMonthName}
+                      <ArrowDown className="h-3 w-3" />
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            );
+          }
+        }
+      }
+
+      rows.push(
         <tr key={key} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors bg-bg-2", { "bg-accent/10": selectedRows.has(key) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
           {selectable && (
             <td className="px-4 py-3 align-middle w-12">
@@ -325,7 +364,9 @@ const DataTable: React.FC<DataTableProps> = ({
         </tr>
       );
     });
-  }, [loading, pageSize, data, previousData, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow, emptyStateIcon, emptyStateText]);
+
+    return rows;
+  }, [loading, pageSize, data, previousData, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow, emptyStateIcon, emptyStateText, showMonthSeparators, dateAccessor]);
 
   return (
     <div className={cn("flex flex-col gap-4", className, disabled && "opacity-50 cursor-not-allowed")}>

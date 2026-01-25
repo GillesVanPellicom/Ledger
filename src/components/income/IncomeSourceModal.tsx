@@ -8,7 +8,7 @@ import VisibilityCard from '../ui/VisibilityCard';
 interface IncomeSourceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newSourceId?: number) => void;
+  onSave: (newSourceId?: number, name?: string) => void;
   sourceToEdit: any | null;
 }
 
@@ -46,13 +46,13 @@ const IncomeSourceModal: React.FC<IncomeSourceModalProps> = ({ isOpen, onClose, 
           'UPDATE IncomeSources SET IncomeSourceName = ?, IncomeSourceIsActive = ? WHERE IncomeSourceID = ?',
           [name.trim(), isActive ? 1 : 0, sourceToEdit.IncomeSourceID]
         );
-        onSave();
+        onSave(sourceToEdit.IncomeSourceID, name.trim());
       } else {
         const result = await db.execute(
           'INSERT INTO IncomeSources (IncomeSourceName, IncomeSourceIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
-        onSave(result.lastID);
+        onSave(result.lastID, name.trim());
       }
       onClose();
     } catch (err: any) {

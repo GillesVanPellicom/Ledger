@@ -145,7 +145,14 @@ const ReferenceDataPage: React.FC = () => {
   const productColumns = [
     { header: 'Name', accessor: 'ProductName', width: '30%' },
     { header: 'Brand', accessor: 'ProductBrand', width: '25%' },
-    { header: 'Size', width: '15%', render: (row: Product) => `${row.ProductSize} ${row.ProductUnitType}` },
+    { 
+      header: 'Size', 
+      width: '15%', 
+      render: (row: Product) => {
+        if (!row.ProductSize && !row.ProductUnitType) return '';
+        return `${row.ProductSize || ''} ${row.ProductUnitType || ''}`.trim();
+      } 
+    },
     { header: 'Category', accessor: 'CategoryName', width: '20%' },
     {
       header: 'Actions',

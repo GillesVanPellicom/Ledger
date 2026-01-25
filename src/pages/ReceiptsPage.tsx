@@ -729,6 +729,8 @@ const ReceiptsPage: React.FC = () => {
               onSearch={setSearchTerm}
               searchable={true}
               loading={isLoading}
+              showMonthSeparators={true}
+              dateAccessor="date"
               onRowClick={(row: Transaction) => {
                 if (row.type === 'expense') {
                   navigate(`/receipts/view/${row.originalId}`);

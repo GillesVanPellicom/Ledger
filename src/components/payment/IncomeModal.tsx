@@ -217,18 +217,17 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
               <div className="flex items-end gap-2">
                 <Combobox
                   label="Source Name"
-                  placeholder="e.g. Bonus, Tax Return"
+                  placeholder="Select a source..."
+                  searchPlaceholder="Search source..."
+                  noResultsText="No sources found."
                   options={incomeSources}
                   value={formData.sourceName}
                   onChange={val => setFormData(prev => ({...prev, sourceName: val}))}
                   className="flex-1"
                   error={errors.sourceName}
+                  variant="add"
+                  onAdd={() => setIsIncomeSourceModalOpen(true)}
                 />
-                <Tooltip content="Add Source">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeSourceModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
               </div>
 
               {/* 3. Date */}
@@ -250,32 +249,31 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                   </div>
                   <Combobox
                     placeholder="Select an entity..."
+                    searchPlaceholder="Search entity..."
+                    noResultsText="No entities found."
                     options={entities}
                     value={formData.debtorName}
                     onChange={val => setFormData(prev => ({...prev, debtorName: val}))}
+                    variant="add"
+                    onAdd={() => setIsEntityModalOpen(true)}
                   />
                 </div>
-                <Tooltip content="Add Entity">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
               </div>
 
               {/* 6. Category */}
               <div className="flex items-end gap-2">
                 <Combobox
                   label="Category"
+                  placeholder="Select a category..."
+                  searchPlaceholder="Search category..."
+                  noResultsText="No categories found."
                   options={incomeCategories}
                   value={formData.category}
                   onChange={val => setFormData(prev => ({...prev, category: val}))}
                   className="flex-1"
+                  variant="add"
+                  onAdd={() => setIsIncomeCategoryModalOpen(true)}
                 />
-                <Tooltip content="Add Category">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsIncomeCategoryModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
               </div>
 
               {/* 7. Note */}

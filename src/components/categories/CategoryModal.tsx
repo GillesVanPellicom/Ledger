@@ -9,7 +9,7 @@ import VisibilityCard from '../ui/VisibilityCard';
 interface CategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newCategoryId?: number) => void;
+  onSave: (newCategoryId?: number, name?: string) => void;
   categoryToEdit: Category | null;
 }
 
@@ -47,13 +47,13 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, 
           'UPDATE ProductCategories SET ProductCategoryName = ?, ProductCategoryIsActive = ? WHERE ProductCategoryID = ?',
           [name.trim(), isActive ? 1 : 0, categoryToEdit.CategoryID]
         );
-        onSave();
+        onSave(categoryToEdit.CategoryID, name.trim());
       } else {
         const result = await db.execute(
           'INSERT INTO ProductCategories (ProductCategoryName, ProductCategoryIsActive) VALUES (?, ?)',
           [name.trim(), isActive ? 1 : 0]
         );
-        onSave(result.lastID);
+        onSave(result.lastID, name.trim());
       }
       onClose();
     } catch (err: any) {

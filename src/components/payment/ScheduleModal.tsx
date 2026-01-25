@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Divider from '../ui/Divider';
 import StepperInput from '../ui/StepperInput';
 import Tooltip from '../ui/Tooltip';
-import { Plus, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import IncomeCategoryModal from '../categories/IncomeCategoryModal';
 import IncomeSourceModal from '../income/IncomeSourceModal';
 import StoreModal from '../stores/StoreModal';
@@ -179,7 +179,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.amount || Number(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0.';
-    if (!formData.sourceName) newErrors.sourceName = type === 'income' ? 'Source name is required.' : 'Store name is required.';
+    if (!formData.sourceName) newErrors.sourceName = type === 'income' ? 'Source name is required.' : 'Vendor is required.';
     if (!formData.paymentMethodId) newErrors.paymentMethodId = 'Payment method is required.';
     
     if (formData.monthOfYear === '1' && Number(formData.dayOfMonth) > 28) {
@@ -308,6 +308,46 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
 
   const methodOptions = paymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName }));
 
+  const handleIncomeSourceSave = async (newId?: number, name?: string) => {
+    await fetchReferenceData();
+    if (name) {
+      setFormData(prev => ({...prev, sourceName: name}));
+    }
+    setIsIncomeSourceModalOpen(false);
+  };
+
+  const handleStoreSave = async (newId?: number, name?: string) => {
+    await fetchReferenceData();
+    if (name) {
+      setFormData(prev => ({...prev, sourceName: name}));
+    }
+    setIsStoreModalOpen(false);
+  };
+
+  const handleEntitySave = async (newId?: number, name?: string) => {
+    await fetchReferenceData();
+    if (name) {
+      setFormData(prev => ({...prev, debtorName: name}));
+    }
+    setIsEntityModalOpen(false);
+  };
+
+  const handleIncomeCategorySave = async (newId?: number, name?: string) => {
+    await fetchReferenceData();
+    if (name) {
+      setFormData(prev => ({...prev, category: name}));
+    }
+    setIsIncomeCategoryModalOpen(false);
+  };
+
+  const handleProductCategorySave = async (newId?: number, name?: string) => {
+    await fetchReferenceData();
+    if (name) {
+      setFormData(prev => ({...prev, category: name}));
+    }
+    setIsProductCategoryModalOpen(false);
+  };
+
   return (
     <>
       <Modal
@@ -363,22 +403,21 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                 />
               </div>
 
-              {/* 3. Source / Store */}
+              {/* 3. Source / Vendor */}
               <div className="flex items-end gap-2">
                 <Combobox
-                  label={type === 'income' ? "Source Name" : "Store Name"}
-                  placeholder={type === 'income' ? "e.g. Bonus, Tax Return" : "e.g. Netflix, Rent"}
+                  label={type === 'income' ? "Source Name" : "Vendor"}
+                  placeholder={type === 'income' ? "Select a source..." : "Select a vendor..."}
+                  searchPlaceholder={type === 'income' ? "Search source..." : "Search vendor..."}
+                  noResultsText={type === 'income' ? "No sources found." : "No vendors found."}
                   options={type === 'income' ? incomeSources : stores}
                   value={formData.sourceName}
                   onChange={val => setFormData(prev => ({...prev, sourceName: val}))}
                   className="flex-1"
                   error={errors.sourceName}
+                  variant="add"
+                  onAdd={() => type === 'income' ? setIsIncomeSourceModalOpen(true) : setIsStoreModalOpen(true)}
                 />
-                <Tooltip content={type === 'income' ? "Add Source" : "Add Store"}>
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => type === 'income' ? setIsIncomeSourceModalOpen(true) : setIsStoreModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
               </div>
 
               {/* 4. Scheduling Details */}
@@ -430,6 +469,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                   min={1}
                   max={1000}
                   precision={0}
+                  clamp={true}
                 />
               </div>
 
@@ -479,31 +519,30 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                   </div>
                   <Combobox
                     placeholder="Select an entity..."
+                    searchPlaceholder="Search entity..."
+                    noResultsText="No entities found."
                     options={entities}
                     value={formData.debtorName}
                     onChange={val => setFormData(prev => ({...prev, debtorName: val}))}
+                    variant="add"
+                    onAdd={() => setIsEntityModalOpen(true)}
                   />
                 </div>
-                <Tooltip content="Add Entity">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsEntityModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
               </div>
 
               <div className="flex items-end gap-2">
                 <Combobox
                   label="Category"
+                  placeholder="Select a category..."
+                  searchPlaceholder="Search category..."
+                  noResultsText="No categories found."
                   options={type === 'income' ? incomeCategories : productCategories}
                   value={formData.category}
                   onChange={val => setFormData(prev => ({...prev, category: val}))}
                   className="flex-1"
+                  variant="add"
+                  onAdd={() => type === 'income' ? setIsIncomeCategoryModalOpen(true) : setIsProductCategoryModalOpen(true)}
                 />
-                <Tooltip content="Add Category">
-                  <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => type === 'income' ? setIsIncomeCategoryModalOpen(true) : setIsProductCategoryModalOpen(true)}>
-                    <Plus className="h-5 w-5"/>
-                  </Button>
-                </Tooltip>
               </div>
               
               <Input label="Note" name="notes" value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="e.g., Monthly salary" />
@@ -515,35 +554,35 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
       <IncomeCategoryModal
         isOpen={isIncomeCategoryModalOpen}
         onClose={() => setIsIncomeCategoryModalOpen(false)}
-        onSave={fetchReferenceData}
+        onSave={handleIncomeCategorySave}
         categoryToEdit={null}
       />
 
       <CategoryModal
         isOpen={isProductCategoryModalOpen}
         onClose={() => setIsProductCategoryModalOpen(false)}
-        onSave={fetchReferenceData}
+        onSave={handleProductCategorySave}
         categoryToEdit={null}
       />
 
       <IncomeSourceModal
         isOpen={isIncomeSourceModalOpen}
         onClose={() => setIsIncomeSourceModalOpen(false)}
-        onSave={fetchReferenceData}
+        onSave={handleIncomeSourceSave}
         sourceToEdit={null}
       />
 
       <StoreModal
         isOpen={isStoreModalOpen}
         onClose={() => setIsStoreModalOpen(false)}
-        onSave={fetchReferenceData}
+        onSave={handleStoreSave}
         storeToEdit={null}
       />
 
       <EntityModal
         isOpen={isEntityModalOpen}
         onClose={() => setIsEntityModalOpen(false)}
-        onSave={fetchReferenceData}
+        onSave={handleEntitySave}
         entityToEdit={null}
       />
     </>

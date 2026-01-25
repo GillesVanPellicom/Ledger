@@ -56,8 +56,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
       if (productToEdit) {
         setFormData({ 
           ...productToEdit, 
-          ProductSize: String(productToEdit.ProductSize), 
-          ProductUnitID: String(productToEdit.ProductUnitID),
+          ProductSize: String(productToEdit.ProductSize || ''), 
+          ProductUnitID: String(productToEdit.ProductUnitID || ''),
           CategoryID: productToEdit.CategoryID ? String(productToEdit.CategoryID) : ''
         });
       } else {
@@ -176,8 +176,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
           
           <div className="flex items-end gap-2">
             <div className="flex-grow">
-              <label className="block text-sm font-medium text-font-1 mb-1">Category</label>
               <Combobox
+                label="Category"
+                variant="add"
+                onAdd={() => setIsCategoryModalOpen(true)}
                 options={categories}
                 value={formData.CategoryID}
                 onChange={(value) => handleChange('CategoryID', value)}
@@ -186,11 +188,6 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
                 noResultsText="No categories found."
               />
             </div>
-            <Tooltip content="Add Category">
-              <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsCategoryModalOpen(true)}>
-                <Plus className="h-5 w-5" />
-              </Button>
-            </Tooltip>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -203,6 +200,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
               onIncrement={() => handleChange('ProductSize', String((parseFloat(formData.ProductSize) || 0) + 1))}
               error={errors.ProductSize}
               className="col-span-1"
+              precision={0}
+              clamp={true}
             />
             <Select label="Unit" name="ProductUnitID" value={formData.ProductUnitID} onChange={handleSelectChange} options={units} placeholder="Select Unit" error={errors.ProductUnitID} />
           </div>
