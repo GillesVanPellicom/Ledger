@@ -21,7 +21,7 @@
   "backup": {
     "maxBackups": 5,
     "interval": 5,
-    "editsSinceLastBackup": 1
+    "editsSinceLastBackup": 0
   },
   "paymentMethodStyles": {},
   "datastore": {
@@ -34,7 +34,7 @@
       "debt": true,
       "tentative": true,
       "type": false,
-      "attachments": true
+      "attachments": false
     }
   },
   "dev": {

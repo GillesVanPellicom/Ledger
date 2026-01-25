@@ -4,10 +4,13 @@ import { ChevronsUpDown, Check, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Input from './Input';
 import Divider from './Divider';
+import Tooltip from './Tooltip';
 
 export interface ComboboxOption {
   value: string;
   label: string;
+  disabled?: boolean;
+  tooltip?: string;
 }
 
 interface ComboboxProps {
@@ -68,10 +71,13 @@ const Combobox: React.FC<ComboboxProps> = ({
   }, [searchTerm, options]);
 
   const handleSelectOption = useCallback((selectedValue: string) => {
+    const option = options.find(o => o.value === selectedValue);
+    if (option?.disabled) return;
+
     onChange(selectedValue);
     setIsOpen(false);
     setSearchTerm('');
-  }, [onChange]);
+  }, [onChange, options]);
 
   const calculatePosition = useCallback(() => {
     if (triggerRef.current) {
@@ -155,7 +161,10 @@ const Combobox: React.FC<ComboboxProps> = ({
         case 'Enter':
           e.preventDefault();
           if (activeIndex >= 0 && filteredOptions[activeIndex]) {
-            handleSelectOption(filteredOptions[activeIndex].value);
+            const option = filteredOptions[activeIndex];
+            if (!option.disabled) {
+              handleSelectOption(option.value);
+            }
           }
           break;
         case 'Tab':
@@ -211,28 +220,47 @@ const Combobox: React.FC<ComboboxProps> = ({
       )}
       <div ref={listRef} className="max-h-60 overflow-auto p-1">
         {filteredOptions.length > 0 ? (
-          filteredOptions.map((option, index) => (
-            <div
-              key={option.value}
-              role="option"
-              aria-selected={value === option.value}
-              data-active={index === activeIndex}
-              className={cn(
-                "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none transition-colors text-font-1",
-                "data-[active=true]:bg-field-hover",
-                "hover:bg-field-hover"
-              )}
-              onClick={() => handleSelectOption(option.value)}
-              onMouseEnter={() => setActiveIndex(index)}
-            >
-              {value === option.value && (
-                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                  <Check className="h-4 w-4 text-accent" />
-                </span>
-              )}
-              <span className="truncate">{option.label}</span>
-            </div>
-          ))
+          filteredOptions.map((option, index) => {
+            const isActive = index === activeIndex;
+            const isSelected = value === option.value;
+            
+            const optionContent = (
+              <div
+                role="option"
+                aria-selected={isSelected}
+                aria-disabled={option.disabled}
+                data-active={isActive}
+                className={cn(
+                  "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none transition-colors text-font-1",
+                  isActive && !option.disabled ? "bg-field-hover" : "",
+                  option.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-field-hover"
+                )}
+                onClick={() => !option.disabled && handleSelectOption(option.value)}
+                onMouseEnter={() => setActiveIndex(index)}
+              >
+                {isSelected && (
+                  <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                    <Check className="h-4 w-4 text-accent" />
+                  </span>
+                )}
+                <span className="truncate">{option.label}</span>
+              </div>
+            );
+
+            if (option.disabled && option.tooltip) {
+              return (
+                <Tooltip key={option.value} content={option.tooltip} className="w-full block">
+                  {optionContent}
+                </Tooltip>
+              );
+            }
+
+            return (
+              <React.Fragment key={option.value}>
+                {optionContent}
+              </React.Fragment>
+            );
+          })
         ) : (
           <div className="py-6 text-center text-sm text-font-2">
             {noResultsText}

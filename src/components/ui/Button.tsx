@@ -7,6 +7,7 @@ const variants = {
   danger: 'bg-red hover:bg-red text-white shadow-sm border border-red',
   ghost: 'bg-transparent hover:bg-field-hover text-font-2',
   minimal: 'inline-flex items-center justify-center p-0 m-0 bg-transparent border-0 appearance-none focus:outline-none',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
 };
 
 const sizes = {
@@ -17,7 +18,7 @@ const sizes = {
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'minimal';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'minimal' | 'outline';
   size?: 'sm' | 'md' | 'lg' | 'icon';
   loading?: boolean;
   active?: boolean;

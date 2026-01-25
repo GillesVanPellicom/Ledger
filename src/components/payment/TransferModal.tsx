@@ -147,9 +147,16 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
   };
 
   const methodOptions = paymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName }));
-  const originOptions = paymentMethods
-    .filter(m => (methodBalances[String(m.PaymentMethodID)] || 0) > 0)
-    .map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName }));
+  const originOptions = paymentMethods.map(pm => {
+    const balance = methodBalances[String(pm.PaymentMethodID)] || 0;
+    const isDisabled = balance <= 0;
+    return {
+      value: String(pm.PaymentMethodID),
+      label: pm.PaymentMethodName,
+      disabled: isDisabled,
+      tooltip: isDisabled ? "Insufficient funds" : undefined
+    };
+  });
 
   return (
     <Modal
