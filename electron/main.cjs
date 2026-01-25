@@ -1,4 +1,4 @@
-const {app, BrowserWindow, ipcMain, dialog, protocol, net, shell} = require(
+const {app, BrowserWindow, ipcMain, dialog, protocol, net, shell, session} = require(
   'electron');
 const path = require('node:path');
 const sqlite3 = require('sqlite3');
@@ -148,12 +148,14 @@ function createWindow() {
     mainWindow.setMenu(null);
   }
 
-  const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:5173';
+  const startUrl = process.env.ELECTRON_START_URL;
 
-  if (dev) {
+  if (startUrl) {
     mainWindow.loadURL(startUrl);
     mainWindow.webContents.on('did-finish-load', () => {
-      setTimeout(() => mainWindow.webContents.openDevTools(), 500);
+      if (dev) {
+        setTimeout(() => mainWindow.webContents.openDevTools(), 500);
+      }
     });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
@@ -167,8 +169,21 @@ function createWindow() {
 app.on('ready', async () => {
   initializeStore();
 
-  if (dev) {
-    await installDevTools();
+  // Disable dev tools extensions for now as they cause issues with Electron 38
+  // if (dev) {
+  //   await installDevTools();
+  // }
+  
+  // Clear Service Workers to avoid conflicts
+  if (dev || process.env.ELECTRON_START_URL) {
+    try {
+      if (session && session.defaultSession) {
+        await session.defaultSession.clearStorageData({ storages: ['serviceworkers'] });
+        console.log('Service workers cleared');
+      }
+    } catch (e) {
+      console.error('Failed to clear service workers:', e);
+    }
   }
 
   protocol.handle('local-file', (request) => {

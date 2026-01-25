@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import javascriptObfuscator from "vite-plugin-javascript-obfuscator";
 
 export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? './' : '/',
   plugins: [
     react(),
 
@@ -25,6 +26,8 @@ export default defineConfig(({ mode }) => ({
     dev: JSON.stringify(process.env.NODE_ENV === 'development'),
   },
   build: {
-    sourcemap: false
+    sourcemap: false,
+    outDir: 'dist',
+    emptyOutDir: true,
   }
 }));

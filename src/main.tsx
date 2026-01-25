@@ -18,14 +18,28 @@ const Main = () => {
   useEffect(() => {
     loadSettings();
 
+    // Service Worker Logic
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(registration => {
-          console.log('SW registered: ', registration);
-        }).catch(registrationError => {
-          console.log('SW registration failed: ', registrationError);
+      const isElectron = window.navigator.userAgent.includes('Electron');
+      
+      if (isElectron || dev) {
+        // Unregister existing service workers in Electron or Dev mode
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (const registration of registrations) {
+            registration.unregister();
+            console.log('Service Worker unregistered');
+          }
         });
-      });
+      } else {
+        // Register service worker only in non-Electron production environment
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('SW registered: ', registration);
+          }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        });
+      }
     }
   }, [loadSettings]);
 

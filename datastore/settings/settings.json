@@ -1,5 +1,5 @@
 {
-  "theme": "dark",
+  "theme": "light",
   "modules": {
     "paymentMethods": {
       "enabled": true
@@ -21,13 +21,13 @@
   "backup": {
     "maxBackups": 5,
     "interval": 5,
-    "editsSinceLastBackup": 2
+    "editsSinceLastBackup": 0
   },
   "paymentMethodStyles": {},
   "datastore": {
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
-  "themeColor": "#007AFF",
+  "themeColor": "#000000",
   "headerColor": "#8b5cf6",
   "receipts": {
     "indicators": {
@@ -44,7 +44,7 @@
     }
   },
   "formatting": {
-    "decimalSeparator": "comma",
+    "decimalSeparator": "dot",
     "dateFormat": "international",
     "shortenYear": false,
     "timeFormat": "international",
@@ -63,11 +63,9 @@
     },
     "inProgress": false
   },
-  "userName": "Gilles",
   "notifications": {
     "position": "top-center",
-    "duration": 3000,
-    "attentionGrabber": false
+    "duration": 4000
   },
-  "uiScale": 100
+  "userName": "Gilles"
 }
