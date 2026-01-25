@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import Radio from './Radio';
 
 interface RadioCardProps {
   selected: boolean;
@@ -60,14 +61,7 @@ const RadioCard: React.FC<RadioCardProps> = ({
           {description && <p className="text-sm text-font-2">{description}</p>}
         </div>
       </div>
-      <div className={cn(
-        "w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0",
-        selected 
-          ? "border-accent bg-accent" 
-          : "border-border"
-      )}>
-        {selected && <div className="w-2 h-2 bg-white rounded-full" />}
-      </div>
+      <Radio selected={selected} />
       {children}
     </div>
   );

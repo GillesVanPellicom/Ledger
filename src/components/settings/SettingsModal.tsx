@@ -18,6 +18,7 @@ import { ModulesComponent } from '../../preferences/modules/ModulesComponent';
 import WizardDevTools from './WizardDevTools';
 import TabsComponent from '../ui/Tabs';
 import { toast } from 'sonner';
+import NotificationControls from './NotificationControls';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -267,6 +268,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const appearanceTabs = [
     { id: 'general', label: 'General' },
     { id: 'indicators', label: 'Indicators' },
+    { id: 'notifications', label: 'Notifications' },
   ];
 
   return (
@@ -342,6 +344,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {appearanceActiveTab === 'notifications' && (
+                  <div>
+                    <SectionTitle title="Notification Position" tooltip="Choose where notifications appear on the screen." />
+                    <NotificationControls />
                   </div>
                 )}
               </div>
@@ -592,6 +601,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                           onDecrement={() => setPromiseDuration(String(Math.max(0, Number(promiseDuration) - 1)))}
                           min={0}
                           max={60}
+                          precision={0}
                           className="w-24"
                         />
                       </div>

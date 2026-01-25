@@ -66,6 +66,9 @@ const initialSettings: Settings = {
   wizard: {
     askedQuestions: {},
     inProgress: false,
+  },
+  notifications: {
+    position: 'bottom-right',
   }
 };
 
@@ -164,6 +167,10 @@ export const useSettingsStore = create<SettingsState>()(
                       ...initialSettings.wizard!.askedQuestions,
                       ...loadedSettings.wizard?.askedQuestions
                   }
+              },
+              notifications: {
+                ...initialSettings.notifications,
+                ...loadedSettings.notifications
               }
           };
 
@@ -228,6 +235,10 @@ export const useSettingsStore = create<SettingsState>()(
             wizard: {
                 ...(currentSettings.wizard || { askedQuestions: {}, inProgress: false }),
                 ...(newSettings.wizard || {})
+            },
+            notifications: {
+                ...(currentSettings.notifications || { position: 'bottom-right' }),
+                ...(newSettings.notifications || {})
             }
         };
 
