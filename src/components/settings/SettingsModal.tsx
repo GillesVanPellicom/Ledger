@@ -14,11 +14,14 @@ import StepperInput from '../ui/StepperInput';
 import { format } from 'date-fns';
 import AppearanceSettings from './AppearanceSettings';
 import FormattingSettings from './FormattingSettings';
+import DateSettings from './DateSettings';
+import TimeSettings from './TimeSettings';
 import { ModulesComponent } from '../../preferences/modules/ModulesComponent';
 import WizardDevTools from './WizardDevTools';
 import TabsComponent from '../ui/Tabs';
 import { toast } from 'sonner';
 import NotificationControls from './NotificationControls';
+import Divider from '../ui/Divider';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -364,6 +367,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             )}
             {activeTab === 'formatting' && (
               <div className="space-y-6">
+                <DateSettings />
+                <Divider className="my-8" />
+                <TimeSettings />
+                <Divider className="my-8" />
                 <FormattingSettings />
 
                 <div className="h-px bg-border my-6" />

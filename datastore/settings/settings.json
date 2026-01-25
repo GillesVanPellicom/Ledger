@@ -1,5 +1,5 @@
 {
-  "theme": "light",
+  "theme": "dark",
   "modules": {
     "paymentMethods": {
       "enabled": true
@@ -27,7 +27,7 @@
   "datastore": {
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
-  "themeColor": "#000000",
+  "themeColor": "#007AFF",
   "headerColor": "#8b5cf6",
   "receipts": {
     "indicators": {
@@ -44,7 +44,7 @@
     }
   },
   "formatting": {
-    "decimalSeparator": "dot",
+    "decimalSeparator": "comma",
     "dateFormat": "international",
     "shortenYear": false,
     "timeFormat": "international",
@@ -56,6 +56,8 @@
       "name": 1,
       "intro": 1,
       "theme": 1,
+      "dateFormat": 1,
+      "timeFormat": 1,
       "numberFormat": 1,
       "modules": 1,
       "datastore": 1,
