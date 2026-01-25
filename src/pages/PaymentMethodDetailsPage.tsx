@@ -21,6 +21,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useQueryClient } from '@tanstack/react-query';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import { calculatePaymentMethodBalance } from '../logic/paymentLogic';
 
 const tryParseJson = (str: string) => {
   try {
@@ -281,7 +282,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
       setTransactions(allTransactions);
 
-      const newBalance = (methodData.PaymentMethodFunds || 0) + allTransactions.reduce((acc, tx) => acc + tx.amount, 0);
+      const newBalance = await calculatePaymentMethodBalance(methodId, methodData.PaymentMethodFunds || 0);
       setBalance(newBalance);
 
     } catch (error) {

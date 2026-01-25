@@ -253,54 +253,74 @@ const {promisify} = require('node:util');
 ipcMain.handle('create-transaction',
   async (event, {type, from, to, amount, date, note}) => {
     if (!db) throw new Error('Database not connected');
-    const run = promisify(db.run.bind(db));
+    
+    return new Promise((resolve, reject) => {
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
 
-    try {
-      await run('BEGIN TRANSACTION');
+        if (type === 'deposit') {
+          db.run(
+            'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote) VALUES (?, ?, ?, ?)',
+            [from, amount, date, note],
+            (err) => {
+              if (err) {
+                db.run('ROLLBACK');
+                return reject(err);
+              }
+            }
+          );
+        } else if (type === 'transfer') {
+          db.run(
+            'INSERT INTO Transfers (FromPaymentMethodID, ToPaymentMethodID, Amount, TransferDate, Note) VALUES (?, ?, ?, ?, ?)',
+            [from, to, amount, date, note],
+            function(err) {
+              if (err) {
+                db.run('ROLLBACK');
+                return reject(err);
+              }
+              const transferId = this.lastID;
+              const fromNote = `Transfer to method ${to}`;
+              const toNote = `Transfer from method ${from}`;
 
-      if (type === 'deposit') {
-        await run(
-          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote) VALUES (?, ?, ?, ?)',
-          [from, amount, date, note],
-        );
-      } else if (type === 'transfer') {
-        // Insert transfer record
-        const transferResult = await run(
-          'INSERT INTO Transfers (FromPaymentMethodID, ToPaymentMethodID, Amount, TransferDate, Note) VALUES (?, ?, ?, ?, ?)',
-          [from, to, amount, date, note],
-        );
-        const transferId = transferResult.lastID; // lastID is returned by sqlite3 in callback context, we'll handle it below
+              db.run(
+                'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, TransferID) VALUES (?, ?, ?, ?, ?)',
+                [from, -amount, date, fromNote, transferId],
+                (err) => {
+                  if (err) {
+                    db.run('ROLLBACK');
+                    return reject(err);
+                  }
+                }
+              );
+              db.run(
+                'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, TransferID) VALUES (?, ?, ?, ?, ?)',
+                [to, amount, date, toNote, transferId],
+                (err) => {
+                  if (err) {
+                    db.run('ROLLBACK');
+                    return reject(err);
+                  }
+                }
+              );
+            }
+          );
+        }
 
-        const fromNote = `Transfer to method ${to}`;
-        const toNote = `Transfer from method ${from}`;
-
-        // Insert the corresponding TopUps
-        await run(
-          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)',
-          [from, -amount, date, fromNote, transferId],
-        );
-        await run(
-          'INSERT INTO TopUps (PaymentMethodID, TopUpAmount, TopUpDate, TopUpNote, TransferID) VALUES (?, ?, ?, ?, ?)',
-          [to, amount, date, toNote, transferId],
-        );
-      }
-
-      await run('COMMIT');
-      return {success: true};
-    } catch (err) {
-      try {
-        await run('ROLLBACK');
-      } catch (error_) {
-        console.error('Rollback failed:', error_);
-      }
-      throw err;
-    }
+        db.run('COMMIT', (err) => {
+          if (err) {
+            db.run('ROLLBACK');
+            return reject(err);
+          }
+          resolve({success: true});
+        });
+      });
+    });
   });
 
 ipcMain.handle('delete-transaction', async (event, {topUpId}) => {
   if (!db) throw new Error('Database not connected');
   return new Promise((resolve, reject) => {
-    db.get('SELECT TransferID FROM TopUps WHERE TopUpID = ?', [topUpId],
+    db.get('SELECT TransferID FROM Income WHERE IncomeID = ?', [topUpId],
       (err, row) => {
         if (err) return reject(err);
 
@@ -313,7 +333,7 @@ ipcMain.handle('delete-transaction', async (event, {topUpId}) => {
             });
         } else {
           // It's a simple deposit or other top-up, delete just this one
-          db.run('DELETE FROM TopUps WHERE TopUpID = ?', [topUpId],
+          db.run('DELETE FROM Income WHERE IncomeID = ?', [topUpId],
             function(err) {
               if (err) return reject(err);
               resolve({success: true, changes: this.changes});
