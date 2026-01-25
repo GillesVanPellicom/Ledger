@@ -57,6 +57,10 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onCo
       onClose={onClose}
       title="Mark as Paid"
       onEnter={() => onConfirm(paymentMethodId)}
+      isDatabaseTransaction
+      successToastMessage="Marked as paid successfully"
+      errorToastMessage="Failed to mark as paid"
+      loadingMessage="Processing payment..."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -244,11 +248,12 @@ const EntityDetailsPage: React.FC = () => {
         ['paid', paymentMethodId, receiptToMarkAsPaid.ReceiptID]
       );
       refetchDebt(); // Refetch debt data
-    } catch (error) {
-      showError(error as Error);
-    } finally {
       setIsMarkAsPaidModalOpen(false);
       setReceiptToMarkAsPaid(null);
+    } catch (error) {
+      // Error handled by Modal toast if we propagate it, but here we catch it.
+      // Since we are using the new Modal system, we should rethrow if we want the Modal to show the error toast.
+      throw error;
     }
   };
 
@@ -266,10 +271,9 @@ const EntityDetailsPage: React.FC = () => {
         await db.execute('UPDATE Expenses SET Status = ?, PaymentMethodID = NULL WHERE ExpenseID = ?', ['unpaid', receiptId]);
       }
       refetchDebt(); // Refetch debt data
-    } catch (error) {
-      showError(error as Error);
-    } finally {
       setUnsettleConfirmation({ isOpen: false, receiptId: null, type: null });
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -521,6 +525,9 @@ const EntityDetailsPage: React.FC = () => {
             onConfirm={handleUnsettle}
             title="Unsettle Debt"
             message={`Are you sure you want to mark this debt as unpaid?`}
+            isDatabaseTransaction
+            successToastMessage="Debt unsettled successfully"
+            errorToastMessage="Failed to unsettle debt"
           />
 
           <MarkAsPaidModal

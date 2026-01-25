@@ -67,22 +67,6 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
     setError('');
 
     try {
-      // Use the user-provided note if available, otherwise fallback to the default description
-      // But the user requested that "note" should NOT be populated with "Repayment from..."
-      // So we store the user note in the TopUpNote field.
-      // However, if the note is empty, we might want to store SOMETHING or just leave it empty?
-      // The previous code was: const topUpNote = `Repayment from ${debtInfo!.debtorName}`;
-      // The user said: "Make sure "note" does not get populated with "Repayment from Charlie" or whatever"
-      // This likely means the input field should start empty.
-      // But what should be saved to the DB?
-      // If the user leaves it empty, we probably still want the system generated note for context in the transaction list?
-      // Or maybe we append the user note to the system note?
-      // Let's assume the user wants to control the note field entirely.
-      // If they leave it empty, we can default to the system message in the DB, OR just save an empty note.
-      // Given the request "Make sure 'note' does not get populated with...", it refers to the UI input.
-      // But usually, a transaction needs a description.
-      // Let's use the user note if provided, otherwise use the default system note for the DB record.
-      
       const systemNote = `Repayment from ${debtInfo!.debtorName}`;
       const finalNote = note.trim() ? note.trim() : systemNote;
 
@@ -102,6 +86,7 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
     } catch (err: any) {
       setError(err.message || 'Failed to settle debt.');
       console.error(err);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -115,6 +100,10 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
       onClose={onClose}
       title={`Settle Debt for ${debtInfo.debtorName}`}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage="Debt settled successfully"
+      errorToastMessage="Failed to settle debt"
+      loadingMessage="Settling debt..."
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Settle</Button></>}
     >
       <div className="space-y-4">

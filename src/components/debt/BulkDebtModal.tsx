@@ -108,25 +108,36 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
       setProgress((completedSteps / totalSteps) * 100);
     };
 
-    for (const receiptId of targetReceiptIds) {
-      await db.execute(
-        'UPDATE Expenses SET SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ExpenseID = ?',
-        ['total_split', ownShares, totalShares, receiptId]
-      );
-      updateProgress();
-
-      await db.execute('DELETE FROM ExpenseSplits WHERE ExpenseID = ?', [receiptId]);
-      updateProgress();
-
-      for (const split of receiptSplits) {
-        await db.execute('INSERT INTO ExpenseSplits (ExpenseID, EntityID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
+    try {
+      for (const receiptId of targetReceiptIds) {
+        await db.execute(
+          'UPDATE Expenses SET SplitType = ?, OwnShares = ?, TotalShares = ? WHERE ExpenseID = ?',
+          ['total_split', ownShares, totalShares, receiptId]
+        );
         updateProgress();
-      }
-    }
 
-    setIsProcessing(false);
-    onComplete();
-    onClose();
+        await db.execute('DELETE FROM ExpenseSplits WHERE ExpenseID = ?', [receiptId]);
+        updateProgress();
+
+        for (const split of receiptSplits) {
+          await db.execute('INSERT INTO ExpenseSplits (ExpenseID, EntityID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
+          updateProgress();
+        }
+      }
+      onComplete();
+      onClose();
+    } catch (error) {
+      console.error("Bulk update failed:", error);
+      // Modal will handle error toast if we propagate, but here we have a progress modal overlay.
+      // Since this is a complex multi-step process with its own progress UI, 
+      // we might want to let the Modal handle the overall success/failure if possible,
+      // but the progress modal complicates it. 
+      // For now, let's rethrow so the parent Modal *could* catch it if it was the one calling this.
+      // However, startBulkUpdate is called by onEnter.
+      throw error; 
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -136,6 +147,10 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
         onClose={onClose}
         title={`Bulk Assign Debt (${receiptIds.length} items effected)`}
         onEnter={startBulkUpdate}
+        isDatabaseTransaction
+        successToastMessage="Bulk debt assignment complete"
+        errorToastMessage="Failed to assign debt"
+        loadingMessage="Analyzing selection..."
         footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={startBulkUpdate}
                                                                                        disabled={totalShares === 0}>Apply</Button></>}
       >
@@ -209,15 +224,18 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
         title="Debt Assignment Conflict"
         message={`${conflictingReceipts.length} of the selected expenses already have debt assignments. How would you like to proceed?`}
         confirmText="Overwrite All"
-        onConfirm={() => {
+        onConfirm={async () => {
           setIsConflictModalOpen(false);
-          processBulkUpdate([]);
+          await processBulkUpdate([]);
         }}
         secondaryText="Skip Conflicting"
-        onSecondaryAction={() => {
+        onSecondaryAction={async () => {
           setIsConflictModalOpen(false);
-          processBulkUpdate(conflictingReceipts);
+          await processBulkUpdate(conflictingReceipts);
         }}
+        isDatabaseTransaction
+        successToastMessage="Bulk debt assignment complete"
+        errorToastMessage="Failed to assign debt"
       />
 
       <ProgressModal

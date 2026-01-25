@@ -62,6 +62,7 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
       } else {
         setError(err.message || 'Failed to save store');
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -73,6 +74,10 @@ const StoreModal: React.FC<StoreModalProps> = ({ isOpen, onClose, onSave, storeT
       onClose={onClose}
       title={storeToEdit ? 'Edit Store' : 'Add New Store'}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage={storeToEdit ? 'Store updated successfully' : 'Store created successfully'}
+      errorToastMessage="Failed to save store"
+      loadingMessage="Saving store..."
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <div className="space-y-4">

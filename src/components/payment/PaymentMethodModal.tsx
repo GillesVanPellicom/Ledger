@@ -55,6 +55,7 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({isOpen, onClose,
       } else {
         setError(err.message || 'Failed to save payment method');
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -66,6 +67,10 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({isOpen, onClose,
       onClose={onClose}
       title={methodToEdit ? "Edit Payment Method" : "Add New Payment Method"}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage={methodToEdit ? "Payment method updated successfully" : "Payment method added successfully"}
+      errorToastMessage="Failed to save payment method"
+      loadingMessage="Saving payment method..."
       footer={<><Button variant="secondary"
                         onClick={onClose}
                         disabled={loading}>Cancel</Button><Button onClick={handleSubmit}

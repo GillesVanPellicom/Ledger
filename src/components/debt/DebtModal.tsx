@@ -62,6 +62,7 @@ const DebtModal: React.FC<DebtModalProps> = ({isOpen, onClose, onSave, debtorToE
       } else {
         setError(err.message || 'Failed to save debtor');
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -73,6 +74,10 @@ const DebtModal: React.FC<DebtModalProps> = ({isOpen, onClose, onSave, debtorToE
       onClose={onClose}
       title={debtorToEdit ? 'Edit Debtor' : 'Add New Debtor'}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage={debtorToEdit ? 'Debtor updated successfully' : 'Debtor created successfully'}
+      errorToastMessage="Failed to save debtor"
+      loadingMessage="Saving debtor..."
       footer={<><Button variant="secondary"
                         onClick={onClose}
                         disabled={loading}>Cancel</Button><Button onClick={handleSubmit}

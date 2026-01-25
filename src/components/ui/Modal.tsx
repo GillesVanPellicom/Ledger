@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from './Button';
 import { focusStack } from '../../utils/focusStack';
+import { toast } from 'sonner';
 
 interface ModalProps {
   isOpen: boolean;
@@ -13,7 +14,14 @@ interface ModalProps {
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'xlh' | 'full' | 'viewport';
   className?: string;
-  onEnter?: () => void;
+  onEnter?: () => void | Promise<any>;
+  // New props for the modular system
+  showSuccessToast?: boolean;
+  successToastMessage?: string;
+  showErrorToast?: boolean;
+  errorToastMessage?: string;
+  isDatabaseTransaction?: boolean;
+  loadingMessage?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({ 
@@ -24,12 +32,48 @@ const Modal: React.FC<ModalProps> = ({
   footer, 
   size = 'md',
   className,
-  onEnter
+  onEnter,
+  showSuccessToast = true,
+  successToastMessage = 'Operation successful',
+  showErrorToast = true,
+  errorToastMessage = 'An error occurred',
+  isDatabaseTransaction = false,
+  loadingMessage = 'Processing...',
 }) => {
   const [isRendered, setIsRendered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const modalId = useRef(Math.random().toString(36).substr(2, 9));
   const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  const handleEnterPress = useCallback(async () => {
+    if (!onEnter) return;
+
+    const result = onEnter();
+    
+    // Only trigger toasts if the result is a promise
+    if (result instanceof Promise) {
+      if (isDatabaseTransaction) {
+        toast.promise(result, {
+          loading: loadingMessage,
+          success: successToastMessage,
+          error: errorToastMessage,
+        });
+      } else {
+        try {
+          await result;
+          if (showSuccessToast) toast.success(successToastMessage);
+        } catch (e) {
+          if (showErrorToast) toast.error(errorToastMessage);
+        }
+      }
+      
+      try {
+        await result;
+      } catch (e) {
+        // Error handled by toast
+      }
+    }
+  }, [onEnter, isDatabaseTransaction, loadingMessage, successToastMessage, errorToastMessage, showSuccessToast, showErrorToast]);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,14 +81,14 @@ const Modal: React.FC<ModalProps> = ({
       previousActiveElement.current = document.activeElement as HTMLElement;
 
       setIsRendered(true);
-      focusStack.push({ id: modalId.current, onEnter });
+      focusStack.push({ id: modalId.current, onEnter: handleEnterPress });
       const timer = setTimeout(() => setIsAnimating(true), 10);
       return () => clearTimeout(timer);
     } else {
       setIsAnimating(false);
       focusStack.remove(modalId.current);
     }
-  }, [isOpen, onEnter]);
+  }, [isOpen, handleEnterPress]);
 
   useEffect(() => {
     if (!isRendered) return;
@@ -55,7 +99,7 @@ const Modal: React.FC<ModalProps> = ({
 
       if (e.key === 'Escape') {
         onClose();
-      } else if (e.key === 'Enter' && onEnter) {
+      } else if (e.key === 'Enter') {
         // Check if the active element is not a button or input that handles enter
         const target = document.activeElement as HTMLElement;
         const activeTag = target?.tagName.toLowerCase();
@@ -72,7 +116,7 @@ const Modal: React.FC<ModalProps> = ({
         if (!isInteractiveInput) {
            e.preventDefault();
            e.stopPropagation();
-           onEnter();
+           handleEnterPress();
         }
       }
     };
@@ -87,13 +131,39 @@ const Modal: React.FC<ModalProps> = ({
         document.body.style.overflow = 'unset';
       }
     };
-  }, [isRendered, onClose, onEnter]);
+  }, [isRendered, onClose, handleEnterPress]);
 
   const handleTransitionEnd = () => {
     if (!isAnimating) {
       setIsRendered(false);
     }
   };
+
+  const wrappedFooter = React.useMemo(() => {
+    if (!footer) return null;
+    
+    const wrapClick = (child: React.ReactNode): React.ReactNode => {
+      if (!React.isValidElement(child)) return child;
+      
+      if (child.type === React.Fragment) {
+        return React.cloneElement(child, {}, React.Children.map(child.props.children, wrapClick));
+      }
+      
+      if (child.props.onClick && child.props.children !== 'Cancel' && !child.props.disabled) {
+         return React.cloneElement(child as React.ReactElement<any>, {
+           onClick: (e: React.MouseEvent) => {
+             e.preventDefault();
+             e.stopPropagation();
+             handleEnterPress();
+           }
+         });
+      }
+      
+      return child;
+    };
+
+    return React.Children.map(footer, wrapClick);
+  }, [footer, handleEnterPress]);
 
   if (!isRendered) return null;
 
@@ -137,9 +207,9 @@ const Modal: React.FC<ModalProps> = ({
           </button>
         </div>
         <div className="pl-6 pr-3 py-4 overflow-y-auto flex-1">{children}</div>
-        {footer && (
+        {wrappedFooter && (
           <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-bg-modal rounded-b-xl">
-            {footer}
+            {wrappedFooter}
           </div>
         )}
       </div>
@@ -151,7 +221,7 @@ const Modal: React.FC<ModalProps> = ({
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title?: string;
   message?: string;
   confirmText?: string;
@@ -161,6 +231,9 @@ interface ConfirmModalProps {
   secondaryText?: string;
   onSecondaryAction?: () => void;
   children?: React.ReactNode;
+  isDatabaseTransaction?: boolean;
+  successToastMessage?: string;
+  errorToastMessage?: string;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({ 
@@ -175,7 +248,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   loading = false,
   secondaryText,
   onSecondaryAction,
-  children
+  children,
+  isDatabaseTransaction = false,
+  successToastMessage,
+  errorToastMessage
 }) => (
   <Modal
     isOpen={isOpen}
@@ -183,6 +259,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     title={title}
     size="sm"
     onEnter={onConfirm}
+    isDatabaseTransaction={isDatabaseTransaction}
+    successToastMessage={successToastMessage}
+    errorToastMessage={errorToastMessage}
     footer={
       <>
         <Button variant="secondary" onClick={onClose} disabled={loading}>{cancelText}</Button>

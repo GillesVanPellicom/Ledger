@@ -62,6 +62,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, 
       } else {
         setError(err.message || 'Failed to save category');
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -73,6 +74,10 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, 
       onClose={onClose}
       title={categoryToEdit ? 'Edit Category' : 'Add New Category'}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage={categoryToEdit ? 'Category updated successfully' : 'Category created successfully'}
+      errorToastMessage="Failed to save category"
+      loadingMessage="Saving category..."
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <div className="space-y-4">

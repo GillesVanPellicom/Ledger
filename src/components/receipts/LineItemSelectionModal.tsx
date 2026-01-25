@@ -209,7 +209,14 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   const saveButtonText = selectionMode === 'debtor' ? 'Save Assignments' : 'Exclude Selected Items';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="viewport" onEnter={handleSave}>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={title} 
+      size="viewport" 
+      onEnter={handleSave}
+      isDatabaseTransaction={false}
+    >
       <div className="flex flex-col h-full">
         <div className="shrink-0 p-6 pb-0">
           <InfoCard title="Instructions" message="Use Click, ctrl + click, and ⇧ + click to select items." />

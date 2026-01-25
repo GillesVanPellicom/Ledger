@@ -85,6 +85,8 @@ const AppearanceModal: React.FC<AppearanceModalProps> = ({
       onEnter={handleSave}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={handleSave}>Save Style</Button></>}
       size="lg"
+      // Not a database transaction, just local state update usually
+      isDatabaseTransaction={false}
     >
       <div className="space-y-4">
         <div className="flex border-b border-border">

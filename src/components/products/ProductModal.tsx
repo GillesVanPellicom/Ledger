@@ -126,6 +126,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
       } else {
         setErrors({ form: err.message || 'Failed to save product' });
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -151,6 +152,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
         onClose={onClose}
         title={productToEdit ? "Edit Product" : "Add New Product"}
         onEnter={() => handleSave(false)}
+        isDatabaseTransaction
+        successToastMessage={productToEdit ? "Product updated successfully" : "Product added successfully"}
+        errorToastMessage="Failed to save product"
+        loadingMessage="Saving product..."
         footer={
           <>
             <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>

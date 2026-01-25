@@ -62,6 +62,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
       title="Filters"
       size="sm"
       onEnter={onApply}
+      isDatabaseTransaction={false}
       footer={
         <div className="flex justify-between w-full items-center">
           <Tooltip content="Reset all filters">

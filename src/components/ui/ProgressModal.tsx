@@ -11,7 +11,7 @@ const ProgressModal: React.FC<ProgressModalProps> = ({ isOpen, progress, title =
   const displayProgress = Math.floor(progress);
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} title={title} size="sm">
+    <Modal isOpen={isOpen} onClose={() => {}} title={title} size="sm" isDatabaseTransaction={false}>
       <div className="flex flex-col items-center justify-center py-6 space-y-4">
         <div className="w-full bg-field-disabled rounded-full h-2.5">
           <div 

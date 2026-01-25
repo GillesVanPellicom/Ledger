@@ -141,6 +141,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
       onClose();
     } catch (err: any) {
       setErrors({ form: err.message || 'Failed to save transfer' });
+      throw err; // Re-throw for Modal to catch if needed
     } finally {
       setLoading(false);
     }
@@ -166,6 +167,10 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
       onEnter={handleSubmit}
       size="lg"
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
+      isDatabaseTransaction
+      successToastMessage="Transfer saved successfully"
+      errorToastMessage="Failed to save transfer"
+      loadingMessage="Saving transfer..."
     >
       <div className="space-y-8">
         {errors.form && <div className="p-3 bg-red/10 text-red text-sm rounded-lg">{errors.form}</div>}

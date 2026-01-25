@@ -61,6 +61,7 @@ const IncomeCategoryModal: React.FC<IncomeCategoryModalProps> = ({ isOpen, onClo
       } else {
         setError(err.message || 'Failed to save category');
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -72,6 +73,10 @@ const IncomeCategoryModal: React.FC<IncomeCategoryModalProps> = ({ isOpen, onClo
       onClose={onClose}
       title={categoryToEdit ? 'Edit Income Category' : 'Add New Income Category'}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage={categoryToEdit ? 'Income category updated successfully' : 'Income category created successfully'}
+      errorToastMessage="Failed to save income category"
+      loadingMessage="Saving income category..."
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <div className="space-y-4">

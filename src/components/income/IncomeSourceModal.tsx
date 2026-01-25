@@ -56,11 +56,12 @@ const IncomeSourceModal: React.FC<IncomeSourceModalProps> = ({ isOpen, onClose, 
       }
       onClose();
     } catch (err: any) {
-      if (err.message && err.message.includes('UNIQUE constraint failed')) {
+      if (err.message?.includes('UNIQUE constraint failed')) {
         setError('This source name already exists.');
       } else {
         setError(err.message || 'Failed to save source');
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -72,6 +73,10 @@ const IncomeSourceModal: React.FC<IncomeSourceModalProps> = ({ isOpen, onClose, 
       onClose={onClose}
       title={sourceToEdit ? 'Edit Income Source' : 'Add New Income Source'}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage={sourceToEdit ? 'Income source updated successfully' : 'Income source created successfully'}
+      errorToastMessage="Failed to save income source"
+      loadingMessage="Saving income source..."
       footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
     >
       <div className="space-y-4">

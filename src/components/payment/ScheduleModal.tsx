@@ -230,6 +230,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
       onClose();
     } catch (err: any) {
       setErrors({ form: err.message || 'Failed to save schedule' });
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -314,6 +315,10 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
         onClose={onClose}
         title={scheduleToEdit ? "Edit Schedule" : "Add Schedule"}
         onEnter={handleSubmit}
+        isDatabaseTransaction
+        successToastMessage={scheduleToEdit ? "Schedule updated successfully" : "Schedule created successfully"}
+        errorToastMessage="Failed to save schedule"
+        loadingMessage="Saving schedule..."
         size="lg"
         footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
       >

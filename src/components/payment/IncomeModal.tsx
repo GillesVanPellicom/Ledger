@@ -166,6 +166,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
       onClose();
     } catch (err: any) {
       setErrors({ form: err.message || 'Failed to save income' });
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -180,6 +181,10 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
         onClose={onClose}
         title={topUpToEdit ? "Edit Income" : "Add Income"}
         onEnter={handleSubmit}
+        isDatabaseTransaction
+        successToastMessage={topUpToEdit ? "Income updated successfully" : "Income added successfully"}
+        errorToastMessage="Failed to save income"
+        loadingMessage="Saving income..."
         size="lg"
         footer={<><Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Save</Button></>}
       >

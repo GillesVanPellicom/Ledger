@@ -330,6 +330,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
       setItemToDelete(null);
     } catch (error) {
       console.error("Failed to delete item:", error);
+      throw error;
     }
   };
 
@@ -341,6 +342,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Failed to update payment method name:", error);
+      throw error;
     }
   };
 
@@ -585,9 +587,28 @@ const PaymentMethodDetailsPage: React.FC = () => {
             onConfirm={handleDelete}
             title={`Delete ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}`}
             message={`Are you sure you want to permanently delete this ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}? This action cannot be undone.`}
+            isDatabaseTransaction
+            successToastMessage="Transaction deleted successfully"
+            errorToastMessage="Failed to delete transaction"
+            loadingMessage="Deleting transaction..."
           />
 
-          <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Method" onEnter={handleUpdateMethodName}>
+          <Modal 
+            isOpen={isEditModalOpen} 
+            onClose={() => setIsEditModalOpen(false)} 
+            title="Edit Method" 
+            onEnter={handleUpdateMethodName}
+            isDatabaseTransaction
+            successToastMessage="Method updated successfully"
+            errorToastMessage="Failed to update method"
+            loadingMessage="Updating method..."
+            footer={
+              <div className="flex justify-end space-x-2">
+                <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleUpdateMethodName}>Save</Button>
+              </div>
+            }
+          >
             <div className="space-y-4">
               <Input
                 label="Method Name"
@@ -595,10 +616,6 @@ const PaymentMethodDetailsPage: React.FC = () => {
                 onChange={(e) => setMethodName(e.target.value)}
                 placeholder="Enter new method name"
               />
-              <div className="flex justify-end space-x-2">
-                <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleUpdateMethodName}>Save</Button>
-              </div>
             </div>
           </Modal>
         </div>

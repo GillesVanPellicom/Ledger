@@ -227,7 +227,8 @@ const ReceiptsPage: React.FC = () => {
       setTransactionToDelete(null);
       refetch();
     } catch (error) {
-      showError(error as Error);
+      // Error handled by Modal toast
+      throw error;
     }
   };
 
@@ -1048,16 +1049,16 @@ const ReceiptsPage: React.FC = () => {
               </>
             )}
           </FilterModal>
-          <ConfirmModal isOpen={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setTransactionToDelete(null); }} onConfirm={handleDelete} title={`Delete ${transactionToDelete ? 'Transaction' : `${selectedTransactionIds.length} Transactions`}`} message={`Are you sure you want to permanently delete ${transactionToDelete ? 'this transaction' : `${selectedTransactionIds.length} selected transactions`}? This action cannot be undone.`} />
+          <ConfirmModal isOpen={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setTransactionToDelete(null); }} onConfirm={handleDelete} title={`Delete ${transactionToDelete ? 'Transaction' : `${selectedTransactionIds.length} Transactions`}`} message={`Are you sure you want to permanently delete ${transactionToDelete ? 'this transaction' : `${selectedTransactionIds.length} selected transactions`}? This action cannot be undone.`} isDatabaseTransaction successToastMessage="Transaction deleted successfully" errorToastMessage="Failed to delete transaction" loadingMessage="Deleting transaction..." />
           <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} onSave={refetch} topUpToEdit={null} paymentMethodId={methods[0]?.PaymentMethodID?.toString() || ''} currentBalance={0} />
           <IncomeModal isOpen={isIncomeModalOpen} onClose={() => setIsIncomeModalOpen(false)} onSave={refetch} topUpToEdit={null} />
           <ScheduleModal isOpen={isScheduleModalOpen} onClose={() => setIsScheduleModalOpen(false)} onSave={refetch} scheduleToEdit={editingSchedule} />
           <ProgressModal isOpen={isGeneratingPdf} progress={pdfProgress} title="Generating PDF Report..." />
           {/* Income Modals */}
-          <Modal isOpen={isDeleteScheduleModalOpen} onClose={() => { setIsDeleteScheduleModalOpen(false); setCascadeDelete(false); }} title="Delete Schedule" className="max-w-lg" footer={
+          <Modal isOpen={isDeleteScheduleModalOpen} onClose={() => { setIsDeleteScheduleModalOpen(false); setCascadeDelete(false); }} title="Delete Schedule" className="max-w-lg" isDatabaseTransaction successToastMessage="Schedule deleted successfully" errorToastMessage="Failed to delete schedule" loadingMessage="Deleting schedule..." onEnter={async () => { if (scheduleToDelete) { await deleteScheduleMutation.mutateAsync({ id: scheduleToDelete, cascade: cascadeDelete }); } }} footer={
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setIsDeleteScheduleModalOpen(false)}>Cancel</Button>
-              <Button variant="danger" onClick={() => { if (scheduleToDelete) { deleteScheduleMutation.mutate({ id: scheduleToDelete, cascade: cascadeDelete }); } }} loading={deleteScheduleMutation.isPending}>
+              <Button variant="danger" onClick={async () => { if (scheduleToDelete) { await deleteScheduleMutation.mutateAsync({ id: scheduleToDelete, cascade: cascadeDelete }); } }} loading={deleteScheduleMutation.isPending}>
                 Delete
               </Button>
             </div>
@@ -1073,8 +1074,8 @@ const ReceiptsPage: React.FC = () => {
               </div>
             </div>
           </Modal>
-          <ConfirmModal isOpen={isDismissModalOpen} onClose={() => setIsDismissModalOpen(false)} onConfirm={() => { if (selectedPending) { rejectMutation.mutate(selectedPending.SchedulePendingID); setIsDismissModalOpen(false); } }} title="Dismiss Income" message={`Are you sure you want to dismiss ${selectedPending?.SourceName}? This occurrence will be ignored.`} confirmText="Dismiss" />
-          <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title="Confirm Income" onEnter={handleConfirmIncome} footer={
+          <ConfirmModal isOpen={isDismissModalOpen} onClose={() => setIsDismissModalOpen(false)} onConfirm={async () => { if (selectedPending) { await rejectMutation.mutateAsync(selectedPending.SchedulePendingID); setIsDismissModalOpen(false); } }} title="Dismiss Income" message={`Are you sure you want to dismiss ${selectedPending?.SourceName}? This occurrence will be ignored.`} confirmText="Dismiss" isDatabaseTransaction successToastMessage="Income dismissed successfully" errorToastMessage="Failed to dismiss income" />
+          <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title="Confirm Income" onEnter={handleConfirmIncome} isDatabaseTransaction successToastMessage="Income confirmed successfully" errorToastMessage="Failed to confirm income" loadingMessage="Confirming income..." footer={
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>
               <Button onClick={handleConfirmIncome} loading={confirmMutation.isPending}>

@@ -61,6 +61,7 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
       } else {
         setError(err.message || 'Failed to save entity');
       }
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -72,6 +73,10 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
       onClose={onClose}
       title={entityToEdit ? 'Edit Entity' : 'Add New Entity'}
       onEnter={handleSubmit}
+      isDatabaseTransaction
+      successToastMessage={entityToEdit ? 'Entity updated successfully' : 'Entity created successfully'}
+      errorToastMessage="Failed to save entity"
+      loadingMessage="Saving entity..."
       footer={<><Button variant="secondary"
                         onClick={onClose}
                         disabled={loading}>Cancel</Button><Button onClick={handleSubmit}

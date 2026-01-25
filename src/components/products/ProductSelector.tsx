@@ -142,7 +142,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ isOpen, onClose, onSe
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title="Select Product" size="viewport">
+      <Modal isOpen={isOpen} onClose={onClose} title="Select Product" size="viewport" isDatabaseTransaction={false}>
         <div className="space-y-4">
           <div className="flex justify-end">
             <Button variant="secondary" size="sm" onClick={() => setIsCreateModalOpen(true)}>

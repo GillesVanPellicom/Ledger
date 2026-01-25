@@ -273,7 +273,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xlh" onEnter={onClose}>
+      <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xlh" onEnter={onClose} isDatabaseTransaction={false}>
         <div className="flex h-full">
           <div className="w-56 border-r border-border pr-4">
             <nav className="space-y-1">

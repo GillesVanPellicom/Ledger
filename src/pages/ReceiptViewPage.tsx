@@ -86,6 +86,10 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({isOpen, onClose, onCon
       onClose={onClose}
       title="Mark as Paid"
       onEnter={() => onConfirm(paymentMethodId)}
+      isDatabaseTransaction
+      successToastMessage="Marked as paid successfully"
+      errorToastMessage="Failed to mark as paid"
+      loadingMessage="Processing payment..."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -275,7 +279,7 @@ const ReceiptViewPage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
-      showError(error as Error);
+      throw error;
     } finally {
       setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null});
     }
@@ -291,7 +295,7 @@ const ReceiptViewPage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
-      showError(error as Error);
+      throw error;
     } finally {
       setIsMarkAsPaidModalOpen(false);
     }
@@ -304,7 +308,7 @@ const ReceiptViewPage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
-      showError(error as Error);
+      throw error;
     } finally {
       setMakePermanentModalOpen(false);
     }
@@ -316,7 +320,7 @@ const ReceiptViewPage: React.FC = () => {
       await deleteReceiptMutation.mutateAsync([receipt.ReceiptID]);
       navigate('/');
     } catch (error) {
-      showError(error as Error);
+      throw error;
     } finally {
       setDeleteModalOpen(false);
     }
@@ -465,7 +469,7 @@ const ReceiptViewPage: React.FC = () => {
           {/* Left Column (Notes, Filters, Images, Items) */}
           <div className="xl:col-span-2 space-y-6 xl:col-start-1 xl:row-start-1">
             {receipt?.ReceiptNote && (
-              <Card>
+              <Card className="mb-6">
                 <div className="p-4 flex items-start gap-3">
                   <Tooltip content="Note about the contents of this page">
                     <FileText className="h-5 w-5 text-font-2 shrink-0 mt-0.5" />
@@ -911,6 +915,9 @@ const ReceiptViewPage: React.FC = () => {
         onConfirm={handleUnsettleDebt}
         title="Unsettle Debt"
         message={`Are you sure you want to mark this debt as unpaid?`}
+        isDatabaseTransaction
+        successToastMessage="Debt unsettled successfully"
+        errorToastMessage="Failed to unsettle debt"
       />
 
       <MarkAsPaidModal
@@ -927,6 +934,9 @@ const ReceiptViewPage: React.FC = () => {
         title="Make Expense Permanent"
         message="Are you sure you want to make this expense permanent? This action is irreversible."
         confirmText="Confirm"
+        isDatabaseTransaction
+        successToastMessage="Expense made permanent"
+        errorToastMessage="Failed to make expense permanent"
       />
 
       <ConfirmModal
@@ -935,6 +945,10 @@ const ReceiptViewPage: React.FC = () => {
         onConfirm={handleDelete}
         title="Delete Expense"
         message="Are you sure you want to permanently delete this expense? This action cannot be undone."
+        isDatabaseTransaction
+        successToastMessage="Expense deleted successfully"
+        errorToastMessage="Failed to delete expense"
+        loadingMessage="Deleting expense..."
       />
     </div>
   );
