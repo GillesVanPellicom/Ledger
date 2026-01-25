@@ -62,7 +62,7 @@
   "userName": "Gilles",
   "notifications": {
     "position": "top-center",
-    "duration": 4000,
+    "duration": 3000,
     "attentionGrabber": false
   },
   "uiScale": 100

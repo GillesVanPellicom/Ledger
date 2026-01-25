@@ -30,7 +30,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             "group-[.toast]:bg-field group-[.toast]:text-font-2",
           error: "group-[.toaster]:text-red group-[.toaster]:border-red/20 group-[.toaster]:bg-red/5",
-          // success, info, warning removed to use default styles
+          success: "group-[.toaster]:text-green group-[.toaster]:!bg-bg-modal group-[.toaster]:!border-border",
+          warning: "group-[.toaster]:text-yellow group-[.toaster]:!bg-bg-modal group-[.toaster]:!border-border",
+          info: "group-[.toaster]:text-blue group-[.toaster]:!bg-bg-modal group-[.toaster]:!border-border",
           closeButton: "!bg-field !text-font-2 !border !border-border !hover:bg-field-hover !left-auto !right-[-6px] !top-[-6px] !transform-none",
         },
       }}

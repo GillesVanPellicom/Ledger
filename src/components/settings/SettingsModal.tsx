@@ -456,11 +456,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="max-backups" className="text-sm font-medium text-font-1 flex items-center gap-1 mb-2">Max Backups <Tooltip content="The maximum number of backups to keep."><Info className="h-4 w-4 text-font-2" /></Tooltip></label>
-                        <StepperInput id="max-backups" min={1} max={50} value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('maxBackups', Math.min(50, backupSettings.maxBackups + 1))} onDecrement={() => handleBackupSettingChange('maxBackups', Math.max(1, backupSettings.maxBackups - 1))} />
+                        <StepperInput id="max-backups" min={1} max={50} value={String(backupSettings.maxBackups)} onChange={(e) => handleBackupSettingChange('maxBackups', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('maxBackups', Math.min(50, backupSettings.maxBackups + 1))} onDecrement={() => handleBackupSettingChange('maxBackups', Math.max(1, backupSettings.maxBackups - 1))} precision={0} />
                       </div>
                       <div>
                         <label htmlFor="backup-interval" className="text-sm font-medium text-font-1 flex items-center gap-1 mb-2">Backup Interval <Tooltip content="Number of edits/additions before a new backup is made."><Info className="h-4 w-4 text-font-2" /></Tooltip></label>
-                        <StepperInput id="backup-interval" min={1} max={50} value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('interval', Math.min(50, backupSettings.interval + 1))} onDecrement={() => handleBackupSettingChange('interval', Math.max(1, backupSettings.interval - 1))} />
+                        <StepperInput id="backup-interval" min={1} max={50} value={String(backupSettings.interval)} onChange={(e) => handleBackupSettingChange('interval', Number(e.target.value))} onIncrement={() => handleBackupSettingChange('interval', Math.min(50, backupSettings.interval + 1))} onDecrement={() => handleBackupSettingChange('interval', Math.max(1, backupSettings.interval - 1))} precision={0} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
@@ -528,7 +528,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 mr-4">
                               <div className="p-2 rounded-lg bg-red/20 text-red">
-                                <Bug className="h-6 w-6" />
+                                <Trash2 className="h-6 w-6" />
                               </div>
                               <div>
                                 <p className="font-medium text-font-1">Reset All Settings</p>
