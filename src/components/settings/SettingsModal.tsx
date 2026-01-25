@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Bug, Trash2, Info, Plug, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code } from 'lucide-react';
+import { Bug, Trash2, Info, Plug, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code, Bell } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -17,6 +17,7 @@ import FormattingSettings from './FormattingSettings';
 import { ModulesComponent } from '../../preferences/modules/ModulesComponent';
 import WizardDevTools from './WizardDevTools';
 import TabsComponent from '../ui/Tabs';
+import { toast } from 'sonner';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [mockTimeTime, setMockTimeTime] = useState('');
   const [devActiveTab, setDevActiveTab] = useState('general');
   const [appearanceActiveTab, setAppearanceActiveTab] = useState('general');
+  const [promiseDuration, setPromiseDuration] = useState('2');
 
   useEffect(() => {
     if (isOpen) {
@@ -187,6 +189,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     window.location.reload();
   };
 
+  const handlePromiseToast = () => {
+    const promise = new Promise((resolve) => setTimeout(resolve, Number(promiseDuration) * 1000));
+    toast.promise(promise, {
+      loading: 'Loading...',
+      success: 'Success!',
+      error: 'Error',
+    });
+  };
+
   const tabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'data', label: 'Data', icon: Database },
@@ -250,6 +261,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     { id: 'general', label: 'General' },
     { id: 'wizard', label: 'Wizard' },
     { id: 'time', label: 'Time' },
+    { id: 'sonner', label: 'Sonner' },
   ];
 
   const appearanceTabs = [
@@ -557,6 +569,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                           />
                           <Button onClick={handleMockTimeSet} disabled={!settings.dev?.mockTime?.enabled}>Set</Button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {devActiveTab === 'sonner' && (
+                  <div>
+                    <SectionTitle title="Sonner Toasts" tooltip="Test different toast notifications." />
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button onClick={() => toast('Default toast message')}>Default</Button>
+                      <Button onClick={() => toast.success('Success toast message')}>Success</Button>
+                      <Button onClick={() => toast.info('Info toast message')}>Info</Button>
+                      <Button onClick={() => toast.warning('Warning toast message')}>Warning</Button>
+                      <Button onClick={() => toast.error('Error toast message')}>Error</Button>
+                      <div className="flex items-center gap-2">
+                        <Button onClick={handlePromiseToast} className="flex-1">Promise</Button>
+                        <StepperInput 
+                          value={promiseDuration} 
+                          onChange={(e) => setPromiseDuration(e.target.value)}
+                          onIncrement={() => setPromiseDuration(String(Math.min(60, Number(promiseDuration) + 1)))}
+                          onDecrement={() => setPromiseDuration(String(Math.max(0, Number(promiseDuration) - 1)))}
+                          min={0}
+                          max={60}
+                          className="w-24"
+                        />
                       </div>
                     </div>
                   </div>

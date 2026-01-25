@@ -7,6 +7,7 @@ import {useIncomeStore} from '../../store/useIncomeStore';
 import {useSettingsStore} from '../../store/useSettingsStore';
 import {format} from 'date-fns';
 import {Clock} from 'lucide-react';
+import { Toaster } from '../ui/sonner';
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -49,6 +50,7 @@ const MainLayout: React.FC = () => {
           </div>
         )}
       </main>
+      <Toaster />
     </div>
   );
 };
