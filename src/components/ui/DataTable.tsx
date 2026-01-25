@@ -108,7 +108,16 @@ const DataTable: React.FC<DataTableProps> = ({
 
   const totalPages = useMemo(() => Math.ceil(prevTotalCount / pageSize) || 1, [prevTotalCount, pageSize]);
   const totalPagesDigits = useMemo(() => (totalPages || 1).toString().length, [totalPages]);
-  const inputWidth = useMemo(() => `${1.5 + (totalPagesDigits * 0.6)}rem`, [totalPagesDigits]);
+  
+  // Calculate width to accommodate at least xxxx/yyyy (4 digits each side)
+  // 4 digits + '/' + 4 digits = 9 characters. 
+  // We use a min-width to prevent jumping, but allow it to grow if digits > 4.
+  const paginationDisplayWidth = useMemo(() => {
+    const maxDigits = Math.max(4, totalPagesDigits);
+    // Approx 0.6rem per digit + some padding/separator space
+    return `${(maxDigits * 2 * 0.6) + 2}rem`;
+  }, [totalPagesDigits]);
+
   const inputRef = useRef<HTMLInputElement>(null);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -364,21 +373,24 @@ const DataTable: React.FC<DataTableProps> = ({
               >
                 <ChevronLeft className="h-3 w-3" />
               </button>
-              <div className="relative h-10 flex items-center bg-field border-y border-border">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={pageInput}
-                  onChange={handleInputChange}
-                  onBlur={handlePageJump}
-                  onKeyDown={handleKeyDown}
-                  className="border-0 h-full text-center bg-transparent py-2 text-font-1 placeholder:text-font-2 focus:ring-0 px-1"
-                  style={{ width: inputWidth, minWidth: '2rem' }}
-                  placeholder="1"
-                  required
-                  disabled={disabled}
-                />
-                <div className="flex items-center pr-3 pointer-events-none whitespace-nowrap">
+              <div 
+                className="relative h-10 flex items-center justify-center bg-field border-y border-border px-2"
+                style={{ minWidth: paginationDisplayWidth }}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={pageInput}
+                    onChange={handleInputChange}
+                    onBlur={handlePageJump}
+                    onKeyDown={handleKeyDown}
+                    className="border-0 h-full text-right bg-transparent py-2 text-font-1 placeholder:text-font-2 focus:ring-0 p-0"
+                    style={{ width: `${Math.max(1, pageInput.length) * 0.6}rem` }}
+                    placeholder="1"
+                    required
+                    disabled={disabled}
+                  />
                   <span className="text-font-2 text-sm">/ {totalPages || 1}</span>
                 </div>
               </div>

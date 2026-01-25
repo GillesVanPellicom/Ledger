@@ -586,13 +586,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                   <div>
                     <SectionTitle title="Sonner Toasts" tooltip="Test different toast notifications." />
                     <div className="grid grid-cols-2 gap-4">
-                      <Button onClick={() => toast('Default toast message')}>Default</Button>
-                      <Button onClick={() => toast.success('Success toast message')}>Success</Button>
-                      <Button onClick={() => toast.info('Info toast message')}>Info</Button>
-                      <Button onClick={() => toast.warning('Warning toast message')}>Warning</Button>
-                      <Button onClick={() => toast.error('Error toast message')}>Error</Button>
+                      <Button variant={"secondary"} onClick={() => toast('Default toast message')}>Default</Button>
+                      <Button variant={"secondary"} onClick={() => toast.success('Success toast message')}>Success</Button>
+                      <Button variant={"secondary"} onClick={() => toast.info('Info toast message')}>Info</Button>
+                      <Button variant={"secondary"} onClick={() => toast.warning('Warning toast message')}>Warning</Button>
+                      <Button variant={"secondary"} onClick={() => toast.error('Error toast message')}>Error</Button>
                       <div className="flex items-center gap-2">
-                        <Button onClick={handlePromiseToast} className="flex-1">Promise</Button>
+                        <Button variant={"secondary"} onClick={handlePromiseToast} className="flex-1">Promise</Button>
                         <StepperInput 
                           value={promiseDuration} 
                           onChange={(e) => setPromiseDuration(e.target.value)}
