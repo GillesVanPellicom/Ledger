@@ -1,10 +1,27 @@
-const {app, BrowserWindow, ipcMain, dialog, protocol, net, shell, session} = require(
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  protocol,
+  net,
+  shell,
+  session,
+} = require(
   'electron');
 const path = require('node:path');
 const sqlite3 = require('sqlite3');
 const fs = require('node:fs');
 const {runMigrations} = require('./db/migrate.cjs');
 const Store = require('./store.cjs');
+
+// Global error handlers for main process
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  dialog.showErrorBox('Application Error',
+    `An unexpected error occurred in the main process:\n\n${error.stack ||
+    error.message}`);
+});
 
 let mainWindow;
 let db;
@@ -14,7 +31,7 @@ let dbConnectionError = null;
 const dev = process.env.NODE_ENV === 'development';
 
 if (dev) {
-  console.log("Running in development mode. Telemetry enabled.");
+  console.log('Running in development mode. Telemetry enabled.');
 }
 
 // Initialize store
@@ -53,6 +70,7 @@ function initializeStore() {
     console.log('Store initialized successfully.');
   } catch (error) {
     console.error('Failed to initialize store:', error);
+    dialog.showErrorBox('Store Initialization Failed', error.message);
   }
 }
 
@@ -80,10 +98,7 @@ function connectDatabase(dbPath) {
     } catch (error) {
       console.error('Failed to create database directory:', error);
       dbConnectionError = `Failed to create directory: ${error.message}`;
-      return reject({
-        success: false,
-        error: dbConnectionError,
-      });
+      return reject(new Error(dbConnectionError));
     }
 
     db = new sqlite3.Database(dbPath, (err) => {
@@ -91,7 +106,7 @@ function connectDatabase(dbPath) {
         console.error('Database connection failed:', err);
         dbConnectionError = err.message;
         db = null;
-        return reject({success: false, error: err.message});
+        return reject(new Error(err.message));
       }
 
       db.run('PRAGMA foreign_keys = ON;', (fkErr) => {
@@ -102,7 +117,7 @@ function connectDatabase(dbPath) {
         if (walErr) {
           console.error('Failed to set WAL mode:', walErr);
           dbConnectionError = walErr.message;
-          return reject({success: false, error: walErr.message});
+          return reject(new Error(walErr.message));
         }
 
         try {
@@ -113,7 +128,7 @@ function connectDatabase(dbPath) {
         } catch (migrationError) {
           console.error('Failed to run migrations:', migrationError);
           dbConnectionError = migrationError.message;
-          return reject({success: false, error: migrationError.message});
+          return reject(new Error(migrationError.message));
         }
       });
     });
@@ -158,6 +173,8 @@ function createWindow() {
       }
     });
   } else {
+    setTimeout(() => mainWindow.webContents.openDevTools(), 500);
+
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
@@ -173,12 +190,13 @@ app.on('ready', async () => {
   // if (dev) {
   //   await installDevTools();
   // }
-  
+
   // Clear Service Workers to avoid conflicts
   if (dev || process.env.ELECTRON_START_URL) {
     try {
       if (session && session.defaultSession) {
-        await session.defaultSession.clearStorageData({ storages: ['serviceworkers'] });
+        await session.defaultSession.clearStorageData(
+          {storages: ['serviceworkers']});
         console.log('Service workers cleared');
       }
     } catch (e) {
@@ -235,7 +253,9 @@ ipcMain.handle('get-db-status', () => {
 ipcMain.handle('query-db', (event, sql, params = []) => {
   return new Promise((resolve, reject) => {
     if (!db) {
-      const errorMsg = dbConnectionError ? `Database not connected: ${dbConnectionError}` : 'Database not connected';
+      const errorMsg = dbConnectionError
+        ? `Database not connected: ${dbConnectionError}`
+        : 'Database not connected';
       console.error(`[IPC query-db] Error: ${errorMsg}`);
       return reject(new Error(errorMsg));
     }
@@ -246,7 +266,7 @@ ipcMain.handle('query-db', (event, sql, params = []) => {
       db.all(sql, params, (err, rows) => {
         if (err) {
           console.error('[IPC query-db] Query failed:', err);
-          return reject({error: err.message});
+          return reject(new Error(err.message));
         }
         resolve(rows);
       });
@@ -254,7 +274,7 @@ ipcMain.handle('query-db', (event, sql, params = []) => {
       db.run(sql, params, function(err) {
         if (err) {
           console.error('[IPC query-db] Query failed:', err);
-          return reject({error: err.message});
+          return reject(new Error(err.message));
         }
         resolve({changes: this.changes, lastID: this.lastID});
       });
@@ -267,7 +287,7 @@ const {promisify} = require('node:util');
 ipcMain.handle('create-transaction',
   async (event, {type, from, to, amount, date, note}) => {
     if (!db) throw new Error('Database not connected');
-    
+
     return new Promise((resolve, reject) => {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
@@ -281,7 +301,7 @@ ipcMain.handle('create-transaction',
                 db.run('ROLLBACK');
                 return reject(err);
               }
-            }
+            },
           );
         } else if (type === 'transfer') {
           db.run(
@@ -304,7 +324,7 @@ ipcMain.handle('create-transaction',
                     db.run('ROLLBACK');
                     return reject(err);
                   }
-                }
+                },
               );
               db.run(
                 'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, TransferID) VALUES (?, ?, ?, ?, ?)',
@@ -314,9 +334,9 @@ ipcMain.handle('create-transaction',
                     db.run('ROLLBACK');
                     return reject(err);
                   }
-                }
+                },
               );
-            }
+            },
           );
         }
 

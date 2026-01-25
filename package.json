@@ -1,7 +1,7 @@
 {
   "name": "ledger",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.2",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -17,7 +17,7 @@
     "postinstall": "electron-builder install-app-deps",
     "db:migrate": "node utils/db/migrate.js",
     "db:seed": "node utils/db/seed.js",
-    "db:clear": "rm -f datastore/fin.db && rm -rf datastore/receipt_images && touch datastore/fin.db",
+    "db:clear": "rm -f datastore/fin.db.old && rm -rf datastore/receipt_images && touch datastore/fin.db.old",
     "db:clear-and-setup": "npm run db:clear && npm run db:migrate && npm run db:seed"
   },
   "dependencies": {
@@ -81,6 +81,9 @@
     "files": [
       "dist/**/*",
       "electron/**/*"
+    ],
+    "asarUnpack": [
+      "**/node_modules/sqlite3/**/*"
     ],
     "mac": {
       "target": "dmg",

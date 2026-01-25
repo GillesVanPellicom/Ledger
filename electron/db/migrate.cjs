@@ -15,13 +15,29 @@ async function runMigrations(db) {
   for (const migrationFile of allMigrations) {
     const version = migrationFile.split('_')[0];
     const filePath = path.join(MIGRATIONS_DIR, migrationFile);
-    const sql = await fs.readFile(filePath, 'utf-8');
+    let sql = await fs.readFile(filePath, 'utf-8');
+    
+    // Strip BOM if present (common in Windows files)
+    if (sql.charCodeAt(0) === 0xFEFF) {
+      sql = sql.slice(1);
+    }
+
+    // Normalize line endings to LF to ensure consistent checksums across platforms
+    sql = sql.replace(/\r\n/g, '\n');
+
     const checksum = crypto.createHash('sha256').update(sql).digest('hex');
 
     const applied = appliedMigrations.get(version);
 
     if (applied) {
       if (applied.checksum !== checksum) {
+        console.warn(`[Migration Warning] Checksum mismatch for ${version}.`);
+        console.warn(`Expected: ${applied.checksum}`);
+        console.warn(`Calculated: ${checksum}`);
+        
+        // In production, we might want to be lenient if the version is already applied,
+        // but strictly speaking, a mismatch means the file changed.
+        // For now, we throw, but the logging above helps debug.
         throw new Error(
           `Checksum mismatch for migration ${version}. Expected ${applied.checksum} but got ${checksum}.`);
       }
