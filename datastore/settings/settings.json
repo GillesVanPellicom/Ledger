@@ -21,7 +21,7 @@
   "backup": {
     "maxBackups": 5,
     "interval": 5,
-    "editsSinceLastBackup": 1
+    "editsSinceLastBackup": 2
   },
   "paymentMethodStyles": {},
   "datastore": {
@@ -61,7 +61,7 @@
   },
   "userName": "Gilles",
   "notifications": {
-    "position": "bottom-right",
+    "position": "top-center",
     "duration": 3000,
     "attentionGrabber": false
   },

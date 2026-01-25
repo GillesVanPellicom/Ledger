@@ -10,7 +10,7 @@ import ReactECharts from 'echarts-for-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Button from '../components/ui/Button';
-import { FileDown, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowLeft } from 'lucide-react';
+import { FileDown, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowLeft, CheckCheck } from 'lucide-react';
 import Modal, { ConfirmModal } from '../components/ui/Modal';
 import ProgressModal from '../components/ui/ProgressModal';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
@@ -27,6 +27,7 @@ import { useErrorStore } from '../store/useErrorStore';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import Badge from '../components/ui/Badge';
+import { toast } from 'sonner';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -106,6 +107,7 @@ const EntityDetailsPage: React.FC = () => {
   const [receiptToMarkAsPaid, setReceiptToMarkAsPaid] = useState<Receipt | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<{ value: number; label: string }[]>([]);
   const [isEditEntityModalOpen, setIsEditEntityModalOpen] = useState<boolean>(false);
+  const [isSettleAllModalOpen, setIsSettleAllModalOpen] = useState<boolean>(false);
 
   const { showError } = useErrorStore();
   const { settings } = useSettingsStore();
@@ -277,6 +279,39 @@ const EntityDetailsPage: React.FC = () => {
     }
   };
 
+  const handleSettleAll = async () => {
+    try {
+      const unsettledToMe = receipts.filter(r => r.type === 'to_me' && !r.isSettled);
+      const unsettledToEntity = receipts.filter(r => r.type === 'to_entity' && !r.isSettled);
+
+      // 1. Settle debts owed to me
+      for (const r of unsettledToMe) {
+        const systemNote = `Repayment from ${entity!.DebtorName}`;
+        const topUpResult = await db.execute(
+          'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote) VALUES (?, ?, ?, ?)',
+          [1, r.amount, format(new Date(), 'yyyy-MM-dd'), systemNote] // Default to Cash (1)
+        );
+        await db.execute(
+          'INSERT INTO ExpenseEntityPayments (ExpenseID, EntityID, PaidDate, IncomeID) VALUES (?, ?, ?, ?)',
+          [r.ReceiptID, id, format(new Date(), 'yyyy-MM-dd'), topUpResult.lastID]
+        );
+      }
+
+      // 2. Settle debts I owe to entity
+      for (const r of unsettledToEntity) {
+        await db.execute(
+          'UPDATE Expenses SET Status = ?, PaymentMethodID = ? WHERE ExpenseID = ?',
+          ['paid', 1, r.ReceiptID] // Default to Cash (1)
+        );
+      }
+
+      refetchDebt();
+      setIsSettleAllModalOpen(false);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const filteredReceipts = useMemo(() => {
     const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
     const [startDate, endDate] = dateRange;
@@ -415,6 +450,11 @@ const EntityDetailsPage: React.FC = () => {
         }
         actions={
           <>
+            <Tooltip content="Settle All">
+              <Button variant="ghost" size="icon" onClick={() => setIsSettleAllModalOpen(true)}>
+                <CheckCheck className="h-5 w-5" />
+              </Button>
+            </Tooltip>
             <Tooltip content="Edit">
               <Button variant="ghost" size="icon" onClick={() => setIsEditEntityModalOpen(true)}>
                 <Pencil className="h-5 w-5" />
@@ -563,6 +603,18 @@ const EntityDetailsPage: React.FC = () => {
               }}
             />
           )}
+
+          <ConfirmModal
+            isOpen={isSettleAllModalOpen}
+            onClose={() => setIsSettleAllModalOpen(false)}
+            onConfirm={handleSettleAll}
+            title="Settle All Debts"
+            message={`Are you sure you want to settle all outstanding debts with ${entity.DebtorName}? This will mark all expenses as paid using the default payment method.`}
+            confirmText="Settle All"
+            isDatabaseTransaction
+            successToastMessage="All debts settled successfully"
+            errorToastMessage="Failed to settle all debts"
+          />
         </div>
       </PageWrapper>
     </div>

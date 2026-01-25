@@ -19,7 +19,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
 
   const containerClasses = variant === 'toggle'
     ? "inline-flex p-1 border border-border bg-field-disabled rounded-lg shadow-sm isolate gap-1"
-    : "inline-flex shadow-sm isolate border border-border rounded-lg overflow-hidden divide-x divide-border"; // Added divide-x divide-border
+    : "inline-flex shadow-sm isolate border border-border rounded-lg overflow-hidden divide-x divide-border";
 
   return (
     <div className={cn(containerClasses, fullWidth && "flex w-full", className)}>
@@ -58,13 +58,12 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
           }
 
           // For toggle variant, we expect buttons to have an 'active' prop or similar
-          // We'll handle the active state styling here if it's a toggle
           let activeClasses = '';
           if (variant === 'toggle') {
              const isActive = props.active || props.className?.includes('bg-field') || props.className?.includes('bg-bg-2') || props.className?.includes('bg-gray-100');
              activeClasses = isActive 
-               ? 'bg-field text-font-1 shadow-sm hover:bg-field-hover' 
-               : 'bg-transparent text-font-2 hover:bg-field-hover';
+               ? 'bg-field text-font-1 shadow-sm hover:bg-field-hover z-20' 
+               : 'bg-transparent text-font-2 hover:bg-field-hover z-10';
           }
 
           return React.cloneElement(element, {
@@ -74,7 +73,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
               variantClasses,
               activeClasses,
               fullWidth && "flex-1",
-              'relative focus:z-10',
+              'relative focus:z-30',
               'shadow-none border-0' // Remove individual borders
             )
           });

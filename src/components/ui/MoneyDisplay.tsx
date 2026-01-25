@@ -39,8 +39,10 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     absAmount = absAmount.replace('.', ',');
   }
 
+  // If useSignum is true, we always show the sign if it's non-zero.
+  // Otherwise, we respect showSign.
   const sign = isPositive ? '+' : isNegative ? '-' : '';
-  const displaySign = (showSign || (useSignum && (isPositive || isNegative))) ? sign : '';
+  const displaySign = useSignum ? (isPositive || isNegative ? sign : '') : (showSign ? sign : '');
 
   const colorClass = (colored || useSignum) ? cn(
     colorNeutral && "text-yellow",

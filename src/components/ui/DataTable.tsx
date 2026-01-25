@@ -110,11 +110,8 @@ const DataTable: React.FC<DataTableProps> = ({
   const totalPagesDigits = useMemo(() => (totalPages || 1).toString().length, [totalPages]);
   
   // Calculate width to accommodate at least xxxx/yyyy (4 digits each side)
-  // 4 digits + '/' + 4 digits = 9 characters. 
-  // We use a min-width to prevent jumping, but allow it to grow if digits > 4.
   const paginationDisplayWidth = useMemo(() => {
     const maxDigits = Math.max(4, totalPagesDigits);
-    // Approx 0.6rem per digit + some padding/separator space
     return `${(maxDigits * 2 * 0.6) + 2}rem`;
   }, [totalPagesDigits]);
 
@@ -317,7 +314,7 @@ const DataTable: React.FC<DataTableProps> = ({
             const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
             let displayContent = content;
             if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
-              displayContent = <span className="text-font-2">-</span>; // Changed text-field-disabled to text-font-2
+              displayContent = <span className="text-font-2">-</span>;
             }
             return (
               <td key={colIdx} className={cn("px-4 py-3 text-font-1 break-words align-middle", col.className)}>
@@ -442,7 +439,7 @@ const DataTable: React.FC<DataTableProps> = ({
       >
         <div className={cn("overflow-x-auto", disabled && "pointer-events-none")}>
           <table
-            className="text-left text-sm w-full"
+            className="text-left text-sm w-full border-collapse"
             style={{
               tableLayout: colWidths.length > 0 ? 'fixed' : 'auto',
               minWidth: colWidths.length > 0 ? undefined : minWidth,
@@ -474,7 +471,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border bg-bg-2">
               {tableContent}
             </tbody>
           </table>

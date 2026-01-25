@@ -131,7 +131,7 @@ const IncomeViewPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       navigate(-1);
     } catch (error) {
-      showError(error as Error);
+      throw error;
     } finally {
       setDeleteModalOpen(false);
     }
@@ -180,7 +180,7 @@ const IncomeViewPage: React.FC = () => {
         <div className="py-6 flex justify-center">
           <div className="w-full max-w-4xl space-y-6">
             {transaction.note && (
-              <Card>
+              <Card className="mb-6">
                 <div className="p-4 flex items-start gap-3">
                   <Tooltip content="Note about the contents of this page">
                     <FileText className="h-5 w-5 text-font-2 shrink-0 mt-0.5" />
@@ -279,6 +279,9 @@ const IncomeViewPage: React.FC = () => {
         onConfirm={handleDelete}
         title="Delete Transaction"
         message="Are you sure you want to permanently delete this transaction? This action cannot be undone."
+        isDatabaseTransaction
+        successToastMessage="Transaction deleted successfully"
+        errorToastMessage="Failed to delete transaction"
       />
 
       <IncomeModal

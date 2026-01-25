@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronsUpDown, Check, Search } from 'lucide-react';
+import { ChevronsUpDown, Check, Search, Plus } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Input from './Input';
 import Divider from './Divider';
@@ -25,6 +25,9 @@ interface ComboboxProps {
   label?: string;
   error?: string;
   showSearch?: boolean;
+  variant?: 'default' | 'add';
+  onAdd?: () => void;
+  addTooltip?: string;
 }
 
 const Combobox: React.FC<ComboboxProps> = ({
@@ -39,6 +42,9 @@ const Combobox: React.FC<ComboboxProps> = ({
   label,
   error,
   showSearch = true,
+  variant = 'default',
+  onAdd,
+  addTooltip = "Add new",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -277,25 +283,38 @@ const Combobox: React.FC<ComboboxProps> = ({
           {label}
         </label>
       )}
-      <button
-        ref={triggerRef}
-        type="button"
-        role="combobox"
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={disabled}
-        className={cn(
-          "flex h-10 w-full items-center justify-between rounded-lg border border-border bg-field px-3 py-2 text-sm text-font-1 placeholder:text-font-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all",
-          disabled ? "bg-field-disabled cursor-not-allowed opacity-50" : "hover:bg-field-hover",
-          error && "border-danger focus:ring-danger"
+      <div className="flex items-stretch">
+        <button
+          ref={triggerRef}
+          type="button"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          onClick={() => setIsOpen(!isOpen)}
+          disabled={disabled}
+          className={cn(
+            "flex h-10 w-full items-center justify-between border border-border bg-field px-3 py-2 text-sm text-font-1 placeholder:text-font-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all",
+            variant === 'default' ? "rounded-lg" : "rounded-l-lg border-r-0",
+            disabled ? "bg-field-disabled cursor-not-allowed opacity-50" : "hover:bg-field-hover",
+            error && "border-danger focus:ring-danger"
+          )}
+        >
+          <span className="truncate">
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </button>
+        {variant === 'add' && (
+          <button
+            type="button"
+            onClick={onAdd}
+            title={addTooltip}
+            className="flex items-center justify-center w-10 h-10 border border-border border-l bg-field hover:bg-field-hover text-font-2 hover:text-font-1 rounded-r-lg transition-all shrink-0"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
         )}
-      >
-        <span className="truncate">
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
-        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-      </button>
+      </div>
       {error && (
         <p className="mt-1 text-xs text-danger">{error}</p>
       )}

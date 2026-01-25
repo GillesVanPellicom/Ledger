@@ -23,7 +23,7 @@ import '../electron.d';
 import Spinner from '../components/ui/Spinner';
 import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import {calculateSubtotal, calculateTotalWithDiscount} from '../logic/expense';
+import {calculateSubtotal, calculateTotalWithDiscount, calculateDiscount} from '../logic/expense';
 import {useSettingsStore} from '../store/useSettingsStore';
 import {useBackupStore} from '../store/useBackupStore';
 import {useQueryClient} from '@tanstack/react-query';
@@ -34,6 +34,8 @@ import Combobox from '../components/ui/Combobox';
 import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/debtLogic';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import ButtonGroup from '../components/ui/ButtonGroup';
+import { toast } from 'sonner';
+import Select from '../components/ui/Select';
 
 const ReceiptFormPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -344,6 +346,11 @@ const ReceiptFormPage: React.FC = () => {
     return calculateTotalWithDiscount(itemsToDiscount, formData.discount);
   }, [lineItems, receiptFormat, nonItemisedTotal, isExclusionMode, excludedLineItemKeys, formData.discount]);
 
+  const discountAmount = useMemo(() => {
+    if (receiptFormat === 'item-less') return 0;
+    return calculateDiscount(lineItems, formData.discount);
+  }, [lineItems, formData.discount, receiptFormat]);
+
   const debtSummary = useMemo(() => {
     if (!debtEnabled) return {debtors: [], self: null};
 
@@ -585,7 +592,8 @@ const ReceiptFormPage: React.FC = () => {
   const handleSubmit = async (isTentative: boolean) => {
     if (!validate()) return;
     setSaving(true);
-    try {
+
+    const promise = (async () => {
       let receiptId = id;
 
       const receiptPayload = {
@@ -689,6 +697,16 @@ const ReceiptFormPage: React.FC = () => {
       } else {
         navigate(`/receipts/view/${receiptId}`, {replace: true});
       }
+    })();
+
+    toast.promise(promise, {
+      loading: 'Saving expense...',
+      success: 'Expense saved successfully',
+      error: 'Failed to save expense',
+    });
+
+    try {
+      await promise;
     } catch (error) {
       console.error("Failed to save receipt:", error);
     } finally {
@@ -762,25 +780,16 @@ const ReceiptFormPage: React.FC = () => {
             <div className="relative p-6 space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-1">
-                  <div className="flex items-end gap-2">
-                    <div className="flex-grow">
-                      <label className="block text-sm font-medium text-font-1 mb-1">Store</label>
-                      <Combobox
-                        options={stores}
-                        value={formData.storeId}
-                        onChange={(value) => handleFormChange('storeId', value)}
-                        placeholder="Select a store"
-                        searchPlaceholder="Search stores..."
-                        noResultsText="No stores found."
-                      />
-                      {errors.storeId && <p className="mt-1 text-xs text-danger">{errors.storeId}</p>}
-                    </div>
-                    <Tooltip content="Add Store">
-                      <Button variant="secondary" className="h-10 w-10 p-0" onClick={() => setIsStoreModalOpen(true)}>
-                        <Plus className="h-5 w-5"/>
-                      </Button>
-                    </Tooltip>
-                  </div>
+                  <Select
+                    label="Store"
+                    variant="add"
+                    onAdd={() => setIsStoreModalOpen(true)}
+                    options={stores}
+                    value={formData.storeId}
+                    onChange={(e) => handleFormChange('storeId', e.target.value)}
+                    placeholder="Select a store"
+                    error={errors.storeId}
+                  />
                 </div>
                 <div className="col-span-1"><DatePicker label="Expense Date"
                                                         selected={formData.receiptDate}
@@ -790,64 +799,32 @@ const ReceiptFormPage: React.FC = () => {
                 <div className={cn("grid grid-cols-2 gap-6 col-span-2 items-end", !paymentMethodsEnabled && "grid-cols-1")}>
                   {debtEnabled && (
                     <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
-                      <div className="flex items-end gap-2">
-                        <div className="flex-grow">
-                          <label className="block text-sm font-medium text-font-1 mb-1">Paid
-                                                                                                             by</label>
-                          <Tooltip className="w-full flex"
-                                   content={hasSettledDebts ? "Cannot change payer when debts are settled." : ""}>
-                            <Combobox
-                              options={paidByOptions}
-                              value={paidById}
-                              onChange={handlePaidByChange}
-                              placeholder="Select who paid"
-                              searchPlaceholder="Search..."
-                              noResultsText="No one found."
-                              className="w-full"
-                            />
-                          </Tooltip>
-                          {errors.paidById && <p className="mt-1 text-xs text-danger">{errors.paidById}</p>}
-                        </div>
-                        <Tooltip content="Add Entity">
-                          <Button variant="secondary"
-                                  className="h-10 w-10 p-0"
-                                  onClick={() => setIsEntityModalOpen(true)}
-                                  disabled={hasSettledDebts}>
-                            <Plus className="h-5 w-5"/>
-                          </Button>
-                        </Tooltip>
-                      </div>
+                      <Select
+                        label="Paid by"
+                        variant="add"
+                        onAdd={() => setIsEntityModalOpen(true)}
+                        options={paidByOptions}
+                        value={paidById}
+                        onChange={(e) => handlePaidByChange(e.target.value)}
+                        placeholder="Select who paid"
+                        disabled={hasSettledDebts}
+                        error={errors.paidById}
+                      />
                     </div>
                   )}
 
                   {paymentMethodsEnabled && (
                     <div>
-                      <div className="flex items-end gap-2">
-                        <div className="flex-grow">
-                          <label className="block text-sm font-medium text-font-1 mb-1">Payment
-                                                                                                             Method</label>
-                          <Tooltip className="w-full flex"
-                                   content={paidById !== 'me' ? "Payment method is not required when you didn't pay." : ""}>
-                            <Combobox
-                              options={paymentMethods}
-                              value={formData.paymentMethodId}
-                              onChange={(value) => handleFormChange('paymentMethodId', value)}
-                              placeholder="Select a method"
-                              searchPlaceholder="Search methods..."
-                              noResultsText="No methods found."
-                              disabled={paidById !== 'me'}
-                            />
-                          </Tooltip>
-                        </div>
-                        <Tooltip content="Add Payment Method">
-                          <Button variant="secondary"
-                                  className="h-10 w-10 p-0"
-                                  onClick={() => setIsPaymentMethodModalOpen(true)}
-                                  disabled={paidById !== 'me'}>
-                            <Plus className="h-5 w-5"/>
-                          </Button>
-                        </Tooltip>
-                      </div>
+                      <Select
+                        label="Payment Method"
+                        variant="add"
+                        onAdd={() => setIsPaymentMethodModalOpen(true)}
+                        options={paymentMethods}
+                        value={formData.paymentMethodId}
+                        onChange={(e) => handleFormChange('paymentMethodId', e.target.value)}
+                        placeholder="Select a method"
+                        disabled={paidById !== 'me'}
+                      />
                     </div>
                   )}
                 </div>
@@ -938,6 +915,8 @@ const ReceiptFormPage: React.FC = () => {
                             min={0}
                             max={10000000}
                             step={1}
+                            precision={0}
+                            clamp={true}
                             error={errors.nonItemisedTotal}
                             disabled={hasSettledDebts}
                             inputClassName="text-4xl font-bold text-center w-48 h-16 pl-10 pr-4"
@@ -977,7 +956,10 @@ const ReceiptFormPage: React.FC = () => {
                               onIncrement={() => handleLineItemChange(item.key, 'LineQuantity', (Number(item.LineQuantity) || 0) + 1)}
                               onDecrement={() => handleLineItemChange(item.key, 'LineQuantity', Math.max(0, (Number(item.LineQuantity) || 0) - 1))}
                               min={0}
-                              max={1000000}
+                              max={10000000}
+                              step={1}
+                              precision={0}
+                              clamp={true}
                               className="w-full"
                               inputClassName="text-center"
                               error={errors[`qty_${item.key}`]}
@@ -1029,6 +1011,8 @@ const ReceiptFormPage: React.FC = () => {
                                   min={0}
                                   max={100}
                                   step={1}
+                                  precision={0}
+                                  clamp={true}
                                   className="h-8"
                                   inputClassName="text-right"
                                   error={errors.discount}
@@ -1188,6 +1172,8 @@ const ReceiptFormPage: React.FC = () => {
                                       onIncrement={() => handleFormChange('ownShares', String((Number(formData.ownShares) || 0) + 1))}
                                       min={0}
                                       max={1000}
+                                      precision={0}
+                                      clamp={true}
                                       disabled={isDebtDisabled}
                                       className="w-full"
                                       inputClassName="text-center"
@@ -1210,6 +1196,8 @@ const ReceiptFormPage: React.FC = () => {
                                       min={1}
                                       max={100}
                                       step={1}
+                                      precision={0}
+                                      clamp={true}
                                       disabled={isDebtDisabled}
                                       className="w-full"
                                       inputClassName="text-center"
@@ -1228,15 +1216,17 @@ const ReceiptFormPage: React.FC = () => {
                                   <div className="relative flex justify-center">
                                     <div className="relative w-full max-w-xs">
                                       <Combobox
+                                        variant="add"
+                                        onAdd={() => setIsEntityModalOpen(true)}
                                         options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
                                           value: String(d.DebtorID),
                                           label: d.DebtorName
                                         }))}
                                         value=""
                                         onChange={handleAddSplit}
-                                        placeholder="Add Person"
-                                        searchPlaceholder="Search person..."
-                                        noResultsText="No one found."
+                                        placeholder="Choose entity..."
+                                        searchPlaceholder="Search entity..."
+                                        noResultsText="No entities found."
                                         disabled={isDebtDisabled}
                                       />
                                     </div>

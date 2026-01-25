@@ -296,12 +296,12 @@ const ReceiptsPage: React.FC = () => {
           <div className="inline-block">
             <MoneyDisplay
               amount={row.amount}
-              useSignum={true}
-              showSign={true}
+              useSignum={!isTransfer}
+              showSign={!isTransfer}
               colorNegative={!isUnpaid && row.amount < 0}
               colorPositive={row.amount > 0}
               colorNeutral={isUnpaid}
-              colored={true}
+              colored={!isTransfer}
               className={isTransfer ? "text-font-1 font-normal" : ""}
             />
           </div>

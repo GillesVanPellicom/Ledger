@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TransferModal from '../components/payment/TransferModal';
-import { Pencil, Trash2, ArrowLeft, Info } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, Info, Link as LinkIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
@@ -38,7 +38,7 @@ interface PageTransaction {
   name: string;
   note: string;
   amount: number;
-  type: 'receipt' | 'deposit' | 'transfer_in' | 'transfer_out' | 'debt_repayment';
+  type: 'receipt' | 'income' | 'transfer_in' | 'transfer_out' | 'debt_repayment';
   creationTimestamp: string;
   // Receipt-specific fields
   Discount?: number | null;
@@ -228,10 +228,10 @@ const PaymentMethodDetailsPage: React.FC = () => {
         ...topupsData.map((t): PageTransaction => ({
           id: t.id,
           date: t.date,
-          name: 'Deposit',
+          name: 'Income',
           note: t.note,
           amount: t.amount,
-          type: 'deposit',
+          type: 'income',
           creationTimestamp: t.creationTimestamp,
         })),
         ...incomingTransfersData.map((t): PageTransaction => ({
@@ -316,7 +316,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
     try {
       if (itemToDelete.type === 'receipt') {
         await db.execute('DELETE FROM Expenses WHERE ExpenseID = ?', [itemToDelete.id]);
-      } else if (itemToDelete.type === 'deposit' || itemToDelete.type === 'debt_repayment') {
+      } else if (itemToDelete.type === 'income' || itemToDelete.type === 'debt_repayment') {
         await db.execute('DELETE FROM Income WHERE IncomeID = ?', [itemToDelete.id]);
       } else if (itemToDelete.type === 'transfer_in' || itemToDelete.type === 'transfer_out') {
         await db.execute('DELETE FROM Transfers WHERE TransferID = ?', [itemToDelete.id]);
@@ -360,7 +360,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
     return transactions.filter(t => {
       const typeMatch = filter === 'all' 
         || (filter === 'receipt' && t.type === 'receipt') 
-        || (filter === 'deposit' && t.type === 'deposit') 
+        || (filter === 'income' && t.type === 'income') 
         || (filter === 'transfer' && (t.type === 'transfer_in' || t.type === 'transfer_out'))
         || (filter === 'debt_repayment' && t.type === 'debt_repayment');
       if (!typeMatch) return false;
@@ -425,15 +425,17 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
     if (row.type === 'transfer_in' && row.transferInfo) {
       return (
-        <Link to={`/payment-methods/${row.transferInfo.fromMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline">
+        <Link to={`/payment-methods/${row.transferInfo.fromMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline flex items-center gap-1 group">
           From: {row.transferInfo.fromMethodName}
+          <LinkIcon className="h-3 w-3 text-font-2 group-hover:text-accent" />
         </Link>
       );
     }
     if (row.type === 'transfer_out' && row.transferInfo) {
       return (
-        <Link to={`/payment-methods/${row.transferInfo.toMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline">
+        <Link to={`/payment-methods/${row.transferInfo.toMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline flex items-center gap-1 group">
           To: {row.transferInfo.toMethodName}
+          <LinkIcon className="h-3 w-3 text-font-2 group-hover:text-accent" />
         </Link>
       );
     }
@@ -449,8 +451,9 @@ const PaymentMethodDetailsPage: React.FC = () => {
       return (
         <>
           Debt settled by{' '}
-          <Link to={`/receipts/view/${parsedNote.receiptId}`} className="text-accent hover:underline">
+          <Link to={`/receipts/view/${parsedNote.receiptId}`} className="text-accent hover:underline flex items-center gap-1 group inline-flex">
             {parsedNote.debtorName}
+            <LinkIcon className="h-3 w-3 text-font-2 group-hover:text-accent" />
           </Link>
         </>
       );
@@ -564,7 +567,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
                   options={[
                     { value: 'all', label: 'All Transactions' },
                     { value: 'receipt', label: 'Expenses' },
-                    { value: 'deposit', label: 'Deposits' },
+                    { value: 'income', label: 'Income' },
                     { value: 'transfer', label: 'Transfers' },
                     { value: 'debt_repayment', label: 'Debt Repayments' },
                   ]}

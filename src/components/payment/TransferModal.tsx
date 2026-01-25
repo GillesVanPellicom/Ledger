@@ -33,6 +33,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
   const queryClient = useQueryClient();
 
   const fromMethodBalance = transferFrom ? (methodBalances[transferFrom] || 0) : 0;
+  const toMethodBalance = transferTo ? (methodBalances[transferTo] || 0) : 0;
 
   // Initialize and fetch methods
   useEffect(() => {
@@ -188,7 +189,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
                 placeholder="Select origin..."
               />
               <p className={cn("text-[10px] text-font-2 text-center transition-opacity", transferFrom ? "opacity-100" : "opacity-0 invisible")}>
-                Available: €{fromMethodBalance.toFixed(2)}
+                Balance: €{fromMethodBalance.toFixed(2)}
               </p>
             </div>
 
@@ -207,7 +208,9 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
                 error={errors.transferTo}
                 placeholder="Select destination..."
               />
-              <div className="h-4" />
+              <p className={cn("text-[10px] text-font-2 text-center transition-opacity", transferTo ? "opacity-100" : "opacity-0 invisible")}>
+                Balance: €{toMethodBalance.toFixed(2)}
+              </p>
             </div>
           </div>
 
@@ -223,6 +226,8 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
               onDecrement={() => setFormData(prev => ({ ...prev, amount: String(Math.max(0, Number(prev.amount) - 1)) }))}
               min={0}
               max={fromMethodBalance || undefined}
+              precision={2}
+              clamp={true}
               error={errors.amount}
             />
           </div>

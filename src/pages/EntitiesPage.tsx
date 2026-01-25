@@ -1,29 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DataTable from '../components/ui/DataTable';
+import { Plus, Pencil, User, EyeOff, Eye } from 'lucide-react';
 import Button from '../components/ui/Button';
-import { Plus, Pencil, ArrowUpCircle, ArrowDownCircle, User } from 'lucide-react';
 import EntityModal from '../components/debt/EntityModal';
 import Tooltip from '../components/ui/Tooltip';
 import { Debtor } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
+import DataGrid from '../components/ui/DataGrid';
+import Spinner from '../components/ui/Spinner';
 import { useEntities, useInvalidateReferenceData } from '../hooks/useReferenceData';
+import { useDebtCalculation } from '../hooks/useDebtCalculation';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
+import { cn } from '../utils/cn';
+
+interface EntityItemProps {
+  entity: Debtor;
+  onEditClick: (entity: Debtor) => void;
+}
+
+const EntityItem: React.FC<EntityItemProps> = ({ entity, onEditClick }) => {
+    const { stats, loading } = useDebtCalculation(entity.DebtorID);
+
+    return (
+        <div className={cn("flex flex-col justify-between h-full relative group", !entity.DebtorIsActive && "opacity-60")}>
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-font-1">{entity.DebtorName}</h3>
+                <div className="w-8 h-8 flex items-center justify-center">
+                   <User className="h-8 w-8 text-font-2" />
+                </div>
+            </div>
+            <div className="mt-4 text-right">
+                <p className="text-xs text-font-2">Net Balance</p>
+                {loading ? (
+                  <div className="flex justify-end items-center h-7">
+                    <Spinner className="h-5 w-5 text-font-2" />
+                  </div>
+                ) : (
+                  <MoneyDisplay 
+                    amount={stats.netBalance} 
+                    useSignum={true}
+                    className="text-2xl font-semibold"
+                  />
+                )}
+            </div>
+            <div className="absolute bottom-0 left-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Tooltip content="Edit">
+                <Button variant="secondary" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onEditClick(entity); }}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              {!entity.DebtorIsActive && (
+                <Tooltip content="Hidden">
+                  <EyeOff className="h-5 w-5 text-font-2" />
+                </Tooltip>
+              )}
+            </div>
+        </div>
+    );
+};
 
 const EntitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [pageSize, setPageSize] = useState<number>(10);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingEntity, setEditingEntity] = useState<Debtor | null>(null);
+  const [showHidden, setShowHidden] = useState<boolean>(false);
   const invalidateReferenceData = useInvalidateReferenceData();
 
   const { data, isLoading } = useEntities({
-    page: currentPage,
-    pageSize,
-    searchTerm
+    page: 1,
+    pageSize: 1000, // Fetch all for grid view
   });
 
   const handleAddEntity = () => {
@@ -38,81 +84,51 @@ const EntitiesPage: React.FC = () => {
 
   const handleSave = () => {
     invalidateReferenceData();
+    setIsModalOpen(false);
   };
 
-  const columns = [
-    { 
-      header: 'Name', 
-      width: '40%',
-      render: (row: Debtor) => (
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-accent/10 text-accent">
-            <User className="h-5 w-5" />
-          </div>
-          <h3 className="text-lg font-bold text-font-1">{row.DebtorName}</h3>
-        </div>
-      )
-    },
-    { 
-      header: 'Net Balance', 
-      width: '40%',
-      render: (row: Debtor) => (
-        <div className="flex items-center gap-2">
-          <Tooltip content={row.NetBalance >= 0 ? 'Owes you' : 'You owe'}>
-            {row.NetBalance >= 0 ? 
-              <ArrowUpCircle className="h-5 w-5 text-green" /> : 
-              <ArrowDownCircle className="h-5 w-5 text-red" />}
-          </Tooltip>
-          <MoneyDisplay amount={row.NetBalance} useSignum={true} showSign={true} />
-        </div>
-      )
-    },
-    {
-      header: '',
-      width: '20%',
-      className: 'text-right',
-      render: (row: Debtor) => (
-        <div className="flex justify-end">
-          <Tooltip content="Edit Entity">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleEditEntity(row); }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </Tooltip>
-        </div>
-      )
-    }
-  ];
+  const filteredEntities = (data?.entities || []).filter(e => showHidden || e.DebtorIsActive);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Spinner className="h-8 w-8 text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div>
       <Header
         title="Entities"
         actions={
-          <Tooltip content="Add Entity">
-            <Button variant="ghost" size="icon" onClick={handleAddEntity}>
-              <Plus className="h-5 w-5" />
-            </Button>
-          </Tooltip>
+          <>
+            <Tooltip content={showHidden ? 'Hide Inactive' : 'Show Hidden'}>
+              <Button variant="ghost" size="icon" onClick={() => setShowHidden(!showHidden)}>
+                {showHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </Button>
+            </Tooltip>
+            <Tooltip content="Add Entity">
+              <Button variant="ghost" size="icon" onClick={handleAddEntity}>
+                <Plus className="h-5 w-5" />
+              </Button>
+            </Tooltip>
+          </>
         }
       />
       <PageWrapper>
         <div className="py-6">
-          <DataTable
-            data={data?.entities || []}
-            columns={columns}
-            totalCount={data?.totalCount || 0}
-            pageSize={pageSize}
-            onPageSizeChange={setPageSize}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onSearch={setSearchTerm}
-            searchable={true}
-            loading={isLoading}
-            onRowClick={(row: Debtor) => navigate(`/entities/${row.DebtorID}`)}
+          <DataGrid
+            data={filteredEntities}
+            itemKey="DebtorID"
+            onItemClick={(entity) => navigate(`/entities/${entity.DebtorID}`)}
+            renderItem={(entity) => (
+              <EntityItem
+                entity={entity}
+                onEditClick={handleEditEntity}
+              />
+            )}
+            minItemWidth={320}
           />
         </div>
       </PageWrapper>

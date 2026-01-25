@@ -270,7 +270,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       </>
     }
   >
-    {children ? children : <p className="text-font-2">{message}</p>}
+    {children || <p className="text-font-2">{message}</p>}
   </Modal>
 );
 
