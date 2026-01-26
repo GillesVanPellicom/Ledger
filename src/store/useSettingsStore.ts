@@ -58,6 +58,11 @@ const initialSettings: Settings = {
     mockTime: {
       enabled: false,
       date: null,
+    },
+    profiling: {
+      enabled: false,
+      showControls: false,
+      outputPath: ''
     }
   },
   formatting: {
@@ -91,14 +96,11 @@ export const useSettingsStore = create<SettingsState>()(
 
         // Apply CSS variables
         Object.entries(theme.colors).forEach(([key, value]) => {
-          // Remove _COLOR suffix to match index.css variable names
-          // e.g. BG_COLOR -> bg, BG_COLOR_2 -> bg-2
           const normalizedKey = key.replace('_COLOR', '');
           const cssVarName = `--color-${normalizedKey.toLowerCase().replace(/_/g, '-')}`;
           root.style.setProperty(cssVarName, value);
         });
 
-        // Handle dark mode class for Tailwind
         if (themeId === 'dark') {
           root.classList.add('dark');
         } else if (themeId === 'light') {
@@ -116,8 +118,6 @@ export const useSettingsStore = create<SettingsState>()(
         const hasName = !!settings.userName;
         const isInProgress = settings.wizard.inProgress;
 
-        // If we have critical data but wizard is marked as inProgress, it's an inconsistent state
-        // (likely a crash or forced quit during the final steps)
         if (hasDatastore && hasName && isInProgress) {
           console.warn('[SettingsStore] Inconsistent wizard state detected. Repairing...');
           get().updateSettings({
@@ -160,7 +160,12 @@ export const useSettingsStore = create<SettingsState>()(
                       ...loadedSettings.receipts?.indicators
                   }
               } as any,
-              dev: {...initialSettings.dev, ...loadedSettings.dev},
+              dev: {
+                ...initialSettings.dev, 
+                ...loadedSettings.dev,
+                mockTime: { ...initialSettings.dev?.mockTime, ...loadedSettings.dev?.mockTime },
+                profiling: { ...initialSettings.dev?.profiling, ...loadedSettings.dev?.profiling }
+              } as any,
               formatting: {
                 ...initialSettings.formatting,
                 ...loadedSettings.formatting
@@ -181,7 +186,6 @@ export const useSettingsStore = create<SettingsState>()(
 
           if (isDev) console.log('[SettingsStore] Final merged settings:', currentSettings);
 
-          // Apply theme immediately
           const themeId = currentSettings.theme || 'light';
           if (themeId === 'system') {
              if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -205,7 +209,6 @@ export const useSettingsStore = create<SettingsState>()(
             loading: false,
           }, false, 'loadSettings/success');
 
-          // Run repair logic after loading
           get().repairWizardState();
         } catch (error) {
           console.error("[SettingsStore] Failed to load settings:", error);
@@ -217,7 +220,6 @@ export const useSettingsStore = create<SettingsState>()(
         const currentSettings = get().settings;
         if (isDev) console.log('[SettingsStore] updateSettings called with:', newSettings);
         
-        // Deep merge for nested objects to avoid overwriting with partial data or undefined
         const updatedSettings: Settings = {
             ...currentSettings,
             ...newSettings,
@@ -232,7 +234,18 @@ export const useSettingsStore = create<SettingsState>()(
                     ...(newSettings.receipts?.indicators || {})
                 }
             } as any,
-            dev: { ...currentSettings.dev, ...(newSettings.dev || {}) },
+            dev: { 
+                ...currentSettings.dev, 
+                ...(newSettings.dev || {}),
+                mockTime: {
+                    ...(currentSettings.dev?.mockTime || { enabled: false, date: null }),
+                    ...(newSettings.dev?.mockTime || {})
+                },
+                profiling: {
+                    ...(currentSettings.dev?.profiling || { enabled: false, showControls: false, outputPath: '' }),
+                    ...(newSettings.dev?.profiling || {})
+                }
+            } as any,
             formatting: { 
                 ...(currentSettings.formatting || { 
                   decimalSeparator: 'dot',
@@ -257,15 +270,14 @@ export const useSettingsStore = create<SettingsState>()(
 
         set({settings: updatedSettings}, false, `updateSettings/${Object.keys(newSettings).join(',')}`);
 
-        // Apply theme if changed
         let themeId = newSettings.theme || currentSettings.theme || 'light';
         if (themeId === 'system') {
             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 get().applyTheme('dark');
-                themeId = 'dark'; // Resolve for checking locks
+                themeId = 'dark';
             } else {
                 get().applyTheme('light');
-                themeId = 'light'; // Resolve for checking locks
+                themeId = 'light';
             }
         } else {
             get().applyTheme(themeId);
@@ -284,7 +296,9 @@ export const useSettingsStore = create<SettingsState>()(
 
         try {
           if (window.electronAPI) {
-            const result = await window.electronAPI.saveSettings(updatedSettings);
+            // Sanitize the object to remove any non-serializable data (like Proxies) before sending over IPC
+            const sanitizedSettings = JSON.parse(JSON.stringify(updatedSettings));
+            const result = await window.electronAPI.saveSettings(sanitizedSettings);
             if (isDev) console.log('[SettingsStore] Electron save result:', result);
             if (!result.success) {
               console.error('[SettingsStore] Failed to save settings, waiting for revert.');
@@ -302,7 +316,6 @@ export const useSettingsStore = create<SettingsState>()(
   )
 );
 
-// Initialize settings listener for Electron
 if (window.electronAPI) {
   window.electronAPI.onSettingsReverted((_event: any, revertedSettings: Settings) => {
     if (isDev) console.log('[SettingsStore] Settings reverted from Electron:', revertedSettings);

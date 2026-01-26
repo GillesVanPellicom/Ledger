@@ -14,6 +14,7 @@ const sqlite3 = require('sqlite3');
 const fs = require('node:fs');
 const {runMigrations} = require('./db/migrate.cjs');
 const Store = require('./store.cjs');
+const inspector = require('node:inspector');
 
 // Global error handlers for main process
 process.on('uncaughtException', (error) => {
@@ -33,6 +34,12 @@ const dev = process.env.NODE_ENV === 'development';
 if (dev) {
   console.log('Running in development mode. Telemetry enabled.');
 }
+
+// Profiler state
+let profiling = false;
+let profileFilePath = '';
+const profilerSession = new inspector.Session();
+profilerSession.connect();
 
 // Initialize store
 function initializeStore() {
@@ -65,6 +72,12 @@ function initializeStore() {
         datastore: {
           folderPath: '',
         },
+        dev: {
+          profiling: {
+            showControls: false,
+            outputPath: path.join(app.getPath('userData'), 'profiles')
+          }
+        }
       },
     });
     console.log('Store initialized successfully.');
@@ -541,3 +554,68 @@ ipcMain.handle('open-backup-folder', async () => {
   }
   shell.openPath(backupDir);
 });
+
+// Profiler Handlers
+ipcMain.handle('start-profiling', async () => {
+  if (profiling) return;
+  profiling = true;
+  
+  const now = new Date();
+  const timestamp = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+  
+  const customPath = store.get('dev.profiling.outputPath');
+  const profilesDir = customPath || path.join(app.getPath('userData'), 'profiles');
+  
+  console.log(`[Profiler] Starting profile. Output directory: ${profilesDir}`);
+
+  try {
+    if (!fs.existsSync(profilesDir)) {
+      fs.mkdirSync(profilesDir, {recursive: true});
+    }
+  } catch (err) {
+    console.error(`[Profiler] Failed to create directory: ${profilesDir}`, err);
+    profiling = false;
+    throw err;
+  }
+  
+  profileFilePath = path.join(profilesDir, `${timestamp}.cpuprofile`);
+
+  return new Promise((resolve, reject) => {
+    profilerSession.post('Profiler.enable', (err) => {
+      if (err) {
+        profiling = false;
+        return reject(err);
+      }
+      profilerSession.post('Profiler.start', (err2) => {
+        if (err2) {
+          profiling = false;
+          return reject(err2);
+        }
+        console.log(`[Profiler] Recording to: ${profileFilePath}`);
+        resolve(true);
+      });
+    });
+  });
+});
+
+ipcMain.handle('stop-profiling', async () => {
+  if (!profiling) throw new Error('Profiler is not running');
+  profiling = false;
+
+  return new Promise((resolve, reject) => {
+    profilerSession.post('Profiler.stop', (err, { profile }) => {
+      if (err) return reject(err);
+
+      fs.writeFile(profileFilePath, JSON.stringify(profile), (writeErr) => {
+        if (writeErr) {
+          console.error(`[Profiler] Failed to save file: ${profileFilePath}`, writeErr);
+          return reject(writeErr);
+        }
+        console.log(`[Profiler] Saved profile to: ${profileFilePath}`);
+        resolve(profileFilePath);
+      });
+    });
+  });
+});
+
+ipcMain.handle('is-profiling', () => profiling);

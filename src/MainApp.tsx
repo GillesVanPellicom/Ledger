@@ -18,6 +18,7 @@ import { useErrorStore } from './store/useErrorStore';
 import { useUIStore } from './store/useUIStore';
 import { incomeLogic } from './logic/incomeLogic';
 import { useQueryClient } from '@tanstack/react-query';
+import ProfilerOverlay from './components/ui/ProfilerOverlay';
 
 export const MainApp = () => {
   const { showError } = useErrorStore();
@@ -82,6 +83,7 @@ export const MainApp = () => {
         onClose={closeSettingsModal}
         initialTab={settingsModalInitialTab}
       />
+      <ProfilerOverlay />
     </>
   );
 };

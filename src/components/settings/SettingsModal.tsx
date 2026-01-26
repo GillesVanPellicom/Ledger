@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Bug, Trash2, Info, Plug, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code, Bell } from 'lucide-react';
+import { Bug, Trash2, Info, Plug, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code, Bell, Activity } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -22,6 +22,7 @@ import TabsComponent from '../ui/Tabs';
 import { toast } from 'sonner';
 import NotificationControls from './NotificationControls';
 import Divider from '../ui/Divider';
+import ProfilingSettings from './ProfilingSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -208,7 +209,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     { id: 'formatting', label: 'Formatting', icon: Type },
     { id: 'modules', label: 'Modules', icon: Plug },
     { id: 'pdf', label: 'PDF', icon: FileText },
-    { id: 'development', label: 'Development', icon: Code }, // Always show Development tab
+    { id: 'development', label: 'Development', icon: Code },
   ];
 
   tabs.sort((a, b) => a.label.localeCompare(b.label));
@@ -265,6 +266,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
     { id: 'general', label: 'General' },
     { id: 'wizard', label: 'Wizard' },
     { id: 'time', label: 'Time' },
+    { id: 'profiling', label: 'Profiling' },
     { id: 'sonner', label: 'Sonner' },
   ];
 
@@ -587,6 +589,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                       </div>
                     </div>
                   </div>
+                )}
+
+                {devActiveTab === 'profiling' && (
+                  <ProfilingSettings />
                 )}
 
                 {devActiveTab === 'sonner' && (

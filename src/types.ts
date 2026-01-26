@@ -38,7 +38,11 @@ export interface Settings {
     mockTime?: {
       enabled: boolean;
       date: string | null;
-    }
+    };
+    profiling?: {
+      enabled: boolean;
+      showControls: boolean;
+    };
   };
   formatting?: {
     decimalSeparator: 'dot' | 'comma';

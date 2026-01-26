@@ -19,6 +19,9 @@ declare global {
       saveImage: (folderPath: string, imagePath: string) => Promise<string>;
       getBackupCount: () => Promise<number>;
       triggerBackup: () => Promise<void>;
+      startProfiling: () => Promise<boolean>;
+      stopProfiling: () => Promise<string>;
+      isProfiling: () => Promise<boolean>;
       isDev: boolean;
     };
   }

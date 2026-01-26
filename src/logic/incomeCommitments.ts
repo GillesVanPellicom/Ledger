@@ -46,12 +46,31 @@ export interface PendingIncome {
 
 /* ==================== Helpers ==================== */
 
+/**
+ * Normalizes a date to yyyy-MM-dd string.
+ */
+function normalizeDate(date: Date | string): string {
+  const d = typeof date === 'string' ? parseISO(date) : date;
+  return format(startOfDay(d), 'yyyy-MM-dd');
+}
+
 function getCurrentDate(): Date {
   const settings = useSettingsStore.getState().settings;
   if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
     return startOfDay(parseISO(settings.dev.mockTime.date));
   }
   return startOfToday();
+}
+
+/**
+ * Maps raw database row to IncomeSchedule type.
+ */
+function mapScheduleRow(r: any): IncomeSchedule {
+  return {
+    ...r,
+    RequiresConfirmation: Boolean(r.RequiresConfirmation),
+    IsActive: Boolean(r.IsActive)
+  };
 }
 
 /* ==================== Commitments ==================== */
@@ -62,7 +81,11 @@ export const incomeCommitments = {
   getSchedules: async (): Promise<IncomeSchedule[]> => {
     const rows = await db.query<any>(`
       SELECT 
-        s.*, 
+        s.ScheduleID, s.Type, s.RecipientID, s.EntityID, s.CategoryID,
+        s.PaymentMethodID, s.ExpectedAmount, s.RecurrenceRule,
+        s.DayOfMonth, s.DayOfWeek, s.MonthOfYear,
+        s.RequiresConfirmation, s.LookaheadDays, s.IsActive,
+        s.CreationTimestamp, s.Note,
         src.EntityName AS RecipientName,
         cat.CategoryName AS CategoryName,
         pm.PaymentMethodName
@@ -72,11 +95,7 @@ export const incomeCommitments = {
       LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
     `);
 
-    return rows.map(r => ({
-      ...r,
-      RequiresConfirmation: Boolean(r.RequiresConfirmation),
-      IsActive: Boolean(r.IsActive)
-    }));
+    return rows.map(mapScheduleRow);
   },
 
   /* -------- Pending incomes -------- */
@@ -86,7 +105,7 @@ export const incomeCommitments = {
   > => {
     return await db.query<any>(`
       SELECT 
-        p.*, 
+        p.SchedulePendingID, p.ScheduleID, p.PlannedDate, p.Amount, p.Status,
         s.Type,
         src.EntityName AS RecipientName,
         cat.CategoryName AS CategoryName,
@@ -212,7 +231,7 @@ export const incomeCommitments = {
       [
         data.PaymentMethodID, 
         data.Amount, 
-        data.Date, 
+        normalizeDate(data.Date), 
         data.Note, 
         data.RecipientID || null, 
         data.CategoryID || null,
@@ -244,7 +263,7 @@ export const incomeCommitments = {
       `,
       [
         data.RecipientID,
-        data.Date,
+        normalizeDate(data.Date),
         data.Note,
         data.PaymentMethodID,
         data.Amount
@@ -267,7 +286,7 @@ export const incomeCommitments = {
           Status
         ) VALUES (?, ?, ?, 'pending')
       `,
-        [data.ScheduleID, data.PlannedDate, data.Amount]
+        [data.ScheduleID, normalizeDate(data.PlannedDate), data.Amount]
       );
     } catch (err: any) {
       if (err?.code === 'SQLITE_CONSTRAINT') {
@@ -332,11 +351,11 @@ export const incomeCommitments = {
       );
       if (schedule) {
         const today = getCurrentDate();
-        const occurrences = calculateOccurrences(schedule as any, subMonths(today, 1), today);
+        const occurrences = calculateOccurrences(mapScheduleRow(schedule), subMonths(today, 1), today);
         if (occurrences.length > 0) {
           await incomeCommitments.createPendingIncome({
             ScheduleID: newScheduleId,
-            PlannedDate: format(occurrences[0], 'yyyy-MM-dd'),
+            PlannedDate: normalizeDate(occurrences[0]),
             Amount: schedule.ExpectedAmount
           });
         }

@@ -20,5 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBackupCount: () => ipcRenderer.invoke('get-backup-count'),
   triggerBackup: () => ipcRenderer.invoke('trigger-backup'),
   openBackupFolder: () => ipcRenderer.invoke('open-backup-folder'),
+  startProfiling: () => ipcRenderer.invoke('start-profiling'),
+  stopProfiling: () => ipcRenderer.invoke('stop-profiling'),
+  isProfiling: () => ipcRenderer.invoke('is-profiling'),
   isDev: isDev,
 });

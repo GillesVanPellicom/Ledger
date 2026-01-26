@@ -41,6 +41,11 @@
     "mockTime": {
       "enabled": false,
       "date": null
+    },
+    "profiling": {
+      "enabled": true,
+      "showControls": true,
+      "outputPath": "/Users/gvp/IdeaProjects/homefin/profiles"
     }
   },
   "formatting": {
