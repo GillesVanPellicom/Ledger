@@ -30,15 +30,15 @@
   "dev": {
     "profiling": {
       "showControls": false,
-      "outputPath": "/Users/gvp/IdeaProjects/homefin/profiles",
-      "enabled": true
+      "outputPath": "/Users/gvp/Library/Application Support/ledger/profiles",
+      "enabled": false
     },
     "mockTime": {
       "enabled": false,
       "date": null
     }
   },
-  "themeColor": "#6366f1",
+  "themeColor": "#007AFF",
   "headerColor": "#8b5cf6",
   "receipts": {
     "indicators": {
@@ -49,12 +49,12 @@
     }
   },
   "formatting": {
+    "currency": "€",
     "decimalSeparator": "comma",
     "dateFormat": "international",
     "shortenYear": false,
     "timeFormat": "international",
-    "showSeconds": false,
-    "currency": "€"
+    "showSeconds": false
   },
   "wizard": {
     "askedQuestions": {
@@ -69,18 +69,11 @@
       "datastore": 1,
       "completion": 1
     },
-    "inProgress": true,
-    "debugConfig": {
-      "skipHello": false,
-      "autoApplyDefaults": false,
-      "verboseLogging": false,
-      "ignoreHistory": true
-    }
+    "inProgress": false
   },
   "notifications": {
     "position": "top-center",
     "duration": 4000
   },
-  "userName": "Gilles",
-  "uiScale": 110
+  "userName": "Gilles"
 }

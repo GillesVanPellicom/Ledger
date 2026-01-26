@@ -7,7 +7,7 @@ import {useIncomeStore} from '../../store/useIncomeStore';
 import {useSettingsStore} from '../../store/useSettingsStore';
 import {format} from 'date-fns';
 import {Clock} from 'lucide-react';
-import { Toaster } from '../ui/sonner';
+import {Toaster} from '../ui/sonner';
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -17,11 +17,12 @@ const MainLayout: React.FC = () => {
 
   // Log path changes to debug back button issue
 
-  if (dev) {
-    useEffect(() => {
+
+  useEffect(() => {
+    if (dev) {
       console.log('Navigated to:', location.pathname);
-    }, [location.pathname]);
-  }
+    }
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg text-font-1">
@@ -50,7 +51,7 @@ const MainLayout: React.FC = () => {
           </div>
         )}
       </main>
-      <Toaster />
+      <Toaster/>
     </div>
   );
 };
