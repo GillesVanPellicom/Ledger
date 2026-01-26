@@ -31,7 +31,7 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
     // Ensure the component is a valid Lucide icon (has displayName) to avoid crashing with internal exports
     const IconComponent = SymbolComponent && typeof SymbolComponent === 'object' && 'displayName' in SymbolComponent ? SymbolComponent : null;
     
-    const { data: balance, isLoading } = usePaymentMethodBalance(method.PaymentMethodID, method.PaymentMethodFunds);
+    const { data: balanceData, isLoading } = usePaymentMethodBalance(method.PaymentMethodID, method.PaymentMethodFunds);
 
     return (
         <div className={cn("flex flex-col justify-between h-full relative group", method.PaymentMethodIsActive === 0 && "opacity-60")}>
@@ -45,13 +45,13 @@ const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({ method, onStyleCl
             </div>
             <div className="mt-4 text-right">
                 <p className="text-xs text-font-2">Current Balance</p>
-                {isLoading || balance === undefined ? (
+                {isLoading || balanceData === undefined ? (
                   <div className="flex justify-end items-center h-7">
                     <Spinner className="h-5 w-5 text-font-2" />
                   </div>
                 ) : (
                   <MoneyDisplay 
-                    amount={balance} 
+                    amount={balanceData.balance}
                     useSignum={true} // Enabled useSignum
                     className="text-2xl font-semibold"
                   />

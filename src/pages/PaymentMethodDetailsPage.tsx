@@ -22,6 +22,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import DateDisplay from '../components/ui/DateDisplay';
 import { calculatePaymentMethodBalance } from '../logic/paymentLogic';
+import { usePaymentMethodBalance } from '../hooks/usePaymentMethods';
 
 const tryParseJson = (str: string) => {
   try {
@@ -93,7 +94,6 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [transactions, setTransactions] = useState<PageTransaction[]>([]);
-  const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -109,6 +109,11 @@ const PaymentMethodDetailsPage: React.FC = () => {
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
+
+  const { data: balanceData, isLoading: isBalanceLoading } = usePaymentMethodBalance(
+    parseInt(id!, 10), 
+    method?.PaymentMethodFunds || 0
+  );
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
@@ -281,9 +286,6 @@ const PaymentMethodDetailsPage: React.FC = () => {
       });
 
       setTransactions(allTransactions);
-
-      const newBalance = await calculatePaymentMethodBalance(methodId, methodData.PaymentMethodFunds || 0);
-      setBalance(newBalance);
 
     } catch (error) {
       console.error("Failed to fetch payment method details:", error);
@@ -511,12 +513,18 @@ const PaymentMethodDetailsPage: React.FC = () => {
                   <Info className="h-3 w-3 text-gray-400" />
                 </Tooltip>
               </div>
-              <MoneyDisplay
-                amount={balance}
-                showSign={true}
-                useSignum={true}
-                className="text-3xl font-bold"
-              />
+              {isBalanceLoading || balanceData === undefined ? (
+                <div className="flex justify-center items-center h-10">
+                  <Spinner className="h-6 w-6 text-font-2" />
+                </div>
+              ) : (
+                <MoneyDisplay
+                  amount={balanceData.balance}
+                  showSign={true}
+                  useSignum={true}
+                  className="text-3xl font-bold"
+                />
+              )}
             </div>
           </div>
         }
@@ -577,7 +585,7 @@ const PaymentMethodDetailsPage: React.FC = () => {
             onSave={handleTransferSave}
             topUpToEdit={transferToEdit}
             paymentMethodId={id!}
-            currentBalance={balance}
+            currentBalance={balanceData?.balance || 0}
           />
 
           <ConfirmModal
