@@ -29,7 +29,7 @@
   },
   "dev": {
     "profiling": {
-      "showControls": true,
+      "showControls": false,
       "outputPath": "/Users/gvp/IdeaProjects/homefin/profiles",
       "enabled": true
     },

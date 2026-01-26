@@ -24,6 +24,7 @@ import PageWrapper from '../components/layout/PageWrapper';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import IncomeModal from '../components/payment/IncomeModal';
+import NotFoundState from '../components/ui/NotFoundState';
 
 const IncomeViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -143,7 +144,7 @@ const IncomeViewPage: React.FC = () => {
   }
 
   if (!transaction) {
-    return <div className="text-center text-font-1">Transaction not found.</div>;
+    return <NotFoundState title="Transaction Not Found" message="The income or repayment you're looking for might have been deleted or moved." />;
   }
 
   return (

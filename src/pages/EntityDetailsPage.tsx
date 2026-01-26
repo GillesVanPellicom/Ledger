@@ -27,6 +27,7 @@ import { useErrorStore } from '../store/useErrorStore';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import Badge from '../components/ui/Badge';
+import NotFoundState from '../components/ui/NotFoundState';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -338,7 +339,7 @@ const EntityDetailsPage: React.FC = () => {
 
         let trxIndex = 0;
         dateRange.forEach(day => {
-            while(trxIndex < sortedReceipts.length && new Date(sortedReceipts[trxIndex].ReceiptDate) <= day) {
+            while(trxIndex < sortedTransactions.length && new Date(sortedTransactions[trxIndex].date) <= day) {
                 const receipt = sortedReceipts[trxIndex];
                 const amount = receipt.amount || 0;
                 if (receipt.type === 'to_me') {
@@ -422,7 +423,7 @@ const EntityDetailsPage: React.FC = () => {
   ];
 
   if (loading || debtLoading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
-  if (!entity) return <div>Entity not found.</div>;
+  if (!entity) return <NotFoundState title="Entity Not Found" message="The entity you're looking for might have been deleted or moved." />;
 
   return (
     <div>

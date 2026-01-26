@@ -2,90 +2,24 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db } from '../utils/db';
 import Button from '../components/ui/Button';
-import DataTable from '../components/ui/DataTable';
 import TransferModal from '../components/payment/TransferModal';
-import { Pencil, Trash2, Info, Link as LinkIcon } from 'lucide-react';
+import { Pencil, Info } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import Select from '../components/ui/Select';
 import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
-import DatePicker from '../components/ui/DatePicker';
-import Modal, { ConfirmModal } from '../components/ui/Modal';
+import Modal from '../components/ui/Modal';
 import Tooltip from '../components/ui/Tooltip';
 import Input from '../components/ui/Input';
-import { PaymentMethod, TopUp, LineItem } from '../types';
+import { PaymentMethod, TopUp } from '../types';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import { calculateTotalWithDiscount } from '../logic/expense/discountLogic';
 import { useQueryClient } from '@tanstack/react-query';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
-import DateDisplay from '../components/ui/DateDisplay';
-import { calculatePaymentMethodBalance } from '../logic/paymentLogic';
 import { usePaymentMethodBalance } from '../hooks/usePaymentMethods';
-
-const tryParseJson = (str: string) => {
-  try {
-    return JSON.parse(str);
-  } catch (e) {
-    return null;
-  }
-};
-
-// A more specific type for transactions on this page
-interface PageTransaction {
-  id: number;
-  date: string;
-  name: string;
-  note: string;
-  amount: number;
-  type: 'receipt' | 'income' | 'transfer_in' | 'transfer_out' | 'debt_repayment';
-  creationTimestamp: string;
-  // Receipt-specific fields
-  Discount?: number | null;
-  IsNonItemised?: 0 | 1;
-  NonItemisedTotal?: number | null;
-  // Transfer-specific fields
-  transferInfo?: {
-    fromMethodId: number;
-    toMethodId: number;
-    fromMethodName: string;
-    toMethodName: string;
-  };
-  // Debt repayment fields
-  debtorName?: string;
-}
-
-interface IncomingTransferQueryResult {
-  id: number;
-  date: string;
-  note: string;
-  amount: number;
-  creationTimestamp: string;
-  fromMethodId: number;
-  toMethodId: number;
-  fromMethodName: string;
-}
-
-interface OutgoingTransferQueryResult {
-  id: number;
-  date: string;
-  note: string;
-  amount: number;
-  creationTimestamp: string;
-  fromMethodId: number;
-  toMethodId: number;
-  toMethodName: string;
-}
-
-interface DebtRepaymentQueryResult {
-  id: number;
-  date: string;
-  note: string;
-  amount: number;
-  creationTimestamp: string;
-  debtorName: string;
-}
+import TransactionDataTable from '../components/receipts/TransactionDataTable';
+import { useTransactions } from '../hooks/useTransactions';
+import NotFoundState from '../components/ui/NotFoundState';
 
 const PaymentMethodDetailsPage: React.FC = () => {
   const chartRef = useRef<ReactECharts>(null);
@@ -93,19 +27,11 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [method, setMethod] = useState<PaymentMethod | null>(null);
-  const [transactions, setTransactions] = useState<PageTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [methodName, setMethodName] = useState('');
   const [transferToEdit, setTransferToEdit] = useState<TopUp | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<PageTransaction | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
   const theme = isDarkMode ? 'dark' : 'light';
@@ -115,228 +41,46 @@ const PaymentMethodDetailsPage: React.FC = () => {
     method?.PaymentMethodFunds || 0
   );
 
-  const fetchDetails = useCallback(async () => {
+  // Fetch all transactions for the chart using the hook
+  // We use a large pageSize to get enough data for the chart
+  const { data: transactionsData } = useTransactions({
+    page: 1,
+    pageSize: 1000,
+    methodFilter: id,
+    typeFilter: 'all'
+  });
+
+  const allTransactions = transactionsData?.transactions || [];
+
+  const fetchMethod = useCallback(async () => {
     setLoading(true);
     try {
-      const methodId = parseInt(id!, 10);
       const methodData = await db.queryOne<PaymentMethod>('SELECT * FROM PaymentMethods WHERE PaymentMethodID = ?', [id]);
-      
-      if (!methodData) {
-        setMethod(null);
-        setTransactions([]);
-        setLoading(false);
-        return;
+      if (methodData) {
+        setMethod(methodData);
+        setMethodName(methodData.PaymentMethodName || '');
       }
-
-      setMethod(methodData);
-      setMethodName(methodData.PaymentMethodName || '');
-
-      interface ReceiptQueryResult {
-        id: number;
-        date: string;
-        name: string;
-        note: string;
-        Discount: number | null;
-        IsNonItemised: 0 | 1;
-        NonItemisedTotal: number | null;
-        type: 'receipt';
-        creationTimestamp: string;
-      }
-
-      const receiptsData = await db.query<ReceiptQueryResult>(`
-        SELECT r.ExpenseID as id, r.ExpenseDate as date, s.EntityName as name, r.ExpenseNote as note, r.Discount,
-               r.IsNonItemised, r.NonItemisedTotal, 'receipt' as type, r.CreationTimestamp as creationTimestamp
-        FROM Expenses r
-        JOIN Entities s ON r.RecipientID = s.EntityID
-        WHERE r.PaymentMethodID = ?
-      `, [id]);
-
-      const receiptIds = receiptsData.map(r => r.id);
-      const allLineItems = receiptIds.length > 0
-        ? await db.query<LineItem>(`SELECT ExpenseLineItemID as LineItemID, ExpenseID as ReceiptID, ProductID, LineQuantity, LineUnitPrice, EntityID as DebtorID, IsExcludedFromDiscount, CreationTimestamp, UpdatedAt FROM ExpenseLineItems WHERE ExpenseID IN (${receiptIds.map(() => '?').join(',')})`, receiptIds)
-        : [];
-
-      interface TopUpQueryResult {
-        id: number;
-        date: string;
-        note: string;
-        amount: number;
-        creationTimestamp: string;
-      }
-
-      const topupsData = await db.query<TopUpQueryResult>(`
-        SELECT
-          tu.IncomeID as id,
-          tu.IncomeDate as date,
-          tu.IncomeNote as note,
-          tu.IncomeAmount as amount,
-          tu.CreationTimestamp as creationTimestamp
-        FROM Income tu
-        WHERE tu.PaymentMethodID = ? AND tu.TransferID IS NULL AND NOT EXISTS (
-          SELECT 1 FROM ExpenseEntityPayments rdp WHERE rdp.IncomeID = tu.IncomeID
-        )
-      `, [id]);
-
-      const incomingTransfersData = await db.query<IncomingTransferQueryResult>(`
-        SELECT
-          t.TransferID as id,
-          t.TransferDate as date,
-          t.Note as note,
-          t.Amount as amount,
-          t.CreationTimestamp as creationTimestamp,
-          t.FromPaymentMethodID as fromMethodId,
-          t.ToPaymentMethodID as toMethodId,
-          pm_from.PaymentMethodName as fromMethodName
-        FROM Transfers t
-        JOIN PaymentMethods pm_from ON t.FromPaymentMethodID = pm_from.PaymentMethodID
-        WHERE t.ToPaymentMethodID = ?
-      `, [id]);
-      
-      const outgoingTransfersData = await db.query<OutgoingTransferQueryResult>(`
-        SELECT
-          t.TransferID as id,
-          t.TransferDate as date,
-          t.Note as note,
-          t.Amount as amount,
-          t.CreationTimestamp as creationTimestamp,
-          t.FromPaymentMethodID as fromMethodId,
-          t.ToPaymentMethodID as toMethodId,
-          pm_to.PaymentMethodName as toMethodName
-        FROM Transfers t
-        JOIN PaymentMethods pm_to ON t.ToPaymentMethodID = pm_to.PaymentMethodID
-        WHERE t.FromPaymentMethodID = ?
-      `, [id]);
-
-      const debtRepaymentsData = await db.query<DebtRepaymentQueryResult>(`
-        SELECT
-          rdp.ExpenseEntityPaymentID as id,
-          rdp.PaidDate as date,
-          tu.IncomeNote as note,
-          tu.IncomeAmount as amount,
-          rdp.CreationTimestamp as creationTimestamp,
-          d.EntityName as debtorName
-        FROM ExpenseEntityPayments rdp
-        JOIN Income tu ON rdp.IncomeID = tu.IncomeID
-        JOIN Entities d ON rdp.EntityID = d.EntityID
-        WHERE tu.PaymentMethodID = ?
-      `, [id]);
-
-      const allTransactions: PageTransaction[] = [
-        ...receiptsData.map((r): PageTransaction => {
-            if (r.IsNonItemised) {
-              return {...r, amount: -(r.NonItemisedTotal || 0)};
-            }
-            const items = allLineItems.filter(li => li.ReceiptID === r.id);
-            const total = calculateTotalWithDiscount(items, r.Discount || 0);
-            return {...r, name: r.name, amount: -total};
-        }),
-        ...topupsData.map((t): PageTransaction => ({
-          id: t.id,
-          date: t.date,
-          name: 'Income',
-          note: t.note,
-          amount: t.amount,
-          type: 'income',
-          creationTimestamp: t.creationTimestamp,
-        })),
-        ...incomingTransfersData.map((t): PageTransaction => ({
-            id: t.id,
-            date: t.date,
-            name: 'Transfer',
-            note: t.note,
-            amount: t.amount,
-            type: 'transfer_in',
-            creationTimestamp: t.creationTimestamp,
-            transferInfo: {
-                fromMethodId: t.fromMethodId,
-                toMethodId: t.toMethodId,
-                fromMethodName: t.fromMethodName,
-                toMethodName: methodData.PaymentMethodName
-            }
-        })),
-        ...outgoingTransfersData.map((t): PageTransaction => ({
-            id: t.id,
-            date: t.date,
-            name: 'Transfer',
-            note: t.note,
-            amount: -t.amount,
-            type: 'transfer_out',
-            creationTimestamp: t.creationTimestamp,
-            transferInfo: {
-                fromMethodId: t.fromMethodId,
-                toMethodId: t.toMethodId,
-                fromMethodName: methodData.PaymentMethodName,
-                toMethodName: t.toMethodName
-            }
-        })),
-        ...debtRepaymentsData.map((t): PageTransaction => ({
-          id: t.id,
-          date: t.date,
-          name: 'Debt Repayment',
-          note: t.note,
-          amount: t.amount,
-          type: 'debt_repayment',
-          creationTimestamp: t.creationTimestamp,
-          debtorName: t.debtorName,
-        }))
-      ].sort((a, b) => {
-        const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (dateComparison !== 0) return dateComparison;
-        return new Date(b.creationTimestamp).getTime() - new Date(a.creationTimestamp).getTime();
-      });
-
-      setTransactions(allTransactions);
-
     } catch (error) {
-      console.error("Failed to fetch payment method details:", error);
+      console.error("Failed to fetch payment method:", error);
     } finally {
       setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
-    fetchDetails();
-  }, [fetchDetails]);
+    fetchMethod();
+  }, [fetchMethod]);
 
-  const handleTransferSave = () => {
-    fetchDetails();
-    setTransferToEdit(null);
-  };
-
-  const openDeleteModal = (item: PageTransaction) => {
-    setItemToDelete(item);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!itemToDelete) return;
-    try {
-      if (itemToDelete.type === 'receipt') {
-        await db.execute('DELETE FROM Expenses WHERE ExpenseID = ?', [itemToDelete.id]);
-      } else if (itemToDelete.type === 'income' || itemToDelete.type === 'debt_repayment') {
-        await db.execute('DELETE FROM Income WHERE IncomeID = ?', [itemToDelete.id]);
-      } else if (itemToDelete.type === 'transfer_in' || itemToDelete.type === 'transfer_out') {
-        await db.execute('DELETE FROM Transfers WHERE TransferID = ?', [itemToDelete.id]);
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-
-      fetchDetails();
-      setIsDeleteModalOpen(false);
-      setItemToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete item:", error);
-      throw error;
-    }
+  const handleRefetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance', parseInt(id!, 10)] });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
   };
 
   const handleUpdateMethodName = async () => {
     if (!methodName.trim()) return;
     try {
       await db.execute('UPDATE PaymentMethods SET PaymentMethodName = ? WHERE PaymentMethodID = ?', [methodName.trim(), id]);
-      fetchDetails();
+      fetchMethod();
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Failed to update payment method name:", error);
@@ -344,43 +88,8 @@ const PaymentMethodDetailsPage: React.FC = () => {
     }
   };
 
-  const handleRowClick = (row: PageTransaction) => {
-    if (row.type === 'receipt') {
-      navigate(`/receipts/view/${row.id}`);
-    }
-  };
-
-  const filteredTransactions = useMemo(() => {
-    const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
-    const [startDate, endDate] = dateRange;
-
-    return transactions.filter(t => {
-      const typeMatch = filter === 'all' 
-        || (filter === 'receipt' && t.type === 'receipt') 
-        || (filter === 'income' && t.type === 'income') 
-        || (filter === 'transfer' && (t.type === 'transfer_in' || t.type === 'transfer_out'))
-        || (filter === 'debt_repayment' && t.type === 'debt_repayment');
-      if (!typeMatch) return false;
-
-      const date = new Date(t.date);
-      if (startDate && date < startDate) return false;
-      if (endDate && date > endDate) return false;
-
-      if (keywords.length === 0) return true;
-
-      const searchableText = [t.name, t.note, format(date, 'dd/MM/yyyy')].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      return keywords.every(kw => searchableText.includes(kw));
-    });
-  }, [transactions, filter, searchTerm, dateRange]);
-
-  const paginatedTransactions = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    const end = start + pageSize;
-    return filteredTransactions.slice(start, end);
-  }, [filteredTransactions, currentPage, pageSize]);
-
   const balanceChartOption = useMemo(() => {
-    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sortedTransactions = [...allTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     let runningBalance = method?.PaymentMethodFunds || 0;
     const data: [string, string][] = [];
 
@@ -408,87 +117,10 @@ const PaymentMethodDetailsPage: React.FC = () => {
       series: [{ data, type: 'line', showSymbol: false, smooth: true }],
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     };
-  }, [transactions, method]);
-
-  const getTransactionTypeDisplayName = (type: PageTransaction['type']) => {
-    if (type === 'transfer_in' || type === 'transfer_out') return 'transfer';
-    if (type === 'receipt') return 'expense';
-    if (type === 'debt_repayment') return 'debt repayment';
-    return type;
-  }
-
-  const renderDetails = (row: PageTransaction) => {
-    const handleLinkClick = (e: React.MouseEvent) => e.stopPropagation();
-
-    if (row.type === 'transfer_in' && row.transferInfo) {
-      return (
-        <Link to={`/payment-methods/${row.transferInfo.fromMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline flex items-center gap-1 group">
-          From: {row.transferInfo.fromMethodName}
-          <LinkIcon className="h-3 w-3 text-font-2 group-hover:text-accent" />
-        </Link>
-      );
-    }
-    if (row.type === 'transfer_out' && row.transferInfo) {
-      return (
-        <Link to={`/payment-methods/${row.transferInfo.toMethodId}`} onClick={handleLinkClick} className="text-accent hover:underline flex items-center gap-1 group">
-          To: {row.transferInfo.toMethodName}
-          <LinkIcon className="h-3 w-3 text-font-2 group-hover:text-accent" />
-        </Link>
-      );
-    }
-    if (row.type === 'debt_repayment' && row.debtorName) {
-      return `From: ${row.debtorName}`;
-    }
-    return '-';
-  };
-
-  const renderNote = (row: PageTransaction) => {
-    const parsedNote = tryParseJson(row.note);
-    if (parsedNote && parsedNote.type === 'debt_settlement') {
-      return (
-        <>
-          Debt settled by{' '}
-          <Link to={`/receipts/view/${parsedNote.receiptId}`} className="text-accent hover:underline flex items-center gap-1 group inline-flex">
-            {parsedNote.debtorName}
-            <LinkIcon className="h-3 w-3 text-font-2 group-hover:text-accent" />
-          </Link>
-        </>
-      );
-    }
-    return row.note || '-';
-  };
-
-  const columns = [
-    { header: 'Date', render: (row: PageTransaction) => <DateDisplay date={row.date} /> },
-    { header: 'Name', accessor: 'name' },
-    { header: 'Details', render: (row: PageTransaction) => renderDetails(row) },
-    { header: 'Note', render: (row: PageTransaction) => renderNote(row) },
-    {
-      header: 'Amount',
-      render: (row: PageTransaction) => (
-        <MoneyDisplay amount={row.amount} useSignum={true} showSign={true} />
-      )
-    },
-    {
-      header: '',
-      render: (row: PageTransaction) => (
-        <div className="flex justify-end">
-          <Tooltip content={`Delete ${getTransactionTypeDisplayName(row.type)}`}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e: React.MouseEvent) => { e.stopPropagation(); openDeleteModal(row); }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </Tooltip>
-        </div>
-      )
-    }
-  ];
+  }, [allTransactions, method]);
 
   if (loading) return <div className="flex justify-center items-center h-full"><Spinner className="h-8 w-8 text-accent animate-spin" /></div>;
-  if (!method) return <div>Method not found.</div>;
+  if (!method) return <NotFoundState title="Payment Method Not Found" message="The payment method you're looking for might have been deleted or moved." />;
 
   return (
     <div>
@@ -538,66 +170,20 @@ const PaymentMethodDetailsPage: React.FC = () => {
             </div>
           </Card>
 
-          <DataTable
-            data={paginatedTransactions}
-            columns={columns}
-            onRowClick={handleRowClick}
-            itemKey={(row: PageTransaction) => `${row.type}-${row.id}`}
-            totalCount={filteredTransactions.length}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            pageSize={pageSize}
-            onPageSizeChange={setPageSize}
-            onSearch={setSearchTerm}
-            searchable={true}
-            middleRowLeft={
-              <div className="w-1/2">
-                <DatePicker
-                  startDate={dateRange[0]}
-                  endDate={dateRange[1]}
-                  onChange={(update: [Date | null, Date | null]) => { setDateRange(update); setCurrentPage(1); }}
-                  isClearable={true}
-                  placeholderText="Filter by date range"
-                  selectsRange={true}
-                />
-              </div>
-            }
-            middleRowRight={
-              <div className="w-48">
-                <Select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  options={[
-                    { value: 'all', label: 'All Transactions' },
-                    { value: 'receipt', label: 'Expenses' },
-                    { value: 'income', label: 'Income' },
-                    { value: 'transfer', label: 'Transfers' },
-                    { value: 'debt_repayment', label: 'Debt Repayments' },
-                  ]}
-                />
-              </div>
-            }
+          <TransactionDataTable 
+            instanceId={`payment-method-${id}`}
+            fixedFilters={{ method: id }} 
+            hideColumns={['method']}
+            onRefetch={handleRefetch}
           />
 
           <TransferModal
             isOpen={isTransferModalOpen}
             onClose={() => setIsTransferModalOpen(false)}
-            onSave={handleTransferSave}
+            onSave={handleRefetch}
             topUpToEdit={transferToEdit}
             paymentMethodId={id!}
             currentBalance={balanceData?.balance || 0}
-          />
-
-          <ConfirmModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onConfirm={handleDelete}
-            title={`Delete ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}`}
-            message={`Are you sure you want to permanently delete this ${getTransactionTypeDisplayName(itemToDelete?.type || 'receipt')}? This action cannot be undone.`}
-            isDatabaseTransaction
-            successToastMessage="Transaction deleted successfully"
-            errorToastMessage="Failed to delete transaction"
-            loadingMessage="Deleting transaction..."
           />
 
           <Modal 

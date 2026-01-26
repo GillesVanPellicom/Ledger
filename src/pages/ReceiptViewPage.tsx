@@ -56,6 +56,7 @@ import ButtonGroup from '../components/ui/ButtonGroup';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import Badge, { BadgeVariant } from '../components/ui/Badge';
 import { useQueryClient } from '@tanstack/react-query';
+import NotFoundState from '../components/ui/NotFoundState';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -416,7 +417,7 @@ const ReceiptViewPage: React.FC = () => {
   }
 
   if (!receipt) {
-    return <div className="text-center text-font-1">Expense not found.</div>;
+    return <NotFoundState title="Expense Not Found" message="The expense you're looking for might have been deleted or moved." />;
   }
 
   return (

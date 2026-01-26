@@ -65,23 +65,65 @@ interface FullReceipt extends Receipt {
 
 interface TransactionDataTableProps {
   onRefetch?: () => void;
+  fixedFilters?: {
+    method?: string;
+    recipient?: string;
+    category?: string;
+    debtor?: string;
+    type?: string;
+  };
+  hideColumns?: string[];
+  instanceId?: string; // Optional ID to persist state per instance
 }
 
-const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch }) => {
+const initialFilters = {
+  type: 'all',
+  debt: 'all',
+  repayment: 'all',
+  expenseType: 'all',
+  tentative: 'all',
+  attachment: 'all',
+  recipient: 'all',
+  category: 'all',
+  incomeEntity: 'all',
+  debtor: 'all',
+  fromMethod: 'all',
+  toMethod: 'all',
+  method: 'all',
+};
+
+const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, fixedFilters = {}, hideColumns = [], instanceId }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings } = useSettingsStore();
   const deleteReceiptMutation = useDeleteReceipt();
   const { generatePdf, isGenerating: isGeneratingPdf, progress: pdfProgress } = usePdfGenerator();
 
-  const {
-    currentPage, setCurrentPage,
-    pageSize, setPageSize,
-    searchTerm, setSearchTerm,
-    appliedDateRange, setDateRange,
-    appliedFilters, setFilters,
-    resetFilters
-  } = useReceiptsStore();
+  const store = useReceiptsStore();
+  
+  // Get state for this specific instance or the global state
+  const instanceState = instanceId ? (store.instances[instanceId] || {
+    currentPage: 1,
+    pageSize: 10,
+    searchTerm: '',
+    appliedDateRange: [null, null],
+    appliedFilters: initialFilters,
+  }) : {
+    currentPage: store.currentPage,
+    pageSize: store.pageSize,
+    searchTerm: store.searchTerm,
+    appliedDateRange: store.appliedDateRange,
+    appliedFilters: store.appliedFilters,
+  };
+
+  const { currentPage, pageSize, searchTerm, appliedDateRange, appliedFilters } = instanceState;
+
+  const setCurrentPage = (page: number) => store.setCurrentPage(page, instanceId);
+  const setPageSize = (size: number) => store.setPageSize(size, instanceId);
+  const setSearchTerm = (term: string) => store.setSearchTerm(term, instanceId);
+  const setDateRange = (range: [string | null, string | null]) => store.setDateRange(range, instanceId);
+  const setFilters = (f: any) => store.setFilters(f, instanceId);
+  const resetFilters = () => store.resetFilters(instanceId);
 
   const debtEnabled = settings.modules.debt?.enabled;
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
@@ -132,18 +174,18 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch }
     searchTerm,
     startDate: appliedDateRange[0] ? parseISO(appliedDateRange[0]) : null,
     endDate: appliedDateRange[1] ? parseISO(appliedDateRange[1]) : null,
-    typeFilter: appliedFilters.type,
+    typeFilter: fixedFilters.type || appliedFilters.type,
     debtFilter: appliedFilters.debt,
     repaymentFilter: appliedFilters.repayment,
     expenseTypeFilter: appliedFilters.expenseType,
     tentativeFilter: appliedFilters.tentative,
     attachmentFilter: appliedFilters.attachment,
-    recipientFilter: appliedFilters.recipient,
-    categoryFilter: appliedFilters.category,
-    debtorFilter: appliedFilters.debtor,
+    recipientFilter: fixedFilters.recipient || appliedFilters.recipient,
+    categoryFilter: fixedFilters.category || appliedFilters.category,
+    debtorFilter: fixedFilters.debtor || appliedFilters.debtor,
     fromMethodFilter: appliedFilters.fromMethod,
     toMethodFilter: appliedFilters.toMethod,
-    methodFilter: appliedFilters.method,
+    methodFilter: fixedFilters.method || appliedFilters.method,
     debtEnabled
   });
 
@@ -221,7 +263,7 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch }
     { header: 'Note', accessor: 'note', width: '23%' },
   ];
 
-  if (paymentMethodsEnabled) {
+  if (paymentMethodsEnabled && !hideColumns.includes('method')) {
     columns.push({ header: 'Method', accessor: 'methodName', width: '15%' });
   }
 
@@ -527,40 +569,12 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch }
 
   const handleResetFilters = () => {
     resetFilters();
-    setPendingFilters({
-      type: 'all',
-      debt: 'all',
-      repayment: 'all',
-      expenseType: 'all',
-      tentative: 'all',
-      attachment: 'all',
-      recipient: 'all',
-      category: 'all',
-      incomeEntity: 'all',
-      debtor: 'all',
-      fromMethod: 'all',
-      toMethod: 'all',
-      method: 'all',
-    });
+    setPendingFilters(initialFilters);
     setPendingDateRange([null, null]);
   };
 
   const resetPendingFilters = () => {
-    setPendingFilters({
-      type: 'all',
-      debt: 'all',
-      repayment: 'all',
-      expenseType: 'all',
-      tentative: 'all',
-      attachment: 'all',
-      recipient: 'all',
-      category: 'all',
-      incomeEntity: 'all',
-      debtor: 'all',
-      fromMethod: 'all',
-      toMethod: 'all',
-      method: 'all',
-    });
+    setPendingFilters(initialFilters);
     setPendingDateRange([null, null]);
   };
 
@@ -667,14 +681,16 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch }
         <FilterOption title="Date Range" onReset={() => setPendingDateRange([null, null])} isModified={pendingDateRange[0] !== null || pendingDateRange[1] !== null}>
           <DatePicker selectsRange startDate={pendingDateRange[0]} endDate={pendingDateRange[1]} onChange={(update: any) => setPendingDateRange(update)} isClearable={true} placeholderText="Filter by date range" />
         </FilterOption>
-        <FilterOption title="Transaction Type" onReset={() => handlePendingFilterChange('type', 'all')} isModified={pendingFilters.type !== 'all'}>
-          <Combobox options={typeFilterOptions} value={pendingFilters.type} onChange={val => handlePendingFilterChange('type', val)} />
-        </FilterOption>
+        {!fixedFilters.type && (
+          <FilterOption title="Transaction Type" onReset={() => handlePendingFilterChange('type', 'all')} isModified={pendingFilters.type !== 'all'}>
+            <Combobox options={typeFilterOptions} value={pendingFilters.type} onChange={val => handlePendingFilterChange('type', val)} />
+          </FilterOption>
+        )}
 
-        {pendingFilters.type === 'paid_expense' && (
+        {(pendingFilters.type === 'paid_expense' || fixedFilters.type === 'paid_expense' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
           <>
             <Divider text="Expense Filters" className="my-4" />
-            {paymentMethodsEnabled && (
+            {paymentMethodsEnabled && !fixedFilters.method && (
               <FilterOption title="Method" onReset={() => handlePendingFilterChange('method', 'all')} isModified={pendingFilters.method !== 'all'}>
                 <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
               </FilterOption>
@@ -698,52 +714,64 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch }
             <FilterOption title="Attachments" onReset={() => handlePendingFilterChange('attachment', 'all')} isModified={pendingFilters.attachment !== 'all'}>
               <Combobox options={attachmentFilterOptions} value={pendingFilters.attachment} onChange={val => handlePendingFilterChange('attachment', val)} />
             </FilterOption>
-            <FilterOption title="Recipient" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
-              <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
-            </FilterOption>
+            {!fixedFilters.recipient && (
+              <FilterOption title="Recipient" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
+                <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
+              </FilterOption>
+            )}
           </>
         )}
 
-        {pendingFilters.type === 'income' && (
+        {(pendingFilters.type === 'income' || fixedFilters.type === 'income' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
           <>
             <Divider text="Income Filters" className="my-4" />
-            {paymentMethodsEnabled && (
+            {paymentMethodsEnabled && !fixedFilters.method && (
               <FilterOption title="Method" onReset={() => handlePendingFilterChange('method', 'all')} isModified={pendingFilters.method !== 'all'}>
                 <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
               </FilterOption>
             )}
-            <FilterOption title="Source" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
-              <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
-            </FilterOption>
-            <FilterOption title="Category" onReset={() => handlePendingFilterChange('category', 'all')} isModified={pendingFilters.category !== 'all'}>
-              <Combobox options={[{ value: 'all', label: 'All' }, ...categories.map(c => ({ value: String(c.CategoryID), label: c.CategoryName }))]} value={pendingFilters.category} onChange={val => handlePendingFilterChange('category', val)} />
-            </FilterOption>
+            {!fixedFilters.recipient && (
+              <FilterOption title="Source" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
+                <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
+              </FilterOption>
+            )}
+            {!fixedFilters.category && (
+              <FilterOption title="Category" onReset={() => handlePendingFilterChange('category', 'all')} isModified={pendingFilters.category !== 'all'}>
+                <Combobox options={[{ value: 'all', label: 'All' }, ...categories.map(c => ({ value: String(c.CategoryID), label: c.CategoryName }))]} value={pendingFilters.category} onChange={val => handlePendingFilterChange('category', val)} />
+              </FilterOption>
+            )}
           </>
         )}
 
-        {pendingFilters.type === 'repayment' && (
+        {(pendingFilters.type === 'repayment' || fixedFilters.type === 'repayment' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
           <>
             <Divider text="Repayment Filters" className="my-4" />
-            {paymentMethodsEnabled && (
+            {paymentMethodsEnabled && !fixedFilters.method && (
               <FilterOption title="Method" onReset={() => handlePendingFilterChange('method', 'all')} isModified={pendingFilters.method !== 'all'}>
                 <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
               </FilterOption>
             )}
-            <FilterOption title="Entity" onReset={() => handlePendingFilterChange('debtor', 'all')} isModified={pendingFilters.debtor !== 'all'}>
-              <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.debtor} onChange={val => handlePendingFilterChange('debtor', val)} />
-            </FilterOption>
+            {!fixedFilters.debtor && (
+              <FilterOption title="Entity" onReset={() => handlePendingFilterChange('debtor', 'all')} isModified={pendingFilters.debtor !== 'all'}>
+                <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.debtor} onChange={val => handlePendingFilterChange('debtor', val)} />
+              </FilterOption>
+            )}
           </>
         )}
 
-        {pendingFilters.type === 'transfer' && (
+        {(pendingFilters.type === 'transfer' || fixedFilters.type === 'transfer' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
           <>
             <Divider text="Transfer Filters" className="my-4" />
-            <FilterOption title="From Method" onReset={() => handlePendingFilterChange('fromMethod', 'all')} isModified={pendingFilters.fromMethod !== 'all'}>
-              <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.fromMethod} onChange={val => handlePendingFilterChange('fromMethod', val)} />
-            </FilterOption>
-            <FilterOption title="To Method" onReset={() => handlePendingFilterChange('toMethod', 'all')} isModified={pendingFilters.toMethod !== 'all'}>
-              <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.toMethod} onChange={val => handlePendingFilterChange('toMethod', val)} />
-            </FilterOption>
+            {!fixedFilters.method && (
+              <>
+                <FilterOption title="From Method" onReset={() => handlePendingFilterChange('fromMethod', 'all')} isModified={pendingFilters.fromMethod !== 'all'}>
+                  <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.fromMethod} onChange={val => handlePendingFilterChange('fromMethod', val)} />
+                </FilterOption>
+                <FilterOption title="To Method" onReset={() => handlePendingFilterChange('toMethod', 'all')} isModified={pendingFilters.toMethod !== 'all'}>
+                  <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.toMethod} onChange={val => handlePendingFilterChange('toMethod', val)} />
+                </FilterOption>
+              </>
+            )}
           </>
         )}
       </FilterModal>

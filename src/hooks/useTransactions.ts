@@ -208,8 +208,16 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         queries = [expenseQuery, incomeQuery, transferQuery, repaymentQuery];
       } else if (typeFilter === 'expense' || typeFilter === 'paid_expense') {
         queries = [expenseQuery];
+        // If method is filtered, include transfers as potential expenses (outgoing)
+        if (methodFilter && methodFilter !== 'all') {
+          queries.push(transferQuery);
+        }
       } else if (typeFilter === 'income') {
-        queries = [incomeQuery];
+        queries = [incomeQuery, repaymentQuery];
+        // If method is filtered, include transfers as potential income (incoming)
+        if (methodFilter && methodFilter !== 'all') {
+          queries.push(transferQuery);
+        }
       } else if (typeFilter === 'transfer') {
         queries = [transferQuery];
       } else if (typeFilter === 'repayment') {
@@ -265,6 +273,11 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           whereClauses.push("recipientId = ?");
           queryParams.push(recipientFilter);
         }
+        // If method is filtered, in the expense tab we only show money going OUT
+        if (methodFilter && methodFilter !== 'all') {
+          whereClauses.push("(type != 'transfer' OR fromMethodId = ?)");
+          queryParams.push(methodFilter);
+        }
       } else if (typeFilter === 'income') {
         if (recipientFilter && recipientFilter !== 'all') {
           whereClauses.push("recipientId = ?");
@@ -273,6 +286,11 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         if (categoryFilter && categoryFilter !== 'all') {
           whereClauses.push("categoryId = ?");
           queryParams.push(categoryFilter);
+        }
+        // If method is filtered, in the income tab we only show money coming IN
+        if (methodFilter && methodFilter !== 'all') {
+          whereClauses.push("(type != 'transfer' OR toMethodId = ?)");
+          queryParams.push(methodFilter);
         }
       } else if (typeFilter === 'repayment') {
         if (debtorFilter && debtorFilter !== 'all') {
@@ -331,7 +349,20 @@ export const useTransactions = (params: FetchTransactionsParams) => {
       queryParams.push(pageSize, offset);
 
       const transactions = await db.query<Transaction>(finalQuery, queryParams);
-      return { transactions, totalCount };
+      
+      // Adjust transfer amounts based on method filter
+      const adjustedTransactions = transactions.map(t => {
+        if (t.type === 'transfer' && methodFilter && methodFilter !== 'all') {
+          if (String(t.fromMethodId) === String(methodFilter)) {
+            return { ...t, amount: -Math.abs(t.amount) };
+          } else if (String(t.toMethodId) === String(methodFilter)) {
+            return { ...t, amount: Math.abs(t.amount) };
+          }
+        }
+        return t;
+      });
+
+      return { transactions: adjustedTransactions, totalCount };
     },
   });
 };

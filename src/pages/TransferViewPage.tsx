@@ -22,6 +22,7 @@ import {useErrorStore} from '../store/useErrorStore';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import TransferModal from '../components/payment/TransferModal';
+import NotFoundState from '../components/ui/NotFoundState';
 
 const TransferViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -75,7 +76,7 @@ const TransferViewPage: React.FC = () => {
   }
 
   if (!transfer) {
-    return <div className="text-center text-font-1">Transfer not found.</div>;
+    return <NotFoundState title="Transfer Not Found" message="The transfer you're looking for might have been deleted or moved." />;
   }
 
   return (
@@ -98,7 +99,7 @@ const TransferViewPage: React.FC = () => {
               </Button>
             </Tooltip>
             <Tooltip content="Edit">
-              <Button variant="ghost" size="icon" onClick={() => setIsEditModalOpen(true)}>
+              <Button variant="ghost" size="icon" onClick={() => navigate(`/receipts/edit/${id}`)}>
                 <Pencil className="h-5 w-5"/>
               </Button>
             </Tooltip>
