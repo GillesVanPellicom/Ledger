@@ -26,8 +26,7 @@ import {
   RotateCcw,
   Filter,
   FileText,
-  ArrowDownLeft,
-  ArrowUpRight
+  ArrowDownLeft
 } from 'lucide-react';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
@@ -747,8 +746,9 @@ const ReceiptViewPage: React.FC = () => {
                       {receipt?.OwedToDebtorID && (
                         <Card
                           className={cn(
-                            "p-4 border border-border",
-                            !receipt?.IsTentative && "cursor-pointer hover:bg-field-hover"
+                            "p-4 transition-all duration-200 border-2",
+                            receipt.Status === 'paid' ? "border-green/30 bg-green/5" : "border-red/30 bg-red/5",
+                            !receipt?.IsTentative && "cursor-pointer hover:border-accent/50"
                           )}
                           onClick={() => {
                             if (receipt.Status === 'unpaid') {
@@ -785,7 +785,7 @@ const ReceiptViewPage: React.FC = () => {
                               <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
                             <div className="text-right flex-shrink-0 pl-2">
-                              <p className="text-sm text-font-2">Full Amount</p>
+                              <p className="text-sm text-font-2">Repayment</p>
                             </div>
                           </div>
                         </Card>
@@ -795,24 +795,18 @@ const ReceiptViewPage: React.FC = () => {
                         <Card
                           key={debtor.debtorId}
                           className={cn(
-                            "p-4 border border-border",
+                            "p-4 transition-all duration-200",
                             !receipt?.IsTentative && "cursor-pointer hover:bg-field-hover"
                           )}
                           onClick={() => handleSettleClick(debtor)}
                         >
                           <div className="flex justify-between items-start">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 mb-1">
-                                <ArrowUpRight className={cn("h-4 w-4", debtor.isPaid ? "text-green" : "text-red")} />
-                                <span className="text-xs font-semibold text-font-2 uppercase tracking-wider">Debt ({debtor.name})</span>
-                              </div>
-                              <Link to={`/entities/${debtor.debtorId}`}
-                                    className="font-medium hover:underline flex items-center gap-1.5 group"
-                                    onClick={(e) => e.stopPropagation()}>
-                                <span className="text-font-1">{debtor.name}</span>
-                                <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
-                              </Link>
-                            </div>
+                            <Link to={`/entities/${debtor.debtorId}`}
+                                  className="font-medium hover:underline flex items-center gap-1.5 group"
+                                  onClick={(e) => e.stopPropagation()}>
+                              <span className="text-font-1">{debtor.name}</span>
+                              <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
+                            </Link>
                             <div className="flex items-center">
                               {debtor.isPaid ? (
                                 <Tooltip content={`Paid on ${payments.find(p => p.DebtorID === debtor.debtorId)?.PaidDate}`}>
@@ -840,13 +834,13 @@ const ReceiptViewPage: React.FC = () => {
                         </Card>
                       ))}
                       {!!debtSummary.ownShare && (
-                        <Card className="p-4 border border-border">
+                        <Card className="p-4">
                           <div className="flex justify-between items-start">
                             <p className="font-medium text-font-1">Own Share</p>
-                            <User className="h-5 w-5 text-blue"/>
+                            <User className="h-5 w-5 text-accent"/>
                           </div>
                           <div className="flex justify-between items-baseline mt-1">
-                            <p className="font-bold text-blue truncate"
+                            <p className="font-bold text-accent truncate"
                                style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                               <MoneyDisplay amount={debtSummary.ownShare.amount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
