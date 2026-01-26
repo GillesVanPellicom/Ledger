@@ -96,9 +96,6 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
     if (!transferTo) newErrors.transferTo = 'Please select a destination account.';
     if (transferFrom && transferTo && transferFrom === transferTo) newErrors.transferTo = 'Origin and destination must be different.';
     if (!formData.amount || amount <= 0) newErrors.amount = 'Amount must be greater than 0.';
-    if (transferFrom && amount > fromMethodBalance) {
-      newErrors.amount = `Insufficient funds. Max: €${fromMethodBalance.toFixed(2)}`;
-    }
     if (!formData.date) newErrors.date = 'Date is required.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -154,17 +151,6 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
 
   const methodOptions = useMemo(() => activePaymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })), [activePaymentMethods]);
   
-  const originOptions = useMemo(() => activePaymentMethods.map(pm => {
-    const balance = methodBalances[String(pm.PaymentMethodID)] || 0;
-    const isDisabled = balance <= 0;
-    return {
-      value: String(pm.PaymentMethodID),
-      label: pm.PaymentMethodName,
-      disabled: isDisabled,
-      tooltip: isDisabled ? "Insufficient funds" : undefined
-    };
-  }), [activePaymentMethods, methodBalances]);
-
   return (
     <Modal
       isOpen={isOpen}
@@ -187,7 +173,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
             <div className="flex-1 flex flex-col gap-2">
               <p className="text-sm font-medium text-font-1 text-center">Origin</p>
               <Combobox
-                options={topUpToEdit ? methodOptions : originOptions}
+                options={methodOptions}
                 value={transferFrom}
                 onChange={setTransferFrom}
                 error={errors.transferFrom}
@@ -230,7 +216,6 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
               onIncrement={() => setFormData(prev => ({ ...prev, amount: String(Number(prev.amount) + 1) }))}
               onDecrement={() => setFormData(prev => ({ ...prev, amount: String(Math.max(0, Number(prev.amount) - 1)) }))}
               min={0}
-              max={fromMethodBalance || undefined}
               precision={2}
               error={errors.amount}
             />
