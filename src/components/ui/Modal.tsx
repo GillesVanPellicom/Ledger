@@ -5,6 +5,7 @@ import { cn } from '../../utils/cn';
 import Button from './Button';
 import { focusStack } from '../../utils/focusStack';
 import { toast } from 'sonner';
+import { nanoid } from 'nanoid';
 
 interface ModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
   const [isRendered, setIsRendered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const modalId = useRef(Math.random().toString(36).substr(2, 9));
+  const modalId = useRef(nanoid(9));
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
   const handleEnterPress = useCallback(async () => {

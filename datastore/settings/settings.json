@@ -69,7 +69,7 @@
       "datastore": 1,
       "completion": 1
     },
-    "inProgress": false,
+    "inProgress": true,
     "debugConfig": {
       "skipHello": false,
       "autoApplyDefaults": false,

@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { task, info, success, done } from './styling.js';
 import { format } from 'date-fns';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,16 +93,20 @@ function getQuery(db, sql, params = []) {
     return new Promise((resolve, reject) => db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows)));
 }
 
+function secureRandom() {
+    return crypto.randomInt(0, 1000000) / 1000000;
+}
+
 function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return crypto.randomInt(min, max + 1);
 }
 
 function getRandomElement(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
+    return arr[crypto.randomInt(0, arr.length)];
 }
 
 function generateRandomDate(start, end) {
-    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+    return new Date(start.getTime() + secureRandom() * (end.getTime() - start.getTime()));
 }
 
 function calculateTotalShares(ownShares, splits) {
@@ -210,7 +215,7 @@ async function seed() {
         for (let i = 0; i < 10000; i++) {
             const name = getRandomElement(productNames).toLowerCase();
             const brand = getRandomElement(brands);
-            const categoryId = Math.random() < 0.95 ? getRandomElement(categoryIds) : null;
+            const categoryId = secureRandom() < 0.95 ? getRandomElement(categoryIds) : null;
             await runQuery(db, insert, [name, brand, getRandomElement(sizes), getRandomElement(unitIds), categoryId]);
         }
     });
@@ -251,30 +256,30 @@ async function seed() {
                 for (let i = 0; i < 4000; i++) {
                     const date = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
                     const recipientId = getRandomElement(storeEntityIds);
-                    const note = Math.random() > 0.8 ? `Grote boodschappen week ${i % 52 + 1}` : null;
+                    const note = secureRandom() > 0.8 ? `Grote boodschappen week ${i % 52 + 1}` : null;
                     const paymentMethodId = getRandomElement(paymentMethodIds);
 
                     const pmName = pmMap[paymentMethodId];
                     const roleName = pmRoles[pmName];
                     const role = roles[roleName] || { debtProb: 0.1, unpaidProb: 0.1 };
 
-                    const isPaidBySomeoneElse = Math.random() < role.unpaidProb;
-                    const isRepaid = isPaidBySomeoneElse && Math.random() > 0.5;
+                    const isPaidBySomeoneElse = secureRandom() < role.unpaidProb;
+                    const isRepaid = isPaidBySomeoneElse && secureRandom() > 0.5;
                     
                     const status = (isPaidBySomeoneElse && !isRepaid) ? 'unpaid' : 'paid';
                     const owedToEntityID = isPaidBySomeoneElse ? getRandomElement(debtEntityIds) : null;
                     const receiptPaymentMethodId = (isPaidBySomeoneElse && !isRepaid) ? null : paymentMethodId;
 
-                    const isTentative = Math.random() < 0.05;
-                    const isNonItemised = Math.random() < 0.1;
+                    const isTentative = secureRandom() < 0.05;
+                    const isNonItemised = secureRandom() < 0.1;
                     
-                    const hasDiscount = Math.random() < 0.2;
+                    const hasDiscount = secureRandom() < 0.2;
                     const discount = hasDiscount ? getRandomInt(5, 20) : 0;
 
-                    const hasDebt = !isPaidBySomeoneElse && Math.random() < role.debtProb;
+                    const hasDebt = !isPaidBySomeoneElse && secureRandom() < role.debtProb;
                     let splitType = 'none';
                     if (hasDebt) {
-                        splitType = Math.random() > 0.5 ? 'line_item' : 'total_split';
+                        splitType = secureRandom() > 0.5 ? 'line_item' : 'total_split';
                     }
                     
                     let ownShares = null;
@@ -284,7 +289,7 @@ async function seed() {
                         if (err) return reject(err);
                         const receiptId = this.lastID;
 
-                        if (Math.random() < 0.1 && seedImages.length > 0) {
+                        if (secureRandom() < 0.1 && seedImages.length > 0) {
                             const numImages = getRandomInt(1, 3);
                             for (let k = 0; k < numImages; k++) {
                                 const img = getRandomElement(seedImages);
@@ -295,7 +300,7 @@ async function seed() {
                         }
                         
                         if (isNonItemised) {
-                            const total = (Math.random() * 100 + 5).toFixed(2);
+                            const total = (secureRandom() * 100 + 5).toFixed(2);
                             db.run('UPDATE Expenses SET NonItemisedTotal = ? WHERE ExpenseID = ?', [total, receiptId]);
                         } else {
                             const numItems = getRandomInt(1, 25);
@@ -304,14 +309,14 @@ async function seed() {
 
                             for (let j = 0; j < numItems; j++) {
                                 let debtorId = null;
-                                if (splitType === 'line_item' && Math.random() > 0.3) {
+                                if (splitType === 'line_item' && secureRandom() > 0.3) {
                                     debtorId = getRandomElement(debtEntityIds);
                                     if(debtorId) receiptDebtors.add(debtorId);
                                 }
                                 lineItemsToInsert.push({
                                     productId: getRandomElement(productIds),
                                     qty: getRandomInt(1, 5),
-                                    price: (Math.random() * 20 + 0.5).toFixed(2),
+                                    price: (secureRandom() * 20 + 0.5).toFixed(2),
                                     debtorId: debtorId
                                 });
                             }
@@ -324,7 +329,7 @@ async function seed() {
                                     if (!selectedDebtors.includes(d)) selectedDebtors.push(d);
                                 }
                                 
-                                const ownSharePart = Math.random() > 0.3 ? getRandomInt(1, 3) : 0;
+                                const ownSharePart = secureRandom() > 0.3 ? getRandomInt(1, 3) : 0;
                                 const splits = [];
 
                                 selectedDebtors.forEach(debtorId => {
@@ -338,7 +343,7 @@ async function seed() {
                                 db.run('UPDATE Expenses SET OwnShares = ?, TotalShares = ? WHERE ExpenseID = ?', [ownSharePart, currentTotalShares, receiptId]);
                             }
 
-                            const hasExclusions = hasDiscount && Math.random() < 0.3;
+                            const hasExclusions = hasDiscount && secureRandom() < 0.3;
                             const exclusionCount = hasExclusions ? getRandomInt(1, Math.floor(numItems / 2)) : 0;
                             const excludedIndexes = new Set();
                             while(excludedIndexes.size < exclusionCount) {
@@ -350,7 +355,7 @@ async function seed() {
                                 db.run(insertLineItem, [receiptId, item.productId, item.qty, item.price, item.debtorId, isExcluded]);
                             });
 
-                            if (receiptDebtors.size > 0 && Math.random() < 0.15) {
+                            if (receiptDebtors.size > 0 && secureRandom() < 0.15) {
                                 const paymentDate = format(generateRandomDate(new Date(date), new Date()), 'yyyy-MM-dd');
                                 receiptDebtors.forEach(debtorId => {
                                     db.run(insertPayment, [receiptId, debtorId, paymentDate]);
@@ -395,10 +400,10 @@ async function seed() {
             for (let i = 0; i < numTopUps; i++) {
                 const topUpAmount = getRandomInt(AVG_SPENT_PER_RECEIPT * 0.5, AVG_SPENT_PER_RECEIPT * role.topUpMultiplier);
                 const topUpDate = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
-                const topUpNote = Math.random() > 0.5 ? getRandomElement(topUpNotes) : null;
+                const topUpNote = secureRandom() > 0.5 ? getRandomElement(topUpNotes) : null;
                 
-                const recipientId = Math.random() > 0.2 ? getRandomElement(entities).EntityID : null;
-                const categoryId = Math.random() > 0.2 ? getRandomElement(categories).CategoryID : null;
+                const recipientId = secureRandom() > 0.2 ? getRandomElement(entities).EntityID : null;
+                const categoryId = secureRandom() > 0.2 ? getRandomElement(categories).CategoryID : null;
 
                 await runQuery(db, 'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, RecipientID, CategoryID) VALUES (?, ?, ?, ?, ?, ?)', 
                     [pm.PaymentMethodID, topUpAmount, topUpDate, topUpNote, recipientId, categoryId]);
@@ -426,7 +431,7 @@ async function seed() {
 
                     const amount = getRandomInt(50, 1000);
                     const date = format(generateRandomDate(new Date(2023, 0, 1), new Date()), 'yyyy-MM-dd');
-                    const note = Math.random() > 0.5 ? 'Savings transfer' : 'Covering expenses';
+                    const note = secureRandom() > 0.5 ? 'Savings transfer' : 'Covering expenses';
 
                     db.run(insertTransfer, [fromMethod.PaymentMethodID, toMethod.PaymentMethodID, amount, date, note], function(err) {
                         if (err) return reject(err);

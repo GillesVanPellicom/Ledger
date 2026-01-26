@@ -1,6 +1,7 @@
 import React, { forwardRef, InputHTMLAttributes } from 'react';
 import { cn } from '../../utils/cn';
 import { Check } from 'lucide-react';
+import { nanoid } from 'nanoid';
 
 interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -8,7 +9,7 @@ interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ className, label, error, ...props }, ref) => {
-  const id = props.id || `checkbox-${Math.random().toString(36).substr(2, 9)}`;
+  const id = React.useMemo(() => props.id || `checkbox-${nanoid(9)}`, [props.id]);
 
   return (
     <div className="flex flex-col gap-1">
