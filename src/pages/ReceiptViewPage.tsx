@@ -26,7 +26,9 @@ import {
   RotateCcw,
   Filter,
   FileText,
-  ArrowDownLeft
+  ArrowDownLeft,
+  ArrowUpRight,
+  ArrowDownLeft as ArrowDownLeftIcon
 } from 'lucide-react';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
@@ -121,8 +123,9 @@ const ReceiptViewPage: React.FC = () => {
   const [unsettleConfirmation, setUnsettleConfirmation] = useState<{
     isOpen: boolean,
     paymentId: number | null,
-    topUpId: number | null
-  }>({isOpen: false, paymentId: null, topUpId: null});
+    topUpId: number | null,
+    type: 'me' | 'them'
+  }>({isOpen: false, paymentId: null, topUpId: null, type: 'them'});
   const [isMarkAsPaidModalOpen, setIsMarkAsPaidModalOpen] = useState<boolean>(false);
   const [makePermanentModalOpen, setMakePermanentModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -236,7 +239,7 @@ const ReceiptViewPage: React.FC = () => {
     if (receipt?.IsTentative) return;
     const payment = (payments || []).find(p => p.DebtorID === debtor.debtorId);
     if (payment) {
-      confirmUnsettleDebt(payment.PaymentID, payment.TopUpID);
+      confirmUnsettleDebt(payment.PaymentID, payment.TopUpID, 'them');
     } else {
       handleSettleDebt(debtor);
     }
@@ -254,24 +257,31 @@ const ReceiptViewPage: React.FC = () => {
     setIsSettlementModalOpen(true);
   };
 
-  const confirmUnsettleDebt = (paymentId: number, topUpId: number | undefined) => {
-    setUnsettleConfirmation({isOpen: true, paymentId, topUpId: topUpId || null});
+  const confirmUnsettleDebt = (paymentId: number | null, topUpId: number | undefined, type: 'me' | 'them') => {
+    setUnsettleConfirmation({isOpen: true, paymentId, topUpId: topUpId || null, type});
   };
 
   const handleUnsettleDebt = async () => {
-    const {paymentId, topUpId} = unsettleConfirmation;
-    if (!paymentId) return;
+    const {paymentId, topUpId, type} = unsettleConfirmation;
+    
     try {
-      await db.execute('DELETE FROM ExpenseEntityPayments WHERE ExpenseEntityPaymentID = ?', [paymentId]);
-      if (topUpId) {
-        await db.execute('DELETE FROM Income WHERE IncomeID = ?', [topUpId]);
+      if (type === 'me') {
+        await db.execute(
+          'UPDATE Expenses SET Status = ? WHERE ExpenseID = ?',
+          ['unpaid', id]
+        );
+      } else if (paymentId) {
+        await db.execute('DELETE FROM ExpenseEntityPayments WHERE ExpenseEntityPaymentID = ?', [paymentId]);
+        if (topUpId) {
+          await db.execute('DELETE FROM Income WHERE IncomeID = ?', [topUpId]);
+        }
       }
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (error) {
       throw error;
     } finally {
-      setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null});
+      setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null, type: 'them'});
     }
   };
 
@@ -443,7 +453,7 @@ const ReceiptViewPage: React.FC = () => {
         <div className="py-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
 
           {/* Left Column (Notes, Filters, Images, Items) */}
-          <div className="xl:col-span-2 space-y-6 xl:col-start-1 xl:row-start-1">
+          <div className="xl:col-span-2 xl:col-start-1 xl:row-start-1">
             {receipt?.ReceiptNote && (
               <Card className="mb-6">
                 <div className="p-4 flex items-start gap-3">
@@ -456,7 +466,7 @@ const ReceiptViewPage: React.FC = () => {
             )}
 
             {/* Summary Card - Moved to top for responsive layout */}
-            <div className="xl:hidden">
+            <div className="xl:hidden mb-6">
               <Card>
                 <div className="p-8">
                   <div className="flex flex-col items-center gap-8">
@@ -536,7 +546,7 @@ const ReceiptViewPage: React.FC = () => {
             </div>
 
             {!!receipt.IsTentative && (
-              <Card className="p-4 border-accent/20 bg-accent/5">
+              <Card className="p-4 border-border bg-accent/5 mb-6">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <Info className="h-5 w-5 text-accent" />
@@ -551,7 +561,7 @@ const ReceiptViewPage: React.FC = () => {
             )}
 
             {images.length > 0 && (
-              <Card>
+              <Card className="mb-6">
                 <div className="p-6">
                   <Gallery images={images.map(i => i.src) as (string | { src: string })[]}/>
                 </div>
@@ -746,13 +756,15 @@ const ReceiptViewPage: React.FC = () => {
                       {receipt?.OwedToDebtorID && (
                         <Card
                           className={cn(
-                            "p-4 transition-all duration-200 border-2",
-                            receipt.Status === 'paid' ? "border-green/30 bg-green/5" : "border-red/30 bg-red/5",
+                            "p-4 border-2 border-border",
+                            receipt.Status === 'paid' ? "bg-green/5" : "bg-red/5",
                             !receipt?.IsTentative && "cursor-pointer hover:border-accent/50"
                           )}
                           onClick={() => {
                             if (receipt.Status === 'unpaid') {
                               setIsMarkAsPaidModalOpen(true);
+                            } else {
+                              confirmUnsettleDebt(null, undefined, 'me');
                             }
                           }}
                         >
@@ -795,18 +807,25 @@ const ReceiptViewPage: React.FC = () => {
                         <Card
                           key={debtor.debtorId}
                           className={cn(
-                            "p-4 transition-all duration-200",
-                            !receipt?.IsTentative && "cursor-pointer hover:bg-field-hover"
+                            "p-4 border-2 border-border",
+                            debtor.isPaid ? "bg-green/5" : "bg-red/5",
+                            !receipt?.IsTentative && "cursor-pointer hover:border-accent/50"
                           )}
                           onClick={() => handleSettleClick(debtor)}
                         >
                           <div className="flex justify-between items-start">
-                            <Link to={`/entities/${debtor.debtorId}`}
-                                  className="font-medium hover:underline flex items-center gap-1.5 group"
-                                  onClick={(e) => e.stopPropagation()}>
-                              <span className="text-font-1">{debtor.name}</span>
-                              <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
-                            </Link>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-1">
+                                <ArrowUpRight className={cn("h-4 w-4", debtor.isPaid ? "text-green" : "text-red")} />
+                                <span className="text-xs font-semibold text-font-2 uppercase tracking-wider">Debt (Them)</span>
+                              </div>
+                              <Link to={`/entities/${debtor.debtorId}`}
+                                    className="font-medium hover:underline flex items-center gap-1.5 group"
+                                    onClick={(e) => e.stopPropagation()}>
+                                <span className="text-font-1">{debtor.name}</span>
+                                <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
+                              </Link>
+                            </div>
                             <div className="flex items-center">
                               {debtor.isPaid ? (
                                 <Tooltip content={`Paid on ${payments.find(p => p.DebtorID === debtor.debtorId)?.PaidDate}`}>
@@ -834,13 +853,21 @@ const ReceiptViewPage: React.FC = () => {
                         </Card>
                       ))}
                       {!!debtSummary.ownShare && (
-                        <Card className="p-4">
+                        <Card className="p-4 border-2 border-border bg-field/5">
                           <div className="flex justify-between items-start">
-                            <p className="font-medium text-font-1">Own Share</p>
-                            <User className="h-5 w-5 text-accent"/>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-1">
+                                <User className="h-4 w-4 text-font-2" />
+                                <span className="text-xs font-semibold text-font-2 uppercase tracking-wider">Own Share</span>
+                              </div>
+                              <p className="font-medium text-font-1">Me</p>
+                            </div>
+                            <div className="flex items-center">
+                               <CheckCircle className="h-5 w-5 text-font-2"/>
+                            </div>
                           </div>
                           <div className="flex justify-between items-baseline mt-1">
-                            <p className="font-bold text-accent truncate"
+                            <p className="font-bold text-font-2 truncate"
                                style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                               <MoneyDisplay amount={debtSummary.ownShare.amount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
@@ -958,10 +985,12 @@ const ReceiptViewPage: React.FC = () => {
 
       <ConfirmModal
         isOpen={unsettleConfirmation.isOpen}
-        onClose={() => setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null})}
+        onClose={() => setUnsettleConfirmation({isOpen: false, paymentId: null, topUpId: null, type: 'them'})}
         onConfirm={handleUnsettleDebt}
         title="Unsettle Debt"
         message={`Are you sure you want to mark this debt as unpaid?`}
+        confirmText="Confirm"
+        variant="primary"
         isDatabaseTransaction
         successToastMessage="Debt unsettled successfully"
         errorToastMessage="Failed to unsettle debt"
