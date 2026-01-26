@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../utils/db';
 import { Product, Category, Entity } from '../types';
 
+export const REFERENCE_DATA_STALE_TIME = 1000 * 60 * 5; // 5 minutes
+
 // --- Products ---
 
 interface FetchProductsParams {
@@ -52,8 +54,7 @@ export const useProducts = (params: FetchProductsParams) => {
       const products = await db.query<Product>(query, queryParams);
       return { products, totalCount };
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: REFERENCE_DATA_STALE_TIME,
     enabled: params.enabled !== false,
   });
 };
@@ -90,8 +91,7 @@ export const useCategories = (params: FetchCategoriesParams) => {
       const categories = await db.query<Category>(query, queryParams);
       return { categories, totalCount };
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: REFERENCE_DATA_STALE_TIME,
     enabled: params.enabled !== false,
   });
 };
@@ -102,8 +102,7 @@ export const useActiveCategories = () => {
     queryFn: async () => {
       return await db.query<Category>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: REFERENCE_DATA_STALE_TIME,
   });
 };
 
@@ -155,8 +154,19 @@ export const useEntities = (params: FetchEntitiesParams) => {
 
       return { entities: entitiesWithBalance, totalCount };
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: REFERENCE_DATA_STALE_TIME,
+  });
+};
+
+export const useActiveEntities = () => {
+  return useQuery({
+    queryKey: ['entities', 'active'],
+    queryFn: async () => {
+      return await db.query<{ EntityID: number; EntityName: string }>(
+        'SELECT EntityID, EntityName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName'
+      );
+    },
+    staleTime: REFERENCE_DATA_STALE_TIME,
   });
 };
 

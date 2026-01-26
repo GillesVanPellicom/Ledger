@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { cn } from '../../utils/cn';
 import { BackgroundGradientAnimation } from './background-gradient-animation';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -37,22 +37,20 @@ export const Header: React.FC<HeaderProps> = ({
   tabs,
 }) => {
   const theme = useSettingsStore((state) => state.settings.theme);
-  const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const rowHeight = minHeight / 4;
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Define main routes that should not have a back button
-  const mainRoutes = ['/', '/income', '/reference-data', '/analytics', '/payment-methods', '/entities'];
+  const mainRoutes = useMemo(() => ['/', '/income', '/reference-data', '/analytics', '/payment-methods', '/entities'], []);
   const isMainRoute = mainRoutes.includes(location.pathname);
 
-  const defaultBackButton = !isMainRoute ? (
+  const defaultBackButton = useMemo(() => !isMainRoute ? (
     <Tooltip content="Go Back">
       <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
         <ArrowLeft className="h-5 w-5" />
       </Button>
     </Tooltip>
-  ) : null;
+  ) : null, [isMainRoute, navigate]);
 
   return (
     <div
@@ -62,7 +60,6 @@ export const Header: React.FC<HeaderProps> = ({
       )}
       style={{ display: 'contents' }}
     >
-      {/* Shared Seamless Background: Sticky logic to match header rows exactly */}
       <div 
         className="sticky z-30 pointer-events-none" 
         style={{ 
@@ -86,15 +83,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Row 1: Top 1/4 - Scrolls away */}
       <div 
         className="relative z-40" 
         style={{ height: `${rowHeight}px` }}
-      >
-        {/* Row 1 is empty space, background shows through from the sticky container */}
-      </div>
+      />
 
-      {/* Row 2 & 3: Middle 2/4 - Sticks to top */}
       <div 
         className="sticky top-0 z-50"
         style={{ height: `${rowHeight * 2}px` }}
@@ -156,15 +149,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Row 4: Bottom 1/4 - Scrolls away */}
       <div 
         className="relative z-40" 
         style={{ height: `${rowHeight}px` }}
-      >
-        {/* Row 4 is empty space, background shows through from the sticky container */}
-      </div>
+      />
 
-      {/* Sticky Border Element */}
       <div 
         className="sticky z-40 border-b border-border pointer-events-none"
         style={{ 

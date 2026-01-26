@@ -30,6 +30,10 @@ interface ComboboxProps {
   addTooltip?: string;
 }
 
+const ITEM_HEIGHT = 36;
+const VISIBLE_ITEMS = 6;
+const LIST_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+
 const Combobox: React.FC<ComboboxProps> = ({
   options,
   value,
@@ -50,13 +54,14 @@ const Combobox: React.FC<ComboboxProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+  const [scrollTop, setScrollTop] = useState(0);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOption = useMemo(() => options.find((option) => option.value === value), [options, value]);
 
   const fuzzySearch = (term: string, text: string) => {
     const search = term.replace(/[\s()]/g, '').toLowerCase();
@@ -71,10 +76,18 @@ const Combobox: React.FC<ComboboxProps> = ({
   };
 
   const filteredOptions = useMemo(() => {
-    return searchTerm
-      ? options.filter((option) => fuzzySearch(searchTerm, option.label))
-      : options;
+    if (!searchTerm) return options;
+    return options.filter((option) => fuzzySearch(searchTerm, option.label));
   }, [searchTerm, options]);
+
+  // Virtualization logic
+  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - 2);
+  const endIndex = Math.min(filteredOptions.length, startIndex + VISIBLE_ITEMS + 4);
+  const visibleOptions = filteredOptions.slice(startIndex, endIndex);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
 
   const handleSelectOption = useCallback((selectedValue: string) => {
     const option = options.find(o => o.value === selectedValue);
@@ -93,7 +106,7 @@ const Combobox: React.FC<ComboboxProps> = ({
         top: `${rect.bottom + window.scrollY + 4}px`,
         left: `${rect.left + window.scrollX}px`,
         width: `${rect.width}px`,
-        zIndex: 9999, // Ensure it's on top
+        zIndex: 9999,
       });
     }
   }, []);
@@ -112,20 +125,25 @@ const Combobox: React.FC<ComboboxProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      // Reset active index when opening
-      const index = options.findIndex(opt => opt.value === value);
+      const index = filteredOptions.findIndex(opt => opt.value === value);
       setActiveIndex(index >= 0 ? index : 0);
       
-      // Focus input after a short delay to ensure rendering is complete
       if (showSearch) {
         requestAnimationFrame(() => {
           inputRef.current?.focus();
         });
       }
+      
+      // Reset scroll on open
+      if (listRef.current) {
+        listRef.current.scrollTop = index >= 0 ? Math.max(0, (index - 2) * ITEM_HEIGHT) : 0;
+        setScrollTop(listRef.current.scrollTop);
+      }
     } else {
       setSearchTerm('');
+      setScrollTop(0);
     }
-  }, [isOpen, value, options, showSearch]);
+  }, [isOpen, value, filteredOptions, showSearch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -185,16 +203,20 @@ const Combobox: React.FC<ComboboxProps> = ({
     };
   }, [isOpen, activeIndex, filteredOptions, handleSelectOption]);
 
+  // Sync scroll with active index
   useEffect(() => {
     if (isOpen && activeIndex >= 0 && listRef.current) {
-      const activeItem = listRef.current.children[activeIndex] as HTMLElement;
-      if (activeItem) {
-        activeItem.scrollIntoView({ block: 'nearest' });
+      const targetScroll = activeIndex * ITEM_HEIGHT;
+      const currentScroll = listRef.current.scrollTop;
+      
+      if (targetScroll < currentScroll) {
+        listRef.current.scrollTop = targetScroll;
+      } else if (targetScroll + ITEM_HEIGHT > currentScroll + LIST_HEIGHT) {
+        listRef.current.scrollTop = targetScroll - LIST_HEIGHT + ITEM_HEIGHT;
       }
     }
   }, [activeIndex, isOpen]);
   
-  // Reset active index when search term changes
   useEffect(() => {
     if (isOpen) {
       setActiveIndex(0);
@@ -224,54 +246,66 @@ const Combobox: React.FC<ComboboxProps> = ({
           <Divider className="shrink-0" />
         </>
       )}
-      <div ref={listRef} className="max-h-60 overflow-auto p-1">
-        {filteredOptions.length > 0 ? (
-          filteredOptions.map((option, index) => {
-            const isActive = index === activeIndex;
-            const isSelected = value === option.value;
-            
-            const optionContent = (
-              <div
-                role="option"
-                aria-selected={isSelected}
-                aria-disabled={option.disabled}
-                data-active={isActive}
-                className={cn(
-                  "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none transition-colors text-font-1",
-                  isActive && !option.disabled ? "bg-field-hover" : "",
-                  option.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-field-hover"
-                )}
-                onClick={() => !option.disabled && handleSelectOption(option.value)}
-                onMouseEnter={() => setActiveIndex(index)}
-              >
-                {isSelected && (
-                  <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                    <Check className="h-4 w-4 text-accent" />
-                  </span>
-                )}
-                <span className="truncate">{option.label}</span>
-              </div>
-            );
-
-            if (option.disabled && option.tooltip) {
-              return (
-                <Tooltip key={option.value} content={option.tooltip} className="w-full block">
-                  {optionContent}
-                </Tooltip>
+      <div 
+        ref={listRef} 
+        onScroll={handleScroll}
+        className="overflow-auto p-1 relative"
+        style={{ height: `${Math.min(LIST_HEIGHT, filteredOptions.length * ITEM_HEIGHT)}px` }}
+      >
+        <div style={{ height: `${filteredOptions.length * ITEM_HEIGHT}px`, position: 'relative' }}>
+          {visibleOptions.length > 0 ? (
+            visibleOptions.map((option, index) => {
+              const actualIndex = startIndex + index;
+              const isActive = actualIndex === activeIndex;
+              const isSelected = value === option.value;
+              
+              const optionContent = (
+                <div
+                  role="option"
+                  aria-selected={isSelected}
+                  aria-disabled={option.disabled}
+                  data-active={isActive}
+                  className={cn(
+                    "absolute left-0 right-0 flex cursor-pointer select-none items-center rounded-md px-2 pl-8 text-sm outline-none transition-colors text-font-1",
+                    isActive && !option.disabled ? "bg-field-hover" : "",
+                    option.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-field-hover"
+                  )}
+                  style={{ 
+                    top: `${actualIndex * ITEM_HEIGHT}px`, 
+                    height: `${ITEM_HEIGHT}px` 
+                  }}
+                  onClick={() => !option.disabled && handleSelectOption(option.value)}
+                  onMouseEnter={() => setActiveIndex(actualIndex)}
+                >
+                  {isSelected && (
+                    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                      <Check className="h-4 w-4 text-accent" />
+                    </span>
+                  )}
+                  <span className="truncate">{option.label}</span>
+                </div>
               );
-            }
 
-            return (
-              <React.Fragment key={option.value}>
-                {optionContent}
-              </React.Fragment>
-            );
-          })
-        ) : (
-          <div className="py-6 text-center text-sm text-font-2">
-            {noResultsText}
-          </div>
-        )}
+              if (option.disabled && option.tooltip) {
+                return (
+                  <Tooltip key={option.value} content={option.tooltip} className="w-full block">
+                    {optionContent}
+                  </Tooltip>
+                );
+              }
+
+              return (
+                <React.Fragment key={option.value}>
+                  {optionContent}
+                </React.Fragment>
+              );
+            })
+          ) : (
+            <div className="py-6 text-center text-sm text-font-2">
+              {noResultsText}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

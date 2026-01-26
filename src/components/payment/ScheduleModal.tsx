@@ -19,7 +19,7 @@ import { parseRecurrenceRule, calculateOccurrences } from '../../logic/incomeSch
 import Checkbox from '../ui/Checkbox';
 import { cn } from '../../utils/cn';
 import CategoryModal from '../categories/CategoryModal';
-import { useActiveCategories, useEntities } from '../../hooks/useReferenceData';
+import { useActiveCategories, useActiveEntities } from '../../hooks/useReferenceData';
 import { useActivePaymentMethods } from '../../hooks/usePaymentMethods';
 
 interface ScheduleModalProps {
@@ -54,10 +54,11 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
   
   const { data: activePaymentMethods = [] } = useActivePaymentMethods();
   const { data: activeCategories = [] } = useActiveCategories();
-  const { data: entitiesData } = useEntities({ page: 1, pageSize: 1000 });
+  const { data: activeEntities = [] } = useActiveEntities();
   
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
+  const [showPastPeriodCheckbox, setShowPastPeriodCheckbox] = useState(false);
 
   const getCurrentDate = useCallback(() => {
     if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
@@ -128,8 +129,37 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
       setErrors({});
     } else {
       initializedRef.current = undefined;
+      setShowPastPeriodCheckbox(false);
     }
   }, [isOpen, scheduleToEdit, getCurrentDate, activePaymentMethods]);
+
+  // Offload past period check to an effect that runs after mount/animation
+  useEffect(() => {
+    if (!isOpen || scheduleToEdit) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const today = getCurrentDate();
+        const oneMonthAgo = subMonths(today, 1);
+        const occurrences = calculateOccurrences(
+          {
+            RecurrenceRule: formData.recurrenceRule,
+            DayOfMonth: Number(formData.dayOfMonth),
+            DayOfWeek: Number(formData.dayOfWeek),
+            MonthOfYear: Number(formData.monthOfYear),
+            CreationTimestamp: new Date().toISOString()
+          } as any,
+          oneMonthAgo,
+          today
+        );
+        setShowPastPeriodCheckbox(occurrences.some(occ => isBefore(occ, today)));
+      } catch (e) {
+        setShowPastPeriodCheckbox(false);
+      }
+    }, 300); // Delay to allow modal animation to finish
+
+    return () => clearTimeout(timer);
+  }, [isOpen, formData.recurrenceRule, formData.dayOfMonth, formData.dayOfWeek, formData.monthOfYear, scheduleToEdit, getCurrentDate]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -180,7 +210,6 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
         );
       }
       
-      // Run background processing without blocking
       incomeLogic.processSchedules().then(() => {
         queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
         queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
@@ -244,31 +273,9 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
     }
   };
 
-  const showCreateForPastPeriodCheckbox = useMemo(() => {
-    if (scheduleToEdit) return false;
-    try {
-      const today = getCurrentDate();
-      const oneMonthAgo = subMonths(today, 1);
-      const occurrences = calculateOccurrences(
-        {
-          RecurrenceRule: formData.recurrenceRule,
-          DayOfMonth: Number(formData.dayOfMonth),
-          DayOfWeek: Number(formData.dayOfWeek),
-          MonthOfYear: Number(formData.monthOfYear),
-          CreationTimestamp: new Date().toISOString()
-        } as any,
-        oneMonthAgo,
-        today
-      );
-      return occurrences.some(occ => isBefore(occ, today));
-    } catch (e) {
-      return false;
-    }
-  }, [formData.recurrenceRule, formData.dayOfMonth, formData.dayOfWeek, formData.monthOfYear, scheduleToEdit, getCurrentDate]);
-
   const methodOptions = useMemo(() => activePaymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })), [activePaymentMethods]);
   const categoryOptions = useMemo(() => activeCategories.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })), [activeCategories]);
-  const entityOptions = useMemo(() => (entitiesData?.entities || []).map((e: any) => ({ value: String(e.EntityID), label: e.EntityName })), [entitiesData]);
+  const entityOptions = useMemo(() => activeEntities.map((e: any) => ({ value: String(e.EntityID), label: e.EntityName })), [activeEntities]);
 
   const handleEntitySave = async (newId?: number) => {
     queryClient.invalidateQueries({ queryKey: ['entities'] });
@@ -431,7 +438,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                     <Info className="h-4 w-4 text-font-2 cursor-help"/>
                   </Tooltip>
                 </div>
-                <div className={cn("flex items-center gap-2 transition-opacity", showCreateForPastPeriodCheckbox ? "opacity-100" : "opacity-0 pointer-events-none")}>
+                <div className={cn("flex items-center gap-2 transition-opacity", showPastPeriodCheckbox ? "opacity-100" : "opacity-0 pointer-events-none")}>
                   <Checkbox
                     label="Create for current period"
                     checked={formData.createForPastPeriod}

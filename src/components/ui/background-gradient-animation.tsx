@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { cn } from "../../utils/cn";
 import { useSettingsStore } from "../../store/useSettingsStore";
 
@@ -6,44 +6,40 @@ export const BackgroundGradientAnimation = ({
   gradientBackgroundStart = "var(--color-bg)",
   gradientBackgroundEnd = "var(--color-bg)",
   color = "18, 113, 255",
-  pointerColor = "140, 100, 255", // This prop will no longer be used for interactive pointer
+  pointerColor = "140, 100, 255",
   size = "40%",
   blendingValue = "hard-light",
   children,
   className,
-  // interactive = true, // Removed interactive prop
   containerClassName,
   forceColor,
 }: {
   gradientBackgroundStart?: string;
   gradientBackgroundEnd?: string;
   color?: string;
-  pointerColor?: string; // This prop will no longer be used for interactive pointer
+  pointerColor?: string;
   size?: string;
   blendingValue?: string;
   children?: React.ReactNode;
   className?: string;
-  // interactive?: boolean; // Removed interactive prop
   containerClassName?: string;
   forceColor?: string;
 }) => {
   const interactiveRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettingsStore();
 
-  // Removed curX, curY state and handleMouseMove function as they are for interactive pointer
-
-  // Convert hex color to RGB string for CSS variables
   const hexToRgb = (hex: string) => {
-    if (hex.startsWith('var')) return null; // Can't easily convert var to rgb here
+    if (hex.startsWith('var')) return null;
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
   };
 
-  useEffect(() => {
-    // Use forceColor if provided, otherwise fall back to settings, then default prop
+  const rgbColor = useMemo(() => {
     const headerColor = forceColor || settings.headerColor || '#8b5cf6'; 
-    const rgbColor = hexToRgb(headerColor) || color;
+    return hexToRgb(headerColor) || color;
+  }, [settings.headerColor, forceColor, color]);
 
+  useEffect(() => {
     const container = interactiveRef.current?.parentElement || document.body;
     
     if (container && container.style) {
@@ -54,12 +50,10 @@ export const BackgroundGradientAnimation = ({
       container.style.setProperty("--third-color", rgbColor);
       container.style.setProperty("--fourth-color", rgbColor);
       container.style.setProperty("--fifth-color", rgbColor);
-      // container.style.setProperty("--pointer-color", pointerColor); // Removed pointer color
       container.style.setProperty("--size", size);
       container.style.setProperty("--blending-value", blendingValue);
     }
-
-  }, [gradientBackgroundStart, gradientBackgroundEnd, color, size, blendingValue, settings.headerColor, forceColor]); // Removed pointerColor from dependencies
+  }, [gradientBackgroundStart, gradientBackgroundEnd, rgbColor, size, blendingValue]);
 
   return (
     <div
@@ -142,8 +136,6 @@ export const BackgroundGradientAnimation = ({
             `opacity-100`
           )}
         ></div>
-
-        {/* Removed interactive pointer div */}
       </div>
     </div>
   );

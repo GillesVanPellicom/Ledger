@@ -27,6 +27,17 @@
   "datastore": {
     "folderPath": "/Users/gvp/IdeaProjects/homefin/datastore"
   },
+  "dev": {
+    "profiling": {
+      "showControls": true,
+      "outputPath": "/Users/gvp/IdeaProjects/homefin/profiles",
+      "enabled": true
+    },
+    "mockTime": {
+      "enabled": false,
+      "date": null
+    }
+  },
   "themeColor": "#007AFF",
   "headerColor": "#8b5cf6",
   "receipts": {
@@ -35,17 +46,6 @@
       "tentative": true,
       "type": false,
       "attachments": false
-    }
-  },
-  "dev": {
-    "mockTime": {
-      "enabled": false,
-      "date": null
-    },
-    "profiling": {
-      "enabled": true,
-      "showControls": true,
-      "outputPath": "/Users/gvp/IdeaProjects/homefin/profiles"
     }
   },
   "formatting": {
