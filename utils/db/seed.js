@@ -73,6 +73,7 @@ const sizes = [1, 2, 5, 10, 20, 50, 100, 150, 200, 250, 300, 330, 400, 500, 750,
 
 const entities = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Albert Heijn', 'Jumbo', 'Lidl', 'Aldi', 'Plus', 'Salary', 'Freelance Client A', 'Dividends', 'Birthday Gift', 'Tax Refund'];
 const debtEntities = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'];
+const storeEntities = ['Albert Heijn', 'Jumbo', 'Lidl', 'Aldi', 'Plus'];
 
 const categories = [
     'Foodstuffs', 'Medical', 'Clothing', 'Electronics', 'Household', 
@@ -218,7 +219,7 @@ async function seed() {
         if (!fs.existsSync(receiptImgPath)) {
             fs.mkdirSync(receiptImgPath, { recursive: true });
         }
-        const entityIds = (await getQuery(db, 'SELECT EntityID FROM Entities')).map(e => e.EntityID);
+        const storeEntityIds = (await getQuery(db, `SELECT EntityID FROM Entities WHERE EntityName IN ('${storeEntities.join("','")}')`)).map(e => e.EntityID);
         const debtEntityIds = (await getQuery(db, `SELECT EntityID FROM Entities WHERE EntityName IN ('${debtEntities.join("','")}')`)).map(e => e.EntityID);
         const productIds = (await getQuery(db, 'SELECT ProductID FROM Products')).map(p => p.ProductID);
         const paymentMethodIds = (await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods')).map(pm => pm.PaymentMethodID);
@@ -249,7 +250,7 @@ async function seed() {
                 db.run('BEGIN TRANSACTION');
                 for (let i = 0; i < 4000; i++) {
                     const date = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
-                    const recipientId = getRandomElement(entityIds);
+                    const recipientId = getRandomElement(storeEntityIds);
                     const note = Math.random() > 0.8 ? `Grote boodschappen week ${i % 52 + 1}` : null;
                     const paymentMethodId = getRandomElement(paymentMethodIds);
 

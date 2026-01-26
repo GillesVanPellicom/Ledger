@@ -25,7 +25,9 @@ import {
   AlertTriangle,
   RotateCcw,
   Filter,
-  FileText
+  FileText,
+  ArrowDownLeft,
+  ArrowUpRight
 } from 'lucide-react';
 import {cn} from '../utils/cn';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
@@ -435,20 +437,6 @@ const ReceiptViewPage: React.FC = () => {
                 <FileDown className="h-5 w-5"/>
               </Button>
             </Tooltip>
-            {receipt.Status === 'unpaid' && (
-              <Tooltip content={receipt.IsTentative ? "Cannot mark a tentative expense as paid" : "Mark as Paid"}>
-                <div className={cn(!receipt.IsTentative && "cursor-pointer")}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => !receipt.IsTentative && setIsMarkAsPaidModalOpen(true)}
-                    disabled={!!receipt.IsTentative}
-                  >
-                    <Landmark className="h-5 w-5"/>
-                  </Button>
-                </div>
-              </Tooltip>
-            )}
           </>
         }
       />
@@ -484,13 +472,24 @@ const ReceiptViewPage: React.FC = () => {
                       />
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
-                      {receipt?.Status === 'paid' ? (
-                        <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the recipient.'}>
-                          <Badge variant="green">Paid to Recipient</Badge>
-                        </Tooltip>
+                      {receipt.OwedToDebtorID ? (
+                        <>
+                          <Tooltip content={`${receipt.OwedToDebtorName} physically paid the store/recipient for this expense.`}>
+                            <Badge variant="green">Paid to recipient by {receipt.OwedToDebtorName}</Badge>
+                          </Tooltip>
+                          {receipt.Status === 'paid' ? (
+                            <Tooltip content={`You have repaid ${receipt.OwedToDebtorName} for this expense.`}>
+                              <Badge variant="green">Repaid to {receipt.OwedToDebtorName}</Badge>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip content={`Total amount is owed to ${receipt.OwedToDebtorName}.`}>
+                              <Badge variant="red">Unpaid to {receipt.OwedToDebtorName}</Badge>
+                            </Tooltip>
+                          )}
+                        </>
                       ) : (
-                        <Tooltip content={`Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
-                          <Badge variant="red">Unpaid to {receipt?.OwedToDebtorName}</Badge>
+                        <Tooltip content="This expense has been paid to the recipient.">
+                          <Badge variant="green">Paid to Recipient</Badge>
                         </Tooltip>
                       )}
                       {debtStatus && (
@@ -538,13 +537,18 @@ const ReceiptViewPage: React.FC = () => {
             </div>
 
             {!!receipt.IsTentative && (
-              <InfoCard
-                variant="info"
-                title="Tentative Expense"
-                message="This is a draft expense. It won't affect analytics or debts until made permanent."
-              >
-                <Button onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
-              </InfoCard>
+              <Card className="p-4 border-accent/20 bg-accent/5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <Info className="h-5 w-5 text-accent" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-font-1">Tentative Expense</h4>
+                      <p className="text-xs text-font-2">This is a draft expense. It won't affect analytics or debts until made permanent.</p>
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={() => setMakePermanentModalOpen(true)}>Make Permanent</Button>
+                </div>
+              </Card>
             )}
 
             {images.length > 0 && (
@@ -650,17 +654,24 @@ const ReceiptViewPage: React.FC = () => {
 
                   {/* Badges */}
                   <div className="flex flex-wrap justify-center gap-2">
-                    {receipt?.Status === 'paid' ? (
-                      <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the recipient.'}>
-                        <Badge variant="green">
-                          {receipt.OwedToDebtorID ? `Paid by ${receipt.OwedToDebtorName}` : 'Paid to Recipient'}
-                        </Badge>
-                      </Tooltip>
+                    {receipt.OwedToDebtorID ? (
+                      <>
+                        <Tooltip content={`${receipt.OwedToDebtorName} physically paid the store/recipient for this expense.`}>
+                          <Badge variant="green">Paid to recipient by {receipt.OwedToDebtorName}</Badge>
+                        </Tooltip>
+                        {receipt.Status === 'paid' ? (
+                          <Tooltip content={`You have repaid ${receipt.OwedToDebtorName} for this expense.`}>
+                            <Badge variant="green">Repaid to {receipt.OwedToDebtorName}</Badge>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip content={`Total amount is owed to ${receipt.OwedToDebtorName}.`}>
+                            <Badge variant="red">Unpaid to {receipt.OwedToDebtorName}</Badge>
+                          </Tooltip>
+                        )}
+                      </>
                     ) : (
-                      <Tooltip content={`Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
-                        <Badge variant="red">
-                          Unpaid to {receipt?.OwedToDebtorName}
-                        </Badge>
+                      <Tooltip content="This expense has been paid to the recipient.">
+                        <Badge variant="green">Paid to Recipient by Me</Badge>
                       </Tooltip>
                     )}
                     {debtStatus && (
@@ -731,24 +742,77 @@ const ReceiptViewPage: React.FC = () => {
               <div>
                 <Divider text="Debt Breakdown"/>
                 <div className="space-y-2 mt-4">
-                  {(debtSummary && (debtSummary.debtors.length > 0 || debtSummary.ownShare)) ? (
+                  {(debtSummary && (debtSummary.debtors.length > 0 || debtSummary.ownShare || receipt?.OwedToDebtorID)) ? (
                     <>
+                      {receipt?.OwedToDebtorID && (
+                        <Card
+                          className={cn(
+                            "p-4 border border-border",
+                            !receipt?.IsTentative && "cursor-pointer hover:bg-field-hover"
+                          )}
+                          onClick={() => {
+                            if (receipt.Status === 'unpaid') {
+                              setIsMarkAsPaidModalOpen(true);
+                            }
+                          }}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-1">
+                                <ArrowDownLeft className={cn("h-4 w-4", receipt.Status === 'paid' ? "text-green" : "text-red")} />
+                                <span className="text-xs font-semibold text-font-2 uppercase tracking-wider">Debt (Me)</span>
+                              </div>
+                              <Link to={`/entities/${receipt.OwedToDebtorID}`}
+                                    className="font-medium hover:underline flex items-center gap-1.5 group"
+                                    onClick={(e) => e.stopPropagation()}>
+                                <span className="text-font-1">{receipt.OwedToDebtorName}</span>
+                                <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
+                              </Link>
+                            </div>
+                            <div className="flex items-center">
+                              {receipt.Status === 'paid' ? (
+                                <CheckCircle className="h-5 w-5 text-green"/>
+                              ) : (
+                                <Tooltip content={receipt?.IsTentative ? "Cannot settle debts for tentative expenses" : "Unpaid"}>
+                                  <AlertCircle className={cn("h-5 w-5", receipt?.IsTentative ? "text-text-disabled" : "text-red")}/>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-baseline mt-1">
+                            <p className={cn("font-bold truncate", receipt.Status === 'paid' ? "text-green" : (receipt?.IsTentative ? "text-text-disabled" : "text-red"))}
+                               style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
+                              <MoneyDisplay amount={displayTotalAmount} showSign={false} colorPositive={false} colorNegative={false} />
+                            </p>
+                            <div className="text-right flex-shrink-0 pl-2">
+                              <p className="text-sm text-font-2">Full Amount</p>
+                            </div>
+                          </div>
+                        </Card>
+                      )}
+
                       {debtSummary.debtors.map((debtor) => (
                         <Card
                           key={debtor.debtorId}
                           className={cn(
-                            "p-4 transition-all duration-200",
+                            "p-4 border border-border",
                             !receipt?.IsTentative && "cursor-pointer hover:bg-field-hover"
                           )}
                           onClick={() => handleSettleClick(debtor)}
                         >
                           <div className="flex justify-between items-start">
-                            <Link to={`/entities/${debtor.debtorId}`}
-                                  className="font-medium hover:underline flex items-center gap-1.5 group"
-                                  onClick={(e) => e.stopPropagation()}>
-                              <span className="text-font-1">{debtor.name}</span>
-                              <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
-                            </Link>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-1">
+                                <ArrowUpRight className={cn("h-4 w-4", debtor.isPaid ? "text-green" : "text-red")} />
+                                <span className="text-xs font-semibold text-font-2 uppercase tracking-wider">Debt ({debtor.name})</span>
+                              </div>
+                              <Link to={`/entities/${debtor.debtorId}`}
+                                    className="font-medium hover:underline flex items-center gap-1.5 group"
+                                    onClick={(e) => e.stopPropagation()}>
+                                <span className="text-font-1">{debtor.name}</span>
+                                <LinkIcon className="h-4 w-4 text-font-2 group-hover:text-accent"/>
+                              </Link>
+                            </div>
                             <div className="flex items-center">
                               {debtor.isPaid ? (
                                 <Tooltip content={`Paid on ${payments.find(p => p.DebtorID === debtor.debtorId)?.PaidDate}`}>
@@ -776,13 +840,13 @@ const ReceiptViewPage: React.FC = () => {
                         </Card>
                       ))}
                       {!!debtSummary.ownShare && (
-                        <Card className="p-4">
+                        <Card className="p-4 border border-border">
                           <div className="flex justify-between items-start">
                             <p className="font-medium text-font-1">Own Share</p>
-                            <User className="h-5 w-5 text-accent"/>
+                            <User className="h-5 w-5 text-blue"/>
                           </div>
                           <div className="flex justify-between items-baseline mt-1">
-                            <p className="font-bold text-accent truncate"
+                            <p className="font-bold text-blue truncate"
                                style={{fontSize: '1.5rem', lineHeight: '2rem'}}>
                               <MoneyDisplay amount={debtSummary.ownShare.amount} showSign={false} colorPositive={false} colorNegative={false} />
                             </p>
@@ -821,7 +885,7 @@ const ReceiptViewPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg/30 backdrop-blur-sm">
-                          <span className="text-font-2 font-medium">No debts owed to you for this receipt.</span>
+                          <span className="text-font-2 font-medium">No debts owed for this expense.</span>
                         </div>
                       </div>
                     </Card>

@@ -298,15 +298,22 @@ const ReceiptsPage: React.FC = () => {
     header: 'Type', width: '10%', render: (row: Transaction) => {
       if (row.type === 'expense' && row.status === 'unpaid') {
         return (
-          <Tooltip content="Unpaid expense - not yet deducted from balance">
+          <Tooltip content={row.owedToEntityId ? `Owed to ${row.debtorName || 'entity'}` : "Unpaid expense - not yet deducted from balance"}>
             <Badge variant="yellow" className="flex items-center gap-1 w-fit">
-              <Clock className="h-3 w-3" /> Unpaid
+              <Clock className="h-3 w-3" /> {row.owedToEntityId ? 'Owed' : 'Unpaid'}
             </Badge>
           </Tooltip>
         );
       }
       switch (row.type) {
         case 'expense':
+          if (row.owedToEntityId) {
+            return (
+              <Tooltip content={`Repaid to ${row.debtorName || 'entity'}`}>
+                <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Repaid</Badge>
+              </Tooltip>
+            );
+          }
           return (
             <Tooltip content="Expense - money spent">
               <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Expense</Badge>
