@@ -10,7 +10,7 @@ export const db = {
       return [];
     }
   },
-  
+
   // Helper for single result queries
   queryOne: async <T>(sql: string, params: any[] = []): Promise<T | null> => {
     const results = await db.query<T>(sql, params);

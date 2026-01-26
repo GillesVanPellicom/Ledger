@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import inspector from 'inspector';
-import { format } from 'date-fns';
+import fs from 'node:fs';
+import path from 'node:path';
+import inspector from 'node:inspector';
+import {format} from 'date-fns';
 
 const session = new inspector.Session();
 session.connect();
@@ -29,7 +29,7 @@ export function startProfiling(tag?: string, sampleInterval = 1000) {
   const profilesDir = path.join(process.cwd(), 'profiles');
 
   if (!fs.existsSync(profilesDir)) {
-    fs.mkdirSync(profilesDir, { recursive: true });
+    fs.mkdirSync(profilesDir, {recursive: true});
   }
 
   profileFilePath = path.join(profilesDir, fileName);
@@ -41,7 +41,7 @@ export function startProfiling(tag?: string, sampleInterval = 1000) {
       return;
     }
 
-    session.post('Profiler.start', { sampleInterval }, (err2) => {
+    session.post('Profiler.start', {sampleInterval}, (err2) => {
       if (err2) {
         console.error('Failed to start profiler:', err2);
         profiling = false;
@@ -61,7 +61,7 @@ export function stopProfiling(): Promise<string> {
     if (!profiling) return reject(new Error('Profiler is not running'));
     profiling = false;
 
-    session.post('Profiler.stop', (err, { profile }) => {
+    session.post('Profiler.stop', (err, {profile}) => {
       if (err) return reject(err);
 
       fs.writeFile(profileFilePath, JSON.stringify(profile), (writeErr) => {

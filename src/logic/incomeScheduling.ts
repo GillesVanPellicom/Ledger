@@ -11,7 +11,7 @@ import {
   getDay,
   getDaysInMonth,
 } from 'date-fns';
-import { IncomeSchedule } from './incomeCommitments';
+import {IncomeSchedule} from './incomeCommitments';
 
 /* ==================== Types ==================== */
 
@@ -24,7 +24,7 @@ export interface RecurrenceRule {
 
 /* ==================== Rule parsing ==================== */
 
-const VALID_TYPES: RecurrenceType[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'];
+const VALID_TYPES: RecurrenceType[] = new Set(['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']);
 
 /**
  * Validates and parses a recurrence rule string.
@@ -44,14 +44,14 @@ export function parseRecurrenceRule(ruleStr: string): RecurrenceRule {
   }
 
   const freq = freqPart.split('=')[1];
-  if (!freq || !VALID_TYPES.includes(freq as RecurrenceType)) {
+  if (!freq || !VALID_TYPES.has(freq as RecurrenceType)) {
     throw new Error(`Invalid recurrence type: ${freq} in rule: ${ruleStr}`);
   }
 
   const intervalRaw = intervalPart?.split('=')[1];
-  const interval = Math.max(1, parseInt(intervalRaw ?? '1', 10) || 1);
+  const interval = Math.max(1, Number.parseInt(intervalRaw ?? '1', 10) || 1);
 
-  return { type: freq as RecurrenceType, interval };
+  return {type: freq as RecurrenceType, interval};
 }
 
 export function formatRecurrenceRule(rule: RecurrenceRule): string {
@@ -64,11 +64,29 @@ const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const plural = (n: number) => (n > 1 ? 's' : '');
-const nth = (d: number) => (d > 3 && d < 21 ? `${d}th` : `${d % 10 === 1 ? d + 'st' : d % 10 === 2 ? d + 'nd' : d % 10 === 3 ? d + 'rd' : d + 'th'}`);
+const nth = (d: number): string => {
+  // Numbers between 4 and 20 always use 'th'
+  if (d > 3 && d < 21) {
+    return `${d}th`;
+  }
+
+  // Determine the suffix based on the last digit
+  const lastDigit = d % 10;
+
+  if (lastDigit === 1) {
+    return `${d}st`;
+  } else if (lastDigit === 2) {
+    return `${d}nd`;
+  } else if (lastDigit === 3) {
+    return `${d}rd`;
+  } else {
+    return `${d}th`;
+  }
+};
 
 export function humanizeRecurrenceRule(schedule: IncomeSchedule): string {
   try {
-    const { type, interval } = parseRecurrenceRule(schedule.RecurrenceRule);
+    const {type, interval} = parseRecurrenceRule(schedule.RecurrenceRule);
 
     switch (type) {
       case 'DAILY':
@@ -100,7 +118,7 @@ export function humanizeRecurrenceRule(schedule: IncomeSchedule): string {
 
 /** Safely set day of month */
 function safeSetDay(date: Date, day: number) {
-  return set(date, { date: Math.min(day, getDaysInMonth(date)) });
+  return set(date, {date: Math.min(day, getDaysInMonth(date))});
 }
 
 /** Advance a date according to the rule */
@@ -114,9 +132,10 @@ function advanceIterator(iterator: Date, rule: RecurrenceRule, schedule: IncomeS
       return safeSetDay(addMonths(iterator, rule.interval), schedule.DayOfMonth ?? 1);
     case 'QUARTERLY':
       return safeSetDay(addMonths(iterator, rule.interval * 3), schedule.DayOfMonth ?? 1);
-    case 'YEARLY':
+    case 'YEARLY': {
       const yMonth = schedule.MonthOfYear ?? 0;
-      return safeSetDay(set(addYears(iterator, rule.interval), { month: yMonth }), schedule.DayOfMonth ?? 1);
+      return safeSetDay(set(addYears(iterator, rule.interval), {month: yMonth}), schedule.DayOfMonth ?? 1);
+    }
   }
 }
 
@@ -155,7 +174,7 @@ export function calculateOccurrences(
   // Adjust first occurrence based on rule type
   switch (rule.type) {
     case 'YEARLY':
-      iterator = safeSetDay(set(iterator, { month: schedule.MonthOfYear ?? 0 }), schedule.DayOfMonth ?? 1);
+      iterator = safeSetDay(set(iterator, {month: schedule.MonthOfYear ?? 0}), schedule.DayOfMonth ?? 1);
       break;
     case 'MONTHLY':
     case 'QUARTERLY':

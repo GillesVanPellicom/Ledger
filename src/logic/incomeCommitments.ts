@@ -1,7 +1,7 @@
-import { db } from '../utils/db';
-import { calculateOccurrences } from './incomeScheduling';
-import { format, startOfToday, subMonths, parseISO, startOfDay } from 'date-fns';
-import { useSettingsStore } from '../store/useSettingsStore';
+import {db} from '../utils/db';
+import {calculateOccurrences} from './incomeScheduling';
+import {format, startOfToday, subMonths, parseISO, startOfDay} from 'date-fns';
+import {useSettingsStore} from '../store/useSettingsStore';
 
 /* ==================== Types ==================== */
 
@@ -80,19 +80,29 @@ export const incomeCommitments = {
 
   getSchedules: async (): Promise<IncomeSchedule[]> => {
     const rows = await db.query<any>(`
-      SELECT 
-        s.ScheduleID, s.Type, s.RecipientID, s.EntityID, s.CategoryID,
-        s.PaymentMethodID, s.ExpectedAmount, s.RecurrenceRule,
-        s.DayOfMonth, s.DayOfWeek, s.MonthOfYear,
-        s.RequiresConfirmation, s.LookaheadDays, s.IsActive,
-        s.CreationTimestamp, s.Note,
-        src.EntityName AS RecipientName,
-        cat.CategoryName AS CategoryName,
-        pm.PaymentMethodName
-      FROM Schedules s
-      LEFT JOIN Entities src ON s.RecipientID = src.EntityID
-      LEFT JOIN Categories cat ON s.CategoryID = cat.CategoryID
-      LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
+        SELECT s.ScheduleID,
+               s.Type,
+               s.RecipientID,
+               s.EntityID,
+               s.CategoryID,
+               s.PaymentMethodID,
+               s.ExpectedAmount,
+               s.RecurrenceRule,
+               s.DayOfMonth,
+               s.DayOfWeek,
+               s.MonthOfYear,
+               s.RequiresConfirmation,
+               s.LookaheadDays,
+               s.IsActive,
+               s.CreationTimestamp,
+               s.Note,
+               src.EntityName   AS RecipientName,
+               cat.CategoryName AS CategoryName,
+               pm.PaymentMethodName
+        FROM Schedules s
+                 LEFT JOIN Entities src ON s.RecipientID = src.EntityID
+                 LEFT JOIN Categories cat ON s.CategoryID = cat.CategoryID
+                 LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
     `);
 
     return rows.map(mapScheduleRow);
@@ -104,24 +114,27 @@ export const incomeCommitments = {
     (PendingIncome & { RecipientName: string })[]
   > => {
     return await db.query<any>(`
-      SELECT 
-        p.SchedulePendingID, p.ScheduleID, p.PlannedDate, p.Amount, p.Status,
-        s.Type,
-        src.EntityName AS RecipientName,
-        cat.CategoryName AS CategoryName,
-        pm.PaymentMethodName,
-        s.PaymentMethodID,
-        s.Note,
-        s.RecipientID,
-        s.CategoryID,
-        s.EntityID
-      FROM SchedulesPending p
-      JOIN Schedules s ON p.ScheduleID = s.ScheduleID
-      LEFT JOIN Entities src ON s.RecipientID = src.EntityID
-      LEFT JOIN Categories cat ON s.CategoryID = cat.CategoryID
-      LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
-      WHERE p.Status = 'pending'
-      ORDER BY p.PlannedDate ASC
+        SELECT p.SchedulePendingID,
+               p.ScheduleID,
+               p.PlannedDate,
+               p.Amount,
+               p.Status,
+               s.Type,
+               src.EntityName   AS RecipientName,
+               cat.CategoryName AS CategoryName,
+               pm.PaymentMethodName,
+               s.PaymentMethodID,
+               s.Note,
+               s.RecipientID,
+               s.CategoryID,
+               s.EntityID
+        FROM SchedulesPending p
+                 JOIN Schedules s ON p.ScheduleID = s.ScheduleID
+                 LEFT JOIN Entities src ON s.RecipientID = src.EntityID
+                 LEFT JOIN Categories cat ON s.CategoryID = cat.CategoryID
+                 LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
+        WHERE p.Status = 'pending'
+        ORDER BY p.PlannedDate ASC
     `);
   },
 
@@ -129,46 +142,45 @@ export const incomeCommitments = {
 
   getConfirmedIncomeTopUps: async (): Promise<any[]> => {
     return await db.query(`
-      SELECT t.*, pm.PaymentMethodName, src.EntityName as RecipientName
-      FROM Income t
-      LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
-      LEFT JOIN Entities src ON t.RecipientID = src.EntityID
-      WHERE t.IncomeNote NOT LIKE 'Repayment from %'
-      ORDER BY t.IncomeDate DESC
+        SELECT t.*, pm.PaymentMethodName, src.EntityName as RecipientName
+        FROM Income t
+                 LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
+                 LEFT JOIN Entities src ON t.RecipientID = src.EntityID
+        WHERE t.IncomeNote NOT LIKE 'Repayment from %'
+        ORDER BY t.IncomeDate DESC
     `);
   },
 
   getDebtRepayments: async (): Promise<any[]> => {
     const [paidToMe, paidByMe] = await Promise.all([
       db.query<any>(`
-        SELECT 
-          rdp.PaidDate,
-          d.EntityID as DebtorID,
-          d.EntityName as DebtorName,
-          pm.PaymentMethodName,
-          t.IncomeAmount as TopUpAmount,
-          t.PaymentMethodID,
-          rdp.ExpenseID as ReceiptID
-        FROM ExpenseEntityPayments rdp
-        JOIN Entities d ON rdp.EntityID = d.EntityID
-        JOIN Income t ON rdp.IncomeID = t.IncomeID
-        JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
-        ORDER BY rdp.PaidDate DESC
+          SELECT rdp.PaidDate,
+                 d.EntityID     as DebtorID,
+                 d.EntityName   as DebtorName,
+                 pm.PaymentMethodName,
+                 t.IncomeAmount as TopUpAmount,
+                 t.PaymentMethodID,
+                 rdp.ExpenseID  as ReceiptID
+          FROM ExpenseEntityPayments rdp
+                   JOIN Entities d ON rdp.EntityID = d.EntityID
+                   JOIN Income t ON rdp.IncomeID = t.IncomeID
+                   JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
+          ORDER BY rdp.PaidDate DESC
       `),
       db.query<any>(`
-        SELECT
-          r.ExpenseDate as PaidDate,
-          d.EntityID as DebtorID,
-          d.EntityName as DebtorName,
-          pm.PaymentMethodName,
-          r.NonItemisedTotal as TopUpAmount,
-          r.PaymentMethodID,
-          r.ExpenseID as ReceiptID
-        FROM Expenses r
-        JOIN Entities d ON r.OwedToEntityID = d.EntityID
-        JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-        WHERE r.Status = 'paid' AND r.OwedToEntityID IS NOT NULL
-        ORDER BY r.ExpenseDate DESC
+          SELECT r.ExpenseDate      as PaidDate,
+                 d.EntityID         as DebtorID,
+                 d.EntityName       as DebtorName,
+                 pm.PaymentMethodName,
+                 r.NonItemisedTotal as TopUpAmount,
+                 r.PaymentMethodID,
+                 r.ExpenseID        as ReceiptID
+          FROM Expenses r
+                   JOIN Entities d ON r.OwedToEntityID = d.EntityID
+                   JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+          WHERE r.Status = 'paid'
+            AND r.OwedToEntityID IS NOT NULL
+          ORDER BY r.ExpenseDate DESC
       `)
     ]);
 
@@ -180,24 +192,24 @@ export const incomeCommitments = {
   ): Promise<{ TopUpDate: string }[]> => {
     if (schedule.Type === 'expense') {
       return await db.query<{ TopUpDate: string }>(`
-        SELECT ExpenseDate as TopUpDate
-        FROM Expenses
-        WHERE RecipientID = ?
-          AND PaymentMethodID = ?
-          AND IsNonItemised = 1
-          AND ABS(NonItemisedTotal - ?) < 0.01
+          SELECT ExpenseDate as TopUpDate
+          FROM Expenses
+          WHERE RecipientID = ?
+            AND PaymentMethodID = ?
+            AND IsNonItemised = 1
+            AND ABS(NonItemisedTotal - ?) < 0.01
       `, [schedule.RecipientID, schedule.PaymentMethodID, schedule.ExpectedAmount]);
     } else {
       return await db.query<{ TopUpDate: string }>(
         `
-        SELECT IncomeDate as TopUpDate
-        FROM Income
-        WHERE RecipientID = ? 
-          AND (CategoryID = ? OR (CategoryID IS NULL AND ? IS NULL))
-          AND (EntityID = ? OR (EntityID IS NULL AND ? IS NULL))
-      `,
+            SELECT IncomeDate as TopUpDate
+            FROM Income
+            WHERE RecipientID = ?
+              AND (CategoryID = ? OR (CategoryID IS NULL AND ? IS NULL))
+              AND (EntityID = ? OR (EntityID IS NULL AND ? IS NULL))
+        `,
         [
-          schedule.RecipientID, 
+          schedule.RecipientID,
           schedule.CategoryID, schedule.CategoryID,
           schedule.EntityID, schedule.EntityID
         ]
@@ -218,22 +230,21 @@ export const incomeCommitments = {
   }) => {
     return await db.execute(
       `
-      INSERT INTO Income (
-        PaymentMethodID,
-        IncomeAmount,
-        IncomeDate,
-        IncomeNote,
-        RecipientID,
-        CategoryID,
-        EntityID
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `,
+          INSERT INTO Income (PaymentMethodID,
+                              IncomeAmount,
+                              IncomeDate,
+                              IncomeNote,
+                              RecipientID,
+                              CategoryID,
+                              EntityID)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
       [
-        data.PaymentMethodID, 
-        data.Amount, 
-        normalizeDate(data.Date), 
-        data.Note, 
-        data.RecipientID || null, 
+        data.PaymentMethodID,
+        data.Amount,
+        normalizeDate(data.Date),
+        data.Note,
+        data.RecipientID || null,
         data.CategoryID || null,
         data.EntityID || null
       ]
@@ -250,16 +261,15 @@ export const incomeCommitments = {
   }) => {
     return await db.execute(
       `
-      INSERT INTO Expenses (
-        RecipientID,
-        ExpenseDate,
-        ExpenseNote,
-        PaymentMethodID,
-        Status,
-        IsNonItemised,
-        NonItemisedTotal,
-        IsTentative
-      ) VALUES (?, ?, ?, ?, 'paid', 1, ?, 0)
+          INSERT INTO Expenses (RecipientID,
+                                ExpenseDate,
+                                ExpenseNote,
+                                PaymentMethodID,
+                                Status,
+                                IsNonItemised,
+                                NonItemisedTotal,
+                                IsTentative)
+          VALUES (?, ?, ?, ?, 'paid', 1, ?, 0)
       `,
       [
         data.RecipientID,
@@ -279,13 +289,12 @@ export const incomeCommitments = {
     try {
       return await db.execute(
         `
-        INSERT INTO SchedulesPending (
-          ScheduleID,
-          PlannedDate,
-          Amount,
-          Status
-        ) VALUES (?, ?, ?, 'pending')
-      `,
+            INSERT INTO SchedulesPending (ScheduleID,
+                                          PlannedDate,
+                                          Amount,
+                                          Status)
+            VALUES (?, ?, ?, 'pending')
+        `,
         [data.ScheduleID, normalizeDate(data.PlannedDate), data.Amount]
       );
     } catch (err: any) {
@@ -298,7 +307,9 @@ export const incomeCommitments = {
 
   deletePendingIncome: async (id: number) => {
     return await db.execute(
-      `DELETE FROM SchedulesPending WHERE SchedulePendingID = ?`,
+      `DELETE
+       FROM SchedulesPending
+       WHERE SchedulePendingID = ?`,
       [id]
     );
   },
@@ -308,23 +319,22 @@ export const incomeCommitments = {
   createSchedule: async (data: any) => {
     const result = await db.execute(
       `
-      INSERT INTO Schedules (
-        Type,
-        RecipientID,
-        EntityID,
-        CategoryID,
-        PaymentMethodID,
-        ExpectedAmount,
-        RecurrenceRule,
-        DayOfMonth,
-        DayOfWeek,
-        MonthOfYear,
-        RequiresConfirmation,
-        LookaheadDays,
-        IsActive,
-        Note
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-    `,
+          INSERT INTO Schedules (Type,
+                                 RecipientID,
+                                 EntityID,
+                                 CategoryID,
+                                 PaymentMethodID,
+                                 ExpectedAmount,
+                                 RecurrenceRule,
+                                 DayOfMonth,
+                                 DayOfWeek,
+                                 MonthOfYear,
+                                 RequiresConfirmation,
+                                 LookaheadDays,
+                                 IsActive,
+                                 Note)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+      `,
       [
         data.Type || 'income',
         data.RecipientID,
@@ -346,7 +356,9 @@ export const incomeCommitments = {
 
     if (data.CreateForPastPeriod) {
       const schedule = await db.queryOne<IncomeSchedule>(
-        `SELECT * FROM Schedules WHERE ScheduleID = ?`,
+        `SELECT *
+         FROM Schedules
+         WHERE ScheduleID = ?`,
         [newScheduleId]
       );
       if (schedule) {
@@ -368,24 +380,23 @@ export const incomeCommitments = {
   updateSchedule: async (id: number, data: any) => {
     return await db.execute(
       `
-      UPDATE Schedules
-      SET
-        Type = ?,
-        RecipientID = ?,
-        EntityID = ?,
-        CategoryID = ?,
-        PaymentMethodID = ?,
-        ExpectedAmount = ?,
-        RecurrenceRule = ?,
-        DayOfMonth = ?,
-        DayOfWeek = ?,
-        MonthOfYear = ?,
-        RequiresConfirmation = ?,
-        LookaheadDays = ?,
-        IsActive = ?,
-        Note = ?
-      WHERE ScheduleID = ?
-    `,
+          UPDATE Schedules
+          SET Type                 = ?,
+              RecipientID          = ?,
+              EntityID             = ?,
+              CategoryID           = ?,
+              PaymentMethodID      = ?,
+              ExpectedAmount       = ?,
+              RecurrenceRule       = ?,
+              DayOfMonth           = ?,
+              DayOfWeek            = ?,
+              MonthOfYear          = ?,
+              RequiresConfirmation = ?,
+              LookaheadDays        = ?,
+              IsActive             = ?,
+              Note                 = ?
+          WHERE ScheduleID = ?
+      `,
       [
         data.Type || 'income',
         data.RecipientID,
@@ -409,13 +420,17 @@ export const incomeCommitments = {
   deleteSchedule: async (id: number, hardDelete: boolean) => {
     if (hardDelete) {
       await db.execute(
-        `DELETE FROM SchedulesPending WHERE ScheduleID = ?`,
+        `DELETE
+         FROM SchedulesPending
+         WHERE ScheduleID = ?`,
         [id]
       );
     }
 
     return await db.execute(
-      `UPDATE Schedules SET IsActive = 0 WHERE ScheduleID = ?`,
+      `UPDATE Schedules
+       SET IsActive = 0
+       WHERE ScheduleID = ?`,
       [id]
     );
   },

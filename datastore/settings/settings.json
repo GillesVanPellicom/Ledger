@@ -81,5 +81,6 @@
     "position": "top-center",
     "duration": 4000
   },
-  "userName": "Gilles"
+  "userName": "Gilles",
+  "uiScale": 110
 }

@@ -18,7 +18,11 @@ interface ProductSpending {
   totalSpent: number;
 }
 
-const TopProducts: React.FC = () => {
+interface TopProductsProps {
+  children?: React.ReactNode;
+}
+
+const TopProducts: React.FC<TopProductsProps> = ({ children }) => {
   const chartRef = useRef<ReactECharts>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | 'all'>(new Date().getFullYear());
@@ -198,6 +202,8 @@ const TopProducts: React.FC = () => {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <div className="p-6 space-y-6">
+        {children}
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardHeader title="Product Spending" tooltipText="Shows the top 10 products by total amount spent in the selected period." />
           <div className="flex flex-wrap gap-2">

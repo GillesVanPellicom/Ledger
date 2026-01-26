@@ -9,6 +9,8 @@ interface InfoCardProps {
   title: string;
   message: string;
   children?: React.ReactNode;
+  noCard?: boolean;
+  className?: string;
 }
 
 const variantConfig = {
@@ -26,13 +28,17 @@ const variantConfig = {
   },
 };
 
-const InfoCard: React.FC<InfoCardProps> = ({ variant = 'info', title, message, children }) => {
+const InfoCard: React.FC<InfoCardProps> = ({ variant = 'info', title, message, children, noCard = false, className }) => {
   const config = variantConfig[variant];
   const Icon = config.icon;
 
   return (
-    <div className="p-4 rounded-xl flex items-center gap-4 bg-bg-2 border border-border">
-      <Icon className={cn('h-8 w-8', config.color)} />
+    <div className={cn(
+      "p-4 flex items-center gap-4",
+      !noCard && "rounded-xl bg-bg-2 border border-border",
+      className
+    )}>
+      <Icon className={cn('h-8 w-8 shrink-0', config.color)} />
       <div className="flex-grow">
         <p className={cn('font-semibold', config.color)}>{title}</p>
         <p className="text-sm text-font-1">{message}</p>

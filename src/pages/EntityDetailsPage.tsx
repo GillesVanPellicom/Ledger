@@ -157,8 +157,8 @@ const EntityDetailsPage: React.FC = () => {
     }
 
     const fullReceiptsData: any[] = [];
-    for (let i = 0; i < receiptsToProcess.length; i++) {
-      const r = receiptsToProcess[i];
+    for (const element of receiptsToProcess) {
+      const r = element;
       const receiptDetails = await db.queryOne<any>(`
         SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.RecipientID as StoreID,
                s.EntityName as StoreName, pm.PaymentMethodName
@@ -225,13 +225,11 @@ const EntityDetailsPage: React.FC = () => {
         });
         setIsSettlementModalOpen(true);
       }
-    } else { 
-      if (receipt.isSettled) {
-        setUnsettleConfirmation({ isOpen: true, receiptId: receipt.ReceiptID, type: 'to_entity' });
-      } else {
-        setReceiptToMarkAsPaid(receipt);
-        setIsMarkAsPaidModalOpen(true);
-      }
+    } else if (receipt.isSettled) {
+      setUnsettleConfirmation({isOpen: true, receiptId: receipt.ReceiptID, type: 'to_entity'});
+    } else {
+      setReceiptToMarkAsPaid(receipt);
+      setIsMarkAsPaidModalOpen(true);
     }
   };
 
@@ -257,7 +255,7 @@ const EntityDetailsPage: React.FC = () => {
       if (type === 'to_me') {
         const payment = await db.queryOne<{ TopUpID: number }>('SELECT IncomeID as TopUpID FROM ExpenseEntityPayments WHERE ExpenseID = ? AND EntityID = ?', [receiptId, id]);
         await db.execute('DELETE FROM ExpenseEntityPayments WHERE ExpenseID = ? AND EntityID = ?', [receiptId, id]);
-        if (payment && payment.TopUpID) {
+        if (payment?.TopUpID) {
           await db.execute('DELETE FROM Income WHERE IncomeID = ?', [payment.TopUpID]);
         }
       } else {
@@ -339,7 +337,7 @@ const EntityDetailsPage: React.FC = () => {
 
         let trxIndex = 0;
         dateRange.forEach(day => {
-            while(trxIndex < sortedTransactions.length && new Date(sortedTransactions[trxIndex].date) <= day) {
+            while(trxIndex < sortedReceipts.length && new Date(sortedReceipts[trxIndex].ReceiptDate) <= day) {
                 const receipt = sortedReceipts[trxIndex];
                 const amount = receipt.amount || 0;
                 if (receipt.type === 'to_me') {

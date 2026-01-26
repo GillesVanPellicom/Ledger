@@ -1,4 +1,3 @@
-
 type FocusLayer = {
   id: string;
   onEnter?: () => void;
@@ -21,11 +20,11 @@ class FocusStack {
   }
 
   isTop(id: string) {
-    return this.stack.length > 0 && this.stack[this.stack.length - 1].id === id;
+    return this.stack.length > 0 && this.stack.at(-1).id === id;
   }
 
   getTop() {
-    return this.stack.length > 0 ? this.stack[this.stack.length - 1] : null;
+    return this.stack.length > 0 ? this.stack.at(-1) : null;
   }
 
   subscribe(listener: () => void) {
