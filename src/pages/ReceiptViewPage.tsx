@@ -653,7 +653,7 @@ const ReceiptViewPage: React.FC = () => {
                     {receipt?.Status === 'paid' ? (
                       <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the recipient.'}>
                         <Badge variant="green">
-                          Paid to Recipient
+                          {receipt.OwedToDebtorID ? `Paid by ${receipt.OwedToDebtorName}` : 'Paid to Recipient'}
                         </Badge>
                       </Tooltip>
                     ) : (

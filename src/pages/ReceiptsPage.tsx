@@ -130,6 +130,7 @@ const ReceiptsPage: React.FC = () => {
     endDate: appliedDateRange[1] ? parseISO(appliedDateRange[1]) : null,
     typeFilter: appliedFilters.type,
     debtFilter: appliedFilters.debt,
+    repaymentFilter: appliedFilters.repayment,
     expenseTypeFilter: appliedFilters.expenseType,
     tentativeFilter: appliedFilters.tentative,
     attachmentFilter: appliedFilters.attachment,
@@ -516,7 +517,6 @@ const ReceiptsPage: React.FC = () => {
   const typeFilterOptions = [
     { value: 'all', label: 'All' },
     { value: 'paid_expense', label: 'Expenses' },
-    { value: 'unpaid_expense', label: 'Unpaid' },
     { value: 'income', label: 'Income' },
     { value: 'transfer', label: 'Transfers' },
     { value: 'repayment', label: 'Repayments' },
@@ -526,7 +526,13 @@ const ReceiptsPage: React.FC = () => {
     { value: 'all', label: 'All' },
     { value: 'none', label: 'No Debt' },
     { value: 'unpaid', label: 'Unpaid Debt' },
-    { value: 'own_debt', label: 'Own Debt' },
+    { value: 'paid', label: 'Paid Debt' },
+  ];
+
+  const repaymentFilterOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'none', label: 'No Debt' },
+    { value: 'unpaid', label: 'Unpaid Debt' },
     { value: 'paid', label: 'Paid Debt' },
   ];
 
@@ -600,6 +606,7 @@ const ReceiptsPage: React.FC = () => {
     setPendingFilters({
       type: 'all',
       debt: 'all',
+      repayment: 'all',
       expenseType: 'all',
       tentative: 'all',
       attachment: 'all',
@@ -618,6 +625,7 @@ const ReceiptsPage: React.FC = () => {
     setPendingFilters({
       type: 'all',
       debt: 'all',
+      repayment: 'all',
       expenseType: 'all',
       tentative: 'all',
       attachment: 'all',
@@ -632,13 +640,14 @@ const ReceiptsPage: React.FC = () => {
     setPendingDateRange([null, null]);
   };
 
-  const hasActiveFilters = appliedFilters.type !== 'all' || appliedFilters.debt !== 'all' || appliedFilters.expenseType !== 'all' || appliedFilters.tentative !== 'all' || appliedFilters.attachment !== 'all' || appliedFilters.recipient !== 'all' || appliedFilters.category !== 'all' || appliedFilters.incomeEntity !== 'all' || appliedFilters.debtor !== 'all' || appliedFilters.fromMethod !== 'all' || appliedFilters.toMethod !== 'all' || appliedFilters.method !== 'all' || appliedDateRange[0] !== null || appliedDateRange[1] !== null || searchTerm !== '';
+  const hasActiveFilters = appliedFilters.type !== 'all' || appliedFilters.debt !== 'all' || appliedFilters.repayment !== 'all' || appliedFilters.expenseType !== 'all' || appliedFilters.tentative !== 'all' || appliedFilters.attachment !== 'all' || appliedFilters.recipient !== 'all' || appliedFilters.category !== 'all' || appliedFilters.incomeEntity !== 'all' || appliedFilters.debtor !== 'all' || appliedFilters.fromMethod !== 'all' || appliedFilters.toMethod !== 'all' || appliedFilters.method !== 'all' || appliedDateRange[0] !== null || appliedDateRange[1] !== null || searchTerm !== '';
 
-  const hasPendingFilters = pendingFilters.type !== 'all' || pendingFilters.debt !== 'all' || pendingFilters.expenseType !== 'all' || pendingFilters.tentative !== 'all' || pendingFilters.attachment !== 'all' || pendingFilters.recipient !== 'all' || pendingFilters.category !== 'all' || pendingFilters.incomeEntity !== 'all' || pendingFilters.debtor !== 'all' || pendingFilters.fromMethod !== 'all' || pendingFilters.toMethod !== 'all' || pendingFilters.method !== 'all' || pendingDateRange[0] !== null || pendingDateRange[1] !== null;
+  const hasPendingFilters = pendingFilters.type !== 'all' || pendingFilters.debt !== 'all' || pendingFilters.repayment !== 'all' || pendingFilters.expenseType !== 'all' || pendingFilters.tentative !== 'all' || pendingFilters.attachment !== 'all' || pendingFilters.recipient !== 'all' || pendingFilters.category !== 'all' || pendingFilters.incomeEntity !== 'all' || pendingFilters.debtor !== 'all' || pendingFilters.fromMethod !== 'all' || pendingFilters.toMethod !== 'all' || pendingFilters.method !== 'all' || appliedDateRange[0] !== null || appliedDateRange[1] !== null;
 
   const activeFilterCount = [
     pendingFilters.type !== 'all',
     pendingFilters.debt !== 'all',
+    pendingFilters.repayment !== 'all',
     pendingFilters.expenseType !== 'all',
     pendingFilters.tentative !== 'all',
     pendingFilters.attachment !== 'all',
@@ -653,7 +662,18 @@ const ReceiptsPage: React.FC = () => {
   ].filter(Boolean).length;
 
   const handlePendingFilterChange = (key, value) => {
-    setPendingFilters(prev => ({ ...prev, [key]: value }));
+    setPendingFilters(prev => {
+      const newState = { ...prev, [key]: value };
+      
+      // Mutually exclusive logic for debt filters
+      if (key === 'debt' && value !== 'all') {
+        newState.repayment = 'all';
+      } else if (key === 'repayment' && value !== 'all') {
+        newState.debt = 'all';
+      }
+      
+      return newState;
+    });
   };
 
   return (
@@ -942,31 +962,13 @@ const ReceiptsPage: React.FC = () => {
                   </FilterOption>
                 )}
                 {debtEnabled && (
-                  <FilterOption title="Debt Status" onReset={() => handlePendingFilterChange('debt', 'all')} isModified={pendingFilters.debt !== 'all'}>
-                    <Combobox options={debtFilterOptions} value={pendingFilters.debt} onChange={val => handlePendingFilterChange('debt', val)} />
+                  <FilterOption title="Owed to You" onReset={() => handlePendingFilterChange('debt', 'all')} isModified={pendingFilters.debt !== 'all'}>
+                    <Combobox options={debtFilterOptions} value={pendingFilters.debt} onChange={val => handlePendingFilterChange('debt', val)} disabled={pendingFilters.repayment !== 'all'} />
                   </FilterOption>
                 )}
-                <FilterOption title="Expense Format" onReset={() => handlePendingFilterChange('expenseType', 'all')} isModified={pendingFilters.expenseType !== 'all'}>
-                  <Combobox options={expenseTypeFilterOptions} value={pendingFilters.expenseType} onChange={val => handlePendingFilterChange('expenseType', val)} />
-                </FilterOption>
-                <FilterOption title="Status" onReset={() => handlePendingFilterChange('tentative', 'all')} isModified={pendingFilters.tentative !== 'all'}>
-                  <Combobox options={tentativeFilterOptions} value={pendingFilters.tentative} onChange={val => handlePendingFilterChange('tentative', val)} />
-                </FilterOption>
-                <FilterOption title="Attachments" onReset={() => handlePendingFilterChange('attachment', 'all')} isModified={pendingFilters.attachment !== 'all'}>
-                  <Combobox options={attachmentFilterOptions} value={pendingFilters.attachment} onChange={val => handlePendingFilterChange('attachment', val)} />
-                </FilterOption>
-                <FilterOption title="Recipient" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
-                  <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
-                </FilterOption>
-              </>
-            )}
-
-            {pendingFilters.type === 'unpaid_expense' && (
-              <>
-                <Divider text="Unpaid Filters" className="my-4" />
                 {debtEnabled && (
-                  <FilterOption title="Debt Status" onReset={() => handlePendingFilterChange('debt', 'all')} isModified={pendingFilters.debt !== 'all'}>
-                    <Combobox options={debtFilterOptions} value={pendingFilters.debt} onChange={val => handlePendingFilterChange('debt', val)} />
+                  <FilterOption title="Owed by You" onReset={() => handlePendingFilterChange('repayment', 'all')} isModified={pendingFilters.repayment !== 'all'}>
+                    <Combobox options={repaymentFilterOptions} value={pendingFilters.repayment} onChange={val => handlePendingFilterChange('repayment', val)} disabled={pendingFilters.debt !== 'all'} />
                   </FilterOption>
                 )}
                 <FilterOption title="Expense Format" onReset={() => handlePendingFilterChange('expenseType', 'all')} isModified={pendingFilters.expenseType !== 'all'}>

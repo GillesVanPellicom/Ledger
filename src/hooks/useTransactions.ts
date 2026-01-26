@@ -13,6 +13,7 @@ interface FetchTransactionsParams {
   debtEnabled?: boolean;
   // Expense specific filters
   debtFilter?: string;
+  repaymentFilter?: string;
   expenseTypeFilter?: string;
   tentativeFilter?: string;
   attachmentFilter?: string;
@@ -43,6 +44,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
     typeFilter,
     debtEnabled,
     debtFilter,
+    repaymentFilter,
     expenseTypeFilter,
     tentativeFilter,
     attachmentFilter,
@@ -57,7 +59,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
   return useQuery<FetchTransactionsResult>({
     queryKey: ['transactions', { 
       page, pageSize, searchTerm, startDate, endDate, typeFilter, debtEnabled, 
-      debtFilter, expenseTypeFilter, tentativeFilter, attachmentFilter,
+      debtFilter, repaymentFilter, expenseTypeFilter, tentativeFilter, attachmentFilter,
       recipientFilter, categoryFilter, debtorFilter, fromMethodFilter, toMethodFilter, methodFilter
     }],
     queryFn: async () => {
@@ -95,7 +97,8 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as fromMethodId,
           NULL as toMethodId,
           r.RecipientID as recipientId,
-          NULL as categoryId
+          NULL as categoryId,
+          r.OwedToEntityID as owedToEntityId
         FROM Expenses r
         JOIN Entities s ON r.RecipientID = s.EntityID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
@@ -126,7 +129,8 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as fromMethodId,
           NULL as toMethodId,
           tu.RecipientID as recipientId,
-          tu.CategoryID as categoryId
+          tu.CategoryID as categoryId,
+          NULL as owedToEntityId
         FROM Income tu
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
         LEFT JOIN Entities src ON tu.RecipientID = src.EntityID
@@ -159,7 +163,8 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           t.FromPaymentMethodID as fromMethodId,
           t.ToPaymentMethodID as toMethodId,
           NULL as recipientId,
-          NULL as categoryId
+          NULL as categoryId,
+          NULL as owedToEntityId
         FROM Transfers t
         JOIN PaymentMethods pm_from ON t.FromPaymentMethodID = pm_from.PaymentMethodID
         JOIN PaymentMethods pm_to ON t.ToPaymentMethodID = pm_to.PaymentMethodID
@@ -190,7 +195,8 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as fromMethodId,
           NULL as toMethodId,
           NULL as recipientId,
-          NULL as categoryId
+          NULL as categoryId,
+          NULL as owedToEntityId
         FROM ExpenseEntityPayments rdp
         JOIN Income tu ON rdp.IncomeID = tu.IncomeID
         JOIN Entities d ON rdp.EntityID = d.EntityID
@@ -200,12 +206,8 @@ export const useTransactions = (params: FetchTransactionsParams) => {
       let queries = [];
       if (typeFilter === 'all') {
         queries = [expenseQuery, incomeQuery, transferQuery, repaymentQuery];
-      } else if (typeFilter === 'expense') {
+      } else if (typeFilter === 'expense' || typeFilter === 'paid_expense') {
         queries = [expenseQuery];
-      } else if (typeFilter === 'paid_expense') {
-        queries = [expenseQuery + " WHERE r.Status = 'paid'"];
-      } else if (typeFilter === 'unpaid_expense') {
-        queries = [expenseQuery + " WHERE r.Status = 'unpaid'"];
       } else if (typeFilter === 'income') {
         queries = [incomeQuery];
       } else if (typeFilter === 'transfer') {
@@ -247,7 +249,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
       }
 
       // Apply type-specific filters
-      if (typeFilter === 'expense' || typeFilter === 'paid_expense' || typeFilter === 'unpaid_expense') {
+      if (typeFilter === 'expense' || typeFilter === 'paid_expense') {
         if (expenseTypeFilter && expenseTypeFilter !== 'all') {
           whereClauses.push(`isNonItemised = ?`);
           queryParams.push(expenseTypeFilter === 'total-only' ? 1 : 0);
@@ -258,22 +260,6 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         }
         if (attachmentFilter && attachmentFilter !== 'all') {
           whereClauses.push(`attachmentCount ${attachmentFilter === 'yes' ? '> 0' : '= 0'}`);
-        }
-        if (debtEnabled && debtFilter && debtFilter !== 'all') {
-          switch (debtFilter) {
-            case 'none':
-              whereClauses.push("totalDebtorCount = 0");
-              break;
-            case 'unpaid':
-              whereClauses.push("unpaidDebtorCount > 0");
-              break;
-            case 'own_debt':
-              whereClauses.push("status = 'unpaid'");
-              break;
-            case 'paid':
-              whereClauses.push("(totalDebtorCount > 0 AND unpaidDebtorCount = 0)");
-              break;
-          }
         }
         if (recipientFilter && recipientFilter !== 'all') {
           whereClauses.push("recipientId = ?");
@@ -301,6 +287,35 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         if (toMethodFilter && toMethodFilter !== 'all') {
           whereClauses.push("toMethodId = ?");
           queryParams.push(toMethodFilter);
+        }
+      }
+
+      // Debt filters (applied to the union result)
+      if (debtEnabled && debtFilter && debtFilter !== 'all') {
+        switch (debtFilter) {
+          case 'none':
+            whereClauses.push("totalDebtorCount = 0");
+            break;
+          case 'unpaid':
+            whereClauses.push("unpaidDebtorCount > 0");
+            break;
+          case 'paid':
+            whereClauses.push("(totalDebtorCount > 0 AND unpaidDebtorCount = 0)");
+            break;
+        }
+      }
+
+      if (debtEnabled && repaymentFilter && repaymentFilter !== 'all') {
+        switch (repaymentFilter) {
+          case 'none':
+            whereClauses.push("owedToEntityId IS NULL");
+            break;
+          case 'unpaid':
+            whereClauses.push("owedToEntityId IS NOT NULL AND status = 'unpaid'");
+            break;
+          case 'paid':
+            whereClauses.push("owedToEntityId IS NOT NULL AND status = 'paid'");
+            break;
         }
       }
 

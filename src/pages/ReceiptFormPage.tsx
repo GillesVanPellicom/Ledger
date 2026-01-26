@@ -32,6 +32,7 @@ import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/d
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import ButtonGroup from '../components/ui/ButtonGroup';
 import { toast } from 'sonner';
+import Checkbox from '../components/ui/Checkbox';
 
 const ReceiptFormPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -47,6 +48,7 @@ const ReceiptFormPage: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<{ value: string, label: string }[]>([]);
   const [debtors, setDebtors] = useState<Entity[]>([]);
   const [paidById, setPaidById] = useState<string>('me');
+  const [isRepaid, setIsRepaid] = useState<boolean>(false);
 
   const [formData, setFormData] = useState({
     recipientId: '',
@@ -176,7 +178,8 @@ const ReceiptFormPage: React.FC = () => {
           if (receiptData.IsNonItemised) {
             setNonItemisedTotal(receiptData.NonItemisedTotal);
           }
-          setPaidById(receiptData.Status === 'unpaid' ? String(receiptData.OwedToEntityID) : 'me');
+          setPaidById(receiptData.OwedToEntityID ? String(receiptData.OwedToEntityID) : 'me');
+          setIsRepaid(receiptData.Status === 'paid' && !!receiptData.OwedToEntityID);
           setFormData(prev => ({
             ...prev,
             recipientId: String(receiptData.RecipientID),
@@ -244,6 +247,7 @@ const ReceiptFormPage: React.FC = () => {
             setReceiptFormat(parsedConcept.receiptFormat || null);
             setNonItemisedTotal(parsedConcept.nonItemisedTotal || 0);
             setPaidById(parsedConcept.paidById || 'me');
+            setIsRepaid(parsedConcept.isRepaid || false);
             setFormData({
               ...parsedConcept.formData,
               receiptDate: new Date(parsedConcept.formData.receiptDate)
@@ -273,6 +277,7 @@ const ReceiptFormPage: React.FC = () => {
       const concept = {
         formData,
         paidById,
+        isRepaid,
         lineItems,
         images: images.filter(img => !img.file),
         splitType,
@@ -285,7 +290,7 @@ const ReceiptFormPage: React.FC = () => {
       localStorage.setItem('receipt_concept', JSON.stringify(concept));
       setIsConcept(true);
     }
-  }, [formData, paidById, lineItems, images, splitType, receiptSplits, isEditing, loading, excludedLineItemKeys, isExclusionMode, receiptFormat, nonItemisedTotal]);
+  }, [formData, paidById, isRepaid, lineItems, images, splitType, receiptSplits, isEditing, loading, excludedLineItemKeys, isExclusionMode, receiptFormat, nonItemisedTotal]);
 
   const clearConcept = () => {
     localStorage.removeItem('receipt_concept');
@@ -298,6 +303,7 @@ const ReceiptFormPage: React.FC = () => {
       discount: 0,
     });
     setPaidById('me');
+    setIsRepaid(false);
     setLineItems([]);
     setImages([]);
     setSplitType('none');
@@ -557,11 +563,11 @@ const ReceiptFormPage: React.FC = () => {
         RecipientID: formData.recipientId,
         ExpenseDate: format(formData.receiptDate, 'yyyy-MM-dd'),
         ExpenseNote: formData.note,
-        PaymentMethodID: paidById === 'me' ? formData.paymentMethodId : null,
+        PaymentMethodID: (paidById === 'me' || isRepaid) ? formData.paymentMethodId : null,
         SplitType: splitType,
         OwnShares: splitType === 'total_split' ? (formData.ownShares || 0) : null,
         TotalShares: splitType === 'total_split' ? totalShares : null,
-        Status: paidById === 'me' ? 'paid' : 'unpaid',
+        Status: (paidById === 'me' || isRepaid) ? 'paid' : 'unpaid',
         OwedToEntityID: paidById === 'me' ? null : paidById,
         Discount: receiptFormat === 'item-less' ? 0 : formData.discount,
         IsNonItemised: receiptFormat === 'item-less' ? 1 : 0,
@@ -758,19 +764,34 @@ const ReceiptFormPage: React.FC = () => {
                 <div className={cn("grid grid-cols-2 gap-6 col-span-2 items-end", !paymentMethodsEnabled && "grid-cols-1")}>
                   {debtEnabled && (
                     <div className={cn(!paymentMethodsEnabled && "col-span-2")}>
-                      <Combobox
-                        label="Paid by"
-                        variant="add"
-                        onAdd={() => setIsEntityModalOpen(true)}
-                        options={paidByOptions}
-                        value={paidById}
-                        onChange={(value) => handlePaidByChange(value)}
-                        placeholder="Select who paid"
-                        searchPlaceholder="Search entity..."
-                        noResultsText="No entities found."
-                        disabled={hasSettledDebts}
-                        error={errors.paidById}
-                      />
+                      <div className="flex flex-col gap-2">
+                        <Combobox
+                          label="Paid by"
+                          variant="add"
+                          onAdd={() => setIsEntityModalOpen(true)}
+                          options={paidByOptions}
+                          value={paidById}
+                          onChange={(value) => handlePaidByChange(value)}
+                          placeholder="Select who paid"
+                          searchPlaceholder="Search entity..."
+                          noResultsText="No entities found."
+                          disabled={hasSettledDebts}
+                          error={errors.paidById}
+                        />
+                        {paidById !== 'me' && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Checkbox
+                              id="isRepaid"
+                              checked={isRepaid}
+                              onChange={(e) => setIsRepaid(e.target.checked)}
+                              label={`Already repaid to ${debtors.find(d => String(d.EntityID) === paidById)?.EntityName || 'entity'}`}
+                            />
+                            <Tooltip content="Check this if you have already paid this person back. This will mark the expense as paid from your selected payment method.">
+                              <Info className="h-4 w-4 text-font-2 cursor-help"/>
+                            </Tooltip>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -786,7 +807,7 @@ const ReceiptFormPage: React.FC = () => {
                         placeholder="Select a method"
                         searchPlaceholder="Search methods..."
                         noResultsText="No methods found."
-                        disabled={paidById !== 'me'}
+                        disabled={paidById !== 'me' && !isRepaid}
                       />
                     </div>
                   )}
@@ -879,7 +900,6 @@ const ReceiptFormPage: React.FC = () => {
                             max={10000000}
                             step={1}
                             precision={2}
-                            clamp={true}
                             error={errors.nonItemisedTotal}
                             disabled={hasSettledDebts}
                             inputClassName="text-4xl font-bold text-center w-48 h-16 pl-10 pr-4"

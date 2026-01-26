@@ -10,6 +10,7 @@ interface ReceiptsState {
   appliedFilters: {
     type: string;
     debt: string;
+    repayment: string;
     expenseType: string;
     tentative: string;
     attachment: string;
@@ -33,6 +34,7 @@ interface ReceiptsState {
 const initialFilters = {
   type: 'all',
   debt: 'all',
+  repayment: 'all',
   expenseType: 'all',
   tentative: 'all',
   attachment: 'all',

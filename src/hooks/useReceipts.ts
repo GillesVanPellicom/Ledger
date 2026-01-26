@@ -14,6 +14,7 @@ interface FetchReceiptsParams {
   endDate?: Date | null;
   debtEnabled?: boolean;
   debtFilter?: string;
+  repaymentFilter?: string;
   typeFilter?: string;
   tentativeFilter?: string;
   attachmentFilter?: string;
@@ -33,13 +34,14 @@ export const useReceipts = (params: FetchReceiptsParams) => {
     endDate,
     debtEnabled,
     debtFilter,
+    repaymentFilter,
     typeFilter,
     tentativeFilter,
     attachmentFilter
   } = params;
 
   return useQuery<FetchReceiptsResult>({
-    queryKey: ['receipts', { page, pageSize, searchTerm, startDate, endDate, debtEnabled, debtFilter, typeFilter, tentativeFilter, attachmentFilter }],
+    queryKey: ['receipts', { page, pageSize, searchTerm, startDate, endDate, debtEnabled, debtFilter, repaymentFilter, typeFilter, tentativeFilter, attachmentFilter }],
     queryFn: async () => {
       const offset = (page - 1) * pageSize;
 
@@ -52,6 +54,7 @@ export const useReceipts = (params: FetchReceiptsParams) => {
                r.IsTentative,
                r.NonItemisedTotal,
                r.PaymentMethodID,
+               r.OwedToEntityID,
                s.EntityName as StoreName,
                pm.PaymentMethodName,
                (SELECT COUNT(*) FROM ExpenseImages ri WHERE ri.ExpenseID = r.ExpenseID) as AttachmentCount,
@@ -153,11 +156,22 @@ export const useReceipts = (params: FetchReceiptsParams) => {
           case 'unpaid':
             outerWhereClauses.push('UnpaidDebtorCount > 0');
             break;
-          case 'own_debt':
-            outerWhereClauses.push('Status = "unpaid"');
-            break;
           case 'paid':
             outerWhereClauses.push('TotalDebtorCount > 0 AND UnpaidDebtorCount = 0');
+            break;
+        }
+      }
+
+      if (debtEnabled && repaymentFilter && repaymentFilter !== 'all') {
+        switch (repaymentFilter) {
+          case 'none':
+            outerWhereClauses.push('OwedToEntityID IS NULL');
+            break;
+          case 'unpaid':
+            outerWhereClauses.push('OwedToEntityID IS NOT NULL AND Status = "unpaid"');
+            break;
+          case 'paid':
+            outerWhereClauses.push('OwedToEntityID IS NOT NULL AND Status = "paid"');
             break;
         }
       }

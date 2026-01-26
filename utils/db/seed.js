@@ -72,6 +72,7 @@ const productNames = [
 const sizes = [1, 2, 5, 10, 20, 50, 100, 150, 200, 250, 300, 330, 400, 500, 750, 1000, 1500, 2000];
 
 const entities = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Albert Heijn', 'Jumbo', 'Lidl', 'Aldi', 'Plus', 'Salary', 'Freelance Client A', 'Dividends', 'Birthday Gift', 'Tax Refund'];
+const debtEntities = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'];
 
 const categories = [
     'Foodstuffs', 'Medical', 'Clothing', 'Electronics', 'Household', 
@@ -218,6 +219,7 @@ async function seed() {
             fs.mkdirSync(receiptImgPath, { recursive: true });
         }
         const entityIds = (await getQuery(db, 'SELECT EntityID FROM Entities')).map(e => e.EntityID);
+        const debtEntityIds = (await getQuery(db, `SELECT EntityID FROM Entities WHERE EntityName IN ('${debtEntities.join("','")}')`)).map(e => e.EntityID);
         const productIds = (await getQuery(db, 'SELECT ProductID FROM Products')).map(p => p.ProductID);
         const paymentMethodIds = (await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods')).map(pm => pm.PaymentMethodID);
         const seedImages = fs.readdirSync(seedImgPath).filter(f => f.endsWith('.webp'));
@@ -255,10 +257,12 @@ async function seed() {
                     const roleName = pmRoles[pmName];
                     const role = roles[roleName] || { debtProb: 0.1, unpaidProb: 0.1 };
 
-                    const isUnpaid = Math.random() < role.unpaidProb;
-                    const status = isUnpaid ? 'unpaid' : 'paid';
-                    const owedToEntityID = isUnpaid ? getRandomElement(entityIds) : null;
-                    const receiptPaymentMethodId = isUnpaid ? null : paymentMethodId;
+                    const isPaidBySomeoneElse = Math.random() < role.unpaidProb;
+                    const isRepaid = isPaidBySomeoneElse && Math.random() > 0.5;
+                    
+                    const status = (isPaidBySomeoneElse && !isRepaid) ? 'unpaid' : 'paid';
+                    const owedToEntityID = isPaidBySomeoneElse ? getRandomElement(debtEntityIds) : null;
+                    const receiptPaymentMethodId = (isPaidBySomeoneElse && !isRepaid) ? null : paymentMethodId;
 
                     const isTentative = Math.random() < 0.05;
                     const isNonItemised = Math.random() < 0.1;
@@ -266,7 +270,7 @@ async function seed() {
                     const hasDiscount = Math.random() < 0.2;
                     const discount = hasDiscount ? getRandomInt(5, 20) : 0;
 
-                    const hasDebt = !isUnpaid && Math.random() < role.debtProb;
+                    const hasDebt = !isPaidBySomeoneElse && Math.random() < role.debtProb;
                     let splitType = 'none';
                     if (hasDebt) {
                         splitType = Math.random() > 0.5 ? 'line_item' : 'total_split';
@@ -300,7 +304,7 @@ async function seed() {
                             for (let j = 0; j < numItems; j++) {
                                 let debtorId = null;
                                 if (splitType === 'line_item' && Math.random() > 0.3) {
-                                    debtorId = getRandomElement(entityIds);
+                                    debtorId = getRandomElement(debtEntityIds);
                                     if(debtorId) receiptDebtors.add(debtorId);
                                 }
                                 lineItemsToInsert.push({
@@ -315,7 +319,7 @@ async function seed() {
                                 const numDebtors = getRandomInt(1, 3);
                                 const selectedDebtors = [];
                                 while (selectedDebtors.length < numDebtors) {
-                                    const d = getRandomElement(entityIds);
+                                    const d = getRandomElement(debtEntityIds);
                                     if (!selectedDebtors.includes(d)) selectedDebtors.push(d);
                                 }
                                 
