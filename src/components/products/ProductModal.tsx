@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -10,6 +10,8 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import CategoryModal from '../categories/CategoryModal';
 import StepperInput from '../ui/StepperInput';
 import Combobox from '../ui/Combobox';
+import { useActiveCategories } from '../../hooks/useReferenceData';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -23,34 +25,29 @@ interface ProductModalProps {
 const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToEdit, onSave, showSaveAndSelect, onSaveAndSelect }) => {
   const [formData, setFormData] = useState({ ProductName: '', ProductBrand: '', ProductSize: '', ProductUnitID: '', CategoryID: '' });
   const [units, setUnits] = useState<{ value: number; label: string }[]>([]);
-  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { settings } = useSettingsStore();
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: activeCategories = [] } = useActiveCategories();
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.ProductName) newErrors.ProductName = 'Product name is required.';
-    // Brand, Size, Unit, and Category are now optional
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const loadUnits = async () => {
-    const result = await db.query<{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string }>('SELECT * FROM ProductUnits ORDER BY ProductUnitType');
-    setUnits(result.map(u => ({ value: u.ProductUnitID, label: `${u.ProductUnitType} (${u.ProductUnitDescription})` })));
-  };
-
-  const loadCategories = async () => {
-    const result = await db.query<{ CategoryID: number; CategoryName: string }>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
-    setCategories(result.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })));
-  };
-
   useEffect(() => {
     if (isOpen) {
+      const loadUnits = async () => {
+        const result = await db.query<{ ProductUnitID: number; ProductUnitType: string; ProductUnitDescription: string }>('SELECT * FROM ProductUnits ORDER BY ProductUnitType');
+        setUnits(result.map(u => ({ value: u.ProductUnitID, label: `${u.ProductUnitType} (${u.ProductUnitDescription})` })));
+      };
       loadUnits();
-      loadCategories();
+
       if (productToEdit) {
         setFormData({ 
           ...productToEdit, 
@@ -131,12 +128,14 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
   };
 
   const handleCategorySave = async (newCategoryId?: number) => {
-    await loadCategories();
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
     if (newCategoryId) {
       setFormData(prev => ({ ...prev, CategoryID: String(newCategoryId) }));
     }
     setIsCategoryModalOpen(false);
   };
+
+  const categoryOptions = useMemo(() => activeCategories.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })), [activeCategories]);
 
   return (
     <>
@@ -173,7 +172,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
                 label="Category"
                 variant="add"
                 onAdd={() => setIsCategoryModalOpen(true)}
-                options={categories}
+                options={categoryOptions}
                 value={formData.CategoryID}
                 onChange={(value) => handleChange('CategoryID', value)}
                 placeholder="Select Category"

@@ -5,13 +5,14 @@ import {db} from '../../utils/db';
 import {X, Lock} from 'lucide-react';
 import {nanoid} from 'nanoid';
 import ProgressModal from '../ui/ProgressModal';
-import {Debtor, ReceiptSplit} from '../../types';
+import {ReceiptSplit} from '../../types';
 import Card from "../ui/Card";
 import Combobox from "../ui/Combobox";
 import StepperInput from "../ui/StepperInput";
 import {useSettingsStore} from '../../store/useSettingsStore';
 import Tooltip from '../ui/Tooltip';
 import {calculateTotalShares} from '../../logic/debt/debtLogic';
+import { useEntities } from '../../hooks/useReferenceData';
 
 interface BulkDebtModalProps {
   isOpen: boolean;
@@ -22,7 +23,6 @@ interface BulkDebtModalProps {
 
 const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptIds, onComplete}) => {
   const {settings} = useSettingsStore();
-  const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);
   const [ownShares, setOwnShares] = useState(0);
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
@@ -30,13 +30,11 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
   const [progress, setProgress] = useState(0);
   const [conflictingReceipts, setConflictingReceipts] = useState<number[]>([]);
 
+  const { data: entitiesData } = useEntities({ page: 1, pageSize: 1000 });
+  const activeDebtors = useMemo(() => (entitiesData?.entities || []).filter((e: any) => e.EntityIsActive), [entitiesData]);
+
   useEffect(() => {
     if (isOpen) {
-      const fetchDebtors = async () => {
-        const debtorsData = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
-        setDebtors(debtorsData);
-      };
-      fetchDebtors();
       setReceiptSplits([]);
       setOwnShares(0);
     }
@@ -48,12 +46,12 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
 
   const handleAddSplit = (debtorId: string) => {
     if (!debtorId) return;
-    const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId));
+    const debtor = activeDebtors.find((d: any) => d.EntityID === parseInt(debtorId));
     if (debtor) {
       setReceiptSplits(prev => [...prev, {
         key: nanoid(),
-        DebtorID: debtor.DebtorID,
-        DebtorName: debtor.DebtorName,
+        DebtorID: debtor.EntityID,
+        DebtorName: debtor.EntityName,
         SplitPart: 1
       }]);
     }
@@ -128,17 +126,21 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
       onClose();
     } catch (error) {
       console.error("Bulk update failed:", error);
-      // Modal will handle error toast if we propagate, but here we have a progress modal overlay.
-      // Since this is a complex multi-step process with its own progress UI, 
-      // we might want to let the Modal handle the overall success/failure if possible,
-      // but the progress modal complicates it. 
-      // For now, let's rethrow so the parent Modal *could* catch it if it was the one calling this.
-      // However, startBulkUpdate is called by onEnter.
       throw error; 
     } finally {
       setIsProcessing(false);
     }
   };
+
+  const debtorOptions = useMemo(() => 
+    activeDebtors
+      .filter((d: any) => !receiptSplits.some(s => s.DebtorID === d.EntityID))
+      .map((d: any) => ({
+        value: String(d.EntityID),
+        label: d.EntityName
+      })),
+    [activeDebtors, receiptSplits]
+  );
 
   return (
     <>
@@ -203,10 +205,7 @@ const BulkDebtModal: React.FC<BulkDebtModalProps> = ({isOpen, onClose, receiptId
 
           <div className="grid grid-cols-2 gap-4 items-end">
             <Combobox
-              options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
-                value: String(d.DebtorID),
-                label: d.DebtorName
-              }))}
+              options={debtorOptions}
               value=""
               onChange={handleAddSplit}
               placeholder="Add Debtor..."

@@ -1,21 +1,20 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import DatePicker from '../ui/DatePicker';
 import { db } from '../../utils/db';
 import { format, parseISO, startOfDay, startOfToday } from 'date-fns';
-import { PaymentMethod, TopUp } from '../../types';
+import { TopUp } from '../../types';
 import Combobox from '../ui/Combobox';
 import { useQueryClient } from '@tanstack/react-query';
 import Divider from '../ui/Divider';
 import StepperInput from '../ui/StepperInput';
-import Tooltip from '../ui/Tooltip';
-import { Info } from 'lucide-react';
 import CategoryModal from '../categories/CategoryModal';
 import EntityModal from '../debt/EntityModal';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { incomeCommitments } from '../../logic/incomeCommitments';
+import { useActiveCategories, useEntities } from '../../hooks/useReferenceData';
+import { useActivePaymentMethods } from '../../hooks/usePaymentMethods';
 
 interface IncomeModalProps {
   isOpen: boolean;
@@ -32,9 +31,9 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [entities, setEntities] = useState<any[]>([]);
+  const { data: activePaymentMethods = [] } = useActivePaymentMethods();
+  const { data: activeCategories = [] } = useActiveCategories();
+  const { data: entitiesData } = useEntities({ page: 1, pageSize: 1000 });
   
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
@@ -57,54 +56,35 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
 
   const initializedRef = useRef<number | null | undefined>(undefined);
 
-  const fetchReferenceData = useCallback(async () => {
-    const [pmRows, catRows, entRows] = await Promise.all([
-      db.query<PaymentMethod>("SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName"),
-      db.query<any>("SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName"),
-      db.query<any>("SELECT EntityID, EntityName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName")
-    ]);
-    setPaymentMethods(pmRows);
-    setCategories(catRows.map(r => ({ value: String(r.CategoryID), label: r.CategoryName })));
-    setEntities(entRows.map(r => ({ value: String(r.EntityID), label: r.EntityName })));
-    
-    return { pmRows, catRows, entRows };
-  }, []);
-
   useEffect(() => {
     if (isOpen) {
-      const initialize = async () => {
-        const { pmRows } = await fetchReferenceData();
-        
-        if (topUpToEdit && initializedRef.current !== topUpToEdit.IncomeID) {
-          setFormData({
-            amount: String(topUpToEdit.IncomeAmount),
-            date: parseISO(topUpToEdit.IncomeDate),
-            notes: topUpToEdit.IncomeNote || '',
-            recipientId: String(topUpToEdit.RecipientID || ''),
-            categoryId: String(topUpToEdit.CategoryID || ''),
-            paymentMethodId: String(topUpToEdit.PaymentMethodID),
-          });
-          initializedRef.current = topUpToEdit.IncomeID;
-        } else if (!topUpToEdit) {
-          const today = getCurrentDate();
-          setFormData({ 
-            amount: '0', 
-            date: today, 
-            notes: '',
-            recipientId: '',
-            categoryId: '',
-            paymentMethodId: paymentMethodId || (pmRows.length > 0 ? String(pmRows[0].PaymentMethodID) : ''),
-          });
-          initializedRef.current = null;
-        }
-        setErrors({});
-      };
-      
-      initialize();
+      if (topUpToEdit && initializedRef.current !== topUpToEdit.IncomeID) {
+        setFormData({
+          amount: String(topUpToEdit.IncomeAmount),
+          date: parseISO(topUpToEdit.IncomeDate),
+          notes: topUpToEdit.IncomeNote || '',
+          recipientId: String(topUpToEdit.RecipientID || ''),
+          categoryId: String(topUpToEdit.CategoryID || ''),
+          paymentMethodId: String(topUpToEdit.PaymentMethodID),
+        });
+        initializedRef.current = topUpToEdit.IncomeID;
+      } else if (!topUpToEdit && initializedRef.current !== null) {
+        const today = getCurrentDate();
+        setFormData({ 
+          amount: '0', 
+          date: today, 
+          notes: '',
+          recipientId: '',
+          categoryId: '',
+          paymentMethodId: paymentMethodId || (activePaymentMethods.length > 0 ? String(activePaymentMethods[0].PaymentMethodID) : ''),
+        });
+        initializedRef.current = null;
+      }
+      setErrors({});
     } else {
       initializedRef.current = undefined;
     }
-  }, [isOpen, topUpToEdit, paymentMethodId, fetchReferenceData, getCurrentDate]);
+  }, [isOpen, topUpToEdit, paymentMethodId, getCurrentDate, activePaymentMethods]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -151,7 +131,25 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
     }
   };
 
-  const methodOptions = paymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName }));
+  const methodOptions = useMemo(() => activePaymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })), [activePaymentMethods]);
+  const categoryOptions = useMemo(() => activeCategories.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })), [activeCategories]);
+  const entityOptions = useMemo(() => (entitiesData?.entities || []).map((e: any) => ({ value: String(e.EntityID), label: e.EntityName })), [entitiesData]);
+
+  const handleEntitySave = async (newId?: number) => {
+    queryClient.invalidateQueries({ queryKey: ['entities'] });
+    if (newId) {
+      setFormData(prev => ({...prev, recipientId: String(newId)}));
+    }
+    setIsEntityModalOpen(false);
+  };
+
+  const handleCategorySave = async (newId?: number) => {
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    if (newId) {
+      setFormData(prev => ({...prev, categoryId: String(newId)}));
+    }
+    setIsCategoryModalOpen(false);
+  };
 
   return (
     <>
@@ -199,7 +197,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                   placeholder="Select a source..."
                   searchPlaceholder="Search source..."
                   noResultsText="No sources found."
-                  options={entities}
+                  options={entityOptions}
                   value={formData.recipientId}
                   onChange={val => setFormData(prev => ({...prev, recipientId: val}))}
                   className="flex-1"
@@ -224,7 +222,7 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
                   placeholder="Select a category..."
                   searchPlaceholder="Search category..."
                   noResultsText="No categories found."
-                  options={categories}
+                  options={categoryOptions}
                   value={formData.categoryId}
                   onChange={val => setFormData(prev => ({...prev, categoryId: val}))}
                   className="flex-1"
@@ -243,14 +241,14 @@ const IncomeModal: React.FC<IncomeModalProps> = ({ isOpen, onClose, onSave, topU
       <CategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
-        onSave={fetchReferenceData}
+        onSave={handleCategorySave}
         categoryToEdit={null}
       />
 
       <EntityModal
         isOpen={isEntityModalOpen}
         onClose={() => setIsEntityModalOpen(false)}
-        onSave={fetchReferenceData}
+        onSave={handleEntitySave}
         entityToEdit={null}
       />
     </>

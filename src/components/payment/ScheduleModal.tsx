@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { db } from '../../utils/db';
 import { getDate, getDay, getMonth, parseISO, startOfDay, startOfToday, subMonths, isBefore } from 'date-fns';
-import { PaymentMethod } from '../../types';
 import Combobox from '../ui/Combobox';
 import { useQueryClient } from '@tanstack/react-query';
 import Divider from '../ui/Divider';
@@ -20,6 +19,8 @@ import { parseRecurrenceRule, calculateOccurrences } from '../../logic/incomeSch
 import Checkbox from '../ui/Checkbox';
 import { cn } from '../../utils/cn';
 import CategoryModal from '../categories/CategoryModal';
+import { useActiveCategories, useEntities } from '../../hooks/useReferenceData';
+import { useActivePaymentMethods } from '../../hooks/usePaymentMethods';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -51,9 +52,9 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [entities, setEntities] = useState<any[]>([]);
+  const { data: activePaymentMethods = [] } = useActivePaymentMethods();
+  const { data: activeCategories = [] } = useActiveCategories();
+  const { data: entitiesData } = useEntities({ page: 1, pageSize: 1000 });
   
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState(false);
@@ -83,71 +84,52 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
 
   const initializedRef = useRef<number | null | undefined>(undefined);
 
-  const fetchReferenceData = useCallback(async () => {
-    const [pmRows, catRows, entRows] = await Promise.all([
-      db.query<PaymentMethod>("SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName"),
-      db.query<any>("SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName"),
-      db.query<any>("SELECT EntityID, EntityName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName")
-    ]);
-    setPaymentMethods(pmRows);
-    setCategories(catRows.map(r => ({ value: String(r.CategoryID), label: r.CategoryName })));
-    setEntities(entRows.map(r => ({ value: String(r.EntityID), label: r.EntityName })));
-    
-    return { pmRows, catRows, entRows };
-  }, []);
-
   useEffect(() => {
     if (isOpen) {
-      const initialize = async () => {
-        const { pmRows } = await fetchReferenceData();
+      if (scheduleToEdit && initializedRef.current !== scheduleToEdit.ScheduleID) {
+        setType(scheduleToEdit.Type || 'income');
         
-        if (scheduleToEdit && initializedRef.current !== scheduleToEdit.ScheduleID) {
-          setType(scheduleToEdit.Type || 'income');
-          
-          setFormData({
-            amount: String(scheduleToEdit.ExpectedAmount || 0),
-            notes: scheduleToEdit.Note || '',
-            recipientId: String(scheduleToEdit.RecipientID || ''),
-            categoryId: String(scheduleToEdit.CategoryID || ''),
-            paymentMethodId: String(scheduleToEdit.PaymentMethodID),
-            recurrenceRule: scheduleToEdit.RecurrenceRule || 'FREQ=MONTHLY;INTERVAL=1',
-            dayOfMonth: String(scheduleToEdit.DayOfMonth || getDate(getCurrentDate())),
-            dayOfWeek: String(scheduleToEdit.DayOfWeek || getDay(getCurrentDate())),
-            monthOfYear: String(scheduleToEdit.MonthOfYear || getMonth(getCurrentDate())),
-            requiresConfirmation: scheduleToEdit.RequiresConfirmation,
-            lookaheadDays: scheduleToEdit.LookaheadDays || 7,
-            isActive: scheduleToEdit.IsActive,
-            createForPastPeriod: false
-          });
-          initializedRef.current = scheduleToEdit.ScheduleID;
-        } else if (!scheduleToEdit) {
-          const today = getCurrentDate();
-          setFormData({ 
-            amount: '0', 
-            notes: '',
-            recipientId: '',
-            categoryId: '',
-            paymentMethodId: pmRows.length > 0 ? String(pmRows[0].PaymentMethodID) : '',
-            recurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
-            dayOfMonth: String(getDate(today)),
-            dayOfWeek: String(getDay(today)),
-            monthOfYear: String(getMonth(today)),
-            requiresConfirmation: true,
-            lookaheadDays: 7,
-            isActive: true,
-            createForPastPeriod: false
-          });
-          initializedRef.current = null;
-          setType('income'); // Default to income
-        }
-        setErrors({});
-      };
-      
-      initialize();
+        setFormData({
+          amount: String(scheduleToEdit.ExpectedAmount || 0),
+          notes: scheduleToEdit.Note || '',
+          recipientId: String(scheduleToEdit.RecipientID || ''),
+          categoryId: String(scheduleToEdit.CategoryID || ''),
+          paymentMethodId: String(scheduleToEdit.PaymentMethodID),
+          recurrenceRule: scheduleToEdit.RecurrenceRule || 'FREQ=MONTHLY;INTERVAL=1',
+          dayOfMonth: String(scheduleToEdit.DayOfMonth || getDate(getCurrentDate())),
+          dayOfWeek: String(scheduleToEdit.DayOfWeek || getDay(getCurrentDate())),
+          monthOfYear: String(scheduleToEdit.MonthOfYear || getMonth(getCurrentDate())),
+          requiresConfirmation: scheduleToEdit.RequiresConfirmation,
+          lookaheadDays: scheduleToEdit.LookaheadDays || 7,
+          isActive: scheduleToEdit.IsActive,
+          createForPastPeriod: false
+        });
+        initializedRef.current = scheduleToEdit.ScheduleID;
+      } else if (!scheduleToEdit && initializedRef.current !== null) {
+        const today = getCurrentDate();
+        setFormData({ 
+          amount: '0', 
+          notes: '',
+          recipientId: '',
+          categoryId: '',
+          paymentMethodId: activePaymentMethods.length > 0 ? String(activePaymentMethods[0].PaymentMethodID) : '',
+          recurrenceRule: 'FREQ=MONTHLY;INTERVAL=1',
+          dayOfMonth: String(getDate(today)),
+          dayOfWeek: String(getDay(today)),
+          monthOfYear: String(getMonth(today)),
+          requiresConfirmation: true,
+          lookaheadDays: 7,
+          isActive: true,
+          createForPastPeriod: false
+        });
+        initializedRef.current = null;
+        setType('income');
+      }
+      setErrors({});
     } else {
       initializedRef.current = undefined;
     }
-  }, [isOpen, scheduleToEdit, fetchReferenceData, getCurrentDate]);
+  }, [isOpen, scheduleToEdit, getCurrentDate, activePaymentMethods]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -198,10 +180,11 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
         );
       }
       
-      await incomeLogic.processSchedules();
-      
-      queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
+      // Run background processing without blocking
+      incomeLogic.processSchedules().then(() => {
+        queryClient.invalidateQueries({ queryKey: ['incomeSchedules'] });
+        queryClient.invalidateQueries({ queryKey: ['pendingIncome'] });
+      });
 
       onSave();
       onClose();
@@ -261,7 +244,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
     }
   };
 
-  const showCreateForPastPeriodCheckbox = () => {
+  const showCreateForPastPeriodCheckbox = useMemo(() => {
     if (scheduleToEdit) return false;
     try {
       const today = getCurrentDate();
@@ -281,12 +264,14 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
     } catch (e) {
       return false;
     }
-  };
+  }, [formData.recurrenceRule, formData.dayOfMonth, formData.dayOfWeek, formData.monthOfYear, scheduleToEdit, getCurrentDate]);
 
-  const methodOptions = paymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName }));
+  const methodOptions = useMemo(() => activePaymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })), [activePaymentMethods]);
+  const categoryOptions = useMemo(() => activeCategories.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })), [activeCategories]);
+  const entityOptions = useMemo(() => (entitiesData?.entities || []).map((e: any) => ({ value: String(e.EntityID), label: e.EntityName })), [entitiesData]);
 
   const handleEntitySave = async (newId?: number) => {
-    await fetchReferenceData();
+    queryClient.invalidateQueries({ queryKey: ['entities'] });
     if (newId) {
       setFormData(prev => ({...prev, recipientId: String(newId)}));
     }
@@ -294,7 +279,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
   };
 
   const handleCategorySave = async (newId?: number) => {
-    await fetchReferenceData();
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
     if (newId) {
       setFormData(prev => ({...prev, categoryId: String(newId)}));
     }
@@ -363,7 +348,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                   placeholder={`Select a ${type === 'income' ? 'source' : 'recipient'}...`}
                   searchPlaceholder={`Search ${type === 'income' ? 'source' : 'recipient'}...`}
                   noResultsText={`No ${type === 'income' ? 'sources' : 'recipients'} found.`}
-                  options={entities}
+                  options={entityOptions}
                   value={formData.recipientId}
                   onChange={val => setFormData(prev => ({...prev, recipientId: val}))}
                   className="flex-1"
@@ -446,7 +431,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                     <Info className="h-4 w-4 text-font-2 cursor-help"/>
                   </Tooltip>
                 </div>
-                <div className={cn("flex items-center gap-2 transition-opacity", showCreateForPastPeriodCheckbox() ? "opacity-100" : "opacity-0 pointer-events-none")}>
+                <div className={cn("flex items-center gap-2 transition-opacity", showCreateForPastPeriodCheckbox ? "opacity-100" : "opacity-0 pointer-events-none")}>
                   <Checkbox
                     label="Create for current period"
                     checked={formData.createForPastPeriod}
@@ -467,7 +452,7 @@ const ScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, onClose, onSave, 
                   placeholder="Select a category..."
                   searchPlaceholder="Search category..."
                   noResultsText="No categories found."
-                  options={categories}
+                  options={categoryOptions}
                   value={formData.categoryId}
                   onChange={val => setFormData(prev => ({...prev, categoryId: val}))}
                   className="flex-1"

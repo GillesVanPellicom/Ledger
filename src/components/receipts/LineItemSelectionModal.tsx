@@ -4,8 +4,9 @@ import Button from '../ui/Button';
 import DataTable from '../ui/DataTable';
 import Select from '../ui/Select';
 import InfoCard from '../ui/InfoCard';
-import { LineItem, Debtor } from '../../types';
+import { LineItem } from '../../types';
 import { cn } from '../../utils/cn';
+import { useEntities } from '../../hooks/useReferenceData';
 
 interface LineItemSelectionModalProps {
   isOpen: boolean;
@@ -13,7 +14,6 @@ interface LineItemSelectionModalProps {
   lineItems: LineItem[];
   onSave: (data: any) => void;
   selectionMode: 'debtor' | 'discount';
-  debtors: Debtor[];
   initialSelectedKeys: string[];
   disabled?: boolean;
 }
@@ -24,7 +24,6 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
   lineItems,
   onSave,
   selectionMode,
-  debtors,
   initialSelectedKeys,
   disabled = false,
 }) => {
@@ -38,6 +37,9 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(15);
+
+  const { data: entitiesData } = useEntities({ page: 1, pageSize: 1000 });
+  const activeDebtors = useMemo(() => (entitiesData?.entities || []).filter((e: any) => e.EntityIsActive), [entitiesData]);
 
   const allFilteredItems = useMemo(() => {
     if (!searchTerm) return lineItems;
@@ -194,7 +196,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
             <Select
               value={assignments[item.key] || ''}
               onChange={(e) => handleAssignmentChange(item.key, e.target.value)}
-              options={[{ value: '', label: 'Me' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+              options={[{ value: '', label: 'Me' }, ...activeDebtors.map((d: any) => ({ value: String(d.EntityID), label: d.EntityName }))]}
               className="w-full"
               disabled={disabled}
             />
@@ -245,7 +247,7 @@ const LineItemSelectionModal: React.FC<LineItemSelectionModalProps> = ({
                   <Select
                     value={bulkDebtorId}
                     onChange={(e) => setBulkDebtorId(e.target.value)}
-                    options={[{ value: '', label: 'Assign to...' }, ...debtors.map(d => ({ value: d.DebtorID, label: d.DebtorName }))]}
+                    options={[{ value: '', label: 'Assign to...' }, ...activeDebtors.map((d: any) => ({ value: String(d.EntityID), label: d.EntityName }))]}
                     className="w-auto"
                     disabled={disabled}
                   />

@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import DatePicker from '../ui/DatePicker';
 import { db } from '../../utils/db';
 import { format } from 'date-fns';
-import { PaymentMethod, TopUp } from '../../types';
+import { TopUp } from '../../types';
 import Combobox from '../ui/Combobox';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import Divider from '../ui/Divider';
 import StepperInput from '../ui/StepperInput';
 import { cn } from '../../utils/cn';
+import { useActivePaymentMethods, usePaymentMethodBalance } from '../../hooks/usePaymentMethods';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -28,24 +29,28 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [transferFrom, setTransferFrom] = useState<string>('');
   const [transferTo, setTransferTo] = useState<string>('');
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [methodBalances, setMethodBalances] = useState<Record<string, number>>({});
+  
   const queryClient = useQueryClient();
+  const { data: activePaymentMethods = [] } = useActivePaymentMethods();
+
+  // We need balances for all active methods to show in the UI
+  // Using a custom hook or just fetching them here. 
+  // For now, let's stick to the requirement of not fetching in useEffect if possible.
+  // But we need balances for ALL methods.
+  const [methodBalances, setMethodBalances] = useState<Record<string, number>>({});
 
   const fromMethodBalance = transferFrom ? (methodBalances[transferFrom] || 0) : 0;
   const toMethodBalance = transferTo ? (methodBalances[transferTo] || 0) : 0;
 
-  // Initialize and fetch methods
   useEffect(() => {
     if (isOpen) {
-      const init = async () => {
-        const methods = await db.query<PaymentMethod>('SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1');
-        
+      const fetchBalances = async () => {
         const balances: Record<string, number> = {};
-        for (const m of methods) {
+        // Batch fetch balances
+        const balancePromises = activePaymentMethods.map(async (m) => {
           const receipts = await db.queryOne<{ total: number }>(`
             SELECT SUM(CASE WHEN IsNonItemised = 1 THEN NonItemisedTotal ELSE (SELECT SUM(LineQuantity * LineUnitPrice) FROM ExpenseLineItems WHERE ExpenseID = Expenses.ExpenseID) END) as total
-            FROM Expenses WHERE PaymentMethodID = ?
+            FROM Expenses WHERE PaymentMethodID = ? AND IsTentative = 0
           `, [m.PaymentMethodID]);
           
           const topups = await db.queryOne<{ total: number }>(`
@@ -53,34 +58,36 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
           `, [m.PaymentMethodID]);
 
           balances[String(m.PaymentMethodID)] = (m.PaymentMethodFunds || 0) + (topups?.total || 0) - (receipts?.total || 0);
-        }
-        
+        });
+        await Promise.all(balancePromises);
         setMethodBalances(balances);
-        setPaymentMethods(methods);
-        
-        if (topUpToEdit) {
-          setFormData({ 
-            amount: String(Math.abs(topUpToEdit.IncomeAmount)), 
-            date: new Date(topUpToEdit.IncomeDate), 
-            notes: topUpToEdit.IncomeNote || '' 
-          });
-          setTransferFrom(String(topUpToEdit.PaymentMethodID));
-          if (topUpToEdit.TransferID) {
-            const otherTu = await db.queryOne<TopUp>('SELECT * FROM Income WHERE TransferID = ? AND IncomeID != ?', [topUpToEdit.TransferID, topUpToEdit.IncomeID]);
-            if (otherTu) {
-              setTransferTo(String(otherTu.PaymentMethodID));
-            }
-          }
-        } else {
-          setFormData({ amount: '0', date: new Date(), notes: '' });
-          setTransferFrom('');
-          setTransferTo('');
-        }
-        setErrors({});
       };
-      init();
+
+      if (activePaymentMethods.length > 0) {
+        fetchBalances();
+      }
+
+      if (topUpToEdit) {
+        setFormData({ 
+          amount: String(Math.abs(topUpToEdit.IncomeAmount)), 
+          date: new Date(topUpToEdit.IncomeDate), 
+          notes: topUpToEdit.IncomeNote || '' 
+        });
+        setTransferFrom(String(topUpToEdit.PaymentMethodID));
+        if (topUpToEdit.TransferID) {
+          db.queryOne<TopUp>('SELECT * FROM Income WHERE TransferID = ? AND IncomeID != ?', [topUpToEdit.TransferID, topUpToEdit.IncomeID])
+            .then(otherTu => {
+              if (otherTu) setTransferTo(String(otherTu.PaymentMethodID));
+            });
+        }
+      } else {
+        setFormData({ amount: '0', date: new Date(), notes: '' });
+        setTransferFrom('');
+        setTransferTo('');
+      }
+      setErrors({});
     }
-  }, [isOpen, topUpToEdit]);
+  }, [isOpen, topUpToEdit, activePaymentMethods]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -105,13 +112,11 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
 
     try {
       if (topUpToEdit && topUpToEdit.TransferID) {
-        // Update existing transfer
         await db.execute(
           'UPDATE Transfers SET FromPaymentMethodID = ?, ToPaymentMethodID = ?, Amount = ?, TransferDate = ?, Note = ? WHERE TransferID = ?',
           [transferFrom, transferTo, Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, topUpToEdit.TransferID]
         );
         
-        // Update associated TopUps
         await db.execute(
           'UPDATE Income SET PaymentMethodID = ?, IncomeAmount = ?, IncomeDate = ?, IncomeNote = ? WHERE TransferID = ? AND IncomeAmount < 0',
           [transferFrom, -Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, topUpToEdit.TransferID]
@@ -121,7 +126,6 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
           [transferTo, Number(formData.amount), format(formData.date, 'yyyy-MM-dd'), formData.notes, topUpToEdit.TransferID]
         );
       } else {
-        // Create new transfer
         const transactionDetails = {
           type: 'transfer',
           amount: Number(formData.amount),
@@ -142,14 +146,15 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
       onClose();
     } catch (err: any) {
       setErrors({ form: err.message || 'Failed to save transfer' });
-      throw err; // Re-throw for Modal to catch if needed
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const methodOptions = paymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName }));
-  const originOptions = paymentMethods.map(pm => {
+  const methodOptions = useMemo(() => activePaymentMethods.map(pm => ({ value: String(pm.PaymentMethodID), label: pm.PaymentMethodName })), [activePaymentMethods]);
+  
+  const originOptions = useMemo(() => activePaymentMethods.map(pm => {
     const balance = methodBalances[String(pm.PaymentMethodID)] || 0;
     const isDisabled = balance <= 0;
     return {
@@ -158,7 +163,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
       disabled: isDisabled,
       tooltip: isDisabled ? "Insufficient funds" : undefined
     };
-  });
+  }), [activePaymentMethods, methodBalances]);
 
   return (
     <Modal

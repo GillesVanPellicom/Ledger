@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import DatePicker from '../ui/DatePicker';
@@ -7,6 +7,7 @@ import Input from '../ui/Input';
 import { db } from '../../utils/db';
 import { format } from 'date-fns';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useActivePaymentMethods } from '../../hooks/usePaymentMethods';
 
 interface DebtInfo {
   receiptId: number;
@@ -27,36 +28,29 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
   const [paidDate, setPaidDate] = useState(new Date());
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [note, setNote] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState<{ value: number; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { settings } = useSettingsStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
 
+  const { data: activePaymentMethods = [] } = useActivePaymentMethods();
+
   useEffect(() => {
     if (isOpen && debtInfo) {
-      const fetchPaymentMethods = async () => {
-        if (paymentMethodsEnabled) {
-          const methods = await db.query<{ PaymentMethodID: number; PaymentMethodName: string }>(
-            'SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName'
-          );
-          setPaymentMethods(methods.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
-          
-          if (debtInfo.receiptPaymentMethodId) {
-            setPaymentMethodId(String(debtInfo.receiptPaymentMethodId));
-          } else if (methods.length > 0) {
-            setPaymentMethodId(String(methods[0].PaymentMethodID));
-          }
-        } else {
-          setPaymentMethodId('1'); // Default to Cash
+      if (paymentMethodsEnabled) {
+        if (debtInfo.receiptPaymentMethodId) {
+          setPaymentMethodId(String(debtInfo.receiptPaymentMethodId));
+        } else if (activePaymentMethods.length > 0) {
+          setPaymentMethodId(String(activePaymentMethods[0].PaymentMethodID));
         }
-      };
-      fetchPaymentMethods();
+      } else {
+        setPaymentMethodId('1'); // Default to Cash
+      }
       setPaidDate(new Date());
       setNote('');
       setError('');
     }
-  }, [isOpen, debtInfo, paymentMethodsEnabled]);
+  }, [isOpen, debtInfo, paymentMethodsEnabled, activePaymentMethods]);
 
   const handleSubmit = async () => {
     if (!paymentMethodId) {
@@ -92,6 +86,8 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
     }
   };
 
+  const methodOptions = useMemo(() => activePaymentMethods.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })), [activePaymentMethods]);
+
   if (!debtInfo) return null;
 
   return (
@@ -119,7 +115,7 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
             label="Paid into"
             value={paymentMethodId}
             onChange={(e) => setPaymentMethodId(e.target.value)}
-            options={paymentMethods}
+            options={methodOptions}
             placeholder="Select a method"
           />
         )}
