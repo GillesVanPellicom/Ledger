@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
-import { Bug, Trash2, Info, Plug, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code, Bell, Activity } from 'lucide-react';
+import { Bug, Trash2, Info, Plug, CheckCircle, AlertCircle, HelpCircle, ClipboardList, Clipboard, Paperclip, Clock, Palette, FileText, Database, Type, Code, Bell, Activity, Settings2, User, Monitor, Layout, Sliders, Calendar, Hash, Coins } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import ErrorModal from '../ui/ErrorModal';
@@ -46,6 +46,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   const [mockTimeTime, setMockTimeTime] = useState('');
   const [devActiveTab, setDevActiveTab] = useState('general');
   const [appearanceActiveTab, setAppearanceActiveTab] = useState('general');
+  const [formattingActiveTab, setFormattingActiveTab] = useState('general');
   const [promiseDuration, setPromiseDuration] = useState('2');
 
   useEffect(() => {
@@ -214,8 +215,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
   tabs.sort((a, b) => a.label.localeCompare(b.label));
 
-  const SectionTitle = ({ title, tooltip }: { title: string, tooltip?: string }) => (
+  const SectionTitle = ({ title, tooltip, icon: Icon }: { title: string, tooltip?: string, icon?: React.ElementType }) => (
     <div className="flex items-center gap-2 mb-4">
+      {Icon && <Icon className="h-5 w-5 text-accent" />}
       <h3 className="text-lg font-medium text-font-1">{title}</h3>
       {tooltip && <Tooltip content={tooltip}><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>}
     </div>
@@ -263,17 +265,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
   } as const;
 
   const devTabs = [
-    { id: 'general', label: 'General' },
-    { id: 'wizard', label: 'Wizard' },
-    { id: 'time', label: 'Time' },
-    { id: 'profiling', label: 'Profiling' },
-    { id: 'sonner', label: 'Sonner' },
+    { id: 'general', label: 'General', icon: Sliders },
+    { id: 'wizard', label: 'Wizard', icon: Settings2 },
+    { id: 'time', label: 'Time', icon: Clock },
+    { id: 'profiling', label: 'Profiling', icon: Activity },
+    { id: 'sonner', label: 'Sonner', icon: Bell },
   ];
 
   const appearanceTabs = [
-    { id: 'general', label: 'General' },
-    { id: 'indicators', label: 'Indicators' },
-    { id: 'notifications', label: 'Notifications' },
+    { id: 'general', label: 'General', icon: Monitor },
+    { id: 'indicators', label: 'Indicators', icon: Layout },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+  ];
+
+  const formattingTabs = [
+    { id: 'general', label: 'General', icon: Sliders },
+    { id: 'date-time', label: 'Date & Time', icon: Calendar },
+    { id: 'numbers', label: 'Numbers', icon: Hash },
   ];
 
   return (
@@ -315,6 +323,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
                 {appearanceActiveTab === 'general' && (
                   <div>
+                    <SectionTitle title="General Appearance" tooltip="Configure the overall look and feel of the application." />
                     <AppearanceSettings />
                     
                     <div className="h-px bg-border my-6" />
@@ -354,6 +363,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
 
                 {appearanceActiveTab === 'notifications' && (
                   <div>
+                    <SectionTitle title="Notifications" tooltip="Manage how and when you receive notifications." />
                     <NotificationControls />
                   </div>
                 )}
@@ -362,39 +372,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             {activeTab === 'modules' && (
               <div className="space-y-6">
                 <div>
-                  <SectionTitle title="Modules" tooltip="Enable or disable optional features to customize your experience." />
+                  <SectionTitle title="Modules" icon={Plug} tooltip="Enable or disable optional features to customize your experience." />
                   <ModulesComponent settings={settings} onToggle={handleModuleToggle} />
                 </div>
               </div>
             )}
             {activeTab === 'formatting' && (
               <div className="space-y-6">
-                <DateSettings />
-                <Divider className="my-8" />
-                <TimeSettings />
-                <Divider className="my-8" />
-                <FormattingSettings />
-
-                <div className="h-px bg-border my-6" />
-
-                <div>
-                  <SectionTitle title="Formatting" tooltip="Manage automatic text formatting and capitalization rules." />
-                  <div className="space-y-4">
-                    <Switch 
-                      label="Capitalization Protection" 
-                      description="Enforce capitalization rules for product names and brands." 
-                      isEnabled={settings.modules.capitalizationProtection?.enabled ?? false}
-                      onToggle={() => handleModuleToggle('capitalizationProtection')}
-                      className="border-0 p-0"
-                    />
-                  </div>
+                <div className="mb-6">
+                  <TabsComponent 
+                    tabs={formattingTabs} 
+                    activeTab={formattingActiveTab} 
+                    onChange={setFormattingActiveTab} 
+                  />
                 </div>
+
+                {formattingActiveTab === 'general' && (
+                  <div>
+                    <SectionTitle title="General Formatting" tooltip="Manage automatic text formatting and capitalization rules." />
+                    <div className="space-y-4">
+                      <Switch 
+                        label="Capitalization Protection" 
+                        description="Enforce capitalization rules for product names and brands." 
+                        isEnabled={settings.modules.capitalizationProtection?.enabled ?? false}
+                        onToggle={() => handleModuleToggle('capitalizationProtection')}
+                        className="border-0 p-0"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {formattingActiveTab === 'date-time' && (
+                  <div className="space-y-8">
+                    <DateSettings />
+                    <TimeSettings />
+                  </div>
+                )}
+
+                {formattingActiveTab === 'numbers' && (
+                  <FormattingSettings />
+                )}
               </div>
             )}
             {activeTab === 'pdf' && (
               <div>
                 <div>
-                  <SectionTitle title="Expense Export" tooltip="Customize the content included when exporting individual expenses to PDF." />
+                  <SectionTitle title="Expense Export" icon={FileText} tooltip="Customize the content included when exporting individual expenses to PDF." />
                   <div className="space-y-3">
                     <Switch label="Show Unique Item Count" description="Include the number of unique items on the expense." isEnabled={settings.pdf.showUniqueItems} onToggle={() => handlePdfToggle('showUniqueItems')} className="border-0 p-0" />
                     <Switch label="Show Total Quantity" description="Include the total quantity of all items." isEnabled={settings.pdf.showTotalQuantity} onToggle={() => handlePdfToggle('showTotalQuantity')} className="border-0 p-0" />
@@ -406,7 +429,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 <div className="h-px bg-border my-6" />
                 
                 <div>
-                  <SectionTitle title="Bulk Export" tooltip="Settings for exporting multiple expenses at once." />
+                  <SectionTitle title="Bulk Export" icon={Clipboard} tooltip="Settings for exporting multiple expenses at once." />
                   <div className="space-y-3">
                     <Switch label="Add Summary Page" description="Append a 'super-expense' summarizing all expenses in a bulk export." isEnabled={settings.pdf.addSummaryPage} onToggle={() => handlePdfToggle('addSummaryPage')} className="border-0 p-0" />
                   </div>
@@ -416,7 +439,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             {activeTab === 'data' && (
               <div>
                 <div>
-                  <SectionTitle title="Your Name" tooltip="This name is used on generated documents like PDF expenses to identify you." />
+                  <SectionTitle title="Your Name" icon={User} tooltip="This name is used on generated documents like PDF expenses to identify you." />
                   <div className="flex items-center gap-2">
                     <Input
                       type="text"
@@ -433,7 +456,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 <div className="h-px bg-border my-6" />
 
                 <div>
-                  <SectionTitle title="Datastore" tooltip="The location where this app will save all data. Preferrably placed in a folder which is backed up." />
+                  <SectionTitle title="Datastore" icon={Database} tooltip="The location where this app will save all data. Preferrably placed in a folder which is backed up." />
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0 mr-4">
                       <p className="font-medium text-font-1">Datastore Folder</p>
@@ -455,7 +478,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-medium text-font-1">Backup</h3>
+                        <h3 className="text-lg font-medium text-font-1 flex items-center gap-2">
+                          <Database className="h-5 w-5 text-accent" />
+                          Backup
+                        </h3>
                         <Tooltip content="Automatically back up your database."><Info className="h-5 w-5 text-font-2 hover:text-font-1 cursor-help" /></Tooltip>
                         <span className="text-sm text-font-2 ml-2">({backupCount}/{backupSettings.maxBackups})</span>
                     </div>
@@ -485,7 +511,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
             {activeTab === 'development' && (
               <div>
                 <div className="mb-6">
-                  <h3 className="text-lg font-medium text-font-1 mb-4">Development Tools</h3>
                   <TabsComponent
                     tabs={devTabs} 
                     activeTab={devActiveTab} 
@@ -497,8 +522,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                   <div>
                     {isDev && (
                       <>
-                        <div className="h-px bg-border my-6" />
-
+                        <SectionTitle title="General Development" tooltip="General tools for debugging and resetting application state." />
+                        
                         <div>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 mr-4">
@@ -510,7 +535,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                                 <p className="text-sm text-font-2">Generate a fake error to test the error modal.</p>
                               </div>
                             </div>
-                            <Button variant="danger" onClick={handleGenerateError}>Generate Error</Button>
+                            <Button variant="secondary" onClick={handleGenerateError}>Generate Error</Button>
                           </div>
                         </div>
                         
@@ -527,7 +552,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                                 <p className="text-sm text-font-2">Remove the datastore folder path from settings.</p>
                               </div>
                             </div>
-                            <Button variant="danger" onClick={handleRemoveDatastore}>Reset</Button>
+                            <Button variant="secondary" onClick={handleRemoveDatastore}>Reset</Button>
                           </div>
                         </div>
                         
@@ -544,7 +569,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                                 <p className="text-sm text-font-2">Clear all settings and quit the application.</p>
                               </div>
                             </div>
-                            <Button variant="danger" onClick={handleResetAllSettings}>Reset All</Button>
+                            <Button variant="secondary" onClick={handleResetAllSettings}>Reset All</Button>
                           </div>
                         </div>
                       </>
@@ -553,7 +578,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 )}
 
                 {devActiveTab === 'wizard' && (
-                  <WizardDevTools />
+                  <div>
+                    <SectionTitle title="Wizard Tools" tooltip="Tools to debug and test the onboarding wizard." />
+                    <WizardDevTools />
+                  </div>
                 )}
 
                 {devActiveTab === 'time' && isDev && (
@@ -592,7 +620,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialT
                 )}
 
                 {devActiveTab === 'profiling' && (
-                  <ProfilingSettings />
+                  <div>
+                    <SectionTitle title="Profiling" tooltip="Monitor application performance and render cycles." />
+                    <ProfilingSettings />
+                  </div>
                 )}
 
                 {devActiveTab === 'sonner' && (

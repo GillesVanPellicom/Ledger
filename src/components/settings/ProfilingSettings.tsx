@@ -57,11 +57,6 @@ const ProfilingSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Activity className="h-5 w-5 text-accent" />
-        <h3 className="text-lg font-medium text-font-1">CPU Profiling</h3>
-      </div>
-
       <div className="space-y-6">
         <Switch
           label="Show Profiling Controls"

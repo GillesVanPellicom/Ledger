@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Button from '../ui/Button';
-import Input from '../ui/Input';
 import Switch from '../ui/Switch';
 import Select from '../ui/Select';
 import { questionRegistry } from '../../wizard/questionRegistry';
@@ -8,6 +7,7 @@ import { wizardState } from '../../settings/wizardState';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { PlayCircle, RotateCcw, SkipForward, Settings2, Bug, EyeOff } from 'lucide-react';
 import Divider from '../ui/Divider';
+import StepperInput from '../ui/StepperInput';
 
 const WizardDevTools: React.FC = () => {
   const { updateSettings } = useSettingsStore();
@@ -69,11 +69,6 @@ const WizardDevTools: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Settings2 className="h-5 w-5 text-accent" />
-        <h3 className="text-lg font-medium text-font-1">Wizard Debug Configuration</h3>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <Select
@@ -118,12 +113,16 @@ const WizardDevTools: React.FC = () => {
           <div className="space-y-2">
              <label className="text-sm font-medium text-font-1">Simulate Upgrade (Lower Versions by N)</label>
              <div className="flex gap-2">
-               <Input 
-                 type="number" 
-                 min="0" 
-                 value={simulateUpgradeN} 
+               <StepperInput 
+                 min={0} 
+                 max={100}
+                 precision={0}
+                 step={1}
+                 value={String(simulateUpgradeN)} 
                  onChange={(e) => setSimulateUpgradeN(parseInt(e.target.value) || 0)}
-                 className="w-20"
+                 onIncrement={() => setSimulateUpgradeN(prev => Math.min(100, prev + 1))}
+                 onDecrement={() => setSimulateUpgradeN(prev => Math.max(0, prev - 1))}
+                 className="w-32"
                />
                <Button size="sm" variant="secondary" onClick={handleSimulateUpgrade} disabled={simulateUpgradeN <= 0}>
                  Apply Downgrade

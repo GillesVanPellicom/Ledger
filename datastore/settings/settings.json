@@ -53,7 +53,8 @@
     "dateFormat": "international",
     "shortenYear": false,
     "timeFormat": "international",
-    "showSeconds": false
+    "showSeconds": false,
+    "currency": "€"
   },
   "wizard": {
     "askedQuestions": {
@@ -68,7 +69,13 @@
       "datastore": 1,
       "completion": 1
     },
-    "inProgress": false
+    "inProgress": false,
+    "debugConfig": {
+      "skipHello": false,
+      "autoApplyDefaults": false,
+      "verboseLogging": false,
+      "ignoreHistory": true
+    }
   },
   "notifications": {
     "position": "top-center",

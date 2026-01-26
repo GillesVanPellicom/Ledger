@@ -66,6 +66,7 @@ const initialSettings: Settings = {
     }
   },
   formatting: {
+    currency: 'EUR',
     decimalSeparator: 'dot', // 'dot' or 'comma'
     dateFormat: 'international',
     shortenYear: false,
@@ -248,6 +249,7 @@ export const useSettingsStore = create<SettingsState>()(
             } as any,
             formatting: { 
                 ...(currentSettings.formatting || { 
+                  currency: 'EUR',
                   decimalSeparator: 'dot',
                   dateFormat: 'international',
                   shortenYear: false,

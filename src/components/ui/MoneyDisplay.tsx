@@ -14,6 +14,41 @@ interface MoneyDisplayProps {
   useSignum?: boolean;
 }
 
+const currencySymbols: Record<string, string> = {
+  'EUR': '€',
+  'USD': '$',
+  'GBP': '£',
+  'JPY': '¥',
+  'CNY': '¥',
+  'KRW': '₩',
+  'INR': '₹',
+  'RUB': '₽',
+  'TRY': '₺',
+  'BRL': 'R$',
+  'CAD': 'C$',
+  'AUD': 'A$',
+  'CHF': 'CHF',
+  'SEK': 'kr',
+  'NOK': 'kr',
+  'DKK': 'kr',
+  'PLN': 'zł',
+  'CZK': 'Kč',
+  'HUF': 'Ft',
+  'RON': 'lei',
+  'BGN': 'лв',
+  'ILS': '₪',
+  'ZAR': 'R',
+  'MXN': '$',
+  'SGD': '$',
+  'HKD': '$',
+  'NZD': '$',
+  'THB': '฿',
+  'IDR': 'Rp',
+  'MYR': 'RM',
+  'PHP': '₱',
+  'VND': '₫',
+};
+
 /**
  * Global component for displaying monetary values with consistent formatting and coloring.
  */
@@ -24,12 +59,14 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   colorNegative = true,
   colorNeutral = false,
   className,
-  currency = '€',
+  currency,
   colored = true,
   useSignum = false
 }) => {
   const { settings } = useSettingsStore();
   const decimalSeparator = settings.formatting?.decimalSeparator || 'dot';
+  const activeCurrency = currency || settings.formatting?.currency || 'EUR';
+  const symbol = currencySymbols[activeCurrency] || activeCurrency;
 
   const isPositive = amount > 0;
   const isNegative = amount < 0;
@@ -52,7 +89,7 @@ const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
 
   return (
     <span className={cn("font-medium tabular-nums", colorClass, className)}>
-      {displaySign}{currency}{absAmount}
+      {displaySign}{symbol}{absAmount}
     </span>
   );
 };

@@ -41,8 +41,8 @@ const TimeSettings: React.FC<TimeSettingsProps> = ({ showPreview = true, showCar
   );
 
   const PreviewBox = ({ children }: { children: React.ReactNode }) => (
-    <div className={cn("mb-6 flex justify-center", showCard && "p-4 rounded-xl border border-border bg-field-disabled")}>
-      <div className={cn("text-center inline-block", !showCard && "p-4 rounded-xl border border-border bg-field-disabled min-w-[200px]")}>
+    <div className="mb-6 flex justify-center">
+      <div className="text-center min-w-[280px] p-4 rounded-xl border border-border bg-field-disabled">
         <div className="text-2xl font-bold text-font-1">
           {children}
         </div>
@@ -54,10 +54,12 @@ const TimeSettings: React.FC<TimeSettingsProps> = ({ showPreview = true, showCar
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        {showTitle && <SectionTitle title="Time Display" tooltip="Choose how time is displayed across the app." />}
-        {showPreview && <PreviewHeader tooltip="This preview shows how time will be formatted." />}
-      </div>
+      {(showTitle || showPreview) && (
+        <div className="flex items-center justify-between">
+          {showTitle && <SectionTitle title="Time Display" tooltip="Choose how time is displayed across the app." />}
+          {showPreview && showTitle && <PreviewHeader tooltip="This preview shows how time will be formatted." />}
+        </div>
+      )}
       
       {showPreview && (
         <PreviewBox>
@@ -86,6 +88,7 @@ const TimeSettings: React.FC<TimeSettingsProps> = ({ showPreview = true, showCar
         description="Include seconds in time display"
         isEnabled={!!settings.formatting?.showSeconds}
         onToggle={toggleShowSeconds}
+        className="border-0 p-0"
       />
     </div>
   );

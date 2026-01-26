@@ -12,9 +12,9 @@ export const NumberFormatQuestion: WizardQuestion = {
       <div className="flex flex-col h-full">
         <div className="flex-grow flex flex-col justify-center space-y-8 overflow-y-auto max-w-lg mx-auto w-full p-6">
           <div className="text-center space-y-2 mb-8">
-            <h2 className="text-2xl font-bold text-font-1">How should numbers be formatted?</h2>
+            <h2 className="text-2xl font-bold text-font-1">Numbers & Currency</h2>
             <p className="text-font-2">
-              Choose your preferred decimal separator.
+              Choose your preferred currency symbol and decimal separator.
             </p>
           </div>
 
