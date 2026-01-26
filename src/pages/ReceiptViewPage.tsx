@@ -267,7 +267,7 @@ const ReceiptViewPage: React.FC = () => {
     try {
       if (type === 'me') {
         await db.execute(
-          'UPDATE Expenses SET Status = ? WHERE ExpenseID = ?',
+          'UPDATE Expenses SET Status = ?, PaymentMethodID = NULL WHERE ExpenseID = ?',
           ['unpaid', id]
         );
       } else if (paymentId) {
@@ -278,6 +278,7 @@ const ReceiptViewPage: React.FC = () => {
       }
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
     } catch (error) {
       throw error;
     } finally {
@@ -294,6 +295,7 @@ const ReceiptViewPage: React.FC = () => {
       );
       await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
     } catch (error) {
       throw error;
     } finally {
@@ -979,6 +981,7 @@ const ReceiptViewPage: React.FC = () => {
           await queryClient.invalidateQueries({ queryKey: ['receipt', id] });
           await queryClient.invalidateQueries({ queryKey: ['transactions'] });
           await queryClient.invalidateQueries({ queryKey: ['receiptDebt', id] });
+          await queryClient.invalidateQueries({ queryKey: ['paymentMethodBalance'] });
         }}
         debtInfo={selectedDebtForSettlement}
       />
