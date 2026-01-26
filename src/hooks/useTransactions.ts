@@ -17,9 +17,8 @@ interface FetchTransactionsParams {
   tentativeFilter?: string;
   attachmentFilter?: string;
   // Income specific filters
-  incomeSourceFilter?: string;
-  incomeCategoryFilter?: string;
-  incomeEntityFilter?: string;
+  recipientFilter?: string;
+  categoryFilter?: string;
   // Repayment specific filters
   debtorFilter?: string;
   // Transfer specific filters
@@ -47,9 +46,8 @@ export const useTransactions = (params: FetchTransactionsParams) => {
     expenseTypeFilter,
     tentativeFilter,
     attachmentFilter,
-    incomeSourceFilter,
-    incomeCategoryFilter,
-    incomeEntityFilter,
+    recipientFilter,
+    categoryFilter,
     debtorFilter,
     fromMethodFilter,
     toMethodFilter,
@@ -60,7 +58,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
     queryKey: ['transactions', { 
       page, pageSize, searchTerm, startDate, endDate, typeFilter, debtEnabled, 
       debtFilter, expenseTypeFilter, tentativeFilter, attachmentFilter,
-      incomeSourceFilter, incomeCategoryFilter, incomeEntityFilter, debtorFilter, fromMethodFilter, toMethodFilter, methodFilter
+      recipientFilter, categoryFilter, debtorFilter, fromMethodFilter, toMethodFilter, methodFilter
     }],
     queryFn: async () => {
       const offset = (page - 1) * pageSize;
@@ -84,7 +82,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           r.PaymentMethodID as methodId,
           'expense' as type,
           r.CreationTimestamp as creationTimestamp,
-          s.VendorName as storeName,
+          s.EntityName as storeName,
           NULL as debtorName,
           r.IsNonItemised as isNonItemised,
           r.IsTentative as isTentative,
@@ -95,9 +93,11 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as debtorId,
           NULL as receiptId,
           NULL as fromMethodId,
-          NULL as toMethodId
+          NULL as toMethodId,
+          r.RecipientID as recipientId,
+          NULL as categoryId
         FROM Expenses r
-        JOIN Vendors s ON r.VendorID = s.VendorID
+        JOIN Entities s ON r.RecipientID = s.EntityID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
       `;
 
@@ -114,20 +114,22 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           'income' as type,
           tu.CreationTimestamp as creationTimestamp,
           NULL as storeName,
-          src.IncomeSourceName as debtorName, -- Use debtorName field for SourceName
+          src.EntityName as debtorName,
           NULL as isNonItemised,
           NULL as isTentative,
           NULL as attachmentCount,
           NULL as status,
           NULL as totalDebtorCount,
           NULL as unpaidDebtorCount,
-          tu.EntityID as debtorId,
+          NULL as debtorId,
           NULL as receiptId,
           NULL as fromMethodId,
-          NULL as toMethodId
+          NULL as toMethodId,
+          tu.RecipientID as recipientId,
+          tu.CategoryID as categoryId
         FROM Income tu
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
-        LEFT JOIN IncomeSources src ON tu.IncomeSourceID = src.IncomeSourceID
+        LEFT JOIN Entities src ON tu.RecipientID = src.EntityID
         WHERE tu.TransferID IS NULL 
         AND NOT EXISTS (SELECT 1 FROM ExpenseEntityPayments rdp WHERE rdp.IncomeID = tu.IncomeID)
       `;
@@ -155,7 +157,9 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as debtorId,
           NULL as receiptId,
           t.FromPaymentMethodID as fromMethodId,
-          t.ToPaymentMethodID as toMethodId
+          t.ToPaymentMethodID as toMethodId,
+          NULL as recipientId,
+          NULL as categoryId
         FROM Transfers t
         JOIN PaymentMethods pm_from ON t.FromPaymentMethodID = pm_from.PaymentMethodID
         JOIN PaymentMethods pm_to ON t.ToPaymentMethodID = pm_to.PaymentMethodID
@@ -184,7 +188,9 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           rdp.EntityID as debtorId,
           rdp.ExpenseID as receiptId,
           NULL as fromMethodId,
-          NULL as toMethodId
+          NULL as toMethodId,
+          NULL as recipientId,
+          NULL as categoryId
         FROM ExpenseEntityPayments rdp
         JOIN Income tu ON rdp.IncomeID = tu.IncomeID
         JOIN Entities d ON rdp.EntityID = d.EntityID
@@ -269,21 +275,18 @@ export const useTransactions = (params: FetchTransactionsParams) => {
               break;
           }
         }
+        if (recipientFilter && recipientFilter !== 'all') {
+          whereClauses.push("recipientId = ?");
+          queryParams.push(recipientFilter);
+        }
       } else if (typeFilter === 'income') {
-        if (incomeSourceFilter && incomeSourceFilter !== 'all') {
-          // Match by IncomeSourceID
-          whereClauses.push("originalId IN (SELECT IncomeID FROM Income WHERE IncomeSourceID = ?)");
-          queryParams.push(incomeSourceFilter);
+        if (recipientFilter && recipientFilter !== 'all') {
+          whereClauses.push("recipientId = ?");
+          queryParams.push(recipientFilter);
         }
-        if (incomeCategoryFilter && incomeCategoryFilter !== 'all') {
-          // Match by IncomeCategoryID
-          whereClauses.push("originalId IN (SELECT IncomeID FROM Income WHERE IncomeCategoryID = ?)");
-          queryParams.push(incomeCategoryFilter);
-        }
-        if (incomeEntityFilter && incomeEntityFilter !== 'all') {
-          // Match by DebtorID
-          whereClauses.push("debtorId = ?");
-          queryParams.push(incomeEntityFilter);
+        if (categoryFilter && categoryFilter !== 'all') {
+          whereClauses.push("categoryId = ?");
+          queryParams.push(categoryFilter);
         }
       } else if (typeFilter === 'repayment') {
         if (debtorFilter && debtorFilter !== 'all') {

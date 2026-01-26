@@ -5,8 +5,7 @@ import {
   parseISO,
   isAfter,
   subMonths,
-  isBefore,
-  startOfToday
+  isBefore
 } from 'date-fns';
 
 import { incomeCommitments } from './incomeCommitments';
@@ -60,15 +59,6 @@ export const incomeLogic = {
           parseISO(schedule.CreationTimestamp)
         );
 
-        // Find the latest processed date to start generating from there
-        // If no processed dates, start from creation date or 3 months ago (whichever is later)
-        // Actually, we should calculate occurrences from the beginning (or a reasonable past) 
-        // and filter out those already in processedDates.
-        // But to optimize, we can start checking from the last processed date.
-        
-        // However, if we missed an occurrence in the past (e.g. app was closed), we need to catch it.
-        // So we should look back a bit.
-        
         let rangeStartDate = subMonths(today, 3); 
         if (isBefore(rangeStartDate, creationDate)) {
           rangeStartDate = creationDate;
@@ -82,7 +72,7 @@ export const incomeLogic = {
         /* -------- 3. Calculate occurrences -------- */
 
         const occurrences = calculateOccurrences(
-          schedule,
+          schedule as any,
           rangeStartDate,
           lookaheadDate
         ).slice(0, 500); // hard cap per schedule
@@ -106,18 +96,18 @@ export const incomeLogic = {
                  PaymentMethodID: schedule.PaymentMethodID,
                  Amount: schedule.ExpectedAmount ?? 0,
                  Date: dateStr,
-                 Note: schedule.Note || schedule.SourceName,
-                 VendorID: schedule.VendorID!,
-                 ProductCategoryID: schedule.ProductCategoryID
+                 Note: schedule.Note || schedule.RecipientName,
+                 RecipientID: schedule.RecipientID!,
+                 CategoryID: schedule.CategoryID
                });
             } else {
               await incomeCommitments.createTopUpFromIncome({
                 PaymentMethodID: schedule.PaymentMethodID,
                 Amount: schedule.ExpectedAmount ?? 0,
                 Date: dateStr,
-                Note: schedule.Note || schedule.SourceName,
-                IncomeSourceID: schedule.IncomeSourceID,
-                IncomeCategoryID: schedule.IncomeCategoryID,
+                Note: schedule.Note || schedule.RecipientName,
+                RecipientID: schedule.RecipientID,
+                CategoryID: schedule.CategoryID,
                 EntityID: schedule.EntityID
               });
             }
@@ -130,7 +120,6 @@ export const incomeLogic = {
           `Failed processing ScheduleID=${schedule.ScheduleID}`,
           err
         );
-        // Continue with next schedule
       }
     }
   },
@@ -143,11 +132,9 @@ export const incomeLogic = {
   ) => {
     const schedule = await db.queryOne<any>(
       `
-      SELECT s.*, 
-        CASE WHEN s.Type = 'expense' THEN st.VendorName ELSE src.IncomeSourceName END as SourceName
+      SELECT s.*, src.EntityName as RecipientName
       FROM Schedules s
-      LEFT JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
-      LEFT JOIN Vendors st ON s.VendorID = st.VendorID
+      LEFT JOIN Entities src ON s.RecipientID = src.EntityID
       WHERE s.ScheduleID = ?
     `,
       [pending.ScheduleID]
@@ -162,18 +149,18 @@ export const incomeLogic = {
         PaymentMethodID: paymentMethodId,
         Amount: actualAmount,
         Date: normalizeDateString(actualDate),
-        Note: schedule.Note || schedule.SourceName,
-        VendorID: schedule.VendorID,
-        ProductCategoryID: schedule.ProductCategoryID
+        Note: schedule.Note || schedule.RecipientName,
+        RecipientID: schedule.RecipientID,
+        CategoryID: schedule.CategoryID
       });
     } else {
       await incomeCommitments.createTopUpFromIncome({
         PaymentMethodID: paymentMethodId,
         Amount: actualAmount,
         Date: normalizeDateString(actualDate),
-        Note: schedule.Note || schedule.SourceName,
-        IncomeSourceID: schedule.IncomeSourceID,
-        IncomeCategoryID: schedule.IncomeCategoryID,
+        Note: schedule.Note || schedule.RecipientName,
+        RecipientID: schedule.RecipientID,
+        CategoryID: schedule.CategoryID,
         EntityID: schedule.EntityID
       });
     }

@@ -52,7 +52,7 @@ export const useReceipts = (params: FetchReceiptsParams) => {
                r.IsTentative,
                r.NonItemisedTotal,
                r.PaymentMethodID,
-               s.VendorName as StoreName,
+               s.EntityName as StoreName,
                pm.PaymentMethodName,
                (SELECT COUNT(*) FROM ExpenseImages ri WHERE ri.ExpenseID = r.ExpenseID) as AttachmentCount,
                CASE
@@ -95,7 +95,7 @@ export const useReceipts = (params: FetchReceiptsParams) => {
 
       let subQueryFrom = `
         FROM Expenses r
-        JOIN Vendors s ON r.VendorID = s.VendorID
+        JOIN Entities s ON r.RecipientID = s.EntityID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
       `;
 
@@ -106,7 +106,7 @@ export const useReceipts = (params: FetchReceiptsParams) => {
         const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
         keywords.forEach(keyword => {
           subQueryWhereClauses.push(`(
-            LOWER(s.VendorName) LIKE ? OR 
+            LOWER(s.EntityName) LIKE ? OR
             LOWER(r.ExpenseNote) LIKE ?
           )`);
           queryParams.push(`%${keyword}%`, `%${keyword}%`);

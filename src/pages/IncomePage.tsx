@@ -4,13 +4,10 @@ import {useNavigate, useLocation} from 'react-router-dom';
 import {
   Calendar,
   Clock,
-  Plus,
   Trash,
   Edit,
-  Info,
   Check,
   X,
-  FilePlus2,
   CalendarPlus,
   MoreHorizontal,
   CreditCard,
@@ -21,23 +18,19 @@ import PageWrapper from '../components/layout/PageWrapper';
 import {Header} from '../components/ui/Header';
 import {incomeCommitments} from '../logic/incomeCommitments';
 import {incomeLogic} from '../logic/incomeLogic';
-import {humanizeRecurrenceRule, parseRecurrenceRule, calculateOccurrences} from '../logic/incomeScheduling';
+import {humanizeRecurrenceRule} from '../logic/incomeScheduling';
 import DataTable from '../components/ui/DataTable';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
 import Combobox from '../components/ui/Combobox';
 import StepperInput from '../components/ui/StepperInput';
 import Checkbox from '../components/ui/Checkbox';
 import Modal, {ConfirmModal} from '../components/ui/Modal';
-import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
-import IncomeSourceModal from '../components/income/IncomeSourceModal';
-import {format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths, startOfDay} from 'date-fns';
+import {format, parseISO} from 'date-fns';
 import {cn} from '../utils/cn';
 import {useErrorStore} from '../store/useErrorStore';
 import {db} from '../utils/db';
 import Tooltip from '../components/ui/Tooltip';
-import Divider from '../components/ui/Divider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,14 +41,12 @@ import {
 } from "../components/ui/DropdownMenu"
 import ButtonGroup from '../components/ui/ButtonGroup';
 import {Tabs, TabsList, TabsTrigger} from '../components/ui/Tabs';
-import {useSettingsStore} from '../store/useSettingsStore';
 import IncomeModal from '../components/payment/IncomeModal';
 import ScheduleModal from '../components/payment/ScheduleModal';
 
 const IncomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const {showError} = useErrorStore();
-  const {settings} = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<'to-check' | 'scheduled'>('to-check');
@@ -242,20 +233,15 @@ const IncomePage: React.FC = () => {
                       render: (row) => format(parseISO(row.PlannedDate), 'MMM d, yyyy')
                     },
                     {
-                      header: 'Source', 
-                      accessor: 'SourceName',
+                      header: 'Recipient', 
+                      accessor: 'RecipientName',
                       render: (row) => (
                         <div className="flex items-center gap-2">
-                          {row.SourceName}
-                          {row.EntityID && (
-                            <Tooltip content="Associated with an entity.">
-                              <User className="h-3 w-3 text-accent" />
-                            </Tooltip>
-                          )}
+                          {row.RecipientName}
                         </div>
                       )
                     },
-                    {header: 'Category', accessor: 'Category'},
+                    {header: 'Category', accessor: 'CategoryName'},
                     {header: 'Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
@@ -322,13 +308,13 @@ const IncomePage: React.FC = () => {
                                 <CreditCard className="mr-2 h-4 w-4"/>
                                 Method
                               </DropdownMenuItem>
-                              {row.EntityID && (
+                              {row.RecipientID && (
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/entities/${row.EntityID}`);
+                                  navigate(`/entities/${row.RecipientID}`);
                                 }}>
                                   <User className="mr-2 h-4 w-4"/>
-                                  Entity
+                                  Recipient
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator/>
@@ -372,20 +358,15 @@ const IncomePage: React.FC = () => {
                   }}
                   columns={[
                     {
-                      header: 'Source', 
-                      accessor: 'SourceName',
+                      header: 'Recipient', 
+                      accessor: 'RecipientName',
                       render: (row) => (
                         <div className="flex items-center gap-2">
-                          {row.SourceName}
-                          {row.EntityID && (
-                            <Tooltip content="Associated with an entity.">
-                              <User className="h-3 w-3 text-accent" />
-                            </Tooltip>
-                          )}
+                          {row.RecipientName}
                         </div>
                       )
                     },
-                    {header: 'Category', accessor: 'Category'},
+                    {header: 'Category', accessor: 'CategoryName'},
                     {header: 'Method', accessor: 'PaymentMethodName'},
                     {
                       header: 'Expected Amount',
@@ -395,7 +376,7 @@ const IncomePage: React.FC = () => {
                     {
                       header: 'Recurrence',
                       accessor: 'RecurrenceRule',
-                      render: (row) => humanizeRecurrenceRule(row)
+                      render: (row) => humanizeRecurrenceRule(row as any)
                     },
                     {
                       header: 'Status',
@@ -432,13 +413,13 @@ const IncomePage: React.FC = () => {
                               <CreditCard className="mr-2 h-4 w-4"/>
                               Method
                             </DropdownMenuItem>
-                            {row.EntityID && (
+                            {row.RecipientID && (
                               <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/entities/${row.EntityID}`);
+                                navigate(`/entities/${row.RecipientID}`);
                               }}>
                                 <User className="mr-2 h-4 w-4"/>
-                                Entity
+                                Recipient
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator/>
@@ -541,7 +522,7 @@ const IncomePage: React.FC = () => {
           }
         }}
         title="Dismiss Income"
-        message={`Are you sure you want to dismiss ${selectedPending?.SourceName}? This occurrence will be ignored.`}
+        message={`Are you sure you want to dismiss ${selectedPending?.RecipientName}? This occurrence will be ignored.`}
         confirmText="Dismiss"
         isDatabaseTransaction
         successToastMessage="Income dismissed successfully"
@@ -571,7 +552,7 @@ const IncomePage: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Verify the amount and date for <strong>{selectedPending?.SourceName}</strong>.
+            Verify the amount and date for <strong>{selectedPending?.RecipientName}</strong>.
           </p>
           <StepperInput
             label="Amount"

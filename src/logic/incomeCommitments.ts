@@ -8,13 +8,11 @@ import { useSettingsStore } from '../store/useSettingsStore';
 export interface IncomeSchedule {
   ScheduleID: number;
   Type: 'income' | 'expense';
-  IncomeSourceID: number | null;
-  VendorID: number | null;
+  RecipientID: number | null;
   EntityID: number | null;
-  IncomeCategoryID: number | null;
-  ProductCategoryID: number | null;
-  SourceName: string;
-  Category: string | null;
+  CategoryID: number | null;
+  RecipientName: string;
+  CategoryName: string | null;
   PaymentMethodID: number;
   PaymentMethodName: string;
   ExpectedAmount: number | null;
@@ -36,29 +34,17 @@ export interface PendingIncome {
   Amount: number | null;
   Status: 'pending' | 'confirmed' | 'rejected';
   Type: 'income' | 'expense';
-  SourceName?: string;
-  Category?: string;
+  RecipientName?: string;
+  CategoryName?: string;
   PaymentMethodName?: string;
   PaymentMethodID?: number;
   Note?: string | null;
-  IncomeSourceID?: number | null;
-  VendorID?: number | null;
-  IncomeCategoryID?: number | null;
-  ProductCategoryID?: number | null;
+  RecipientID?: number | null;
+  CategoryID?: number | null;
   EntityID?: number | null;
 }
 
 /* ==================== Helpers ==================== */
-
-function assertDefined<T>(
-  value: T | null | undefined,
-  message: string
-): T {
-  if (value === null || value === undefined) {
-    throw new Error(message);
-  }
-  return value;
-}
 
 function getCurrentDate(): Date {
   const settings = useSettingsStore.getState().settings;
@@ -77,20 +63,12 @@ export const incomeCommitments = {
     const rows = await db.query<any>(`
       SELECT 
         s.*, 
-        CASE 
-          WHEN s.Type = 'expense' THEN st.VendorName
-          ELSE src.IncomeSourceName 
-        END AS SourceName,
-        CASE 
-          WHEN s.Type = 'expense' THEN c.ProductCategoryName
-          ELSE cat.IncomeCategoryName 
-        END AS Category,
+        src.EntityName AS RecipientName,
+        cat.CategoryName AS CategoryName,
         pm.PaymentMethodName
       FROM Schedules s
-      LEFT JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
-      LEFT JOIN Vendors st ON s.VendorID = st.VendorID
-      LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
-      LEFT JOIN ProductCategories c ON s.ProductCategoryID = c.ProductCategoryID
+      LEFT JOIN Entities src ON s.RecipientID = src.EntityID
+      LEFT JOIN Categories cat ON s.CategoryID = cat.CategoryID
       LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
     `);
 
@@ -104,34 +82,24 @@ export const incomeCommitments = {
   /* -------- Pending incomes -------- */
 
   getPendingIncomes: async (): Promise<
-    (PendingIncome & { SourceName: string })[]
+    (PendingIncome & { RecipientName: string })[]
   > => {
     return await db.query<any>(`
       SELECT 
         p.*, 
         s.Type,
-        CASE 
-          WHEN s.Type = 'expense' THEN st.VendorName
-          ELSE src.IncomeSourceName 
-        END AS SourceName,
-        CASE 
-          WHEN s.Type = 'expense' THEN c.ProductCategoryName
-          ELSE cat.IncomeCategoryName 
-        END AS Category,
+        src.EntityName AS RecipientName,
+        cat.CategoryName AS CategoryName,
         pm.PaymentMethodName,
         s.PaymentMethodID,
         s.Note,
-        s.IncomeSourceID,
-        s.VendorID,
-        s.IncomeCategoryID,
-        s.ProductCategoryID,
+        s.RecipientID,
+        s.CategoryID,
         s.EntityID
       FROM SchedulesPending p
       JOIN Schedules s ON p.ScheduleID = s.ScheduleID
-      LEFT JOIN IncomeSources src ON s.IncomeSourceID = src.IncomeSourceID
-      LEFT JOIN Vendors st ON s.VendorID = st.VendorID
-      LEFT JOIN IncomeCategories cat ON s.IncomeCategoryID = cat.IncomeCategoryID
-      LEFT JOIN ProductCategories c ON s.ProductCategoryID = c.ProductCategoryID
+      LEFT JOIN Entities src ON s.RecipientID = src.EntityID
+      LEFT JOIN Categories cat ON s.CategoryID = cat.CategoryID
       LEFT JOIN PaymentMethods pm ON s.PaymentMethodID = pm.PaymentMethodID
       WHERE p.Status = 'pending'
       ORDER BY p.PlannedDate ASC
@@ -142,10 +110,10 @@ export const incomeCommitments = {
 
   getConfirmedIncomeTopUps: async (): Promise<any[]> => {
     return await db.query(`
-      SELECT t.*, pm.PaymentMethodName, src.IncomeSourceName as SourceName
+      SELECT t.*, pm.PaymentMethodName, src.EntityName as RecipientName
       FROM Income t
       LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
-      LEFT JOIN IncomeSources src ON t.IncomeSourceID = src.IncomeSourceID
+      LEFT JOIN Entities src ON t.RecipientID = src.EntityID
       WHERE t.IncomeNote NOT LIKE 'Repayment from %'
       ORDER BY t.IncomeDate DESC
     `);
@@ -188,37 +156,30 @@ export const incomeCommitments = {
     return [...paidToMe, ...paidByMe].sort((a, b) => new Date(b.PaidDate).getTime() - new Date(a.PaidDate).getTime());
   },
 
-  /**
-   * NOTE:
-   * This relies on TopUpNote text matching.
-   * This is fragile and should eventually be replaced with a ScheduleID FK.
-   */
   getConfirmedIncomesForSchedule: async (
     schedule: IncomeSchedule
   ): Promise<{ TopUpDate: string }[]> => {
     if (schedule.Type === 'expense') {
-      // For expenses, we check Receipts table
-      // Assuming non-itemised receipts for scheduled expenses
       return await db.query<{ TopUpDate: string }>(`
         SELECT ExpenseDate as TopUpDate
         FROM Expenses
-        WHERE VendorID = ?
+        WHERE RecipientID = ?
           AND PaymentMethodID = ?
           AND IsNonItemised = 1
           AND ABS(NonItemisedTotal - ?) < 0.01
-      `, [schedule.VendorID, schedule.PaymentMethodID, schedule.ExpectedAmount]);
+      `, [schedule.RecipientID, schedule.PaymentMethodID, schedule.ExpectedAmount]);
     } else {
       return await db.query<{ TopUpDate: string }>(
         `
         SELECT IncomeDate as TopUpDate
         FROM Income
-        WHERE IncomeSourceID = ? 
-          AND (IncomeCategoryID = ? OR (IncomeCategoryID IS NULL AND ? IS NULL))
+        WHERE RecipientID = ? 
+          AND (CategoryID = ? OR (CategoryID IS NULL AND ? IS NULL))
           AND (EntityID = ? OR (EntityID IS NULL AND ? IS NULL))
       `,
         [
-          schedule.IncomeSourceID, 
-          schedule.IncomeCategoryID, schedule.IncomeCategoryID,
+          schedule.RecipientID, 
+          schedule.CategoryID, schedule.CategoryID,
           schedule.EntityID, schedule.EntityID
         ]
       );
@@ -232,8 +193,8 @@ export const incomeCommitments = {
     Amount: number;
     Date: string; // yyyy-MM-dd
     Note: string;
-    IncomeSourceID?: number | null;
-    IncomeCategoryID?: number | null;
+    RecipientID?: number | null;
+    CategoryID?: number | null;
     EntityID?: number | null;
   }) => {
     return await db.execute(
@@ -243,8 +204,8 @@ export const incomeCommitments = {
         IncomeAmount,
         IncomeDate,
         IncomeNote,
-        IncomeSourceID,
-        IncomeCategoryID,
+        RecipientID,
+        CategoryID,
         EntityID
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
@@ -253,8 +214,8 @@ export const incomeCommitments = {
         data.Amount, 
         data.Date, 
         data.Note, 
-        data.IncomeSourceID || null, 
-        data.IncomeCategoryID || null,
+        data.RecipientID || null, 
+        data.CategoryID || null,
         data.EntityID || null
       ]
     );
@@ -265,14 +226,13 @@ export const incomeCommitments = {
     Amount: number;
     Date: string; // yyyy-MM-dd
     Note: string;
-    VendorID: number;
-    ProductCategoryID?: number | null;
+    RecipientID: number;
+    CategoryID?: number | null;
   }) => {
-    // Create a non-itemised receipt
     return await db.execute(
       `
       INSERT INTO Expenses (
-        VendorID,
+        RecipientID,
         ExpenseDate,
         ExpenseNote,
         PaymentMethodID,
@@ -283,18 +243,13 @@ export const incomeCommitments = {
       ) VALUES (?, ?, ?, ?, 'paid', 1, ?, 0)
       `,
       [
-        data.VendorID,
+        data.RecipientID,
         data.Date,
         data.Note,
         data.PaymentMethodID,
         data.Amount
       ]
     );
-    // Note: CategoryID is not directly on Receipts, it's usually on Products.
-    // For non-itemised receipts, we don't have a direct category link in the current schema unless we add it or use a dummy line item.
-    // However, the prompt implies we should just create the expense.
-    // If we want to track category, we might need to insert a dummy line item or just ignore it for now as Receipts don't have CategoryID.
-    // Let's assume for now we just create the receipt.
   },
 
   createPendingIncome: async (data: {
@@ -315,7 +270,6 @@ export const incomeCommitments = {
         [data.ScheduleID, data.PlannedDate, data.Amount]
       );
     } catch (err: any) {
-      // Assume unique constraint violation → idempotent behavior
       if (err?.code === 'SQLITE_CONSTRAINT') {
         return;
       }
@@ -333,65 +287,13 @@ export const incomeCommitments = {
   /* -------- Schedule management -------- */
 
   createSchedule: async (data: any) => {
-    const type = data.Type || 'income';
-    let sourceId = null;
-    let vendorId = null;
-    let categoryId = null;
-    let incomeCategoryId = null;
-    let entityId = null;
-
-    if (type === 'income') {
-      const source = await db.queryOne<{ IncomeSourceID: number }>(
-        `SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?`,
-        [data.SourceName]
-      );
-      sourceId = assertDefined(source?.IncomeSourceID, 'Income source not found');
-
-      if (data.Category) {
-        const category = await db.queryOne<{ IncomeCategoryID: number }>(
-          `SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?`,
-          [data.Category]
-        );
-        incomeCategoryId = category?.IncomeCategoryID ?? null;
-      }
-
-      if (data.DebtorName) {
-        const debtor = await db.queryOne<{ EntityID: number }>(
-          `SELECT EntityID FROM Entities WHERE EntityName = ?`,
-          [data.DebtorName]
-        );
-        entityId = debtor?.EntityID ?? null;
-      }
-    } else {
-      // Expense
-      const store = await db.queryOne<{ VendorID: number }>(
-        `SELECT VendorID FROM Vendors WHERE VendorName = ?`,
-        [data.SourceName] // SourceName holds StoreName for expenses in the UI form
-      );
-      vendorId = assertDefined(store?.VendorID, 'Store not found');
-
-      if (data.Category) {
-        // Assuming general Categories table for expenses
-        // We might need to look up by name or create if not exists? 
-        // For now assume it exists or we pass ID. The UI passes name.
-        // Let's try to find it.
-        const category = await db.queryOne<{ ProductCategoryID: number }>(
-            `SELECT ProductCategoryID FROM ProductCategories WHERE ProductCategoryName = ?`,
-            [data.Category]
-        );
-        categoryId = category?.ProductCategoryID ?? null;
-      }
-    }
-
     const result = await db.execute(
       `
       INSERT INTO Schedules (
         Type,
-        IncomeSourceID,
-        VendorID,
+        RecipientID,
         EntityID,
-        IncomeCategoryID,
-        ProductCategoryID,
+        CategoryID,
         PaymentMethodID,
         ExpectedAmount,
         RecurrenceRule,
@@ -402,15 +304,13 @@ export const incomeCommitments = {
         LookaheadDays,
         IsActive,
         Note
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `,
       [
-        type,
-        sourceId,
-        vendorId,
-        entityId,
-        incomeCategoryId,
-        categoryId,
+        data.Type || 'income',
+        data.RecipientID,
+        data.EntityID || null,
+        data.CategoryID || null,
         data.PaymentMethodID,
         data.ExpectedAmount,
         data.RecurrenceRule,
@@ -432,7 +332,7 @@ export const incomeCommitments = {
       );
       if (schedule) {
         const today = getCurrentDate();
-        const occurrences = calculateOccurrences(schedule, subMonths(today, 1), today);
+        const occurrences = calculateOccurrences(schedule as any, subMonths(today, 1), today);
         if (occurrences.length > 0) {
           await incomeCommitments.createPendingIncome({
             ScheduleID: newScheduleId,
@@ -447,61 +347,14 @@ export const incomeCommitments = {
   },
 
   updateSchedule: async (id: number, data: any) => {
-    const type = data.Type || 'income';
-    let sourceId = null;
-    let vendorId = null;
-    let categoryId = null;
-    let incomeCategoryId = null;
-    let entityId = null;
-
-    if (type === 'income') {
-      const source = await db.queryOne<{ IncomeSourceID: number }>(
-        `SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?`,
-        [data.SourceName]
-      );
-      sourceId = assertDefined(source?.IncomeSourceID, 'Income source not found');
-
-      if (data.Category) {
-        const category = await db.queryOne<{ IncomeCategoryID: number }>(
-          `SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?`,
-          [data.Category]
-        );
-        incomeCategoryId = category?.IncomeCategoryID ?? null;
-      }
-
-      if (data.DebtorName) {
-        const debtor = await db.queryOne<{ EntityID: number }>(
-          `SELECT EntityID FROM Entities WHERE EntityName = ?`,
-          [data.DebtorName]
-        );
-        entityId = debtor?.EntityID ?? null;
-      }
-    } else {
-      const store = await db.queryOne<{ VendorID: number }>(
-        `SELECT VendorID FROM Vendors WHERE VendorName = ?`,
-        [data.SourceName]
-      );
-      vendorId = assertDefined(store?.VendorID, 'Store not found');
-
-      if (data.Category) {
-        const category = await db.queryOne<{ ProductCategoryID: number }>(
-            `SELECT ProductCategoryID FROM ProductCategories WHERE ProductCategoryName = ?`,
-            [data.Category]
-        );
-        categoryId = category?.ProductCategoryID ?? null;
-      }
-    }
-
     return await db.execute(
       `
       UPDATE Schedules
       SET
         Type = ?,
-        IncomeSourceID = ?,
-        VendorID = ?,
+        RecipientID = ?,
         EntityID = ?,
-        IncomeCategoryID = ?,
-        ProductCategoryID = ?,
+        CategoryID = ?,
         PaymentMethodID = ?,
         ExpectedAmount = ?,
         RecurrenceRule = ?,
@@ -515,12 +368,10 @@ export const incomeCommitments = {
       WHERE ScheduleID = ?
     `,
       [
-        type,
-        sourceId,
-        vendorId,
-        entityId,
-        incomeCategoryId,
-        categoryId,
+        data.Type || 'income',
+        data.RecipientID,
+        data.EntityID || null,
+        data.CategoryID || null,
         data.PaymentMethodID,
         data.ExpectedAmount,
         data.RecurrenceRule,
@@ -553,41 +404,22 @@ export const incomeCommitments = {
   /* -------- One-off income -------- */
 
   createOneTimeIncome: async (data: {
-    SourceName: string;
-    Category: string | null;
-    DebtorName?: string | null;
+    RecipientID: number;
+    CategoryID: number | null;
+    EntityID?: number | null;
     PaymentMethodID: number;
     Amount: number;
     Date: string; // yyyy-MM-dd
     Note: string;
   }) => {
-    const source = await db.queryOne<{ IncomeSourceID: number }>(
-      `SELECT IncomeSourceID FROM IncomeSources WHERE IncomeSourceName = ?`,
-      [data.SourceName]
-    );
-
-    const category = data.Category
-      ? await db.queryOne<{ IncomeCategoryID: number }>(
-          `SELECT IncomeCategoryID FROM IncomeCategories WHERE IncomeCategoryName = ?`,
-          [data.Category]
-        )
-      : null;
-
-    const debtor = data.DebtorName
-      ? await db.queryOne<{ EntityID: number }>(
-          `SELECT EntityID FROM Entities WHERE EntityName = ?`,
-          [data.DebtorName]
-        )
-      : null;
-
     return await incomeCommitments.createTopUpFromIncome({
       PaymentMethodID: data.PaymentMethodID,
       Amount: data.Amount,
       Date: data.Date,
       Note: data.Note,
-      IncomeSourceID: source?.IncomeSourceID,
-      IncomeCategoryID: category?.IncomeCategoryID,
-      EntityID: debtor?.EntityID
+      RecipientID: data.RecipientID,
+      CategoryID: data.CategoryID,
+      EntityID: data.EntityID
     });
   }
 };

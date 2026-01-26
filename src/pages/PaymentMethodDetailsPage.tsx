@@ -4,9 +4,8 @@ import { db } from '../utils/db';
 import Button from '../components/ui/Button';
 import DataTable from '../components/ui/DataTable';
 import TransferModal from '../components/payment/TransferModal';
-import { Pencil, Trash2, ArrowLeft, Info, Link as LinkIcon } from 'lucide-react';
+import { Pencil, Trash2, Info, Link as LinkIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import { cn } from '../utils/cn';
 import Select from '../components/ui/Select';
 import ReactECharts from 'echarts-for-react';
 import Card from '../components/ui/Card';
@@ -140,10 +139,10 @@ const PaymentMethodDetailsPage: React.FC = () => {
       }
 
       const receiptsData = await db.query<ReceiptQueryResult>(`
-        SELECT r.ExpenseID as id, r.ExpenseDate as date, s.VendorName as name, r.ExpenseNote as note, r.Discount,
+        SELECT r.ExpenseID as id, r.ExpenseDate as date, s.EntityName as name, r.ExpenseNote as note, r.Discount,
                r.IsNonItemised, r.NonItemisedTotal, 'receipt' as type, r.CreationTimestamp as creationTimestamp
         FROM Expenses r
-        JOIN Vendors s ON r.VendorID = s.VendorID
+        JOIN Entities s ON r.RecipientID = s.EntityID
         WHERE r.PaymentMethodID = ?
       `, [id]);
 
@@ -300,11 +299,6 @@ const PaymentMethodDetailsPage: React.FC = () => {
   const handleTransferSave = () => {
     fetchDetails();
     setTransferToEdit(null);
-  };
-
-  const openTransferModal = (topup: TopUp | null = null) => {
-    setTransferToEdit(topup);
-    setIsTransferModalOpen(true);
   };
 
   const openDeleteModal = (item: PageTransaction) => {

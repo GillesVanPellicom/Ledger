@@ -3,13 +3,13 @@ CREATE TABLE IF NOT EXISTS Products (
     ProductName TEXT NOT NULL,
     ProductBrand TEXT,
     ProductSize REAL,
-    ProductCategoryID INTEGER,
+    CategoryID INTEGER,
     ProductUnitID INTEGER,
     ProductIsActive INTEGER NOT NULL DEFAULT 1,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ProductUnitID) REFERENCES ProductUnits (ProductUnitID),
-    FOREIGN KEY (ProductCategoryID) REFERENCES ProductCategories (ProductCategoryID),
+    FOREIGN KEY (CategoryID) REFERENCES Categories (CategoryID),
     UNIQUE (ProductName, ProductBrand, ProductSize, ProductUnitID)
 );
 

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { calculateDebts, ProcessedReceipt, calculateDebtsForReceipt, DebtSummary } from '../logic/debt/debtLogic';
-import { db } from '../utils/db';
 import { Receipt, LineItem, ReceiptSplit, ReceiptDebtorPayment } from '../types';
 
 interface DebtStats {
@@ -21,7 +20,7 @@ export const useDebtCalculation = (entityId: string | number): UseDebtCalculatio
     queryKey: ['debt', entityId],
     queryFn: () => calculateDebts(entityId),
     enabled: !!entityId,
-    staleTime: 0, // Ensure we always get fresh data
+    staleTime: 0,
   });
 
   return {
@@ -38,10 +37,10 @@ export const useDebtCalculation = (entityId: string | number): UseDebtCalculatio
 
 export const useReceiptDebtCalculation = (receiptId: string | undefined, receipt: Receipt | undefined, lineItems: LineItem[] | undefined, receiptSplits: ReceiptSplit[] | undefined, payments: ReceiptDebtorPayment[] | undefined) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['receiptDebt', receiptId, payments?.length], // Include payments length to trigger re-fetch on payment changes
+    queryKey: ['receiptDebt', receiptId, payments?.length],
     queryFn: () => {
       if (!receiptId || !receipt || !lineItems || !receiptSplits || !payments) {
-        return Promise.resolve({ debtors: [], ownShare: null });
+        return Promise.resolve({ debtors: [], ownShare: null } as DebtSummary);
       }
       return calculateDebtsForReceipt(receiptId, receipt, lineItems, receiptSplits, payments);
     },

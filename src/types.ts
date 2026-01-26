@@ -84,10 +84,9 @@ export interface Category {
 
 export interface Entity {
   EntityID: number;
-  DebtorID: number;
-  DebtorName: string;
   EntityName: string;
   EntityIsActive: boolean;
+  NetBalance?: number;
 }
 
 export interface Product {
@@ -263,6 +262,6 @@ export interface Transaction {
   status?: string;
   totalDebtorCount?: number;
   unpaidDebtorCount?: number;
-  incomeSourceId?: number;
-  incomeCategoryId?: number;
+  recipientId?: number;
+  categoryId?: number;
 }

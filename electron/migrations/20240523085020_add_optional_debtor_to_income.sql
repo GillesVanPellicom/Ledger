@@ -1,5 +1,0 @@
--- Merged into 20240523085008_topups.sql and 20240523085016_income_schedules.sql
--- This file is kept for migration history but its content is now part of the main table definition.
--- Original content:
--- ALTER TABLE TopUps ADD COLUMN DebtorID INTEGER REFERENCES Debtors(DebtorID);
--- ALTER TABLE IncomeSchedules ADD COLUMN DebtorID INTEGER REFERENCES Debtors(DebtorID);

@@ -13,8 +13,8 @@ interface ReceiptsState {
     expenseType: string;
     tentative: string;
     attachment: string;
-    incomeSource: string;
-    incomeCategory: string;
+    recipient: string;
+    category: string;
     incomeEntity: string;
     debtor: string;
     fromMethod: string;
@@ -36,8 +36,8 @@ const initialFilters = {
   expenseType: 'all',
   tentative: 'all',
   attachment: 'all',
-  incomeSource: 'all',
-  incomeCategory: 'all',
+  recipient: 'all',
+  category: 'all',
   incomeEntity: 'all',
   debtor: 'all',
   fromMethod: 'all',

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS Expenses (
     ExpenseID INTEGER PRIMARY KEY AUTOINCREMENT,
-    VendorID INTEGER,
+    RecipientID INTEGER NOT NULL,
     ExpenseDate TEXT NOT NULL,
     ExpenseNote TEXT,
     PaymentMethodID INTEGER,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS Expenses (
     IsTentative INTEGER DEFAULT 0,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (VendorID) REFERENCES Vendors (VendorID),
+    FOREIGN KEY (RecipientID) REFERENCES Entities (EntityID),
     FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID),
     FOREIGN KEY (OwedToEntityID) REFERENCES Entities (EntityID)
 );

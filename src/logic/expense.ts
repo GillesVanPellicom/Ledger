@@ -91,10 +91,10 @@ export async function getReceipt(id: string): Promise<{
   payments: ReceiptDebtorPayment[];
 } | null> {
   const receiptData = await db.queryOne<Receipt>(`
-    SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
-           s.VendorName as StoreName, pm.PaymentMethodName, d.EntityName as OwedToDebtorName
+    SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.RecipientID as StoreID,
+           s.EntityName as StoreName, pm.PaymentMethodName, d.EntityName as OwedToDebtorName
     FROM Expenses r
-             JOIN Vendors s ON r.VendorID = s.VendorID
+             JOIN Entities s ON r.RecipientID = s.EntityID
              LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
              LEFT JOIN Entities d ON r.OwedToEntityID = d.EntityID
     WHERE r.ExpenseID = ?
@@ -105,12 +105,12 @@ export async function getReceipt(id: string): Promise<{
   const lineItems = !receiptData.IsNonItemised
     ? await db.query<(LineItem & { CategoryName: string; CategoryID: number })>(`
         SELECT li.ExpenseLineItemID as LineItemID, li.ExpenseID as ReceiptID, li.ProductID, li.LineQuantity, li.LineUnitPrice, li.EntityID as DebtorID, li.IsExcludedFromDiscount, li.CreationTimestamp, li.UpdatedAt,
-               p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.EntityName as DebtorName, d.EntityID as DebtorID, c.ProductCategoryName as CategoryName, c.ProductCategoryID as CategoryID
+               p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.EntityName as DebtorName, d.EntityID as DebtorID, c.CategoryName as CategoryName, c.CategoryID as CategoryID
         FROM ExpenseLineItems li
                  JOIN Products p ON li.ProductID = p.ProductID
                  LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
                  LEFT JOIN Entities d ON li.EntityID = d.EntityID
-                 LEFT JOIN ProductCategories c ON p.ProductCategoryID = c.ProductCategoryID
+                 LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
         WHERE li.ExpenseID = ?
     `, [id])
     : [];

@@ -3,14 +3,14 @@ import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import {db} from '../../utils/db';
-import {Debtor} from '../../types';
+import {Entity} from '../../types';
 import VisibilityCard from '../ui/VisibilityCard';
 
 interface EntityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (newEntityId?: number, name?: string) => void;
-  entityToEdit: Debtor | null;
+  entityToEdit: Entity | null;
 }
 
 const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entityToEdit}) => {
@@ -22,8 +22,8 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
   useEffect(() => {
     if (isOpen) {
       if (entityToEdit) {
-        setName(entityToEdit.DebtorName);
-        setIsActive(!!entityToEdit.DebtorIsActive);
+        setName(entityToEdit.EntityName);
+        setIsActive(!!entityToEdit.EntityIsActive);
       } else {
         setName('');
         setIsActive(true);
@@ -45,9 +45,9 @@ const EntityModal: React.FC<EntityModalProps> = ({isOpen, onClose, onSave, entit
       if (entityToEdit) {
         await db.execute(
           'UPDATE Entities SET EntityName = ?, EntityIsActive = ? WHERE EntityID = ?',
-          [name.trim(), isActive ? 1 : 0, entityToEdit.DebtorID]
+          [name.trim(), isActive ? 1 : 0, entityToEdit.EntityID]
         );
-        onSave(entityToEdit.DebtorID, name.trim());
+        onSave(entityToEdit.EntityID, name.trim());
       } else {
         const result = await db.execute(
           'INSERT INTO Entities (EntityName, EntityIsActive) VALUES (?, ?)',

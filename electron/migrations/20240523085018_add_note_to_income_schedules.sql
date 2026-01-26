@@ -1,4 +1,0 @@
--- Merged into 20240523085016_income_schedules.sql
--- This file is kept for migration history but its content is now part of the main table definition.
--- Original content:
--- ALTER TABLE IncomeSchedules ADD COLUMN Note TEXT NOT NULL DEFAULT '';

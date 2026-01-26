@@ -33,7 +33,6 @@ import Tooltip from '../components/ui/Tooltip';
 import Modal, {ConfirmModal} from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import {LineItem} from '../types';
-import InfoCard from '../components/ui/InfoCard';
 import {Header} from '../components/ui/Header';
 import Divider from '../components/ui/Divider';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -44,7 +43,6 @@ import {
   calculateTotalWithDiscount
 } from '../logic/expense';
 import {useSettingsStore} from '../store/useSettingsStore';
-import {useErrorStore} from '../store/useErrorStore';
 import {useReceipt, useDeleteReceipt} from '../hooks/useReceipts';
 import {useActivePaymentMethods} from '../hooks/usePaymentMethods';
 import NanoDataTable from '../components/ui/NanoDataTable';
@@ -52,14 +50,6 @@ import {useReceiptDebtCalculation} from '../hooks/useDebtCalculation';
 import {usePdfGenerator} from '../hooks/usePdfGenerator';
 import FilterModal, {FilterOption} from '../components/ui/FilterModal';
 import ButtonGroup from '../components/ui/ButtonGroup';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../components/ui/DropdownMenu"
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import Badge, { BadgeVariant } from '../components/ui/Badge';
 import { useQueryClient } from '@tanstack/react-query';
@@ -112,11 +102,10 @@ const ReceiptViewPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const {settings} = useSettingsStore();
-  const {showError} = useErrorStore();
   const deleteReceiptMutation = useDeleteReceipt();
   const {generatePdf} = usePdfGenerator();
 
-  const {data, isLoading, refetch} = useReceipt(id);
+  const {data, isLoading} = useReceipt(id);
   const {receipt, lineItems: rawLineItems, images: rawImages, splits: receiptSplits, payments = []} = data || {};
 
   const {data: activePaymentMethods} = useActivePaymentMethods();
@@ -496,8 +485,8 @@ const ReceiptViewPage: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
                       {receipt?.Status === 'paid' ? (
-                        <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the vendor.'}>
-                          <Badge variant="green">Paid to Vendor</Badge>
+                        <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the recipient.'}>
+                          <Badge variant="green">Paid to Recipient</Badge>
                         </Tooltip>
                       ) : (
                         <Tooltip content={`Total amount is owed to ${receipt?.OwedToDebtorName}.`}>
@@ -512,7 +501,7 @@ const ReceiptViewPage: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 pt-8 border-t border-border w-full">
                       {receipt?.StoreName && (
-                        <Tooltip content="The vendor where this expense was incurred">
+                        <Tooltip content="The recipient where this expense was incurred">
                           <div className="flex items-center gap-3 cursor-help">
                             <Store className="h-5 w-5 text-font-2"/>
                             <span className="text-sm text-font-1">{receipt.StoreName}</span>
@@ -662,9 +651,9 @@ const ReceiptViewPage: React.FC = () => {
                   {/* Badges */}
                   <div className="flex flex-wrap justify-center gap-2">
                     {receipt?.Status === 'paid' ? (
-                      <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the vendor.'}>
+                      <Tooltip content={receipt.OwedToDebtorID ? `${receipt.OwedToDebtorName} paid this expense.` : 'This expense has been paid to the recipient.'}>
                         <Badge variant="green">
-                          Paid to Vendor
+                          Paid to Recipient
                         </Badge>
                       </Tooltip>
                     ) : (
@@ -686,7 +675,7 @@ const ReceiptViewPage: React.FC = () => {
                   {/* Rest (Attributes) */}
                   <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 pt-8 border-t border-border w-full">
                     {receipt?.StoreName && (
-                      <Tooltip content="The vendor where this expense was incurred">
+                      <Tooltip content="The recipient where this expense was incurred">
                         <div className="flex items-center gap-3 cursor-help">
                           <Store className="h-5 w-5 text-font-2"/>
                           <span className="text-sm text-font-1">{receipt.StoreName}</span>

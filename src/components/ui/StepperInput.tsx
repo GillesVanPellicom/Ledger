@@ -159,6 +159,9 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
       } as React.ChangeEvent<HTMLInputElement>);
     };
 
+    // Filter out non-DOM attributes before passing to Input
+    const { ...domProps } = props;
+
     return (
       <div className={className}>
         {label && (
@@ -176,7 +179,7 @@ const StepperInput = React.forwardRef<HTMLInputElement, StepperInputProps>(
             value={inputValue}
             onChange={handleChange}
             onBlur={handleBlur}
-            {...props}
+            {...domProps}
           />
 
           <div className="flex flex-col h-full aspect-square shrink-0 w-auto">

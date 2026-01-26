@@ -16,7 +16,7 @@ import ProgressModal from '../components/ui/ProgressModal';
 import DebtSettlementModal from '../components/debt/DebtSettlementModal';
 import DebtPdfOptionsModal from '../components/debt/DebtPdfOptionsModal';
 import EntityModal from '../components/debt/EntityModal';
-import { Debtor, Receipt } from '../types';
+import { Entity, Receipt } from '../types';
 import { useDebtCalculation } from '../hooks/useDebtCalculation';
 import { Header } from '../components/ui/Header';
 import Tooltip from '../components/ui/Tooltip';
@@ -27,7 +27,6 @@ import { useErrorStore } from '../store/useErrorStore';
 import { usePdfGenerator } from '../hooks/usePdfGenerator';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import Badge from '../components/ui/Badge';
-import { toast } from 'sonner';
 
 interface MarkAsPaidModalProps {
   isOpen: boolean;
@@ -87,7 +86,7 @@ const MarkAsPaidModal: React.FC<MarkAsPaidModalProps> = ({ isOpen, onClose, onCo
 const EntityDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [entity, setEntity] = useState<Debtor | null>(null);
+  const [entity, setEntity] = useState<Entity | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -113,7 +112,6 @@ const EntityDetailsPage: React.FC = () => {
   const { settings } = useSettingsStore();
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   
-  // Use the new hook signature
   const { receipts, stats, loading: debtLoading, refetch: refetchDebt } = useDebtCalculation(id || '');
 
   const isDarkMode = useMemo(() => document.documentElement.classList.contains('dark'), []);
@@ -122,18 +120,13 @@ const EntityDetailsPage: React.FC = () => {
   const fetchDetails = useCallback(async () => {
     setLoading(true);
     try {
-      const entityData = await db.queryOne<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName, EntityIsActive as DebtorIsActive, CreationTimestamp, UpdatedAt FROM Entities WHERE EntityID = ?', [id]);
+      const entityData = await db.queryOne<Entity>('SELECT EntityID, EntityName, EntityIsActive, CreationTimestamp, UpdatedAt FROM Entities WHERE EntityID = ?', [id]);
       setEntity(entityData);
 
       if (paymentMethodsEnabled) {
-        // Fixed: Removed array brackets from generic type
         const pmData = await db.query<{ PaymentMethodID: number, PaymentMethodName: string }>('SELECT PaymentMethodID, PaymentMethodName FROM PaymentMethods ORDER BY PaymentMethodName');
         setPaymentMethods(pmData.map(pm => ({ value: pm.PaymentMethodID, label: pm.PaymentMethodName })));
       }
-      
-      // Debt calculation is now handled by the hook, but we might want to trigger a refetch if needed
-      // refetchDebt(); 
-
     } catch (error) {
       showError(error as Error);
     } finally {
@@ -166,15 +159,14 @@ const EntityDetailsPage: React.FC = () => {
     for (let i = 0; i < receiptsToProcess.length; i++) {
       const r = receiptsToProcess[i];
       const receiptDetails = await db.queryOne<any>(`
-        SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
-               s.VendorName as StoreName, pm.PaymentMethodName
+        SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.RecipientID as StoreID,
+               s.EntityName as StoreName, pm.PaymentMethodName
         FROM Expenses r
-        JOIN Vendors s ON r.VendorID = s.VendorID
+        JOIN Entities s ON r.RecipientID = s.EntityID
         LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
         WHERE r.ExpenseID = ?
       `, [r.ReceiptID]);
 
-      // Fixed: Removed array brackets from generic type
       const lineItems = await db.query<any>(`
         SELECT li.ExpenseLineItemID as LineItemID, li.ExpenseID as ReceiptID, li.ProductID, li.LineQuantity, li.LineUnitPrice, li.EntityID as DebtorID, li.IsExcludedFromDiscount, li.CreationTimestamp, li.UpdatedAt,
                p.ProductName, p.ProductBrand
@@ -185,10 +177,10 @@ const EntityDetailsPage: React.FC = () => {
       
       const images = await db.query<any[]>('SELECT ExpenseImageID as ImageID, ExpenseID as ReceiptID, ImagePath, CreationTimestamp, UpdatedAt FROM ExpenseImages WHERE ExpenseID = ?', [r.ReceiptID]);
 
-      let totalAmount = r.amount || 0; // Ensure number
+      let totalAmount = r.amount || 0;
       if (r.type === 'to_me') {
         if (r.IsNonItemised) {
-          totalAmount = r.NonItemisedTotal || 0; // Fixed: Handle undefined
+          totalAmount = r.NonItemisedTotal || 0;
         } else {
           totalAmount = calculateTotalWithDiscount(lineItems, receiptDetails.Discount || 0);
         }
@@ -200,8 +192,8 @@ const EntityDetailsPage: React.FC = () => {
         images,
         totalAmount,
         debtInfo: {
-          entityName: entity!.DebtorName,
-          direction: r.type === 'to_me' ? `Owed to ${settings.userName || 'you'}` : `Owed to ${entity!.DebtorName}`,
+          entityName: entity!.EntityName,
+          direction: r.type === 'to_me' ? `Owed to ${settings.userName || 'you'}` : `Owed to ${entity!.EntityName}`,
         }
       });
     }
@@ -225,7 +217,7 @@ const EntityDetailsPage: React.FC = () => {
         setSelectedDebtForSettlement({
           receiptId: receipt.ReceiptID,
           debtorId: id,
-          debtorName: entity!.DebtorName,
+          debtorName: entity!.EntityName,
           amount: receipt.amount,
           receiptDate: receipt.ReceiptDate,
           receiptPaymentMethodId: receipt.PaymentMethodID
@@ -249,12 +241,10 @@ const EntityDetailsPage: React.FC = () => {
         'UPDATE Expenses SET Status = ?, PaymentMethodID = ? WHERE ExpenseID = ?',
         ['paid', paymentMethodId, receiptToMarkAsPaid.ReceiptID]
       );
-      refetchDebt(); // Refetch debt data
+      refetchDebt();
       setIsMarkAsPaidModalOpen(false);
       setReceiptToMarkAsPaid(null);
     } catch (error) {
-      // Error handled by Modal toast if we propagate it, but here we catch it.
-      // Since we are using the new Modal system, we should rethrow if we want the Modal to show the error toast.
       throw error;
     }
   };
@@ -272,7 +262,7 @@ const EntityDetailsPage: React.FC = () => {
       } else {
         await db.execute('UPDATE Expenses SET Status = ?, PaymentMethodID = NULL WHERE ExpenseID = ?', ['unpaid', receiptId]);
       }
-      refetchDebt(); // Refetch debt data
+      refetchDebt();
       setUnsettleConfirmation({ isOpen: false, receiptId: null, type: null });
     } catch (error) {
       throw error;
@@ -284,12 +274,11 @@ const EntityDetailsPage: React.FC = () => {
       const unsettledToMe = receipts.filter(r => r.type === 'to_me' && !r.isSettled);
       const unsettledToEntity = receipts.filter(r => r.type === 'to_entity' && !r.isSettled);
 
-      // 1. Settle debts owed to me
       for (const r of unsettledToMe) {
-        const systemNote = `Repayment from ${entity!.DebtorName}`;
+        const systemNote = `Repayment from ${entity!.EntityName}`;
         const topUpResult = await db.execute(
           'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote) VALUES (?, ?, ?, ?)',
-          [1, r.amount, format(new Date(), 'yyyy-MM-dd'), systemNote] // Default to Cash (1)
+          [1, r.amount, format(new Date(), 'yyyy-MM-dd'), systemNote]
         );
         await db.execute(
           'INSERT INTO ExpenseEntityPayments (ExpenseID, EntityID, PaidDate, IncomeID) VALUES (?, ?, ?, ?)',
@@ -297,11 +286,10 @@ const EntityDetailsPage: React.FC = () => {
         );
       }
 
-      // 2. Settle debts I owe to entity
       for (const r of unsettledToEntity) {
         await db.execute(
           'UPDATE Expenses SET Status = ?, PaymentMethodID = ? WHERE ExpenseID = ?',
-          ['paid', 1, r.ReceiptID] // Default to Cash (1)
+          ['paid', 1, r.ReceiptID]
         );
       }
 
@@ -401,16 +389,16 @@ const EntityDetailsPage: React.FC = () => {
       render: (row: Receipt) => (
         <MoneyDisplay 
           amount={row.amount || 0} 
-          useSignum={true} // Enabled useSignum
-          colorPositive={row.type === 'to_me'} // Color based on type
-          colorNegative={row.type === 'to_entity'} // Color based on type
+          useSignum={true}
+          colorPositive={row.type === 'to_me'}
+          colorNegative={row.type === 'to_entity'}
         />
       ) 
     },
     {
       header: 'Direction',
       render: (row: Receipt) => (
-        <div className={cn("flex items-center", row.type === 'to_me' ? "text-green" : "text-red")}> {/* Applied text color */}
+        <div className={cn("flex items-center", row.type === 'to_me' ? "text-green" : "text-red")}>
           {row.type === 'to_me' ? 
             <ArrowUpCircle className="h-5 w-5 mr-2" /> : 
             <ArrowDownCircle className="h-5 w-5 mr-2" />}
@@ -428,7 +416,6 @@ const EntityDetailsPage: React.FC = () => {
           <Badge variant={row.isSettled ? 'green' : 'red'}>
             {row.isSettled ? 'Settled' : 'Unsettled'}
           </Badge>
-          {/* Removed x/y shares text */}
         </div>
       )
     },
@@ -440,7 +427,7 @@ const EntityDetailsPage: React.FC = () => {
   return (
     <div>
       <Header
-        title={entity.DebtorName}
+        title={entity.EntityName}
         backButton={
           <Tooltip content="Go Back">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -478,7 +465,7 @@ const EntityDetailsPage: React.FC = () => {
           <div className="text-center">
             <p className="text-sm font-medium text-font-2">Net Balance</p>
             <div className="flex items-center justify-center gap-2">
-              <Tooltip content={stats.netBalance >= 0 ? `${entity.DebtorName} owes you` : `You owe ${entity.DebtorName}`}>
+              <Tooltip content={stats.netBalance >= 0 ? `${entity.EntityName} owes you` : `You owe ${entity.EntityName}`}>
                 {stats.netBalance >= 0 ? (
                   <ArrowUpCircle className="h-6 w-6 text-green" />
                 ) : (
@@ -575,7 +562,7 @@ const EntityDetailsPage: React.FC = () => {
             onClose={() => setIsMarkAsPaidModalOpen(false)}
             onConfirm={handleMarkAsPaid}
             paymentMethods={paymentMethods}
-            entityName={entity.DebtorName}
+            entityName={entity.EntityName}
             receipt={receiptToMarkAsPaid}
             paymentMethodsEnabled={paymentMethodsEnabled}
           />
@@ -609,7 +596,7 @@ const EntityDetailsPage: React.FC = () => {
             onClose={() => setIsSettleAllModalOpen(false)}
             onConfirm={handleSettleAll}
             title="Settle All Debts"
-            message={`Are you sure you want to settle all outstanding debts with ${entity.DebtorName}? This will mark all expenses as paid using the default payment method.`}
+            message={`Are you sure you want to settle all outstanding debts with ${entity.EntityName}? This will mark all expenses as paid using the default payment method.`}
             confirmText="Settle All"
             isDatabaseTransaction
             successToastMessage="All debts settled successfully"

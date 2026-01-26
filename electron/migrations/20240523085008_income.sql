@@ -5,15 +5,15 @@ CREATE TABLE IF NOT EXISTS Income (
     IncomeDate TEXT NOT NULL,
     IncomeNote TEXT,
     TransferID INTEGER,
-    IncomeSourceID INTEGER,
-    IncomeCategoryID INTEGER,
+    RecipientID INTEGER,
+    CategoryID INTEGER,
     EntityID INTEGER,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PaymentMethodID) REFERENCES PaymentMethods (PaymentMethodID) ON DELETE CASCADE,
     FOREIGN KEY (TransferID) REFERENCES Transfers (TransferID) ON DELETE CASCADE,
-    FOREIGN KEY (IncomeSourceID) REFERENCES IncomeSources (IncomeSourceID),
-    FOREIGN KEY (IncomeCategoryID) REFERENCES IncomeCategories (IncomeCategoryID),
+    FOREIGN KEY (RecipientID) REFERENCES Entities (EntityID),
+    FOREIGN KEY (CategoryID) REFERENCES Categories (CategoryID),
     FOREIGN KEY (EntityID) REFERENCES Entities (EntityID)
 );
 

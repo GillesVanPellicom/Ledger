@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { db } from '../utils/db';
-import { MonthlySpending, StoreSpending, CategorySpending, Averages, PaymentMethodStats, DebtStats, Debtor } from '../types';
+import { MonthlySpending, StoreSpending, CategorySpending, Averages, PaymentMethodStats, DebtStats, Entity } from '../types';
 
 export const useAvailableYears = () => {
   return useQuery({
@@ -34,13 +34,13 @@ export const useCategoryAnalytics = (year: string, month: string | null, week: s
       const totalQueryPart = `SUM(CASE WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal ELSE li.LineQuantity * li.LineUnitPrice END)`;
 
       const categoryResult = await db.query<{ CategoryName: string, total: number, count: number }>(`
-        SELECT c.ProductCategoryName as CategoryName, ${totalQueryPart} as total, COUNT(DISTINCT r.ExpenseID) as count
+        SELECT c.CategoryName, ${totalQueryPart} as total, COUNT(DISTINCT r.ExpenseID) as count
         FROM Expenses r 
         LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID 
         LEFT JOIN Products p ON li.ProductID = p.ProductID
-        LEFT JOIN ProductCategories c ON p.ProductCategoryID = c.ProductCategoryID
+        LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
         WHERE ${dateFilter} AND ${baseWhere} 
-        GROUP BY c.ProductCategoryName 
+        GROUP BY c.CategoryName 
         ORDER BY total DESC
       `, params);
       
@@ -90,13 +90,13 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       });
 
       // Store Spending
-      const storeResult = await db.query<{ StoreName: string, total: number }>(`SELECT s.VendorName as StoreName, ${totalQueryPart} as total FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID JOIN Vendors s ON r.VendorID = s.VendorID WHERE ${yearFilter} AND ${baseWhere} GROUP BY s.VendorName ORDER BY total DESC`, [selectedYear]);
+      const storeResult = await db.query<{ StoreName: string, total: number }>(`SELECT s.EntityName as StoreName, ${totalQueryPart} as total FROM Expenses r LEFT JOIN ExpenseLineItems li ON r.ExpenseID = li.ExpenseID JOIN Entities s ON r.RecipientID = s.EntityID WHERE ${yearFilter} AND ${baseWhere} GROUP BY s.EntityName ORDER BY total DESC`, [selectedYear]);
       const storeSpending: StoreSpending[] = storeResult.map(s => ({ name: s.StoreName, value: s.total }));
 
       const uncategorizedCountResult = await db.queryOne<{ count: number }>(`
         SELECT COUNT(*) as count
         FROM Products p
-        WHERE p.ProductCategoryID IS NULL
+        WHERE p.CategoryID IS NULL
       `);
       const hasUncategorizedProducts = (uncategorizedCountResult?.count || 0) > 0;
 
@@ -126,7 +126,7 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
       // Debt Stats
       let debtStats: DebtStats = { netBalances: [], totalOwedToMe: 0, totalOwedByMe: 0 };
       if (debtEnabled) {
-        const debtors = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1');
+        const debtors = await db.query<Entity>('SELECT EntityID, EntityName FROM Entities WHERE EntityIsActive = 1');
         let totalOwedToMe = 0;
         let totalOwedByMe = 0;
         const netBalances: { name: string, value: number, id: number }[] = [];
@@ -134,9 +134,9 @@ export const useAnalyticsData = (selectedYear: string, paymentMethodsEnabled: bo
         const { calculateDebts } = await import('../logic/debt/debtLogic');
 
         for (const debtor of debtors) {
-          const { debtToMe, debtToEntity } = await calculateDebts(debtor.DebtorID);
+          const { debtToMe, debtToEntity } = await calculateDebts(debtor.EntityID);
           if (debtToMe - debtToEntity !== 0) {
-            netBalances.push({ name: debtor.DebtorName, value: debtToMe - debtToEntity, id: debtor.DebtorID });
+            netBalances.push({ name: debtor.EntityName, value: debtToMe - debtToEntity, id: debtor.EntityID });
           }
           totalOwedToMe += debtToMe;
           totalOwedByMe += debtToEntity;

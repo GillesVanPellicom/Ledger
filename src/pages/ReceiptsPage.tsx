@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO, isBefore, startOfToday, getDay, getDate, getMonth, subMonths, startOfDay } from 'date-fns';
+import { format, parseISO, startOfToday, startOfDay } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import DataTable from '../components/ui/DataTable';
@@ -23,7 +23,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { cn } from '../utils/cn';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import DateDisplay from '../components/ui/DateDisplay';
-import TimeDisplay from '../components/ui/TimeDisplay';
 import Badge from '../components/ui/Badge';
 import Divider from '../components/ui/Divider';
 import Combobox from '../components/ui/Combobox';
@@ -33,17 +32,15 @@ import ScheduleModal from '../components/payment/ScheduleModal';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { incomeCommitments } from '../logic/incomeCommitments';
 import { incomeLogic } from '../logic/incomeLogic';
-import { humanizeRecurrenceRule, parseRecurrenceRule, calculateOccurrences } from '../logic/incomeScheduling';
+import { humanizeRecurrenceRule } from '../logic/incomeScheduling';
 import StepperInput from '../components/ui/StepperInput';
 import Checkbox from '../components/ui/Checkbox';
-import IncomeCategoryModal from '../components/categories/IncomeCategoryModal';
-import IncomeSourceModal from '../components/income/IncomeSourceModal';
 import Input from '../components/ui/Input';
 import { Header } from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
 import { useReceiptsStore } from '../store/useReceiptsStore';
 
-import type { Receipt, LineItem, ReceiptImage, Transaction, Debtor, PaymentMethod } from '../types';
+import type { Receipt, LineItem, ReceiptImage, Transaction, Entity, PaymentMethod, Category } from '../types';
 
 interface FullReceipt extends Receipt {
   lineItems: LineItem[];
@@ -87,11 +84,9 @@ const ReceiptsPage: React.FC = () => {
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
-  const [debtors, setDebtors] = useState<Debtor[]>([]);
+  const [entities, setEntities] = useState<Entity[]>([]);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
-  const [incomeSources, setIncomeSources] = useState<any[]>([]);
-  const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
-  const [entities, setEntities] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // Income Page States
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
@@ -102,29 +97,17 @@ const ReceiptsPage: React.FC = () => {
   const [isDeleteScheduleModalOpen, setIsDeleteScheduleModalOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<number | null>(null);
   const [cascadeDelete, setCascadeDelete] = useState(false);
-  const [isIncomeCategoryModalOpen, setIsIncomeCategoryModalOpen] = useState(false);
-  const [isIncomeSourceModalOpen, setIsIncomeSourceModalOpen] = useState(false);
-
-  const getCurrentDate = () => {
-    if (settings.dev?.mockTime?.enabled && settings.dev.mockTime.date) {
-      return startOfDay(parseISO(settings.dev.mockTime.date));
-    }
-    return startOfToday();
-  };
 
   useEffect(() => {
     const loadReferenceData = async () => {
-      const [debtorsData, methodsData, sourcesData, categoriesData] = await Promise.all([
-        db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName'),
+      const [entitiesData, methodsData, categoriesData] = await Promise.all([
+        db.query<Entity>('SELECT EntityID, EntityName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName'),
         db.query<PaymentMethod>('SELECT * FROM PaymentMethods WHERE PaymentMethodIsActive = 1 ORDER BY PaymentMethodName'),
-        db.query<any>('SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName'),
-        db.query<any>('SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName'),
+        db.query<Category>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName'),
       ]);
-      setDebtors(debtorsData);
+      setEntities(entitiesData);
       setMethods(methodsData);
-      setIncomeSources(sourcesData);
-      setIncomeCategories(categoriesData);
-      setEntities(debtorsData.map(d => ({ value: d.DebtorName, label: d.DebtorName, id: d.DebtorID })));
+      setCategories(categoriesData);
     };
     loadReferenceData();
   }, []);
@@ -150,9 +133,8 @@ const ReceiptsPage: React.FC = () => {
     expenseTypeFilter: appliedFilters.expenseType,
     tentativeFilter: appliedFilters.tentative,
     attachmentFilter: appliedFilters.attachment,
-    incomeSourceFilter: appliedFilters.incomeSource,
-    incomeCategoryFilter: appliedFilters.incomeCategory,
-    incomeEntityFilter: appliedFilters.incomeEntity,
+    recipientFilter: appliedFilters.recipient,
+    categoryFilter: appliedFilters.category,
     debtorFilter: appliedFilters.debtor,
     fromMethodFilter: appliedFilters.fromMethod,
     toMethodFilter: appliedFilters.toMethod,
@@ -229,7 +211,6 @@ const ReceiptsPage: React.FC = () => {
       setTransactionToDelete(null);
       refetch();
     } catch (error) {
-      // Error handled by Modal toast
       throw error;
     }
   };
@@ -245,10 +226,10 @@ const ReceiptsPage: React.FC = () => {
     const expenseIds = selectedExpenses.map(t => t.originalId);
     const placeholders = expenseIds.map(() => '?').join(',');
     const receiptsData: (Receipt & { lineItems: LineItem[], totalAmount: number })[] = await db.query(`
-      SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
-             s.VendorName as StoreName, pm.PaymentMethodName
+      SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.RecipientID as StoreID,
+             s.EntityName as StoreName, pm.PaymentMethodName
       FROM Expenses r
-      JOIN Vendors s ON r.VendorID = s.VendorID
+      JOIN Entities s ON r.RecipientID = s.EntityID
       LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
       WHERE r.ExpenseID IN (${placeholders})
       ORDER BY r.ExpenseDate DESC
@@ -276,7 +257,7 @@ const ReceiptsPage: React.FC = () => {
         if (row.type === 'expense') return row.storeName;
         if (row.type === 'repayment') return `Repayment from ${row.debtorName}`;
         if (row.type === 'income') {
-          return row.debtorName || 'Income'; // debtorName field is used for SourceName in incomeQuery
+          return row.debtorName || 'Income';
         }
         if (row.type === 'transfer') return 'Transfer';
         return '';
@@ -326,7 +307,7 @@ const ReceiptsPage: React.FC = () => {
       switch (row.type) {
         case 'expense':
           return (
-            <Tooltip content="Expense - money spent at a vendor">
+            <Tooltip content="Expense - money spent">
               <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Expense</Badge>
             </Tooltip>
           );
@@ -622,8 +603,8 @@ const ReceiptsPage: React.FC = () => {
       expenseType: 'all',
       tentative: 'all',
       attachment: 'all',
-      incomeSource: 'all',
-      incomeCategory: 'all',
+      recipient: 'all',
+      category: 'all',
       incomeEntity: 'all',
       debtor: 'all',
       fromMethod: 'all',
@@ -640,8 +621,8 @@ const ReceiptsPage: React.FC = () => {
       expenseType: 'all',
       tentative: 'all',
       attachment: 'all',
-      incomeSource: 'all',
-      incomeCategory: 'all',
+      recipient: 'all',
+      category: 'all',
       incomeEntity: 'all',
       debtor: 'all',
       fromMethod: 'all',
@@ -651,9 +632,9 @@ const ReceiptsPage: React.FC = () => {
     setPendingDateRange([null, null]);
   };
 
-  const hasActiveFilters = appliedFilters.type !== 'all' || appliedFilters.debt !== 'all' || appliedFilters.expenseType !== 'all' || appliedFilters.tentative !== 'all' || appliedFilters.attachment !== 'all' || appliedFilters.incomeSource !== 'all' || appliedFilters.incomeCategory !== 'all' || appliedFilters.incomeEntity !== 'all' || appliedFilters.debtor !== 'all' || appliedFilters.fromMethod !== 'all' || appliedFilters.toMethod !== 'all' || appliedFilters.method !== 'all' || appliedDateRange[0] !== null || appliedDateRange[1] !== null || searchTerm !== '';
+  const hasActiveFilters = appliedFilters.type !== 'all' || appliedFilters.debt !== 'all' || appliedFilters.expenseType !== 'all' || appliedFilters.tentative !== 'all' || appliedFilters.attachment !== 'all' || appliedFilters.recipient !== 'all' || appliedFilters.category !== 'all' || appliedFilters.incomeEntity !== 'all' || appliedFilters.debtor !== 'all' || appliedFilters.fromMethod !== 'all' || appliedFilters.toMethod !== 'all' || appliedFilters.method !== 'all' || appliedDateRange[0] !== null || appliedDateRange[1] !== null || searchTerm !== '';
 
-  const hasPendingFilters = pendingFilters.type !== 'all' || pendingFilters.debt !== 'all' || pendingFilters.expenseType !== 'all' || pendingFilters.tentative !== 'all' || pendingFilters.attachment !== 'all' || pendingFilters.incomeSource !== 'all' || pendingFilters.incomeCategory !== 'all' || pendingFilters.incomeEntity !== 'all' || pendingFilters.debtor !== 'all' || pendingFilters.fromMethod !== 'all' || pendingFilters.toMethod !== 'all' || pendingFilters.method !== 'all' || pendingDateRange[0] !== null || pendingDateRange[1] !== null;
+  const hasPendingFilters = pendingFilters.type !== 'all' || pendingFilters.debt !== 'all' || pendingFilters.expenseType !== 'all' || pendingFilters.tentative !== 'all' || pendingFilters.attachment !== 'all' || pendingFilters.recipient !== 'all' || pendingFilters.category !== 'all' || pendingFilters.incomeEntity !== 'all' || pendingFilters.debtor !== 'all' || pendingFilters.fromMethod !== 'all' || pendingFilters.toMethod !== 'all' || pendingFilters.method !== 'all' || pendingDateRange[0] !== null || pendingDateRange[1] !== null;
 
   const activeFilterCount = [
     pendingFilters.type !== 'all',
@@ -661,8 +642,8 @@ const ReceiptsPage: React.FC = () => {
     pendingFilters.expenseType !== 'all',
     pendingFilters.tentative !== 'all',
     pendingFilters.attachment !== 'all',
-    pendingFilters.incomeSource !== 'all',
-    pendingFilters.incomeCategory !== 'all',
+    pendingFilters.recipient !== 'all',
+    pendingFilters.category !== 'all',
     pendingFilters.incomeEntity !== 'all',
     pendingFilters.debtor !== 'all',
     pendingFilters.fromMethod !== 'all',
@@ -771,18 +752,13 @@ const ReceiptsPage: React.FC = () => {
               columns={[
                 { header: 'Planned Date', accessor: 'PlannedDate', render: (row) => <DateDisplay date={row.PlannedDate} /> },
                 {
-                  header: 'Source', accessor: 'SourceName', render: (row) => (
+                  header: 'Source/Recipient', accessor: 'RecipientName', render: (row) => (
                     <div className="flex items-center gap-2">
-                      {row.SourceName}
-                      {row.EntityID && (
-                        <Tooltip content="Associated with an entity.">
-                          <User className="h-3 w-3 text-accent" />
-                        </Tooltip>
-                      )}
+                      {row.RecipientName}
                     </div>
                   )
                 },
-                { header: 'Category', accessor: 'Category' },
+                { header: 'Category', accessor: 'CategoryName' },
                 { header: 'Method', accessor: 'PaymentMethodName' },
                 { header: 'Expected Amount', accessor: 'Amount', render: (row) => row.Amount ? `€${row.Amount.toFixed(2)}` : '-' },
                 {
@@ -828,9 +804,9 @@ const ReceiptsPage: React.FC = () => {
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/payment-methods/${row.PaymentMethodID}`); }}>
                             <CreditCard className="mr-2 h-4 w-4" /> Method
                           </DropdownMenuItem>
-                          {row.EntityID && (
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.EntityID}`); }}>
-                              <User className="mr-2 h-4 w-4" /> Entity
+                          {row.RecipientID && (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.RecipientID}`); }}>
+                              <User className="mr-2 h-4 w-4" /> {row.Type === 'income' ? 'Source' : 'Recipient'}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
@@ -870,21 +846,16 @@ const ReceiptsPage: React.FC = () => {
               }}
               columns={[
                 {
-                  header: 'Source', accessor: 'SourceName', render: (row) => (
+                  header: 'Source/Recipient', accessor: 'RecipientName', render: (row) => (
                     <div className="flex items-center gap-2">
-                      {row.SourceName}
-                      {row.EntityID && (
-                        <Tooltip content="Associated with an entity.">
-                          <User className="h-3 w-3 text-accent" />
-                        </Tooltip>
-                      )}
+                      {row.RecipientName}
                     </div>
                   )
                 },
-                { header: 'Category', accessor: 'Category' },
+                { header: 'Category', accessor: 'CategoryName' },
                 { header: 'Method', accessor: 'PaymentMethodName' },
                 { header: 'Expected Amount', accessor: 'Amount', render: (row) => row.Amount ? `€${row.Amount.toFixed(2)}` : '-' },
-                { header: 'Recurrence', accessor: 'RecurrenceRule', render: (row) => humanizeRecurrenceRule(row) },
+                { header: 'Recurrence', accessor: 'RecurrenceRule', render: (row) => humanizeRecurrenceRule(row as any) },
                 {
                   header: 'Type', render: (row) => (
                     <Badge variant={row.Type === 'expense' ? 'red' : 'green'}>
@@ -916,9 +887,9 @@ const ReceiptsPage: React.FC = () => {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/payment-methods/${row.PaymentMethodID}`); }}>
                           <CreditCard className="mr-2 h-4 w-4" /> Method
                         </DropdownMenuItem>
-                        {row.EntityID && (
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.EntityID}`); }}>
-                            <User className="mr-2 h-4 w-4" /> Entity
+                        {row.RecipientID && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/entities/${row.RecipientID}`); }}>
+                            <User className="mr-2 h-4 w-4" /> {row.Type === 'income' ? 'Source' : 'Recipient'}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
@@ -984,6 +955,9 @@ const ReceiptsPage: React.FC = () => {
                 <FilterOption title="Attachments" onReset={() => handlePendingFilterChange('attachment', 'all')} isModified={pendingFilters.attachment !== 'all'}>
                   <Combobox options={attachmentFilterOptions} value={pendingFilters.attachment} onChange={val => handlePendingFilterChange('attachment', val)} />
                 </FilterOption>
+                <FilterOption title="Recipient" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
+                  <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
+                </FilterOption>
               </>
             )}
 
@@ -1004,6 +978,9 @@ const ReceiptsPage: React.FC = () => {
                 <FilterOption title="Attachments" onReset={() => handlePendingFilterChange('attachment', 'all')} isModified={pendingFilters.attachment !== 'all'}>
                   <Combobox options={attachmentFilterOptions} value={pendingFilters.attachment} onChange={val => handlePendingFilterChange('attachment', val)} />
                 </FilterOption>
+                <FilterOption title="Recipient" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
+                  <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
+                </FilterOption>
               </>
             )}
 
@@ -1015,14 +992,11 @@ const ReceiptsPage: React.FC = () => {
                     <Combobox options={[{ value: 'all', label: 'All' }, ...methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))]} value={pendingFilters.method} onChange={val => handlePendingFilterChange('method', val)} />
                   </FilterOption>
                 )}
-                <FilterOption title="Source" onReset={() => handlePendingFilterChange('incomeSource', 'all')} isModified={pendingFilters.incomeSource !== 'all'}>
-                  <Combobox options={[{ value: 'all', label: 'All' }, ...incomeSources.map(s => ({ value: String(s.IncomeSourceID), label: s.IncomeSourceName }))]} value={pendingFilters.incomeSource} onChange={val => handlePendingFilterChange('incomeSource', val)} />
+                <FilterOption title="Source" onReset={() => handlePendingFilterChange('recipient', 'all')} isModified={pendingFilters.recipient !== 'all'}>
+                  <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.recipient} onChange={val => handlePendingFilterChange('recipient', val)} />
                 </FilterOption>
-                <FilterOption title="Category" onReset={() => handlePendingFilterChange('incomeCategory', 'all')} isModified={pendingFilters.incomeCategory !== 'all'}>
-                  <Combobox options={[{ value: 'all', label: 'All' }, ...incomeCategories.map(c => ({ value: String(c.IncomeCategoryID), label: c.IncomeCategoryName }))]} value={pendingFilters.incomeCategory} onChange={val => handlePendingFilterChange('incomeCategory', val)} />
-                </FilterOption>
-                <FilterOption title="Entity" onReset={() => handlePendingFilterChange('incomeEntity', 'all')} isModified={pendingFilters.incomeEntity !== 'all'}>
-                  <Combobox options={[{ value: 'all', label: 'All' }, ...debtors.map(d => ({ value: String(d.DebtorID), label: d.DebtorName }))]} value={pendingFilters.incomeEntity} onChange={val => handlePendingFilterChange('incomeEntity', val)} />
+                <FilterOption title="Category" onReset={() => handlePendingFilterChange('category', 'all')} isModified={pendingFilters.category !== 'all'}>
+                  <Combobox options={[{ value: 'all', label: 'All' }, ...categories.map(c => ({ value: String(c.CategoryID), label: c.CategoryName }))]} value={pendingFilters.category} onChange={val => handlePendingFilterChange('category', val)} />
                 </FilterOption>
               </>
             )}
@@ -1036,7 +1010,7 @@ const ReceiptsPage: React.FC = () => {
                   </FilterOption>
                 )}
                 <FilterOption title="Entity" onReset={() => handlePendingFilterChange('debtor', 'all')} isModified={pendingFilters.debtor !== 'all'}>
-                  <Combobox options={[{ value: 'all', label: 'All' }, ...debtors.map(d => ({ value: String(d.DebtorID), label: d.DebtorName }))]} value={pendingFilters.debtor} onChange={val => handlePendingFilterChange('debtor', val)} />
+                  <Combobox options={[{ value: 'all', label: 'All' }, ...entities.map(e => ({ value: String(e.EntityID), label: e.EntityName }))]} value={pendingFilters.debtor} onChange={val => handlePendingFilterChange('debtor', val)} />
                 </FilterOption>
               </>
             )}
@@ -1078,7 +1052,7 @@ const ReceiptsPage: React.FC = () => {
               </div>
             </div>
           </Modal>
-          <ConfirmModal isOpen={isDismissModalOpen} onClose={() => setIsDismissModalOpen(false)} onConfirm={async () => { if (selectedPending) { await rejectMutation.mutateAsync(selectedPending.SchedulePendingID); setIsDismissModalOpen(false); } }} title="Dismiss Income" message={`Are you sure you want to dismiss ${selectedPending?.SourceName}? This occurrence will be ignored.`} confirmText="Dismiss" isDatabaseTransaction successToastMessage="Income dismissed successfully" errorToastMessage="Failed to dismiss income" />
+          <ConfirmModal isOpen={isDismissModalOpen} onClose={() => setIsDismissModalOpen(false)} onConfirm={async () => { if (selectedPending) { await rejectMutation.mutateAsync(selectedPending.SchedulePendingID); setIsDismissModalOpen(false); } }} title="Dismiss Income" message={`Are you sure you want to dismiss ${selectedPending?.RecipientName}? This occurrence will be ignored.`} confirmText="Dismiss" isDatabaseTransaction successToastMessage="Income dismissed successfully" errorToastMessage="Failed to dismiss income" />
           <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title="Confirm Income" onEnter={handleConfirmIncome} isDatabaseTransaction successToastMessage="Income confirmed successfully" errorToastMessage="Failed to confirm income" loadingMessage="Confirming income..." footer={
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setIsConfirmModalOpen(false)}>Cancel</Button>
@@ -1088,22 +1062,12 @@ const ReceiptsPage: React.FC = () => {
             </div>
           }>
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400"> Verify the amount and date for <strong>{selectedPending?.SourceName}</strong>. </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400"> Verify the amount and date for <strong>{selectedPending?.RecipientName}</strong>. </p>
               <StepperInput label="Amount" step={1} value={String(confirmData.amount)} onChange={e => setConfirmData(prev => ({ ...prev, amount: Number.parseFloat(e.target.value) }))} onIncrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) + 1 }))} onDecrement={() => setConfirmData(prev => ({ ...prev, amount: (prev.amount || 0) - 1 }))} />
-              <Input label="Date" type="date" value={confirmData.date} onChange={e => setConfirmData(prev => ({ ...prev, date: e.target.value }))} />
-              <Combobox label="Method" options={methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))} value={confirmData.paymentMethodId} onChange={val => setConfirmData(prev => ({ ...prev, paymentMethodId: val }))} />
+              <Input label="Date" type="date" value={confirmData.date} onChange={e => setConfirmData(prev => ({...prev, date: e.target.value}))} />
+              <Combobox label="Method" options={methods.map(m => ({ value: String(m.PaymentMethodID), label: m.PaymentMethodName }))} value={confirmData.paymentMethodId} onChange={val => setConfirmData(prev => ({...prev, paymentMethodId: val}))} />
             </div>
           </Modal>
-          <IncomeCategoryModal isOpen={isIncomeCategoryModalOpen} onClose={() => setIsIncomeCategoryModalOpen(false)} onSave={() => {
-            db.query("SELECT * FROM IncomeCategories WHERE IncomeCategoryIsActive = 1 ORDER BY IncomeCategoryName").then(rows => {
-              setIncomeCategories(rows.map((r: any) => ({ value: r.IncomeCategoryName, label: r.IncomeCategoryName })));
-            });
-          }} categoryToEdit={null} />
-          <IncomeSourceModal isOpen={isIncomeSourceModalOpen} onClose={() => setIsIncomeSourceModalOpen(false)} onSave={() => {
-            db.query("SELECT * FROM IncomeSources WHERE IncomeSourceIsActive = 1 ORDER BY IncomeSourceName").then(rows => {
-              setIncomeSources(rows.map((r: any) => ({ value: r.IncomeSourceName, label: r.IncomeSourceName })));
-            });
-          }} sourceToEdit={null} />
         </div>
       </PageWrapper>
     </div>

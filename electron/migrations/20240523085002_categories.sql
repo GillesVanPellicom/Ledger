@@ -1,12 +1,12 @@
-CREATE TABLE IF NOT EXISTS ProductCategories (
-    ProductCategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
-    ProductCategoryName TEXT NOT NULL UNIQUE,
-    ProductCategoryIsActive INTEGER NOT NULL DEFAULT 1,
+CREATE TABLE IF NOT EXISTS Categories (
+    CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CategoryName TEXT NOT NULL UNIQUE,
+    CategoryIsActive INTEGER NOT NULL DEFAULT 1,
     CreationTimestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER trigger_productcategories_updated_at AFTER UPDATE ON ProductCategories
+CREATE TRIGGER trigger_categories_updated_at AFTER UPDATE ON Categories
 BEGIN
-    UPDATE ProductCategories SET UpdatedAt = CURRENT_TIMESTAMP WHERE ProductCategoryID = NEW.ProductCategoryID;
+    UPDATE Categories SET UpdatedAt = CURRENT_TIMESTAMP WHERE CategoryID = NEW.CategoryID;
 END;

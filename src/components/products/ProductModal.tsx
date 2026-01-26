@@ -7,8 +7,6 @@ import { db } from '../../utils/db';
 import { Product } from '../../types';
 import Divider from '../ui/Divider';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { Plus } from 'lucide-react';
-import Tooltip from '../ui/Tooltip';
 import CategoryModal from '../categories/CategoryModal';
 import StepperInput from '../ui/StepperInput';
 import Combobox from '../ui/Combobox';
@@ -45,7 +43,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
   };
 
   const loadCategories = async () => {
-    const result = await db.query<{ CategoryID: number; CategoryName: string }>('SELECT ProductCategoryID as CategoryID, ProductCategoryName as CategoryName FROM ProductCategories WHERE ProductCategoryIsActive = 1 ORDER BY ProductCategoryName');
+    const result = await db.query<{ CategoryID: number; CategoryName: string }>('SELECT CategoryID, CategoryName FROM Categories WHERE CategoryIsActive = 1 ORDER BY CategoryName');
     setCategories(result.map(c => ({ value: String(c.CategoryID), label: c.CategoryName })));
   };
 
@@ -108,10 +106,10 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
 
       let result;
       if (productToEdit) {
-        await db.execute('UPDATE Products SET ProductName = ?, ProductBrand = ?, ProductSize = ?, ProductUnitID = ?, ProductCategoryID = ? WHERE ProductID = ?', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID, productToEdit.ProductID]);
+        await db.execute('UPDATE Products SET ProductName = ?, ProductBrand = ?, ProductSize = ?, ProductUnitID = ?, CategoryID = ? WHERE ProductID = ?', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID, productToEdit.ProductID]);
         result = { lastID: productToEdit.ProductID };
       } else {
-        result = await db.execute('INSERT INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, ProductCategoryID) VALUES (?, ?, ?, ?, ?)', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID]);
+        result = await db.execute('INSERT INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, CategoryID) VALUES (?, ?, ?, ?, ?)', [productData.ProductName, productData.ProductBrand, productData.ProductSize, productData.ProductUnitID, productData.CategoryID]);
       }
       
       if (shouldSelect && onSaveAndSelect) {
@@ -130,11 +128,6 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSave(false);
   };
 
   const handleCategorySave = async (newCategoryId?: number) => {
@@ -201,7 +194,6 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, productToE
               error={errors.ProductSize}
               className="col-span-1"
               precision={0}
-              clamp={true}
             />
             <Select label="Unit" name="ProductUnitID" value={formData.ProductUnitID} onChange={handleSelectChange} options={units} placeholder="Select Unit" error={errors.ProductUnitID} />
           </div>

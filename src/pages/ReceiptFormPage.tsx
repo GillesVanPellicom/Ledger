@@ -13,12 +13,10 @@ import {cn} from '../utils/cn';
 import Tooltip from '../components/ui/Tooltip';
 import {ConfirmModal} from '../components/ui/Modal';
 import LineItemSelectionModal from '../components/receipts/LineItemSelectionModal';
-import StoreModal from '../components/stores/StoreModal';
 import EntityModal from '../components/debt/EntityModal';
 import PaymentMethodModal from '../components/payment/PaymentMethodModal';
 import StepperInput from '../components/ui/StepperInput';
-import {Debtor, LineItem, ReceiptImage, ReceiptSplit, Store} from '../types';
-import InfoCard from '../components/ui/InfoCard';
+import {Entity, LineItem, ReceiptImage, ReceiptSplit} from '../types';
 import '../electron.d';
 import Spinner from '../components/ui/Spinner';
 import {Header} from '../components/ui/Header';
@@ -29,7 +27,6 @@ import {useBackupStore} from '../store/useBackupStore';
 import {useQueryClient} from '@tanstack/react-query';
 import Divider from '../components/ui/Divider';
 import NanoDataTable from '../components/ui/NanoDataTable';
-import DataGrid from '../components/ui/DataGrid';
 import Combobox from '../components/ui/Combobox';
 import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/debtLogic';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
@@ -46,13 +43,13 @@ const ReceiptFormPage: React.FC = () => {
   const paymentMethodsEnabled = settings.modules.paymentMethods?.enabled;
   const debtEnabled = settings.modules.debt?.enabled;
 
-  const [stores, setStores] = useState<{ value: string, label: string }[]>([]);
+  const [entities, setEntities] = useState<{ value: string, label: string }[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<{ value: string, label: string }[]>([]);
-  const [debtors, setDebtors] = useState<Debtor[]>([]);
+  const [debtors, setDebtors] = useState<Entity[]>([]);
   const [paidById, setPaidById] = useState<string>('me');
 
   const [formData, setFormData] = useState({
-    storeId: '',
+    recipientId: '',
     receiptDate: new Date(),
     note: '',
     paymentMethodId: '1',
@@ -65,7 +62,6 @@ const ReceiptFormPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState<boolean>(false);
-  const [isStoreModalOpen, setIsStoreModalOpen] = useState<boolean>(false);
   const [isEntityModalOpen, setIsEntityModalOpen] = useState<boolean>(false);
   const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -101,7 +97,7 @@ const ReceiptFormPage: React.FC = () => {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.storeId) newErrors.storeId = 'Vendor is required.';
+    if (!formData.recipientId) newErrors.recipientId = 'Recipient is required.';
     if (!formData.receiptDate) newErrors.receiptDate = 'Date is required.';
     if (!paidById) newErrors.paidById = 'Paid by is required.';
     if (receiptFormat === 'itemised' && lineItems.length === 0) newErrors.lineItems = 'At least one line item is required.';
@@ -121,34 +117,17 @@ const ReceiptFormPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const fetchStores = async () => {
-    const storeData = await db.query<Store>('SELECT VendorID as StoreID, VendorName as StoreName FROM Vendors WHERE VendorIsActive = 1 ORDER BY VendorName');
-    setStores(storeData.map(s => ({value: String(s.StoreID), label: s.StoreName})));
-  };
-
-  const handleStoreSave = async (newStoreId?: number) => {
-    await fetchStores();
-    if (newStoreId) {
-      setFormData(prev => ({...prev, storeId: String(newStoreId)}));
-    }
-    setIsStoreModalOpen(false);
+  const fetchEntities = async () => {
+    const entityData = await db.query<Entity>('SELECT EntityID, EntityName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
+    setEntities(entityData.map(e => ({value: String(e.EntityID), label: e.EntityName})));
+    setDebtors(entityData);
   };
 
   const handleEntitySave = async (newId?: number) => {
-    const debtorsData = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
-    setDebtors(debtorsData);
-
+    await fetchEntities();
     if (newId) {
       setPaidById(String(newId));
-    } else {
-      const newDebtor = await db.queryOne<{
-        DebtorID: number
-      }>('SELECT EntityID as DebtorID FROM Entities ORDER BY EntityID DESC LIMIT 1');
-      if (newDebtor) {
-        setPaidById(String(newDebtor.DebtorID));
-      }
     }
-
     setIsEntityModalOpen(false);
   };
 
@@ -176,7 +155,7 @@ const ReceiptFormPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      await fetchStores();
+      await fetchEntities();
 
       if (paymentMethodsEnabled) {
         const paymentMethodData = await db.query<{
@@ -187,11 +166,6 @@ const ReceiptFormPage: React.FC = () => {
           value: String(pm.PaymentMethodID),
           label: pm.PaymentMethodName
         })));
-      }
-
-      if (debtEnabled) {
-        const debtorsData = await db.query<Debtor>('SELECT EntityID as DebtorID, EntityName as DebtorName FROM Entities WHERE EntityIsActive = 1 ORDER BY EntityName');
-        setDebtors(debtorsData);
       }
 
       if (isEditing) {
@@ -205,7 +179,7 @@ const ReceiptFormPage: React.FC = () => {
           setPaidById(receiptData.Status === 'unpaid' ? String(receiptData.OwedToEntityID) : 'me');
           setFormData(prev => ({
             ...prev,
-            storeId: String(receiptData.VendorID),
+            recipientId: String(receiptData.RecipientID),
             receiptDate: parseISO(receiptData.ExpenseDate),
             note: receiptData.ExpenseNote || '',
             paymentMethodId: String(receiptData.PaymentMethodID),
@@ -316,7 +290,7 @@ const ReceiptFormPage: React.FC = () => {
   const clearConcept = () => {
     localStorage.removeItem('receipt_concept');
     setFormData({
-      storeId: '',
+      recipientId: '',
       receiptDate: new Date(),
       note: '',
       paymentMethodId: '1',
@@ -364,7 +338,7 @@ const ReceiptFormPage: React.FC = () => {
       receiptSplits as any,
       lineItems as any,
       formData.discount,
-      debtors,
+      debtors as any,
       totalShares
     );
   }, [
@@ -496,12 +470,12 @@ const ReceiptFormPage: React.FC = () => {
 
   const handleAddSplit = (debtorId: string) => {
     if (!debtorId || isDebtDisabled) return;
-    const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId));
+    const debtor = debtors.find(d => d.EntityID === parseInt(debtorId));
     if (debtor) {
       setReceiptSplits(prev => [...prev, {
         key: nanoid(),
-        DebtorID: debtor.DebtorID,
-        DebtorName: debtor.DebtorName,
+        DebtorID: debtor.EntityID,
+        DebtorName: debtor.EntityName,
         SplitPart: 1
       }]);
     }
@@ -520,8 +494,8 @@ const ReceiptFormPage: React.FC = () => {
     setLineItems(prev => prev.map(item => {
       if (assignmentsMap.has(item.key)) {
         const debtorId = assignmentsMap.get(item.key);
-        const debtor = debtors.find(d => d.DebtorID === parseInt(debtorId!));
-        return {...item, DebtorID: debtor ? parseInt(debtorId!) : null, DebtorName: debtor ? debtor.DebtorName : null};
+        const debtor = debtors.find(d => d.EntityID === parseInt(debtorId!));
+        return {...item, DebtorID: debtor ? parseInt(debtorId!) : null, DebtorName: debtor ? debtor.EntityName : null};
       }
       return item;
     }));
@@ -533,18 +507,6 @@ const ReceiptFormPage: React.FC = () => {
       setIsExclusionMode(true);
     } else {
       setIsExclusionMode(false);
-    }
-  };
-
-  const toggleExclusionMode = () => {
-    if (isExclusionMode) {
-      if (excludedLineItemKeys.size > 0) {
-        setExclusionConfirmModalOpen(true);
-      } else {
-        setIsExclusionMode(false);
-      }
-    } else {
-      setIsExclusionMode(true);
     }
   };
 
@@ -584,14 +546,6 @@ const ReceiptFormPage: React.FC = () => {
     setFormatChangeModal({isOpen: false, newFormat: null});
   };
 
-  const handleRemoveDebtorFromItems = (debtorId: number) => {
-    setLineItems(prev => prev.map(item => item.DebtorID === debtorId ? {
-      ...item,
-      DebtorID: null,
-      DebtorName: null
-    } : item));
-  };
-
   const handleSubmit = async (isTentative: boolean) => {
     if (!validate()) return;
     setSaving(true);
@@ -600,7 +554,7 @@ const ReceiptFormPage: React.FC = () => {
       let receiptId = id;
 
       const receiptPayload = {
-        VendorID: formData.storeId,
+        RecipientID: formData.recipientId,
         ExpenseDate: format(formData.receiptDate, 'yyyy-MM-dd'),
         ExpenseNote: formData.note,
         PaymentMethodID: paidById === 'me' ? formData.paymentMethodId : null,
@@ -618,7 +572,7 @@ const ReceiptFormPage: React.FC = () => {
       if (isEditing) {
         await db.execute(
           `UPDATE Expenses
-           SET VendorID          = ?,
+           SET RecipientID       = ?,
                ExpenseDate      = ?,
                ExpenseNote      = ?,
                PaymentMethodID  = ?,
@@ -653,7 +607,7 @@ const ReceiptFormPage: React.FC = () => {
       } else {
         const result = await db.execute(
           `INSERT INTO Expenses
-           (VendorID, ExpenseDate, ExpenseNote, PaymentMethodID, SplitType, OwnShares,
+           (RecipientID, ExpenseDate, ExpenseNote, PaymentMethodID, SplitType, OwnShares,
             TotalShares, Status, OwedToEntityID, Discount, IsNonItemised, NonItemisedTotal, IsTentative)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           Object.values(receiptPayload)
@@ -722,7 +676,7 @@ const ReceiptFormPage: React.FC = () => {
 
   const paidByOptions = [
     {value: 'me', label: `${settings.userName || 'User'} (Me)`},
-    ...debtors.map(d => ({value: String(d.DebtorID), label: d.DebtorName}))
+    ...debtors.map(d => ({value: String(d.EntityID), label: d.EntityName}))
   ];
 
   const SplitTypeSelector = () => {
@@ -784,16 +738,16 @@ const ReceiptFormPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-1">
                   <Combobox
-                    label="Vendor"
+                    label="Recipient"
                     variant="add"
-                    onAdd={() => setIsStoreModalOpen(true)}
-                    options={stores}
-                    value={formData.storeId}
-                    onChange={(value) => handleFormChange('storeId', value)}
-                    placeholder="Select a vendor..."
-                    searchPlaceholder="Search vendor..."
-                    noResultsText="No vendors found."
-                    error={errors.storeId}
+                    onAdd={() => setIsEntityModalOpen(true)}
+                    options={entities}
+                    value={formData.recipientId}
+                    onChange={(value) => handleFormChange('recipientId', value)}
+                    placeholder="Select a recipient..."
+                    searchPlaceholder="Search recipient..."
+                    noResultsText="No recipients found."
+                    error={errors.recipientId}
                   />
                 </div>
                 <div className="col-span-1"><DatePicker label="Expense Date"
@@ -924,7 +878,7 @@ const ReceiptFormPage: React.FC = () => {
                             min={0}
                             max={10000000}
                             step={1}
-                            precision={0}
+                            precision={2}
                             clamp={true}
                             error={errors.nonItemisedTotal}
                             disabled={hasSettledDebts}
@@ -968,7 +922,6 @@ const ReceiptFormPage: React.FC = () => {
                               max={10000000}
                               step={1}
                               precision={0}
-                              clamp={true}
                               className="w-full"
                               inputClassName="text-center"
                               error={errors[`qty_${item.key}`]}
@@ -1021,7 +974,6 @@ const ReceiptFormPage: React.FC = () => {
                                   max={100}
                                   step={1}
                                   precision={0}
-                                  clamp={true}
                                   className="h-8"
                                   inputClassName="text-right"
                                   error={errors.discount}
@@ -1182,7 +1134,6 @@ const ReceiptFormPage: React.FC = () => {
                                       min={0}
                                       max={1000}
                                       precision={0}
-                                      clamp={true}
                                       disabled={isDebtDisabled}
                                       className="w-full"
                                       inputClassName="text-center"
@@ -1206,7 +1157,6 @@ const ReceiptFormPage: React.FC = () => {
                                       max={100}
                                       step={1}
                                       precision={0}
-                                      clamp={true}
                                       disabled={isDebtDisabled}
                                       className="w-full"
                                       inputClassName="text-center"
@@ -1227,9 +1177,9 @@ const ReceiptFormPage: React.FC = () => {
                                       <Combobox
                                         variant="add"
                                         onAdd={() => setIsEntityModalOpen(true)}
-                                        options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.DebtorID)).map(d => ({
-                                          value: String(d.DebtorID),
-                                          label: d.DebtorName
+                                        options={debtors.filter(d => !receiptSplits.some(s => s.DebtorID === d.EntityID)).map(d => ({
+                                          value: String(d.EntityID),
+                                          label: d.EntityName
                                         }))}
                                         value=""
                                         onChange={handleAddSplit}
@@ -1339,13 +1289,6 @@ const ReceiptFormPage: React.FC = () => {
                            onClose={() => setIsProductSelectorOpen(false)}
                            onSelect={handleProductSelect}/>
 
-          <StoreModal
-            isOpen={isStoreModalOpen}
-            onClose={() => setIsStoreModalOpen(false)}
-            onSave={handleStoreSave}
-            storeToEdit={null}
-          />
-
           <EntityModal
             isOpen={isEntityModalOpen}
             onClose={() => setIsEntityModalOpen(false)}
@@ -1394,7 +1337,7 @@ const ReceiptFormPage: React.FC = () => {
             lineItems={lineItems}
             onSave={selectionModal.mode === 'debtor' ? handleAssignDebtorSave : handleDiscountExclusionSave}
             selectionMode={selectionModal.mode!}
-            debtors={debtors}
+            debtors={debtors as any}
             initialSelectedKeys={selectionModal.mode === 'debtor' ? [] : Array.from(excludedLineItemKeys)}
             disabled={hasSettledDebts}
           />

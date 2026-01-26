@@ -227,7 +227,6 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onSave, 
               min={0}
               max={fromMethodBalance || undefined}
               precision={2}
-              clamp={true}
               error={errors.amount}
             />
           </div>

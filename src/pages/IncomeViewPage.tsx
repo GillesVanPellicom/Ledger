@@ -15,23 +15,20 @@ import {
   Receipt,
   FileText,
   Link as LinkIcon,
-  Pencil,
-  Plus
+  Pencil
 } from 'lucide-react';
 import Tooltip from '../components/ui/Tooltip';
 import {ConfirmModal} from '../components/ui/Modal';
 import {Header} from '../components/ui/Header';
 import PageWrapper from '../components/layout/PageWrapper';
-import {useErrorStore} from '../store/useErrorStore';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import IncomeModal from '../components/payment/IncomeModal';
 
 const IncomeViewPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const {showError} = useErrorStore();
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
@@ -48,13 +45,13 @@ const IncomeViewPage: React.FC = () => {
                tu.PaymentMethodID,
                pm.PaymentMethodName,
                d.EntityName as DebtorName,
-               s.VendorName as ReceiptStoreName
+               s.EntityName as ReceiptStoreName
         FROM ExpenseEntityPayments rdp
         JOIN Income tu ON rdp.IncomeID = tu.IncomeID
         JOIN Entities d ON rdp.EntityID = d.EntityID
         LEFT JOIN PaymentMethods pm ON tu.PaymentMethodID = pm.PaymentMethodID
         LEFT JOIN Expenses r ON rdp.ExpenseID = r.ExpenseID
-        LEFT JOIN Vendors s ON r.VendorID = s.VendorID
+        LEFT JOIN Entities s ON r.RecipientID = s.EntityID
         WHERE rdp.ExpenseEntityPaymentID = ?
       `, [id]);
 
@@ -80,13 +77,13 @@ const IncomeViewPage: React.FC = () => {
       // If not a repayment, try to find it as a regular income (TopUp)
       const topUp = await db.queryOne<any>(`
         SELECT t.*, 
-               s.IncomeSourceName, 
-               c.IncomeCategoryName,
+               s.EntityName as RecipientName, 
+               c.CategoryName,
                pm.PaymentMethodName,
                d.EntityName as DebtorName
         FROM Income t
-        LEFT JOIN IncomeSources s ON t.IncomeSourceID = s.IncomeSourceID
-        LEFT JOIN IncomeCategories c ON t.IncomeCategoryID = c.IncomeCategoryID
+        LEFT JOIN Entities s ON t.RecipientID = s.EntityID
+        LEFT JOIN Categories c ON t.CategoryID = c.CategoryID
         LEFT JOIN PaymentMethods pm ON t.PaymentMethodID = pm.PaymentMethodID
         LEFT JOIN Entities d ON t.EntityID = d.EntityID
         WHERE t.IncomeID = ?
@@ -98,8 +95,8 @@ const IncomeViewPage: React.FC = () => {
           type: 'income',
           date: topUp.IncomeDate,
           amount: topUp.IncomeAmount,
-          description: topUp.IncomeSourceName || 'Income',
-          category: topUp.IncomeCategoryName,
+          description: topUp.RecipientName || 'Income',
+          category: topUp.CategoryName,
           method: topUp.PaymentMethodName,
           paymentMethodId: topUp.PaymentMethodID,
           note: topUp.IncomeNote,
@@ -107,8 +104,8 @@ const IncomeViewPage: React.FC = () => {
           debtorName: topUp.DebtorName,
           topUpId: topUp.IncomeID,
           receiptId: null,
-          incomeSourceId: topUp.IncomeSourceID,
-          incomeCategoryId: topUp.IncomeCategoryID
+          recipientId: topUp.RecipientID,
+          categoryId: topUp.CategoryID
         };
       }
       
@@ -240,9 +237,9 @@ const IncomeViewPage: React.FC = () => {
                       </Tooltip>
                     )}
 
-                    {/* Debtor (Repayment or Income with Entity) */}
+                    {/* Source/Debtor (Repayment or Income with Entity) */}
                     {transaction.debtorId && (
-                      <Tooltip content={transaction.type === 'repayment' ? "The person who made this repayment" : "The entity associated with this income"}>
+                      <Tooltip content={transaction.type === 'repayment' ? "The person who made this repayment" : "The source associated with this income"}>
                         <div className="flex items-center gap-3 cursor-help">
                           <User className="h-5 w-5 text-font-2" />
                           <Link to={`/entities/${transaction.debtorId}`} className="text-sm text-font-1 hover:underline flex items-center gap-1 group">
@@ -296,8 +293,8 @@ const IncomeViewPage: React.FC = () => {
           IncomeDate: transaction.date,
           IncomeAmount: transaction.amount,
           IncomeNote: transaction.note || '',
-          IncomeSourceID: transaction.incomeSourceId,
-          IncomeCategoryID: transaction.incomeCategoryId,
+          RecipientID: transaction.recipientId,
+          CategoryID: transaction.categoryId,
           EntityID: transaction.debtorId,
           PaymentMethodID: transaction.paymentMethodId
         } as any : null}

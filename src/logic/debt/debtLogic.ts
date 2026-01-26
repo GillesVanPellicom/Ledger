@@ -1,5 +1,5 @@
 import { db } from '../../utils/db';
-import {Debtor, LineItem, Receipt, ReceiptDebtorPayment, ReceiptSplit} from '../../types';
+import {Entity, LineItem, Receipt, ReceiptDebtorPayment, ReceiptSplit} from '../../types';
 import { calculateLineItemTotalWithDiscount, calculateTotalWithDiscount } from '../expense';
 
 interface DebtReceipt extends Receipt {
@@ -65,7 +65,7 @@ export function calculateDebtSummaryForForm(
   receiptSplits: (ReceiptSplit & { DebtorName: string })[],
   lineItems: (LineItem & { DebtorName?: string })[],
   discount: number,
-  debtors: Debtor[],
+  debtors: Entity[],
   totalShares?: number,
 ): FormDebtSummary {
   const summary: Record<string, any> = {};
@@ -89,8 +89,8 @@ export function calculateDebtSummaryForForm(
   } else if (splitType === 'line_item') {
     lineItems.forEach(item => {
       if (item.DebtorID) {
-        const debtor = debtors.find(d => d.DebtorID === item.DebtorID);
-        const debtorName = (item as any).DebtorName || debtor?.DebtorName;
+        const debtor = debtors.find(d => d.EntityID === item.DebtorID);
+        const debtorName = (item as any).DebtorName || debtor?.EntityName;
 
         if (debtorName) {
           const itemAmount = calculateLineItemTotalWithDiscount(item, discount);
@@ -120,11 +120,11 @@ export function calculateDebtSummaryForForm(
  */
 async function calculateDebts(entityId: string | number) {
   const allReceiptsForEntity = await db.query<DebtReceipt>(`
-    SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.VendorID as StoreID,
-           s.VendorName as StoreName,
+    SELECT r.ExpenseID as ReceiptID, r.ExpenseDate as ReceiptDate, r.ExpenseNote as ReceiptNote, r.Discount, r.IsNonItemised, r.IsTentative, r.NonItemisedTotal, r.PaymentMethodID, r.Status, r.SplitType, r.OwnShares, r.TotalShares, r.OwedToEntityID as OwedToDebtorID, r.CreationTimestamp, r.UpdatedAt, r.RecipientID as StoreID,
+           s.EntityName as StoreName,
       CASE WHEN r.OwedToEntityID = ? THEN 'to_entity' ELSE 'to_me' END as type
     FROM Expenses r
-    JOIN Vendors s ON r.VendorID = s.VendorID
+    JOIN Entities s ON r.RecipientID = s.EntityID
     WHERE (r.OwedToEntityID = ? OR
           (r.SplitType = 'line_item' AND r.ExpenseID IN (SELECT li.ExpenseID FROM ExpenseLineItems li WHERE li.EntityID = ?)) OR
           (r.SplitType = 'total_split' AND r.ExpenseID IN (SELECT rs.ExpenseID FROM ExpenseSplits rs WHERE rs.EntityID = ?)))

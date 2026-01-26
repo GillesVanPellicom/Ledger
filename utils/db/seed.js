@@ -26,12 +26,6 @@ const productUnits = [
     { type: 'm', description: 'Meter' },
 ];
 
-const stores = [
-    'Albert Heijn', 'Jumbo', 'Lidl', 'Aldi', 'Plus', 'Hanos', 'Spar', 'Hoogvliet',
-    'Vomar', 'Dekamarkt', 'Picnic', 'Ekoplaza', 'Makro', 'Sligro', 'Hema',
-    'Kruidvat', 'Etos', 'Action', 'Blokker'
-];
-
 const brands = [
     'AH Huismerk', 'Jumbo Huismerk', 'Gwoon', '1 de Beste', 'Perfect', 'Okay',
     'Unilever', 'Nestlé', 'Coca-Cola', 'PepsiCo', 'Danone', 'Kellogg\'s',
@@ -77,20 +71,12 @@ const productNames = [
 
 const sizes = [1, 2, 5, 10, 20, 50, 100, 150, 200, 250, 300, 330, 400, 500, 750, 1000, 1500, 2000];
 
-const debtors = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'];
+const entities = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Albert Heijn', 'Jumbo', 'Lidl', 'Aldi', 'Plus', 'Salary', 'Freelance Client A', 'Dividends', 'Birthday Gift', 'Tax Refund'];
 
 const categories = [
     'Foodstuffs', 'Medical', 'Clothing', 'Electronics', 'Household', 
     'Transport', 'Entertainment', 'Personal Care', 'Housing', 'Utilities', 
-    'Insurance', 'Education', 'Gifts', 'Other'
-];
-
-const incomeCategories = [
-    'Work', 'Investment', 'Gift', 'Refund', 'Other'
-];
-
-const incomeSources = [
-    'Salary', 'Freelance Client A', 'Dividends', 'Birthday Gift', 'Tax Refund'
+    'Insurance', 'Education', 'Gifts', 'Work', 'Investment', 'Refund', 'Other'
 ];
 
 // --- Helper Functions ---
@@ -136,18 +122,13 @@ async function seed() {
         for (const unit of productUnits) await runQuery(db, insert, [unit.type, unit.description]);
     });
 
-    await task('Seeding Vendors', async () => {
-        const insert = 'INSERT OR IGNORE INTO Vendors (VendorName) VALUES (?)';
-        for (const store of stores) await runQuery(db, insert, [store]);
-    });
-
     await task('Seeding Entities', async () => {
         const insert = 'INSERT OR IGNORE INTO Entities (EntityName) VALUES (?)';
-        for (const debtor of debtors) await runQuery(db, insert, [debtor]);
+        for (const entity of entities) await runQuery(db, insert, [entity]);
     });
 
-    await task('Seeding Product Categories', async () => {
-        const insert = 'INSERT OR IGNORE INTO ProductCategories (ProductCategoryName) VALUES (?)';
+    await task('Seeding Categories', async () => {
+        const insert = 'INSERT OR IGNORE INTO Categories (CategoryName) VALUES (?)';
         for (const cat of categories) await runQuery(db, insert, [cat]);
     });
 
@@ -158,28 +139,16 @@ async function seed() {
         }
     });
 
-    await task('Seeding Income Categories', async () => {
-        const insert = 'INSERT OR IGNORE INTO IncomeCategories (IncomeCategoryName) VALUES (?)';
-        for (const cat of incomeCategories) await runQuery(db, insert, [cat]);
-    });
-
-    await task('Seeding Income Sources', async () => {
-        const insert = 'INSERT OR IGNORE INTO IncomeSources (IncomeSourceName) VALUES (?)';
-        for (const source of incomeSources) await runQuery(db, insert, [source]);
-    });
-
     await task('Seeding Schedules', async () => {
         const paymentMethods = await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods');
-        const incomeSources = await getQuery(db, 'SELECT * FROM IncomeSources');
-        const incomeCategories = await getQuery(db, 'SELECT * FROM IncomeCategories');
+        const entities = await getQuery(db, 'SELECT * FROM Entities');
+        const categories = await getQuery(db, 'SELECT * FROM Categories');
 
-        if (paymentMethods.length === 0 || incomeSources.length === 0 || incomeCategories.length === 0) return;
+        if (paymentMethods.length === 0 || entities.length === 0 || categories.length === 0) return;
 
-        // More varied and realistic schedules
         const schedulesToSeed = [
-            // Monthly Salary - Fixed date (25th)
             { 
-                SourceName: 'Salary', 
+                RecipientName: 'Salary', 
                 Category: 'Work', 
                 ExpectedAmount: 3200, 
                 RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=1', 
@@ -188,20 +157,18 @@ async function seed() {
                 IsActive: 1,
                 DayOfMonth: 25 
             },
-            // Weekly Freelance - Every Friday
             { 
-                SourceName: 'Freelance Client A', 
+                RecipientName: 'Freelance Client A', 
                 Category: 'Work', 
                 ExpectedAmount: 450, 
                 RecurrenceRule: 'FREQ=WEEKLY;INTERVAL=1', 
                 RequiresConfirmation: 1, 
                 LookaheadDays: 7, 
                 IsActive: 1,
-                DayOfWeek: 5 // Friday
+                DayOfWeek: 5
             },
-            // Quarterly Dividends - 1st of month
             { 
-                SourceName: 'Dividends', 
+                RecipientName: 'Dividends', 
                 Category: 'Investment', 
                 ExpectedAmount: 150, 
                 RecurrenceRule: 'FREQ=MONTHLY;INTERVAL=3', 
@@ -209,41 +176,18 @@ async function seed() {
                 LookaheadDays: 10, 
                 IsActive: 1,
                 DayOfMonth: 1
-            },
-            // Annual Bonus - December
-            { 
-                SourceName: 'Salary', 
-                Category: 'Work', 
-                ExpectedAmount: 2000, 
-                RecurrenceRule: 'FREQ=YEARLY;INTERVAL=1', 
-                RequiresConfirmation: 1, 
-                LookaheadDays: 30, 
-                IsActive: 1,
-                MonthOfYear: 12,
-                DayOfMonth: 15
-            },
-            // Bi-weekly Rental Income
-            { 
-                SourceName: 'Rental Income', 
-                Category: 'Investment', 
-                ExpectedAmount: 800, 
-                RecurrenceRule: 'FREQ=WEEKLY;INTERVAL=2', 
-                RequiresConfirmation: 0, 
-                LookaheadDays: 3, 
-                IsActive: 1,
-                DayOfWeek: 1 // Monday
             }
         ];
 
-        const insert = 'INSERT OR IGNORE INTO Schedules (IncomeSourceID, IncomeCategoryID, PaymentMethodID, ExpectedAmount, RecurrenceRule, RequiresConfirmation, LookaheadDays, IsActive, DayOfMonth, DayOfWeek, MonthOfYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const insert = 'INSERT OR IGNORE INTO Schedules (RecipientID, CategoryID, PaymentMethodID, ExpectedAmount, RecurrenceRule, RequiresConfirmation, LookaheadDays, IsActive, DayOfMonth, DayOfWeek, MonthOfYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         
         for (const schedule of schedulesToSeed) {
-            const source = incomeSources.find(s => s.IncomeSourceName === schedule.SourceName) || getRandomElement(incomeSources);
-            const category = incomeCategories.find(c => c.IncomeCategoryName === schedule.Category) || getRandomElement(incomeCategories);
+            const recipient = entities.find(e => e.EntityName === schedule.RecipientName) || getRandomElement(entities);
+            const category = categories.find(c => c.CategoryName === schedule.Category) || getRandomElement(categories);
             
             await runQuery(db, insert, [
-                source.IncomeSourceID,
-                category.IncomeCategoryID,
+                recipient.EntityID,
+                category.CategoryID,
                 getRandomElement(paymentMethods).PaymentMethodID,
                 schedule.ExpectedAmount,
                 schedule.RecurrenceRule,
@@ -257,16 +201,14 @@ async function seed() {
         }
     });
 
-    // Removed explicit PendingIncomes seeding as requested - runtime calculation handles this
-
     await task('Generating and Inserting Products', async () => {
         const unitIds = (await getQuery(db, 'SELECT ProductUnitID FROM ProductUnits')).map(u => u.ProductUnitID);
-        const categoryIds = (await getQuery(db, 'SELECT ProductCategoryID FROM ProductCategories')).map(c => c.ProductCategoryID);
-        const insert = 'INSERT OR IGNORE INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, ProductCategoryID) VALUES (?, ?, ?, ?, ?)';
+        const categoryIds = (await getQuery(db, 'SELECT CategoryID FROM Categories')).map(c => c.CategoryID);
+        const insert = 'INSERT OR IGNORE INTO Products (ProductName, ProductBrand, ProductSize, ProductUnitID, CategoryID) VALUES (?, ?, ?, ?, ?)';
         for (let i = 0; i < 10000; i++) {
             const name = getRandomElement(productNames).toLowerCase();
             const brand = getRandomElement(brands);
-            const categoryId = Math.random() < 0.95 ? getRandomElement(categoryIds) : null; // Leave some uncategorized
+            const categoryId = Math.random() < 0.95 ? getRandomElement(categoryIds) : null;
             await runQuery(db, insert, [name, brand, getRandomElement(sizes), getRandomElement(unitIds), categoryId]);
         }
     });
@@ -275,15 +217,14 @@ async function seed() {
         if (!fs.existsSync(receiptImgPath)) {
             fs.mkdirSync(receiptImgPath, { recursive: true });
         }
-        const storeIds = (await getQuery(db, 'SELECT VendorID FROM Vendors')).map(s => s.VendorID);
+        const entityIds = (await getQuery(db, 'SELECT EntityID FROM Entities')).map(e => e.EntityID);
         const productIds = (await getQuery(db, 'SELECT ProductID FROM Products')).map(p => p.ProductID);
         const paymentMethodIds = (await getQuery(db, 'SELECT PaymentMethodID FROM PaymentMethods')).map(pm => pm.PaymentMethodID);
-        const debtorIds = (await getQuery(db, 'SELECT EntityID FROM Entities')).map(d => d.EntityID);
         const seedImages = fs.readdirSync(seedImgPath).filter(f => f.endsWith('.webp'));
 
         if (productIds.length === 0) throw new Error('No products found. Cannot create receipts.');
 
-        const insertReceipt = 'INSERT INTO Expenses (ExpenseDate, VendorID, ExpenseNote, PaymentMethodID, SplitType, Status, OwedToEntityID, IsNonItemised, NonItemisedTotal, IsTentative, OwnShares, TotalShares, Discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const insertReceipt = 'INSERT INTO Expenses (ExpenseDate, RecipientID, ExpenseNote, PaymentMethodID, SplitType, Status, OwedToEntityID, IsNonItemised, NonItemisedTotal, IsTentative, OwnShares, TotalShares, Discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         const insertLineItem = 'INSERT INTO ExpenseLineItems (ExpenseID, ProductID, LineQuantity, LineUnitPrice, EntityID, IsExcludedFromDiscount) VALUES (?, ?, ?, ?, ?, ?)';
         const insertReceiptSplit = 'INSERT INTO ExpenseSplits (ExpenseID, EntityID, SplitPart) VALUES (?, ?, ?)';
         const insertPayment = 'INSERT INTO ExpenseEntityPayments (ExpenseID, EntityID, PaidDate) VALUES (?, ?, ?)';
@@ -306,7 +247,7 @@ async function seed() {
                 db.run('BEGIN TRANSACTION');
                 for (let i = 0; i < 4000; i++) {
                     const date = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
-                    const storeId = getRandomElement(storeIds);
+                    const recipientId = getRandomElement(entityIds);
                     const note = Math.random() > 0.8 ? `Grote boodschappen week ${i % 52 + 1}` : null;
                     const paymentMethodId = getRandomElement(paymentMethodIds);
 
@@ -316,7 +257,7 @@ async function seed() {
 
                     const isUnpaid = Math.random() < role.unpaidProb;
                     const status = isUnpaid ? 'unpaid' : 'paid';
-                    const owedToDebtorID = isUnpaid ? getRandomElement(debtorIds) : null;
+                    const owedToEntityID = isUnpaid ? getRandomElement(entityIds) : null;
                     const receiptPaymentMethodId = isUnpaid ? null : paymentMethodId;
 
                     const isTentative = Math.random() < 0.05;
@@ -334,7 +275,7 @@ async function seed() {
                     let ownShares = null;
                     let totalShares = null;
 
-                    db.run(insertReceipt, [date, storeId, note, receiptPaymentMethodId, splitType, status, owedToDebtorID, isNonItemised ? 1 : 0, null, isTentative ? 1 : 0, ownShares, totalShares, discount], function (err) {
+                    db.run(insertReceipt, [date, recipientId, note, receiptPaymentMethodId, splitType, status, owedToEntityID, isNonItemised ? 1 : 0, null, isTentative ? 1 : 0, ownShares, totalShares, discount], function (err) {
                         if (err) return reject(err);
                         const receiptId = this.lastID;
 
@@ -359,7 +300,7 @@ async function seed() {
                             for (let j = 0; j < numItems; j++) {
                                 let debtorId = null;
                                 if (splitType === 'line_item' && Math.random() > 0.3) {
-                                    debtorId = getRandomElement(debtorIds);
+                                    debtorId = getRandomElement(entityIds);
                                     if(debtorId) receiptDebtors.add(debtorId);
                                 }
                                 lineItemsToInsert.push({
@@ -374,7 +315,7 @@ async function seed() {
                                 const numDebtors = getRandomInt(1, 3);
                                 const selectedDebtors = [];
                                 while (selectedDebtors.length < numDebtors) {
-                                    const d = getRandomElement(debtorIds);
+                                    const d = getRandomElement(entityIds);
                                     if (!selectedDebtors.includes(d)) selectedDebtors.push(d);
                                 }
                                 
@@ -404,7 +345,6 @@ async function seed() {
                                 db.run(insertLineItem, [receiptId, item.productId, item.qty, item.price, item.debtorId, isExcluded]);
                             });
 
-                            // Chance to mark all debts as paid
                             if (receiptDebtors.size > 0 && Math.random() < 0.15) {
                                 const paymentDate = format(generateRandomDate(new Date(date), new Date()), 'yyyy-MM-dd');
                                 receiptDebtors.forEach(debtorId => {
@@ -436,8 +376,8 @@ async function seed() {
         const methodRoles = { 'KBC': 'affluent', 'Knab': 'going_up', 'Paypal': 'keeping_above_water', 'Argenta': 'debter' };
         const topUpNotes = ['Monthly salary', 'Bonus', 'Gift', 'Project payment', 'Stock dividend', null];
         
-        const incomeSources = await getQuery(db, 'SELECT * FROM IncomeSources');
-        const incomeCategories = await getQuery(db, 'SELECT * FROM IncomeCategories');
+        const entities = await getQuery(db, 'SELECT * FROM Entities');
+        const categories = await getQuery(db, 'SELECT * FROM Categories');
 
         for (const pm of methods) {
             const roleName = methodRoles[pm.PaymentMethodName];
@@ -452,12 +392,11 @@ async function seed() {
                 const topUpDate = format(generateRandomDate(new Date(2022, 0, 1), new Date()), 'yyyy-MM-dd');
                 const topUpNote = Math.random() > 0.5 ? getRandomElement(topUpNotes) : null;
                 
-                // Assign random source and category for better data richness
-                const sourceId = Math.random() > 0.2 ? getRandomElement(incomeSources).IncomeSourceID : null;
-                const categoryId = Math.random() > 0.2 ? getRandomElement(incomeCategories).IncomeCategoryID : null;
+                const recipientId = Math.random() > 0.2 ? getRandomElement(entities).EntityID : null;
+                const categoryId = Math.random() > 0.2 ? getRandomElement(categories).CategoryID : null;
 
-                await runQuery(db, 'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, IncomeSourceID, IncomeCategoryID) VALUES (?, ?, ?, ?, ?, ?)', 
-                    [pm.PaymentMethodID, topUpAmount, topUpDate, topUpNote, sourceId, categoryId]);
+                await runQuery(db, 'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote, RecipientID, CategoryID) VALUES (?, ?, ?, ?, ?, ?)', 
+                    [pm.PaymentMethodID, topUpAmount, topUpDate, topUpNote, recipientId, categoryId]);
             }
         }
     });
@@ -473,7 +412,6 @@ async function seed() {
             db.serialize(() => {
                 db.run('BEGIN TRANSACTION');
                 
-                // Generate ~50 transfers
                 for (let i = 0; i < 50; i++) {
                     const fromMethod = getRandomElement(methods);
                     let toMethod = getRandomElement(methods);
@@ -489,7 +427,6 @@ async function seed() {
                         if (err) return reject(err);
                         const transferId = this.lastID;
 
-                        // Create corresponding TopUps
                         db.run(insertTopUp, [fromMethod.PaymentMethodID, -amount, date, `Transfer to ${toMethod.PaymentMethodName}`, transferId]);
                         db.run(insertTopUp, [toMethod.PaymentMethodID, amount, date, `Transfer from ${fromMethod.PaymentMethodName}`, transferId]);
                     });
