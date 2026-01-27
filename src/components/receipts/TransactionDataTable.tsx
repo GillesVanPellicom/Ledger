@@ -265,11 +265,11 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
     ];
 
     if (paymentMethodsEnabled && !hideColumns.includes('method')) {
-      cols.push({ header: 'Method', accessor: 'methodName', width: '6%' });
+      cols.push({ header: 'Method', accessor: 'methodName', width: '8%' });
     }
 
     cols.push({
-      header: 'Amount', width: '10%', className: 'text-right', render: (row: Transaction) => {
+      header: 'Amount', width: '8%', className: 'text-right', render: (row: Transaction) => {
         const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
         const isTransfer = row.type === 'transfer';
         return (

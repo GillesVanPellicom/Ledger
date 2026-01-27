@@ -14,13 +14,13 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ className, label
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <div className="relative flex items-center justify-center">
+        <div className="relative flex items-center justify-center shrink-0">
           <input
             ref={ref}
             type="checkbox"
             id={id}
             className={cn(
-              "peer h-8 w-8 cursor-pointer appearance-none rounded border border-border bg-field transition-all checked:border-accent checked:bg-accent hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
+              "peer h-8 w-8 cursor-pointer appearance-none rounded-lg border-2 border-border bg-field transition-all checked:border-accent checked:bg-accent hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50",
               error && "border-danger",
               className
             )}
@@ -28,7 +28,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ className, label
           />
           <Check 
             className="pointer-events-none absolute h-5 w-5 text-white opacity-0 transition-opacity peer-checked:opacity-100"
-            strokeWidth={3}
+            strokeWidth={3.5}
           />
         </div>
         {label && (
