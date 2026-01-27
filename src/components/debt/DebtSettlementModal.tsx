@@ -61,8 +61,7 @@ const DebtSettlementModal: React.FC<DebtSettlementModalProps> = ({ isOpen, onClo
     setError('');
 
     try {
-      const systemNote = `Repayment from ${debtInfo!.debtorName}`;
-      const finalNote = note.trim() ? note.trim() : systemNote;
+      const finalNote = note.trim() ? note.trim() : null;
 
       const topUpResult = await db.execute(
         'INSERT INTO Income (PaymentMethodID, IncomeAmount, IncomeDate, IncomeNote) VALUES (?, ?, ?, ?)',

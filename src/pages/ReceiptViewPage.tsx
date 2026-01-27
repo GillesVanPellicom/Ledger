@@ -849,6 +849,8 @@ const ReceiptViewPage: React.FC = () => {
                             <div className="text-right flex-shrink-0 pl-2">
                               {receipt?.SplitType === 'total_split' &&
                                 <p className="text-sm text-font-2">{debtor.shares} / {debtor.totalShares} shares</p>}
+                              {receipt?.SplitType === 'by_amount' &&
+                                <p className="text-sm text-font-2">Fixed Amount</p>}
                               {receipt?.SplitType === 'line_item' && !receipt.IsNonItemised &&
                                 <p className="text-sm text-font-2">{debtor.itemCount} / {displayTotalItems} items</p>}
                             </div>
@@ -876,7 +878,7 @@ const ReceiptViewPage: React.FC = () => {
                             </p>
                             <div className="text-right flex-shrink-0 pl-2">
                               <p className="text-sm text-font-2">
-                                {debtSummary.ownShare.shares} / {debtSummary.ownShare.totalShares} shares
+                                {receipt?.SplitType === 'by_amount' ? 'Remainder' : `${debtSummary.ownShare.shares} / ${debtSummary.ownShare.totalShares} shares`}
                               </p>
                             </div>
                           </div>

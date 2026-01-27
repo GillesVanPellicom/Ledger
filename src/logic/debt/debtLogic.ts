@@ -60,7 +60,7 @@ export function calculateTotalShares(ownShares: number, splits: { SplitPart: num
  */
 export function calculateDebtSummaryForForm(
   totalAmount: number,
-  splitType: 'none' | 'total_split' | 'line_item',
+  splitType: 'none' | 'total_split' | 'line_item' | 'by_amount',
   ownShares: number,
   receiptSplits: (ReceiptSplit & { DebtorName: string })[],
   lineItems: (LineItem & { DebtorName?: string })[],
@@ -86,6 +86,15 @@ export function calculateDebtSummaryForForm(
         selfAmount = (totalAmount * Number(ownShares)) / totalSharesValue;
       }
     }
+  } else if (splitType === 'by_amount') {
+    receiptSplits.forEach(split => {
+      summary[split.DebtorName] = {
+        name: split.DebtorName,
+        amount: (summary[split.DebtorName]?.amount || 0) + Number(split.SplitPart || 0),
+        debtorId: split.DebtorID,
+      };
+    });
+    selfAmount = ownShares;
   } else if (splitType === 'line_item') {
     lineItems.forEach(item => {
       if (item.DebtorID) {
@@ -127,9 +136,10 @@ async function calculateDebts(entityId: string | number) {
     JOIN Entities s ON r.RecipientID = s.EntityID
     WHERE (r.OwedToEntityID = ? OR
           (r.SplitType = 'line_item' AND r.ExpenseID IN (SELECT li.ExpenseID FROM ExpenseLineItems li WHERE li.EntityID = ?)) OR
-          (r.SplitType = 'total_split' AND r.ExpenseID IN (SELECT rs.ExpenseID FROM ExpenseSplits rs WHERE rs.EntityID = ?)))
+          (r.SplitType = 'total_split' AND r.ExpenseID IN (SELECT rs.ExpenseID FROM ExpenseSplits rs WHERE rs.EntityID = ?)) OR
+          (r.SplitType = 'by_amount' AND r.ExpenseID IN (SELECT rs.ExpenseID FROM ExpenseSplits rs WHERE rs.EntityID = ?)))
           AND r.IsTentative = 0
-  `, [entityId, entityId, entityId, entityId]);
+  `, [entityId, entityId, entityId, entityId, entityId]);
 
   if (allReceiptsForEntity.length === 0) {
     return {
@@ -176,6 +186,13 @@ async function calculateDebts(entityId: string | number) {
           if (totalShares > 0) {
             amount = (totalAmount * debtorSplit.SplitPart) / totalShares;
           }
+        }
+      } else if (r.SplitType === 'by_amount') {
+        const splits = allSplits.filter(rs => rs.ReceiptID === r.ReceiptID);
+        const debtorSplit = splits.find(rs => rs.DebtorID === Number(entityId));
+        if (debtorSplit) {
+          amount = debtorSplit.SplitPart;
+          splitPart = debtorSplit.SplitPart;
         }
       } else if (r.SplitType === 'line_item') {
         const debtorItems = allLineItems.filter(li => li.ReceiptID === r.ReceiptID && li.DebtorID === Number(entityId));
@@ -238,6 +255,24 @@ export async function calculateDebtsForReceipt(receiptId: string | number, recei
         amount: ownAmount,
         shares: receipt.OwnShares,
         totalShares: totalShares,
+      };
+    }
+  } else if (receipt.SplitType === 'by_amount' && (receiptSplits.length > 0 || (receipt.OwnShares && receipt.OwnShares > 0))) {
+    receiptSplits.forEach(split => {
+      summary[split.DebtorID] = {
+        name: split.DebtorName,
+        amount: (summary[split.DebtorID]?.amount || 0) + split.SplitPart,
+        debtorId: split.DebtorID,
+        shares: split.SplitPart,
+        totalShares: totalAmount,
+      };
+    });
+
+    if (receipt.OwnShares && receipt.OwnShares > 0) {
+      ownShare = {
+        amount: receipt.OwnShares,
+        shares: receipt.OwnShares,
+        totalShares: totalAmount,
       };
     }
   } else if (receipt.SplitType === 'line_item' && !receipt.IsNonItemised) {

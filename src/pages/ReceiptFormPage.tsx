@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import {format, parseISO} from 'date-fns';
 import {db} from '../utils/db';
@@ -31,8 +31,9 @@ import Combobox from '../components/ui/Combobox';
 import {calculateDebtSummaryForForm, calculateTotalShares} from '../logic/debt/debtLogic';
 import MoneyDisplay from '../components/ui/MoneyDisplay';
 import ButtonGroup from '../components/ui/ButtonGroup';
-import { toast } from 'sonner';
+import {toast} from 'sonner';
 import Checkbox from '../components/ui/Checkbox';
+import { useDebounce } from '../hooks/useDebounce';
 
 const ReceiptFormPage: React.FC = () => {
   const {id} = useParams<{ id: string }>();
@@ -75,7 +76,7 @@ const ReceiptFormPage: React.FC = () => {
   }>({isOpen: false, newFormat: null});
   const [nonItemisedTotal, setNonItemisedTotal] = useState<number>(0);
 
-  const [splitType, setSplitType] = useState<'none' | 'total_split' | 'line_item'>('none');
+  const [splitType, setSplitType] = useState<'none' | 'total_split' | 'line_item' | 'by_amount'>('none');
   const [receiptSplits, setReceiptSplits] = useState<ReceiptSplit[]>([]);
   const [paidDebtorIds, setPaidDebtorIds] = useState<number[]>([]);
   const [debtInfoModal, setDebtInfoModal] = useState<{ isOpen: boolean, onConfirm: () => void }>({
@@ -193,8 +194,20 @@ const ReceiptFormPage: React.FC = () => {
 
           if (!receiptData.IsNonItemised) {
             const lineItemData = await db.query<any>(`
-                SELECT li.ExpenseLineItemID as LineItemID, li.ExpenseID as ReceiptID, li.ProductID, li.LineQuantity, li.LineUnitPrice, li.EntityID as DebtorID, li.IsExcludedFromDiscount, li.CreationTimestamp, li.UpdatedAt,
-                       p.ProductName, p.ProductBrand, p.ProductSize, pu.ProductUnitType, d.EntityName as DebtorName
+                SELECT li.ExpenseLineItemID as LineItemID,
+                       li.ExpenseID         as ReceiptID,
+                       li.ProductID,
+                       li.LineQuantity,
+                       li.LineUnitPrice,
+                       li.EntityID          as DebtorID,
+                       li.IsExcludedFromDiscount,
+                       li.CreationTimestamp,
+                       li.UpdatedAt,
+                       p.ProductName,
+                       p.ProductBrand,
+                       p.ProductSize,
+                       pu.ProductUnitType,
+                       d.EntityName         as DebtorName
                 FROM ExpenseLineItems li
                          JOIN Products p ON li.ProductID = p.ProductID
                          LEFT JOIN ProductUnits pu ON p.ProductUnitID = pu.ProductUnitID
@@ -226,10 +239,15 @@ const ReceiptFormPage: React.FC = () => {
             }>('SELECT EntityID as DebtorID FROM ExpenseEntityPayments WHERE ExpenseID = ?', [id]);
             setPaidDebtorIds(paymentsData.map(p => p.DebtorID));
 
-            if (receiptData.SplitType === 'total_split') {
+            if (receiptData.SplitType === 'total_split' || receiptData.SplitType === 'by_amount') {
               const splitsData = await db.query<any>(`
-                  SELECT rs.ExpenseSplitID as SplitID, rs.ExpenseID as ReceiptID, rs.EntityID as DebtorID, rs.SplitPart, rs.CreationTimestamp, rs.UpdatedAt,
-                         d.EntityName as DebtorName
+                  SELECT rs.ExpenseSplitID as SplitID,
+                         rs.ExpenseID      as ReceiptID,
+                         rs.EntityID       as DebtorID,
+                         rs.SplitPart,
+                         rs.CreationTimestamp,
+                         rs.UpdatedAt,
+                         d.EntityName      as DebtorName
                   FROM ExpenseSplits rs
                            JOIN Entities d ON rs.EntityID = d.EntityID
                   WHERE rs.ExpenseID = ?
@@ -449,20 +467,30 @@ const ReceiptFormPage: React.FC = () => {
     return image.ImagePath;
   };
 
-  const handleSplitTypeChange = (newType: 'none' | 'total_split' | 'line_item') => {
+  const handleSplitTypeChange = (newType: 'none' | 'total_split' | 'line_item' | 'by_amount') => {
     if (isDebtDisabled) return;
-    const hasUnsavedDebt = (splitType === 'total_split' && receiptSplits.length > 0) || (splitType === 'line_item' && lineItems.some(li => li.DebtorID));
+    const hasUnsavedDebt = (splitType === 'total_split' && receiptSplits.length > 0) || (splitType === 'by_amount' && receiptSplits.length > 0) || (splitType === 'line_item' && lineItems.some(li => li.DebtorID));
     if (hasUnsavedDebt && newType !== splitType) {
       setDebtInfoModal({
         isOpen: true,
         onConfirm: () => {
           setSplitType(newType);
-          if (newType !== 'total_split') setReceiptSplits([]);
+          if (newType !== 'total_split' && newType !== 'by_amount') setReceiptSplits([]);
           if (newType !== 'line_item') setLineItems(prev => prev.map(item => ({
             ...item,
             DebtorID: null,
             DebtorName: null
           })));
+          
+          // If switching to by_amount, initialize SplitPart to 0 (representing currency amount)
+          if (newType === 'by_amount') {
+            setReceiptSplits(prev => prev.map(s => ({...s, SplitPart: 0})));
+            setFormData(prev => ({...prev, ownShares: total}));
+          } else if (newType === 'total_split') {
+            setReceiptSplits(prev => prev.map(s => ({...s, SplitPart: 1})));
+            setFormData(prev => ({...prev, ownShares: 1}));
+          }
+
           setDebtInfoModal({
             isOpen: false, onConfirm: () => {
             }
@@ -471,6 +499,10 @@ const ReceiptFormPage: React.FC = () => {
       });
     } else {
       setSplitType(newType);
+      if (newType === 'by_amount') {
+        setReceiptSplits(prev => prev.map(s => ({...s, SplitPart: 0})));
+        setFormData(prev => ({...prev, ownShares: total}));
+      }
     }
   };
 
@@ -482,13 +514,14 @@ const ReceiptFormPage: React.FC = () => {
         key: nanoid(),
         DebtorID: debtor.EntityID,
         DebtorName: debtor.EntityName,
-        SplitPart: 1
+        SplitPart: splitType === 'by_amount' ? 0 : 1
       }]);
     }
   };
 
   const handleUpdateSplitPart = (key: string, newPart: string) => {
-    setReceiptSplits(prev => prev.map(s => s.key === key ? {...s, SplitPart: Number.parseInt(newPart) || 1} : s));
+    const value = Number.parseFloat(newPart) || 0;
+    setReceiptSplits(prev => prev.map(s => s.key === key ? {...s, SplitPart: value} : s));
   };
 
   const handleRemoveSplit = (key: string) => {
@@ -501,7 +534,11 @@ const ReceiptFormPage: React.FC = () => {
       if (assignmentsMap.has(item.key)) {
         const debtorId = assignmentsMap.get(item.key);
         const debtor = debtors.find(d => d.EntityID === Number.parseInt(debtorId!));
-        return {...item, DebtorID: debtor ? Number.parseInt(debtorId!) : null, DebtorName: debtor ? debtor.EntityName : null};
+        return {
+          ...item,
+          DebtorID: debtor ? Number.parseInt(debtorId!) : null,
+          DebtorName: debtor ? debtor.EntityName : null
+        };
       }
       return item;
     }));
@@ -565,8 +602,8 @@ const ReceiptFormPage: React.FC = () => {
         ExpenseNote: formData.note,
         PaymentMethodID: (paidById === 'me' || isRepaid) ? formData.paymentMethodId : null,
         SplitType: splitType,
-        OwnShares: splitType === 'total_split' ? (formData.ownShares || 0) : null,
-        TotalShares: splitType === 'total_split' ? totalShares : null,
+        OwnShares: (splitType === 'total_split' || splitType === 'by_amount') ? (formData.ownShares || 0) : null,
+        TotalShares: (splitType === 'total_split' || splitType === 'by_amount') ? totalShares : null,
         Status: (paidById === 'me' || isRepaid) ? 'paid' : 'unpaid',
         OwedToEntityID: paidById === 'me' ? null : paidById,
         Discount: receiptFormat === 'item-less' ? 0 : formData.discount,
@@ -578,7 +615,7 @@ const ReceiptFormPage: React.FC = () => {
       if (isEditing) {
         await db.execute(
           `UPDATE Expenses
-           SET RecipientID       = ?,
+           SET RecipientID      = ?,
                ExpenseDate      = ?,
                ExpenseNote      = ?,
                PaymentMethodID  = ?,
@@ -628,7 +665,7 @@ const ReceiptFormPage: React.FC = () => {
         }
       }
 
-      if (splitType === 'total_split') {
+      if (splitType === 'total_split' || splitType === 'by_amount') {
         for (const split of receiptSplits) {
           await db.execute('INSERT INTO ExpenseSplits (ExpenseID, EntityID, SplitPart) VALUES (?, ?, ?)', [receiptId, split.DebtorID, split.SplitPart]);
         }
@@ -677,6 +714,24 @@ const ReceiptFormPage: React.FC = () => {
     }
   };
 
+  // Logic for "by_amount" split
+  const assignedAmount = useMemo(() => {
+    if (splitType !== 'by_amount') return 0;
+    return receiptSplits.reduce((sum, s) => sum + (Number(s.SplitPart) || 0), 0);
+  }, [receiptSplits, splitType]);
+
+  const myRemainder = useMemo(() => {
+    if (splitType !== 'by_amount') return 0;
+    return Math.max(0, total - assignedAmount);
+  }, [total, assignedAmount, splitType]);
+
+  // Update formData.ownShares when myRemainder changes for by_amount
+  useEffect(() => {
+    if (splitType === 'by_amount') {
+      setFormData(prev => ({...prev, ownShares: myRemainder}));
+    }
+  }, [myRemainder, splitType]);
+
   if (loading) return <div className="flex justify-center items-center h-full">
     <Spinner className="h-8 w-8 text-accent animate-spin"/></div>;
 
@@ -688,10 +743,11 @@ const ReceiptFormPage: React.FC = () => {
   const SplitTypeSelector = () => {
     const buttons = [
       {type: 'none' as const, label: 'None', tooltip: 'No debt splitting.'},
-      {type: 'total_split' as const, label: 'Split Total', tooltip: 'Split the total expense amount by shares.'},
+      {type: 'total_split' as const, label: 'by Shares', tooltip: 'Split the total expense amount by shares.'},
+      {type: 'by_amount' as const, label: 'by Amount', tooltip: 'Assign specific currency amounts to debtors.'},
       ...(receiptFormat === 'itemised' ? [{
         type: 'line_item' as const,
-        label: 'Per Item',
+        label: 'by Items',
         tooltip: 'Assign specific items to debtors.'
       }] : [])
     ];
@@ -855,15 +911,15 @@ const ReceiptFormPage: React.FC = () => {
                   <button onClick={() => handleFormatChange('itemised')}
                           disabled={hasSettledDebts}
                           className={cn("w-full px-3 py-1.5 text-sm font-medium transition-colors", receiptFormat === 'itemised' ? "bg-field" : "")}>Enter
-                                                                                                                                                                                                                                                                                                                                           Items
+                                                                                                                                                     Items
                   </button>
                 </Tooltip>
                 <Tooltip content={hasSettledDebts ? "Cannot change format when one or more debts are settled" : "Enter only the final total of the expense."}>
                   <button onClick={() => handleFormatChange('item-less')}
                           disabled={hasSettledDebts}
                           className={cn("w-full px-3 py-1.5 text-sm font-medium transition-colors", receiptFormat === 'item-less' ? "bg-field" : "")}>Enter
-                                                                                                                                                                                                                                                                                                                                            Total
-                                                                                                                                                                                                                                                                                                                                            Only
+                                                                                                                                                      Total
+                                                                                                                                                      Only
                   </button>
                 </Tooltip>
               </ButtonGroup>
@@ -879,16 +935,16 @@ const ReceiptFormPage: React.FC = () => {
                       <Info className="h-12 w-12 text-font-2"/>
                       <h3 className="mt-2 text-lg font-semibold text-font-1">Debts Settled</h3>
                       <p className="mt-1 text-center text-sm text-font-2">One or more debts on this expense have been
-                                                                            settled.<br/>To preserve data accuracy, some
-                                                                            configurations for this expense are now
-                                                                            locked.</p>
+                                                                          settled.<br/>To preserve data accuracy, some
+                                                                          configurations for this expense are now
+                                                                          locked.</p>
                     </div>
                   )}
                   <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
                     {receiptFormat === 'item-less' ? (
                       <div className="text-center py-4">
                         <label className="block text-sm font-medium text-font-2 mb-2">Total
-                                                                                                           Amount</label>
+                                                                                      Amount</label>
                         <div className="relative inline-block">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl text-font-2">€</span>
                           <StepperInput
@@ -916,7 +972,10 @@ const ReceiptFormPage: React.FC = () => {
                             {label: 'Product', className: splitType === 'line_item' ? 'w-[40%]' : 'w-[50%]'},
                             {label: 'Qty', className: 'w-[10%] text-center'},
                             {label: 'Unit Price (€)', className: 'w-[10%] text-center'},
-                            {label: 'Total (€)', className: cn("text-right", splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]')},
+                            {
+                              label: 'Total (€)',
+                              className: cn("text-right", splitType === 'line_item' ? 'w-[15%]' : 'w-[20%]')
+                            },
                             ...(splitType === 'line_item' ? [{label: 'Debtor', className: 'w-[15%]'}] : []),
                             {label: '', className: 'w-auto'},
                           ]}
@@ -960,7 +1019,10 @@ const ReceiptFormPage: React.FC = () => {
                               error={errors[`price_${item.key}`]}
                               disabled={isDebtDisabled}
                             />,
-                            <span className="font-medium text-right block text-font-1"><MoneyDisplay amount={item.LineQuantity * item.LineUnitPrice} showSign={false} colorPositive={false} colorNegative={false} /></span>,
+                            <span className="font-medium text-right block text-font-1"><MoneyDisplay amount={item.LineQuantity * item.LineUnitPrice}
+                                                                                                     showSign={false}
+                                                                                                     colorPositive={false}
+                                                                                                     colorNegative={false}/></span>,
                             ...(splitType === 'line_item' ? [
                               <div className="text-right text-sm text-font-2">{item.DebtorName || '-'}</div>] : []),
                             <div className="text-right">
@@ -969,7 +1031,7 @@ const ReceiptFormPage: React.FC = () => {
                                                           onClick={() => removeLineItem(item.key)}><X className="h-4 w-4 text-red"/></Button>}
                             </div>
                           ])}
-                          emptyStateIcon={<ArrowDown className="h-10 w-10 opacity-50" />}
+                          emptyStateIcon={<ArrowDown className="h-10 w-10 opacity-50"/>}
                           emptyStateText="Press the button below to get started."
                         />
                         <div className="grid grid-cols-3 items-start mt-4">
@@ -1016,7 +1078,11 @@ const ReceiptFormPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-4 text-font-2">
                               <span className="text-sm">Subtotal</span>
-                              <MoneyDisplay amount={subtotal} showSign={false} colorPositive={false} colorNegative={false} className="font-medium" />
+                              <MoneyDisplay amount={subtotal}
+                                            showSign={false}
+                                            colorPositive={false}
+                                            colorNegative={false}
+                                            className="font-medium"/>
                             </div>
                             <div className="flex items-center gap-4 text-font-2">
                               {parseFloat(String(formData.discount)) > 0 && isExclusionMode ? (
@@ -1031,11 +1097,17 @@ const ReceiptFormPage: React.FC = () => {
                               ) : (
                                 <span className="text-sm">Discount ({formData.discount || 0}%)</span>
                               )}
-                              <span className="font-medium">-<MoneyDisplay amount={discountAmount} showSign={false} colorPositive={false} colorNegative={false} /></span>
+                              <span className="font-medium">-<MoneyDisplay amount={discountAmount}
+                                                                           showSign={false}
+                                                                           colorPositive={false}
+                                                                           colorNegative={false}/></span>
                             </div>
                             <div className="flex items-center gap-4 text-lg font-bold text-font-1">
                               <span>Total</span>
-                              <MoneyDisplay amount={total} showSign={false} colorPositive={false} colorNegative={false} />
+                              <MoneyDisplay amount={total}
+                                            showSign={false}
+                                            colorPositive={false}
+                                            colorNegative={false}/>
                             </div>
                           </div>
                         </div>
@@ -1053,9 +1125,9 @@ const ReceiptFormPage: React.FC = () => {
                         <Info className="h-12 w-12 text-font-2"/>
                         <h3 className="mt-2 text-lg font-semibold text-font-1">Debts Settled</h3>
                         <p className="mt-1 text-center text-sm text-font-2">One or more debts on this expense have been
-                                                                              settled.<br/>To preserve data accuracy, some
-                                                                              configurations for this expense are now
-                                                                              locked.</p>
+                                                                            settled.<br/>To preserve data accuracy, some
+                                                                            configurations for this expense are now
+                                                                            locked.</p>
                       </div>
                     )}
                     <div className={cn(hasSettledDebts && "blur-sm select-none pointer-events-none")}>
@@ -1070,11 +1142,11 @@ const ReceiptFormPage: React.FC = () => {
                               <ButtonGroup variant="toggle">
                                 <button className="px-3 py-1.5 text-sm font-medium transition-colors text-font-2">None</button>
                                 <button className="px-3 py-1.5 text-sm font-medium transition-colors bg-field shadow-sm text-font-1">Split
-                                                                                                                                                                                      Total
+                                                                                                                                     Total
                                 </button>
                                 {receiptFormat === 'itemised' &&
                                   <button className="px-3 py-1.5 text-sm font-medium transition-colors text-font-2">Per
-                                                                                                                                 Item</button>}
+                                                                                                                    Item</button>}
                               </ButtonGroup>
                             </div>
                             <div className="space-y-4">
@@ -1091,7 +1163,8 @@ const ReceiptFormPage: React.FC = () => {
                                       value="0"
                                       disabled={true}
                                       className="w-32 mx-auto"
-                                      onChange={() => {}}
+                                      onChange={() => {
+                                      }}
                                     />,
                                     <div className="text-right text-font-2">
                                       <Tooltip content="You cannot remove yourself">
@@ -1119,9 +1192,10 @@ const ReceiptFormPage: React.FC = () => {
                           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
                             <Info className="h-12 w-12 text-font-2"/>
                             <h3 className="mt-2 text-lg font-semibold text-font-1">Debt Management
-                                                                                                        Disabled</h3>
-                            <p className="mt-1 text-sm text-font-2">Debt management is disabled when an expense isn't paid
-                                                                      by you.</p>
+                                                                                   Disabled</h3>
+                            <p className="mt-1 text-sm text-font-2">Debt management is disabled when an expense isn't
+                                                                    paid
+                                                                    by you.</p>
                           </div>
                         </div>
                       ) : (
@@ -1134,30 +1208,30 @@ const ReceiptFormPage: React.FC = () => {
                             <SplitTypeSelector/>
                           </div>
 
-                          {splitType === 'total_split' && (
+                          {(splitType === 'total_split' || splitType === 'by_amount') && (
                             <div className="space-y-4 min-h-[400px]">
                               <NanoDataTable
                                 headers={[
                                   {label: 'Name', className: 'w-[55%]'},
-                                  {label: 'Shares', className: 'w-[15%] text-center'},
+                                  {label: splitType === 'by_amount' ? 'Amount (€)' : 'Shares', className: 'w-[15%] text-center'},
                                   {label: '', className: 'w-auto text-right'},
                                 ]}
                                 rows={[
                                   [
                                     <span className="font-medium text-font-1">{settings.userName || 'User'} (Me)</span>,
-                                    <StepperInput
-                                      value={String(formData.ownShares)}
-                                      onChange={(e) => handleFormChange('ownShares', e.target.value)}
-                                      name="ownShares"
-                                      onDecrement={() => handleFormChange('ownShares', String(Math.max(0, (Number(formData.ownShares) || 0) - 1)))}
-                                      onIncrement={() => handleFormChange('ownShares', String((Number(formData.ownShares) || 0) + 1))}
-                                      min={0}
-                                      max={1000}
-                                      precision={0}
-                                      disabled={isDebtDisabled}
-                                      className="w-full"
-                                      inputClassName="text-center"
-                                    />,
+                                    <Tooltip content="Your share is automatically calculated as the remainder of the total amount after all other assignments are deducted.">
+                                      <div className="w-full">
+                                        <StepperInput
+                                          value={String(formData.ownShares)}
+                                          onChange={() => {}}
+                                          name="ownShares"
+                                          precision={splitType === 'by_amount' ? 2 : 0}
+                                          disabled={true}
+                                          className="w-full"
+                                          inputClassName="text-center"
+                                        />
+                                      </div>
+                                    </Tooltip>,
                                     <div className="text-right">
                                       <Tooltip content="You cannot remove yourself">
                                         <Button variant="ghost" size="icon" disabled className="opacity-50">
@@ -1171,19 +1245,21 @@ const ReceiptFormPage: React.FC = () => {
                                     <StepperInput
                                       value={String(split.SplitPart)}
                                       onChange={(e) => handleUpdateSplitPart(split.key, e.target.value)}
-                                      onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(1, (Number(split.SplitPart) || 0) - 1)))}
-                                      onIncrement={() => handleUpdateSplitPart(split.key, String((Number(split.SplitPart) || 0) + 1))}
-                                      min={1}
-                                      max={100}
+                                      onDecrement={() => handleUpdateSplitPart(split.key, String(Math.max(splitType === 'by_amount' ? 0 : 1, (Number(split.SplitPart) || 0) - (splitType === 'by_amount' ? 1 : 1))))}
+                                      onIncrement={() => handleUpdateSplitPart(split.key, String((Number(split.SplitPart) || 0) + (splitType === 'by_amount' ? 1 : 1)))}
+                                      min={splitType === 'by_amount' ? 0 : 1}
+                                      max={splitType === 'by_amount' ? (Number(split.SplitPart) || 0) + myRemainder : 100}
                                       step={1}
-                                      precision={0}
+                                      precision={splitType === 'by_amount' ? 2 : 0}
                                       disabled={isDebtDisabled}
                                       className="w-full"
                                       inputClassName="text-center"
                                     />,
                                     <div className="text-right">
                                       {!isDebtDisabled &&
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveSplit(split.key)}><X
+                                        <Button variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleRemoveSplit(split.key)}><X
                                           className="h-4 w-4 text-red"/></Button>}
                                     </div>
                                   ]))
@@ -1210,7 +1286,14 @@ const ReceiptFormPage: React.FC = () => {
                                       />
                                     </div>
                                   </div>
-                                  <div className="text-sm text-font-2 text-right">{totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0'}</div>
+                                  <div className="text-sm text-font-2 text-right">
+                                    {splitType === 'total_split' ? (totalShares > 0 ? `Total Shares: ${totalShares}` : 'Total Shares: 0') : (
+                                      <div className="flex flex-col gap-0.5">
+                                        <span>Assigned to others: €{assignedAmount.toFixed(2)}</span>
+                                        <span className="font-medium text-accent">Remainder (Me): €{myRemainder.toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1222,7 +1305,7 @@ const ReceiptFormPage: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <h4 className="text-base font-medium text-font-1">Item
-                                                                                                           Assignment</h4>
+                                                                                      Assignment</h4>
                                     <p className="text-sm text-font-2 mt-1">
                                       {lineItems.filter(i => i.DebtorID).length} of {lineItems.length} items assigned
                                     </p>
@@ -1249,8 +1332,8 @@ const ReceiptFormPage: React.FC = () => {
                               <Info className="h-12 w-12 text-font-2 mb-2"/>
                               <h3 className="text-lg font-medium text-font-1">No Debt Splitting</h3>
                               <p className="text-sm text-font-2 max-w-sm">The full amount of this expense is assigned to
-                                                                            you. Select a split type above to share the
-                                                                            cost.</p>
+                                                                          you. Select a split type above to share the
+                                                                          cost.</p>
                             </div>
                           )}
 
@@ -1264,13 +1347,20 @@ const ReceiptFormPage: React.FC = () => {
                               {debtSummary.self !== null && (
                                 <div className="flex justify-between items-center p-3 rounded-lg bg-bg-2 border border-border">
                                   <span className="font-medium text-font-1">{settings.userName || 'User'} (Me)</span>
-                                  <span className="text-lg font-semibold text-font-1"><MoneyDisplay amount={debtSummary.self} showSign={false} colorPositive={false} colorNegative={false} /></span>
+                                  <span className="text-lg font-semibold text-font-1"><MoneyDisplay amount={debtSummary.self}
+                                                                                                    showSign={false}
+                                                                                                    colorPositive={false}
+                                                                                                    colorNegative={false}/></span>
                                 </div>
                               )}
                               {debtSummary.debtors.map(d => (
-                                <div key={d.name} className="flex justify-between items-center p-3 rounded-lg bg-bg-2 border border-border">
+                                <div key={d.name}
+                                     className="flex justify-between items-center p-3 rounded-lg bg-bg-2 border border-border">
                                   <span className="font-medium text-font-1">{d.name}</span>
-                                  <span className="text-lg font-semibold text-font-1"><MoneyDisplay amount={d.amount} showSign={false} colorPositive={false} colorNegative={false} /></span>
+                                  <span className="text-lg font-semibold text-font-1"><MoneyDisplay amount={d.amount}
+                                                                                                    showSign={false}
+                                                                                                    colorPositive={false}
+                                                                                                    colorNegative={false}/></span>
                                 </div>
                               ))}
                             </div>

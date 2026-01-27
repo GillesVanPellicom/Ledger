@@ -138,7 +138,7 @@ export async function getReceipt(id: string, options: { includeImages?: boolean 
       ? db.query<ReceiptImage>('SELECT ExpenseImageID as ImageID, ExpenseID as ReceiptID, ImagePath, CreationTimestamp, UpdatedAt FROM ExpenseImages WHERE ExpenseID = ?', [id])
       : Promise.resolve([]),
 
-    receiptData.SplitType === 'total_split'
+    (receiptData.SplitType === 'total_split' || receiptData.SplitType === 'by_amount')
       ? db.query<ReceiptSplit>(`
                 SELECT rs.ExpenseSplitID as SplitID,
                        rs.ExpenseID as ReceiptID,

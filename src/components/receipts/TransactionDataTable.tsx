@@ -252,11 +252,12 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
       { header: 'Date', width: '7%', render: (row: Transaction) => <DateDisplay date={row.date} /> },
       {
         header: 'Description', render: (row: Transaction) => {
-          if (row.type === 'expense') return row.storeName;
-          if (row.type === 'repayment') return `Repayment from ${row.debtorName}`;
-          if (row.type === 'income') {
-            return row.debtorName || 'Income';
+          if (row.type === 'expense') {
+            if (row.owedToEntityId) return row.debtorName;
+            return `at ${row.storeName}`;
           }
+          if (row.type === 'repayment') return `from ${row.debtorName}`;
+          if (row.type === 'income') return `from ${row.debtorName || 'Source'}`;
           if (row.type === 'transfer') return 'Transfer';
           return '';
         }

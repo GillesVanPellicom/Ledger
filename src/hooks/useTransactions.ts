@@ -119,7 +119,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
             'expense' AS type,
             e.CreationTimestamp AS creationTimestamp,
             s.EntityName AS storeName,
-            NULL AS debtorName,
+            d_repaid.EntityName AS debtorName,
             e.IsNonItemised AS isNonItemised,
             e.IsTentative AS isTentative,
             (SELECT COUNT(*) FROM ExpenseImages ri WHERE ri.ExpenseID = e.ExpenseID) AS attachmentCount,
@@ -130,7 +130,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
               LEFT JOIN ExpenseEntityPayments rdp ON d.EntityID = rdp.EntityID AND rdp.ExpenseID = e.ExpenseID
               WHERE rdp.ExpenseEntityPaymentID IS NULL
               AND ((e.SplitType='line_item' AND d.EntityID IN (SELECT li.EntityID FROM ExpenseLineItems li WHERE li.ExpenseID=e.ExpenseID AND li.EntityID IS NOT NULL))
-              OR (e.SplitType='total_split' AND d.EntityID IN (SELECT rs.EntityID FROM ExpenseSplits rs WHERE rs.ExpenseID=e.ExpenseID)))
+              OR ((e.SplitType='total_split' OR e.SplitType='by_amount') AND d.EntityID IN (SELECT rs.EntityID FROM ExpenseSplits rs WHERE rs.ExpenseID=e.ExpenseID)))
             ) AS unpaidDebtorCount,
             NULL AS debtorId,
             NULL AS receiptId,
@@ -142,6 +142,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           FROM Expenses e
           JOIN Entities s ON e.RecipientID = s.EntityID
           LEFT JOIN PaymentMethods pm ON e.PaymentMethodID = pm.PaymentMethodID
+          LEFT JOIN Entities d_repaid ON e.OwedToEntityID = d_repaid.EntityID
         `;
 
         if (expenseTypeFilter && expenseTypeFilter !== 'all') {
@@ -159,27 +160,36 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         typeQueries.push(expenseQuery);
       }
 
-      if (typeFilter === 'all' || typeFilter === 'income') {
+      if (typeFilter === 'all' || typeFilter === 'income' || typeFilter === 'repayment') {
         let incomeQuery = `
           SELECT 
-            'income-' || i.IncomeID AS id,
+            CASE 
+              WHEN eep.ExpenseEntityPaymentID IS NOT NULL THEN 'repayment-' || i.IncomeID
+              ELSE 'income-' || i.IncomeID 
+            END AS id,
             i.IncomeID AS originalId,
             i.IncomeDate AS date,
-            i.IncomeNote AS note,
+            CASE 
+              WHEN i.IncomeNote LIKE 'Repayment from %' THEN NULL 
+              ELSE i.IncomeNote 
+            END AS note,
             i.IncomeAmount AS amount,
             pm.PaymentMethodName AS methodName,
             i.PaymentMethodID AS methodId,
-            'income' AS type,
+            CASE 
+              WHEN eep.ExpenseEntityPaymentID IS NOT NULL THEN 'repayment'
+              ELSE 'income' 
+            END AS type,
             i.CreationTimestamp AS creationTimestamp,
             NULL AS storeName,
-            e.EntityName AS debtorName,
+            COALESCE(e_repayment.EntityName, e_income.EntityName) AS debtorName,
             0 AS isNonItemised,
             0 AS isTentative,
             NULL AS attachmentCount,
             NULL AS status,
             NULL AS totalDebtorCount,
             NULL AS unpaidDebtorCount,
-            NULL AS debtorId,
+            COALESCE(eep.EntityID, i.RecipientID) AS debtorId,
             NULL AS receiptId,
             NULL AS fromMethodId,
             NULL AS toMethodId,
@@ -188,10 +198,18 @@ export const useTransactions = (params: FetchTransactionsParams) => {
             NULL AS owedToEntityId
           FROM Income i
           LEFT JOIN PaymentMethods pm ON i.PaymentMethodID = pm.PaymentMethodID
-          LEFT JOIN Entities e ON i.RecipientID = e.EntityID
+          LEFT JOIN Entities e_income ON i.RecipientID = e_income.EntityID
+          LEFT JOIN ExpenseEntityPayments eep ON i.IncomeID = eep.IncomeID
+          LEFT JOIN Entities e_repayment ON eep.EntityID = e_repayment.EntityID
           WHERE i.TransferID IS NULL
-          AND NOT EXISTS (SELECT 1 FROM ExpenseEntityPayments rdp WHERE rdp.IncomeID = i.IncomeID)
         `;
+        
+        if (typeFilter === 'repayment') {
+          whereClauses.push("type = 'repayment'");
+        } else if (typeFilter === 'income') {
+          whereClauses.push("type = 'income'");
+        }
+
         if (recipientFilter && recipientFilter !== 'all') {
           whereClauses.push("recipientId = ?");
           queryParams.push(recipientFilter);
