@@ -47,10 +47,12 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
 
         const applyStyles = (element: React.ReactElement<any>): React.ReactElement<any> => {
           const props = element.props as Record<string, any>;
-          const type = element.type as any;
-          const name = typeof type === 'string' ? type : (type.displayName || type.name || '');
+          
+          // Check if it's a Tooltip. In production, component names are minified.
+          // We check for 'content' prop which is unique to our Tooltip.
+          const isTooltip = props.content !== undefined;
 
-          if (name === 'Tooltip' && React.isValidElement(props.children)) {
+          if (isTooltip && React.isValidElement(props.children)) {
             return React.cloneElement(element, {
               children: applyStyles(props.children as React.ReactElement<any>),
               className: cn(props.className, fullWidth && "flex-1")
@@ -74,7 +76,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
               activeClasses,
               fullWidth && "flex-1",
               'relative focus:z-30',
-              'shadow-none border-0' // Remove individual borders
+              '!shadow-none !border-0' // Force remove individual borders and shadows
             )
           });
         };

@@ -88,4 +88,6 @@ const Tooltip: React.FC<TooltipProps> = ({ children, content, className, ...prop
   );
 };
 
+Tooltip.displayName = 'Tooltip';
+
 export default Tooltip;
