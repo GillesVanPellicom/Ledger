@@ -251,95 +251,94 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
     const cols: any[] = [
       { header: 'Date', width: '7%', render: (row: Transaction) => <DateDisplay date={row.date} /> },
       {
-        header: 'Description', render: (row: Transaction) => {
+        header: 'Amount', width: '8%', className: 'text-left', render: (row: Transaction) => {
+          const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
+          const isTransfer = row.type === 'transfer';
+          return (
+            <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
+              <div className="inline-block">
+                <MoneyDisplay
+                  amount={row.amount}
+                  useSignum={!isTransfer}
+                  showSign={!isTransfer}
+                  colorNegative={!isUnpaid && row.amount < 0}
+                  colorPositive={row.amount > 0}
+                  colorNeutral={isUnpaid}
+                  colored={!isTransfer}
+                  className={isTransfer ? "text-font-1 font-normal" : ""}
+                />
+              </div>
+            </Tooltip>
+          );
+        }
+      },
+      {
+        header: 'Type', width: '7%', render: (row: Transaction) => {
+          if (row.type === 'expense' && row.status === 'unpaid') {
+            return (
+              <Tooltip content={row.owedToEntityId ? `Owed to ${row.debtorName || 'entity'}` : "Unpaid expense - not yet deducted from balance"}>
+                <Badge variant="yellow" className="flex items-center gap-1 w-fit">
+                  <Clock className="h-3 w-3" /> {row.owedToEntityId ? 'Owed' : 'Unpaid'}
+                </Badge>
+              </Tooltip>
+            );
+          }
+          switch (row.type) {
+            case 'expense':
+              if (row.owedToEntityId) {
+                return (
+                  <Tooltip content={`Repaid to ${row.debtorName || 'entity'}`}>
+                    <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Repaid</Badge>
+                  </Tooltip>
+                );
+              }
+              return (
+                <Tooltip content="Expense - money spent">
+                  <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Expense</Badge>
+                </Tooltip>
+              );
+            case 'income':
+              return (
+                <Tooltip content="Income - money received from a source">
+                  <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3" /> Income</Badge>
+                </Tooltip>
+              );
+            case 'transfer':
+              return (
+                <Tooltip content="Transfer - money moved between payment methods">
+                  <Badge variant="gray" className="flex items-center gap-1 w-fit text-font-1 border-font-1/20 bg-font-1/10"><ArrowRightLeft className="h-3 w-3" /> Transfer</Badge>
+                </Tooltip>
+              );
+            case 'repayment':
+              return (
+                <Tooltip content="Repayment - money received from a debtor">
+                  <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3" /> Repayment</Badge>
+                </Tooltip>
+              );
+            default:
+              return row.type;
+          }
+        }
+      },
+      {
+        header: 'Counterparty', width: '10%', render: (row: Transaction) => {
           if (row.type === 'expense') {
             if (row.owedToEntityId) return row.debtorName;
-            return `at ${row.storeName}`;
+            return row.storeName;
           }
-          if (row.type === 'repayment') return `from ${row.debtorName}`;
-          if (row.type === 'income') return `from ${row.debtorName || 'Source'}`;
+          if (row.type === 'repayment') return row.debtorName;
+          if (row.type === 'income') return row.debtorName || 'Source';
           if (row.type === 'transfer') return 'Transfer';
           return '';
         }
       },
-      { header: 'Note', accessor: 'note' },
     ];
 
     if (paymentMethodsEnabled && !hideColumns.includes('method')) {
       cols.push({ header: 'Method', accessor: 'methodName', width: '8%' });
     }
 
-    cols.push({
-      header: 'Amount', width: '8%', className: 'text-right', render: (row: Transaction) => {
-        const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
-        const isTransfer = row.type === 'transfer';
-        return (
-          <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
-            <div className="inline-block">
-              <MoneyDisplay
-                amount={row.amount}
-                useSignum={!isTransfer}
-                showSign={!isTransfer}
-                colorNegative={!isUnpaid && row.amount < 0}
-                colorPositive={row.amount > 0}
-                colorNeutral={isUnpaid}
-                colored={!isTransfer}
-                className={isTransfer ? "text-font-1 font-normal" : ""}
-              />
-            </div>
-          </Tooltip>
-        );
-      }
-    });
-
-    cols.push({
-      header: 'Type', width: '7%', render: (row: Transaction) => {
-        if (row.type === 'expense' && row.status === 'unpaid') {
-          return (
-            <Tooltip content={row.owedToEntityId ? `Owed to ${row.debtorName || 'entity'}` : "Unpaid expense - not yet deducted from balance"}>
-              <Badge variant="yellow" className="flex items-center gap-1 w-fit">
-                <Clock className="h-3 w-3" /> {row.owedToEntityId ? 'Owed' : 'Unpaid'}
-              </Badge>
-            </Tooltip>
-          );
-        }
-        switch (row.type) {
-          case 'expense':
-            if (row.owedToEntityId) {
-              return (
-                <Tooltip content={`Repaid to ${row.debtorName || 'entity'}`}>
-                  <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Repaid</Badge>
-                </Tooltip>
-              );
-            }
-            return (
-              <Tooltip content="Expense - money spent">
-                <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Expense</Badge>
-              </Tooltip>
-            );
-          case 'income':
-            return (
-              <Tooltip content="Income - money received from a source">
-                <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3" /> Income</Badge>
-              </Tooltip>
-            );
-          case 'transfer':
-            return (
-              <Tooltip content="Transfer - money moved between payment methods">
-                <Badge variant="gray" className="flex items-center gap-1 w-fit text-font-1 border-font-1/20 bg-font-1/10"><ArrowRightLeft className="h-3 w-3" /> Transfer</Badge>
-              </Tooltip>
-            );
-          case 'repayment':
-            return (
-              <Tooltip content="Repayment - money received from a debtor">
-                <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3" /> Repayment</Badge>
-              </Tooltip>
-            );
-          default:
-            return row.type;
-        }
-      }
-    });
+    cols.push({ header: 'Note', accessor: 'note' });
 
     // Indicators Column
     cols.push({

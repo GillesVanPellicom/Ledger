@@ -170,7 +170,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
             i.IncomeID AS originalId,
             i.IncomeDate AS date,
             CASE 
-              WHEN i.IncomeNote LIKE 'Repayment from %' THEN NULL 
+              WHEN LOWER(i.IncomeNote) LIKE 'repayment from %' THEN NULL 
               ELSE i.IncomeNote 
             END AS note,
             i.IncomeAmount AS amount,
@@ -193,7 +193,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
             NULL AS receiptId,
             NULL AS fromMethodId,
             NULL AS toMethodId,
-            i.RecipientID AS recipientId,
+            COALESCE(eep.EntityID, i.RecipientID) AS recipientId,
             i.CategoryID AS categoryId,
             NULL AS owedToEntityId
           FROM Income i
