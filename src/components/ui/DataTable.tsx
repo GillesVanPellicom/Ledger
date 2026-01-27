@@ -285,7 +285,7 @@ const DataTable: React.FC<DataTableProps> = ({
         return (
           <tr key={key} className={cn("transition-colors opacity-50 bg-bg-2", { "bg-accent/10": selectedRows.has(key) }, "cursor-pointer hover:bg-field-hover")}>
             {selectable && (
-              <td className="px-4 py-3 align-middle">
+              <td className="px-4 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
                 <SkeletonCell width="w-5" />
               </td>
             )}
@@ -355,7 +355,7 @@ const DataTable: React.FC<DataTableProps> = ({
       rows.push(
         <tr key={key} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors bg-bg-2", { "bg-accent/10": selectedRows.has(key) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
           {selectable && (
-            <td className="px-4 py-3 align-middle w-20">
+            <td className="px-4 py-3 align-middle w-[1%]" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-center">
                 <Checkbox
                   id={`checkbox-${key}`}
@@ -509,7 +509,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 colWidths.map((width, idx) => <col key={idx} style={{ width: `${width}px` }} />)
               ) : (
                 <>
-                  {selectable && <col style={{ width: '80px' }} />}
+                  {selectable && <col style={{ width: '1%' }} />}
                   {columns.map((col, idx) => <col key={idx} style={{ width: col.width }} />)}
                 </>
               )}
@@ -517,7 +517,7 @@ const DataTable: React.FC<DataTableProps> = ({
             <thead className="bg-bg-modal border-b border-border">
               <tr>
                 {selectable && (
-                  <th className="px-4 py-3 align-middle w-20">
+                  <th className="px-4 py-3 align-middle w-[1%]" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center">
                       <Checkbox id="select-all-checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} disabled={disabled} />
                     </div>

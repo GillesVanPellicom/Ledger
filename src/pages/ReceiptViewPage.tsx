@@ -476,9 +476,9 @@ const ReceiptViewPage: React.FC = () => {
                     <div className="text-center">
                       <p className="text-xs font-semibold text-font-2 uppercase tracking-wider mb-2">Total Amount</p>
                       <MoneyDisplay 
-                        amount={displayTotalAmount} 
+                        amount={-displayTotalAmount} 
                         className="text-4xl font-bold text-font-1" 
-                        colorPositive={true}
+                        colorNegative={true}
                         useSignum={true}
                         showSign={true}
                       />
@@ -656,9 +656,9 @@ const ReceiptViewPage: React.FC = () => {
                   <div className="text-center">
                     <p className="text-xs font-semibold text-font-2 uppercase tracking-wider mb-2">Total Amount</p>
                     <MoneyDisplay 
-                      amount={displayTotalAmount} 
+                      amount={-displayTotalAmount} 
                       className="text-4xl font-bold text-font-1" 
-                      colorPositive={true}
+                      colorNegative={true}
                       useSignum={true}
                       showSign={true}
                     />
