@@ -409,9 +409,9 @@ const ReceiptFormPage: React.FC = () => {
   const handleLineItemBlur = (key: string, field: keyof LineItem, value: any) => {
     let processedValue = value;
     if (field === 'LineQuantity') {
-      processedValue = Math.max(0, parseFloat(value) || 0);
+      processedValue = Math.max(0, Number.parseFloat(value) || 0);
     } else if (field === 'LineUnitPrice') {
-      processedValue = Math.max(0, parseFloat(value) || 0);
+      processedValue = Math.max(0, Number.parseFloat(value) || 0);
     }
     setLineItems(prev => prev.map(item => item.key === key ? {...item, [field]: processedValue} : item));
   };
@@ -488,7 +488,7 @@ const ReceiptFormPage: React.FC = () => {
   };
 
   const handleUpdateSplitPart = (key: string, newPart: string) => {
-    setReceiptSplits(prev => prev.map(s => s.key === key ? {...s, SplitPart: parseInt(newPart) || 1} : s));
+    setReceiptSplits(prev => prev.map(s => s.key === key ? {...s, SplitPart: Number.parseInt(newPart) || 1} : s));
   };
 
   const handleRemoveSplit = (key: string) => {
@@ -500,8 +500,8 @@ const ReceiptFormPage: React.FC = () => {
     setLineItems(prev => prev.map(item => {
       if (assignmentsMap.has(item.key)) {
         const debtorId = assignmentsMap.get(item.key);
-        const debtor = debtors.find(d => d.EntityID === parseInt(debtorId!));
-        return {...item, DebtorID: debtor ? parseInt(debtorId!) : null, DebtorName: debtor ? debtor.EntityName : null};
+        const debtor = debtors.find(d => d.EntityID === Number.parseInt(debtorId!));
+        return {...item, DebtorID: debtor ? Number.parseInt(debtorId!) : null, DebtorName: debtor ? debtor.EntityName : null};
       }
       return item;
     }));
@@ -634,7 +634,7 @@ const ReceiptFormPage: React.FC = () => {
         }
       }
 
-      if (window.electronAPI && settings.datastore.folderPath) {
+      if (globalThis.electronAPI && settings.datastore.folderPath) {
         const newImages = images.filter(img => img.file);
         for (const image of newImages) {
           const imagePathToSave = await window.electronAPI.saveImage(settings.datastore.folderPath, image.ImagePath);

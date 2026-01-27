@@ -64,7 +64,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
           if (variant === 'toggle') {
              const isActive = props.active || props.className?.includes('bg-field') || props.className?.includes('bg-bg-2') || props.className?.includes('bg-gray-100');
              activeClasses = isActive 
-               ? 'bg-field text-font-1 shadow-sm hover:bg-field-hover z-20 ring-2 ring-accent ring-inset'
+               ? 'bg-field text-font-1 shadow-sm hover:bg-field-hover z-20'
                : 'bg-transparent text-font-2 hover:bg-field-hover z-10';
           }
 
@@ -75,7 +75,7 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({ children, className, v
               variantClasses,
               activeClasses,
               fullWidth && "flex-1",
-              'relative focus:z-30',
+              'relative focus:z-30 focus:ring-2 focus:ring-accent focus:ring-inset',
               '!shadow-none !border-0' // Force remove individual borders and shadows
             )
           });
