@@ -687,7 +687,7 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
           </FilterOption>
         )}
 
-        {(pendingFilters.type === 'paid_expense' || fixedFilters.type === 'paid_expense' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
+        {(pendingFilters.type === 'paid_expense' || fixedFilters.type === 'paid_expense') && (
           <>
             <Divider text="Expense Filters" className="my-4" />
             {paymentMethodsEnabled && !fixedFilters.method && (
@@ -722,7 +722,7 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
           </>
         )}
 
-        {(pendingFilters.type === 'income' || fixedFilters.type === 'income' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
+        {(pendingFilters.type === 'income' || fixedFilters.type === 'income') && (
           <>
             <Divider text="Income Filters" className="my-4" />
             {paymentMethodsEnabled && !fixedFilters.method && (
@@ -743,7 +743,7 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
           </>
         )}
 
-        {(pendingFilters.type === 'repayment' || fixedFilters.type === 'repayment' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
+        {(pendingFilters.type === 'repayment' || fixedFilters.type === 'repayment') && (
           <>
             <Divider text="Repayment Filters" className="my-4" />
             {paymentMethodsEnabled && !fixedFilters.method && (
@@ -759,7 +759,7 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
           </>
         )}
 
-        {(pendingFilters.type === 'transfer' || fixedFilters.type === 'transfer' || (pendingFilters.type === 'all' && !fixedFilters.type)) && (
+        {(pendingFilters.type === 'transfer' || fixedFilters.type === 'transfer') && (
           <>
             <Divider text="Transfer Filters" className="my-4" />
             {!fixedFilters.method && (
