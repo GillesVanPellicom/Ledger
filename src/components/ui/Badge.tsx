@@ -11,11 +11,11 @@ interface BadgeProps {
 
 const Badge: React.FC<BadgeProps> = ({ children, variant = 'blue', className }) => {
   const variants = {
-    blue: 'bg-blue/40 text-blue border-blue',
-    green: 'bg-green/40 text-green border-green',
-    red: 'bg-red/40 text-red border-red',
-    yellow: 'bg-yellow/40 text-yellow border-yellow',
-    gray: 'bg-text-disabled/40 text-text-disabled border-text-disabled',
+    blue: 'text-blue border-blue',
+    green: 'text-green border-green',
+    red: 'text-red border-red',
+    yellow: 'text-yellow border-yellow',
+    gray: 'text-text-disabled border-text-disabled',
   };
 
   return (
@@ -25,6 +25,7 @@ const Badge: React.FC<BadgeProps> = ({ children, variant = 'blue', className }) 
         variants[variant],
         className
       )}
+      style={{ backgroundColor: 'color-mix(in srgb, currentColor, transparent 92%)' }}
     >
       {children}
     </span>
