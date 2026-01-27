@@ -98,10 +98,14 @@ function secureRandom() {
 }
 
 function getRandomInt(min, max) {
-    return crypto.randomInt(min, max + 1);
+    const minInt = Math.floor(min);
+    const maxInt = Math.floor(max);
+    if (minInt >= maxInt) return minInt;
+    return crypto.randomInt(minInt, maxInt + 1);
 }
 
 function getRandomElement(arr) {
+    if (!arr || arr.length === 0) return null;
     return arr[crypto.randomInt(0, arr.length)];
 }
 
@@ -343,7 +347,7 @@ async function seed() {
                                 db.run('UPDATE Expenses SET OwnShares = ?, TotalShares = ? WHERE ExpenseID = ?', [ownSharePart, currentTotalShares, receiptId]);
                             }
 
-                            const hasExclusions = hasDiscount && secureRandom() < 0.3;
+                            const hasExclusions = hasDiscount && numItems > 1 && secureRandom() < 0.3;
                             const exclusionCount = hasExclusions ? getRandomInt(1, Math.floor(numItems / 2)) : 0;
                             const excludedIndexes = new Set();
                             while(excludedIndexes.size < exclusionCount) {

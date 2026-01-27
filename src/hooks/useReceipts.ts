@@ -40,156 +40,232 @@ export const useReceipts = (params: FetchReceiptsParams) => {
     attachmentFilter
   } = params;
 
+  const startDateKey = startDate?.toISOString() ?? null;
+  const endDateKey = endDate?.toISOString() ?? null;
+
   return useQuery<FetchReceiptsResult>({
-    queryKey: ['receipts', { page, pageSize, searchTerm, startDate, endDate, debtEnabled, debtFilter, repaymentFilter, typeFilter, tentativeFilter, attachmentFilter }],
+    queryKey: [
+      'receipts',
+      {
+        page,
+        pageSize,
+        searchTerm,
+        startDate: startDateKey,
+        endDate: endDateKey,
+        debtEnabled,
+        debtFilter,
+        repaymentFilter,
+        typeFilter,
+        tentativeFilter,
+        attachmentFilter
+      }
+    ],
     queryFn: async () => {
+
       const offset = (page - 1) * pageSize;
 
-      let subQuerySelect = `
-        SELECT r.ExpenseID as ReceiptID,
-               r.ExpenseDate as ReceiptDate,
-               r.ExpenseNote as ReceiptNote,
-               r.Discount,
-               r.IsNonItemised,
-               r.IsTentative,
-               r.NonItemisedTotal,
-               r.PaymentMethodID,
-               r.OwedToEntityID,
-               s.EntityName as StoreName,
-               pm.PaymentMethodName,
-               (SELECT COUNT(*) FROM ExpenseImages ri WHERE ri.ExpenseID = r.ExpenseID) as AttachmentCount,
-               CASE
-                   WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
-                   ELSE (
-                       (SELECT SUM(li.LineQuantity * li.LineUnitPrice)
-                        FROM ExpenseLineItems li
-                        WHERE li.ExpenseID = r.ExpenseID) -
-                       IFNULL((SELECT SUM(li_discountable.LineQuantity * li_discountable.LineUnitPrice)
-                               FROM ExpenseLineItems li_discountable
-                               WHERE li_discountable.ExpenseID = r.ExpenseID
-                                 AND (li_discountable.IsExcludedFromDiscount = 0 OR
-                                      li_discountable.IsExcludedFromDiscount IS NULL)), 0) * r.Discount / 100
-                       )
-                   END as Total
-      `;
-
-      if (debtEnabled) {
-        subQuerySelect += `,
-          r.Status,
-          (
-            SELECT COUNT(DISTINCT d.EntityID)
-            FROM Entities d
-            WHERE (
-              (r.SplitType = 'line_item' AND d.EntityID IN (SELECT li.EntityID FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID AND li.EntityID IS NOT NULL)) OR
-              (r.SplitType = 'total_split' AND d.EntityID IN (SELECT rs.EntityID FROM ExpenseSplits rs WHERE rs.ExpenseID = r.ExpenseID))
-            )
-          ) as TotalDebtorCount,
-          (
-            SELECT COUNT(DISTINCT d.EntityID)
-            FROM Entities d
-            LEFT JOIN ExpenseEntityPayments rdp ON d.EntityID = rdp.EntityID AND rdp.ExpenseID = r.ExpenseID
-            WHERE rdp.ExpenseEntityPaymentID IS NULL AND (
-              (r.SplitType = 'line_item' AND d.EntityID IN (SELECT li.EntityID FROM ExpenseLineItems li WHERE li.ExpenseID = r.ExpenseID AND li.EntityID IS NOT NULL)) OR
-              (r.SplitType = 'total_split' AND d.EntityID IN (SELECT rs.EntityID FROM ExpenseSplits rs WHERE rs.ExpenseID = r.ExpenseID))
-            )
-          ) as UnpaidDebtorCount
-        `;
-      }
-
-      let subQueryFrom = `
-        FROM Expenses r
-        JOIN Entities s ON r.RecipientID = s.EntityID
-        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
-      `;
-
       const queryParams: any[] = [];
-      const subQueryWhereClauses: string[] = [];
+      const whereClauses: string[] = [];
+
+      // --- Base filters ---
 
       if (searchTerm) {
-        const keywords = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ').filter(k => k);
-        keywords.forEach(keyword => {
-          subQueryWhereClauses.push(`(
+        const keywords = searchTerm
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .split(' ')
+          .filter(Boolean);
+
+        for (const keyword of keywords) {
+          whereClauses.push(`(
             LOWER(s.EntityName) LIKE ? OR
             LOWER(r.ExpenseNote) LIKE ?
           )`);
           queryParams.push(`%${keyword}%`, `%${keyword}%`);
-        });
+        }
       }
 
       if (startDate) {
-        subQueryWhereClauses.push(`r.ExpenseDate >= ?`);
+        whereClauses.push(`r.ExpenseDate >= ?`);
         queryParams.push(format(startDate, 'yyyy-MM-dd'));
       }
+
       if (endDate) {
-        subQueryWhereClauses.push(`r.ExpenseDate <= ?`);
+        whereClauses.push(`r.ExpenseDate <= ?`);
         queryParams.push(format(endDate, 'yyyy-MM-dd'));
       }
 
       if (typeFilter && typeFilter !== 'all') {
-        subQueryWhereClauses.push('r.IsNonItemised = ?');
+        whereClauses.push(`r.IsNonItemised = ?`);
         queryParams.push(typeFilter === 'total-only' ? 1 : 0);
       }
 
       if (tentativeFilter && tentativeFilter !== 'all') {
-        subQueryWhereClauses.push('r.IsTentative = ?');
+        whereClauses.push(`r.IsTentative = ?`);
         queryParams.push(tentativeFilter === 'tentative' ? 1 : 0);
       }
 
-      if (subQueryWhereClauses.length > 0) {
-        subQueryFrom += ` WHERE ${subQueryWhereClauses.join(' AND ')}`;
-      }
-
-      const subQuery = `${subQuerySelect} ${subQueryFrom}`;
-
-      let outerQuery = `SELECT * FROM (${subQuery}) as receipts_with_counts`;
-      const outerWhereClauses: string[] = [];
+      // --- Attachment filter (efficient) ---
 
       if (attachmentFilter && attachmentFilter !== 'all') {
-        outerWhereClauses.push(`AttachmentCount ${attachmentFilter === 'yes' ? '> 0' : '= 0'}`);
+        if (attachmentFilter === 'yes') {
+          whereClauses.push(`
+            EXISTS (
+              SELECT 1 FROM ExpenseImages ri
+              WHERE ri.ExpenseID = r.ExpenseID
+            )
+          `);
+        } else {
+          whereClauses.push(`
+            NOT EXISTS (
+              SELECT 1 FROM ExpenseImages ri
+              WHERE ri.ExpenseID = r.ExpenseID
+            )
+          `);
+        }
       }
-      
+
+      // --- Debt filters ---
+
       if (debtEnabled && debtFilter && debtFilter !== 'all') {
-        switch (debtFilter) {
-          case 'none':
-            outerWhereClauses.push('TotalDebtorCount = 0');
-            break;
-          case 'unpaid':
-            outerWhereClauses.push('UnpaidDebtorCount > 0');
-            break;
-          case 'paid':
-            outerWhereClauses.push('TotalDebtorCount > 0 AND UnpaidDebtorCount = 0');
-            break;
+        if (debtFilter === 'none') {
+          whereClauses.push(`
+            NOT EXISTS (
+              SELECT 1 FROM ExpenseLineItems li
+              WHERE li.ExpenseID = r.ExpenseID
+                AND li.EntityID IS NOT NULL
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM ExpenseSplits rs
+              WHERE rs.ExpenseID = r.ExpenseID
+            )
+          `);
+        }
+
+        if (debtFilter === 'unpaid') {
+          whereClauses.push(`
+            EXISTS (
+              SELECT 1
+              FROM ExpenseEntityPayments ep
+              WHERE ep.ExpenseID = r.ExpenseID
+                AND ep.ExpenseEntityPaymentID IS NULL
+            )
+          `);
+        }
+
+        if (debtFilter === 'paid') {
+          whereClauses.push(`
+            EXISTS (
+              SELECT 1 FROM ExpenseEntityPayments ep
+              WHERE ep.ExpenseID = r.ExpenseID
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM ExpenseEntityPayments ep2
+              WHERE ep2.ExpenseID = r.ExpenseID
+                AND ep2.ExpenseEntityPaymentID IS NULL
+            )
+          `);
         }
       }
 
       if (debtEnabled && repaymentFilter && repaymentFilter !== 'all') {
-        switch (repaymentFilter) {
-          case 'none':
-            outerWhereClauses.push('OwedToEntityID IS NULL');
-            break;
-          case 'unpaid':
-            outerWhereClauses.push('OwedToEntityID IS NOT NULL AND Status = "unpaid"');
-            break;
-          case 'paid':
-            outerWhereClauses.push('OwedToEntityID IS NOT NULL AND Status = "paid"');
-            break;
+        if (repaymentFilter === 'none') {
+          whereClauses.push(`r.OwedToEntityID IS NULL`);
+        }
+
+        if (repaymentFilter === 'unpaid') {
+          whereClauses.push(`r.OwedToEntityID IS NOT NULL AND r.Status = 'unpaid'`);
+        }
+
+        if (repaymentFilter === 'paid') {
+          whereClauses.push(`r.OwedToEntityID IS NOT NULL AND r.Status = 'paid'`);
         }
       }
 
-      if (outerWhereClauses.length > 0) {
-        outerQuery += ` WHERE ${outerWhereClauses.join(' AND ')}`;
-      }
+      const whereSql = whereClauses.length
+        ? `WHERE ${whereClauses.join(' AND ')}`
+        : '';
 
-      const countQuery = `SELECT COUNT(*) as count FROM (${outerQuery})`;
-      const countResult = await db.queryOne<{ count: number }>(countQuery, queryParams);
-      const totalCount = countResult ? countResult.count : 0;
+      // ============================
+      // Lightweight COUNT query
+      // ============================
 
-      const finalQuery = `${outerQuery} ORDER BY ReceiptDate DESC, ReceiptID DESC LIMIT ? OFFSET ?`;
-      const finalQueryParams = [...queryParams, pageSize, offset];
+      const countQuery = `
+        SELECT COUNT(*)
+        FROM Expenses r
+        JOIN Entities s ON r.RecipientID = s.EntityID
+        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        ${whereSql}
+      `;
 
-      const receipts = await db.query<Receipt>(finalQuery, finalQueryParams);
+      const countResult = await db.queryOne<{ count: number }>(
+        countQuery,
+        queryParams
+      );
+
+      const totalCount = countResult?.count ?? 0;
+
+      // ============================
+      // Main data query (optimized)
+      // ============================
+
+      const mainQuery = `
+        SELECT
+          r.ExpenseID AS ReceiptID,
+          r.ExpenseDate AS ReceiptDate,
+          r.ExpenseNote AS ReceiptNote,
+          r.Discount,
+          r.IsNonItemised,
+          r.IsTentative,
+          r.NonItemisedTotal,
+          r.PaymentMethodID,
+          r.OwedToEntityID,
+          r.Status,
+          s.EntityName AS StoreName,
+          pm.PaymentMethodName,
+
+          COUNT(DISTINCT ri.ExpenseImageID) AS AttachmentCount,
+
+          CASE
+            WHEN r.IsNonItemised = 1 THEN r.NonItemisedTotal
+            ELSE
+              IFNULL(SUM(li.LineQuantity * li.LineUnitPrice), 0)
+              - IFNULL(
+                  SUM(
+                    CASE
+                      WHEN li.IsExcludedFromDiscount = 0
+                        OR li.IsExcludedFromDiscount IS NULL
+                      THEN li.LineQuantity * li.LineUnitPrice
+                      ELSE 0
+                    END
+                  ) * r.Discount / 100,
+                  0
+                )
+          END AS Total
+
+        FROM Expenses r
+        JOIN Entities s ON r.RecipientID = s.EntityID
+        LEFT JOIN PaymentMethods pm ON r.PaymentMethodID = pm.PaymentMethodID
+        LEFT JOIN ExpenseImages ri ON ri.ExpenseID = r.ExpenseID
+        LEFT JOIN ExpenseLineItems li ON li.ExpenseID = r.ExpenseID
+
+        ${whereSql}
+
+        GROUP BY r.ExpenseID
+
+        ORDER BY ReceiptDate DESC, ReceiptID DESC
+        LIMIT ? OFFSET ?
+      `;
+
+      const finalParams = [...queryParams, pageSize, offset];
+
+      const receipts = await db.query<Receipt>(mainQuery, finalParams);
+
       return { receipts, totalCount };
     },
+
+    // debug mode – intentionally disabled cache
     staleTime: 0,
     gcTime: 0,
   });
@@ -198,18 +274,18 @@ export const useReceipts = (params: FetchReceiptsParams) => {
 export const useReceipt = (id: string | undefined) => {
   return useQuery({
     queryKey: ['receipt', id],
-    queryFn: () => id ? getReceipt(id) : null,
+    queryFn: () => (id ? getReceipt(id) : null),
     enabled: !!id,
     staleTime: 0,
     gcTime: 0,
   });
 };
 
-
 // --- Mutations ---
 
 export const useDeleteReceipt = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (ids: number[]) => deleteReceiptsFromDb(ids),
     onSuccess: () => {
