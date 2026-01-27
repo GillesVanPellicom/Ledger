@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, ReactNode, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, ReactNode, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight, Search, FileSearch, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Input from './Input';
@@ -47,89 +47,6 @@ interface DataTableProps {
   dateAccessor?: string;
 }
 
-const SkeletonRow = React.memo(({ selectable, columnsCount }: { selectable: boolean, columnsCount: number }) => (
-  <tr className="transition-colors opacity-50 bg-bg-2 cursor-pointer hover:bg-field-hover">
-    {selectable && (
-      <td className="px-4 py-3 align-middle">
-        <div className="h-5 bg-field-disabled rounded-md animate-pulse w-5" />
-      </td>
-    )}
-    {Array.from({ length: columnsCount }).map((_, colIdx) => (
-      <td key={colIdx} className="px-4 py-3 align-middle">
-        <div className="h-5 bg-field-disabled rounded-md animate-pulse w-full" />
-      </td>
-    ))}
-  </tr>
-));
-
-const MonthSeparator = React.memo(({ prevMonthName, currentMonthName, colSpan }: { prevMonthName: string, currentMonthName: string, colSpan: number }) => (
-  <tr className="bg-field-disabled/30 select-none pointer-events-none h-8">
-    <td colSpan={colSpan} className="px-4 py-1">
-      <div className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-font-2 opacity-70">
-        <div className="flex items-center gap-1.5">
-          <ArrowUp className="h-3 w-3" />
-          {prevMonthName}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {currentMonthName}
-          <ArrowDown className="h-3 w-3" />
-        </div>
-      </div>
-    </td>
-  </tr>
-));
-
-const DataTableRow = React.memo(({ 
-  row, 
-  rowIdx, 
-  columns, 
-  selectable, 
-  isSelected, 
-  onSelectRow, 
-  onRowClick, 
-  disabled, 
-  getRowKey 
-}: any) => {
-  const key = getRowKey(row) || rowIdx;
-  
-  return (
-    <tr 
-      onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} 
-      className={cn(
-        "transition-colors bg-bg-2", 
-        { "bg-accent/10": isSelected }, 
-        onRowClick && !disabled && "cursor-pointer hover:bg-field-hover"
-      )}
-    >
-      {selectable && (
-        <td className="px-4 py-3 align-middle w-12">
-          <div className="flex items-center justify-center">
-            <Checkbox
-              id={`checkbox-${key}`}
-              checked={isSelected}
-              onChange={(e) => onSelectRow(e, key)}
-              onClick={(e) => e.stopPropagation()}
-              disabled={disabled}
-            />
-          </div>
-        </td>
-      )}
-      {columns.map((col: Column, colIdx: number) => {
-        const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
-        let displayContent = content;
-        if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
-          displayContent = <span className="text-font-2">-</span>;
-        }
-        return (
-          <td key={colIdx} className={cn("px-4 py-3 text-font-1 break-words align-middle", col.className)}>
-            {displayContent}
-          </td>
-        );
-      })}
-    </tr>
-  );
-});
-
 const DataTable: React.FC<DataTableProps> = ({
   data = [],
   columns = [],
@@ -163,32 +80,40 @@ const DataTable: React.FC<DataTableProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pageInput, setPageInput] = useState(String(currentPage));
-  const [localSelectedRows, setLocalSelectedRows] = useState(new Set());
+  const [selectedRows, setSelectedRows] = useState(new Set());
   const [prevTotalCount, setPrevTotalCount] = useState(totalCount);
   const [previousData, setPreviousData] = useState<any[]>([]);
 
-  const getRowKey = useCallback((row: any) => {
+  // Helper to get key for a row
+  const getRowKey = (row: any) => {
     if (typeof itemKey === 'function') {
       return itemKey(row);
     }
     return row[itemKey];
-  }, [itemKey]);
+  };
 
+  // Only update totalPages/totalPagesDigits when totalCount genuinely changes
   useEffect(() => {
     if (totalCount !== prevTotalCount) {
       setPrevTotalCount(totalCount);
     }
   }, [totalCount, prevTotalCount]);
 
+  // Update previousData when data is not loading
   useEffect(() => {
     if (!loading) {
-      setPreviousData(data.length > 0 ? data : []);
+      if (data.length > 0) {
+        setPreviousData(data);
+      } else {
+        setPreviousData([]); // Clear previous data if current data is empty
+      }
     }
   }, [data, loading]);
 
   const totalPages = useMemo(() => Math.ceil(prevTotalCount / pageSize) || 1, [prevTotalCount, pageSize]);
   const totalPagesDigits = useMemo(() => (totalPages || 1).toString().length, [totalPages]);
   
+  // Calculate width to accommodate at least xxxx/yyyy (4 digits each side)
   const paginationDisplayWidth = useMemo(() => {
     const maxDigits = Math.max(4, totalPagesDigits);
     return `${(maxDigits * 2 * 0.6) + 2}rem`;
@@ -196,10 +121,47 @@ const DataTable: React.FC<DataTableProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const isControlledSelection = selectedIds !== undefined;
-  const selectedRows = useMemo(() => {
-    return isControlledSelection ? new Set(selectedIds) : localSelectedRows;
-  }, [isControlledSelection, selectedIds, localSelectedRows]);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const hasMeasuredRef = useRef(false);
+  const [colWidths, setColWidths] = useState<number[]>([]);
+
+  useLayoutEffect(() => {
+    if (data.length > 0 && !loading && !hasMeasuredRef.current && tableContainerRef.current) {
+      const table = tableContainerRef.current.querySelector('table');
+      if (!table) return;
+
+      table.style.tableLayout = 'auto';
+      table.style.width = 'auto';
+
+      const headerCells = table.querySelectorAll('thead th');
+      if (headerCells.length === 0) return;
+
+      const widths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
+      const totalTableWidth = widths.reduce((sum, w) => sum + w, 0);
+      const containerWidth = tableContainerRef.current.offsetWidth;
+
+      if (totalTableWidth < containerWidth) {
+        table.style.width = '100%';
+        const scaledWidths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
+        setColWidths(scaledWidths);
+      } else {
+        setColWidths(widths);
+      }
+
+      hasMeasuredRef.current = true;
+    }
+  }, [data, loading]);
+
+  useEffect(() => {
+    hasMeasuredRef.current = false;
+    setColWidths([]);
+  }, [searchTerm, pageSize, columns]);
+
+  useEffect(() => {
+    if (selectable) {
+      setSelectedRows(new Set(selectedIds || []));
+    }
+  }, [selectable, selectedIds]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -230,16 +192,17 @@ const DataTable: React.FC<DataTableProps> = ({
     return () => clearTimeout(timer);
   }, [searchTerm, onSearch]);
 
-  const handlePageJump = useCallback(() => {
+  const handlePageJump = () => {
     if (disabled) return;
     let newPage = parseInt(pageInput, 10);
     if (!isNaN(newPage) && onPageChange) {
       newPage = Math.max(1, Math.min(newPage, totalPages || 1));
       onPageChange(newPage);
-    } else if (pageInput !== '') {
-      setPageInput(String(currentPage));
+    } else if (pageInput === '') {
+    } else {
+        setPageInput(String(currentPage));
     }
-  }, [disabled, pageInput, onPageChange, totalPages, currentPage]);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -256,10 +219,10 @@ const DataTable: React.FC<DataTableProps> = ({
     }
   };
 
-  const handleSelectAll = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
-    const currentIds = data.map(row => getRowKey(row));
     const newSelectedRows = new Set(selectedRows);
+    const currentIds = data.map(row => getRowKey(row));
 
     if (e.target.checked) {
       currentIds.forEach(id => newSelectedRows.add(id));
@@ -267,13 +230,11 @@ const DataTable: React.FC<DataTableProps> = ({
       currentIds.forEach(id => newSelectedRows.delete(id));
     }
 
-    if (!isControlledSelection) {
-      setLocalSelectedRows(newSelectedRows);
-    }
+    setSelectedRows(newSelectedRows);
     if (onSelectionChange) onSelectionChange(Array.from(newSelectedRows));
-  }, [disabled, data, getRowKey, selectedRows, onSelectionChange, isControlledSelection]);
+  };
 
-  const handleSelectRow = useCallback((e: React.ChangeEvent<HTMLInputElement>, id: any) => {
+  const handleSelectRow = (e: React.ChangeEvent<HTMLInputElement>, id: any) => {
     if (disabled) return;
     const newSelectedRows = new Set(selectedRows);
     if (e.target.checked) {
@@ -281,37 +242,51 @@ const DataTable: React.FC<DataTableProps> = ({
     } else {
       newSelectedRows.delete(id);
     }
-    
-    if (!isControlledSelection) {
-      setLocalSelectedRows(newSelectedRows);
-    }
+    setSelectedRows(newSelectedRows);
     if (onSelectionChange) onSelectionChange(Array.from(newSelectedRows));
-  }, [disabled, selectedRows, onSelectionChange, isControlledSelection]);
+  };
 
   const isAllOnPageSelected = useMemo(() => {
     if (data.length === 0) return false;
     return data.every(row => selectedRows.has(getRowKey(row)));
-  }, [data, selectedRows, getRowKey]);
+  }, [data, selectedRows, itemKey]);
 
   const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endItem = Math.min(currentPage * pageSize, totalCount);
 
-  const monthFormatter = useMemo(() => new Intl.DateTimeFormat('default', { month: 'long', year: 'numeric' }), []);
+  // Skeleton placeholder component for individual cells
+  const SkeletonCell = ({ width = 'w-full' }: { width?: string }) => (
+    <div className={cn("h-5 bg-field-disabled rounded-md animate-pulse", width)}></div>
+  );
 
   const tableContent = useMemo(() => {
-    if (loading) {
-      const skeletonCount = previousData.length > 0 ? previousData.length : 5;
-      const displayCount = Math.min(skeletonCount, 15); // Limit skeletons to reduce DOM nodes
-      return Array.from({ length: displayCount }).map((_, idx) => (
-        <SkeletonRow key={`skeleton-${idx}`} selectable={selectable} columnsCount={columns.length} />
-      ));
+    // If loading, show previousData with skeleton placeholders on new rows
+    if (loading && previousData.length > 0) {
+      return previousData.map((row, rowIdx) => {
+        const key = getRowKey(row) || rowIdx;
+        return (
+          <tr key={key} className={cn("transition-colors opacity-50 bg-bg-2", { "bg-accent/10": selectedRows.has(key) }, "cursor-pointer hover:bg-field-hover")}>
+            {selectable && (
+              <td className="px-4 py-3 align-middle">
+                <SkeletonCell width="w-5" />
+              </td>
+            )}
+            {columns.map((col, colIdx) => (
+              <td key={colIdx} className={cn("px-4 py-3 align-middle", col.className)}>
+                <SkeletonCell />
+              </td>
+            ))}
+          </tr>
+        );
+      });
     }
 
+    // No data at all (not loading and no previous data)
     if (data.length === 0 && previousData.length === 0) {
       return (
         <tr>
           <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-font-2 bg-bg-2">
-            <div className="flex flex-col items-center gap-2 h-full justify-center min-h-[40vh]">
+            <div className="flex flex-col items-center gap-2 h-full justify-center" style={{height: '300px'}}>
               {emptyStateIcon || <FileSearch className="h-10 w-10 opacity-50" />}
               <span>{emptyStateText}</span>
             </div>
@@ -320,53 +295,78 @@ const DataTable: React.FC<DataTableProps> = ({
       );
     }
 
+    // Show current data (either newly loaded or during loading with previousData)
     const displayData = data.length > 0 ? data : previousData;
     const rows: React.ReactNode[] = [];
-    const colSpan = columns.length + (selectable ? 1 : 0);
-    
-    let lastMonthName = '';
 
     displayData.forEach((row, rowIdx) => {
       const key = getRowKey(row) || rowIdx;
-      
-      if (showMonthSeparators) {
-        const dateStr = row[dateAccessor];
-        if (dateStr) {
-          const date = new Date(dateStr);
-          const currentMonthName = monthFormatter.format(date);
-          
-          if (lastMonthName && currentMonthName !== lastMonthName) {
+
+      if (showMonthSeparators && rowIdx > 0) {
+        const currentDateStr = row[dateAccessor];
+        const prevDateStr = displayData[rowIdx - 1][dateAccessor];
+
+        if (currentDateStr && prevDateStr) {
+          const currentDate = new Date(currentDateStr);
+          const prevDate = new Date(prevDateStr);
+
+          const currentMonthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+          const prevMonthName = prevDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+          if (currentMonthName !== prevMonthName) {
             rows.push(
-              <MonthSeparator 
-                key={`month-sep-${rowIdx}`} 
-                prevMonthName={lastMonthName} 
-                currentMonthName={currentMonthName} 
-                colSpan={colSpan} 
-              />
+              <tr key={`month-sep-${rowIdx}`} className="bg-field-disabled/30 select-none pointer-events-none h-8">
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-1">
+                  <div className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-font-2 opacity-70">
+                    <div className="flex items-center gap-1.5">
+                      <ArrowUp className="h-3 w-3" />
+                      {prevMonthName}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {currentMonthName}
+                      <ArrowDown className="h-3 w-3" />
+                    </div>
+                  </div>
+                </td>
+              </tr>
             );
           }
-          lastMonthName = currentMonthName;
         }
       }
 
       rows.push(
-        <DataTableRow
-          key={key}
-          row={row}
-          rowIdx={rowIdx}
-          columns={columns}
-          selectable={selectable}
-          isSelected={selectedRows.has(key)}
-          onSelectRow={handleSelectRow}
-          onRowClick={onRowClick}
-          disabled={disabled}
-          getRowKey={getRowKey}
-        />
+        <tr key={key} onClick={(e) => onRowClick && !disabled && onRowClick(row, e)} className={cn("transition-colors bg-bg-2", { "bg-accent/10": selectedRows.has(key) }, onRowClick && !disabled && "cursor-pointer hover:bg-field-hover")}>
+          {selectable && (
+            <td className="px-4 py-3 align-middle w-12">
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  id={`checkbox-${key}`}
+                  checked={selectedRows.has(key)}
+                  onChange={(e) => handleSelectRow(e, key)}
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={disabled}
+                />
+              </div>
+            </td>
+          )}
+          {columns.map((col, colIdx) => {
+            const content = col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null);
+            let displayContent = content;
+            if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
+              displayContent = <span className="text-font-2">-</span>;
+            }
+            return (
+              <td key={colIdx} className={cn("px-4 py-3 text-font-1 break-words align-middle", col.className)}>
+                {displayContent}
+              </td>
+            );
+          })}
+        </tr>
       );
     });
 
     return rows;
-  }, [loading, data, previousData, selectable, columns, onRowClick, disabled, getRowKey, selectedRows, handleSelectRow, emptyStateIcon, emptyStateText, showMonthSeparators, dateAccessor, monthFormatter]);
+  }, [loading, pageSize, data, previousData, selectable, columns, onRowClick, disabled, itemKey, selectedRows, handleSelectRow, emptyStateIcon, emptyStateText, showMonthSeparators, dateAccessor]);
 
   return (
     <div className={cn("flex flex-col gap-4", className, disabled && "opacity-50 cursor-not-allowed")}>
@@ -474,12 +474,27 @@ const DataTable: React.FC<DataTableProps> = ({
         </div>
       </div>
 
-      <div className="rounded-lg border border-border overflow-hidden bg-field shadow-sm relative">
+      <div
+        ref={tableContainerRef}
+        className="rounded-lg border border-border overflow-hidden bg-field shadow-sm relative"
+      >
         <div className={cn("overflow-x-auto", disabled && "pointer-events-none")}>
-          <table className="text-left text-sm w-full border-collapse table-fixed" style={{ minWidth }}>
+          <table
+            className="text-left text-sm w-full border-collapse"
+            style={{
+              tableLayout: colWidths.length > 0 ? 'fixed' : 'auto',
+              minWidth: colWidths.length > 0 ? undefined : minWidth,
+            }}
+          >
             <colgroup>
-              {selectable && <col style={{ width: '48px' }} />}
-              {columns.map((col, idx) => <col key={idx} style={{ width: col.width || 'auto' }} />)}
+              {colWidths.length > 0 ? (
+                colWidths.map((width, idx) => <col key={idx} style={{ width: `${width}px` }} />)
+              ) : (
+                <>
+                  {selectable && <col style={{ width: '48px' }} />}
+                  {columns.map((col, idx) => <col key={idx} style={{ width: col.width }} />)}
+                </>
+              )}
             </colgroup>
             <thead className="bg-bg-modal border-b border-border">
               <tr>

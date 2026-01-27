@@ -119,7 +119,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as storeName,
           src.EntityName as debtorName,
           NULL as isNonItemised,
-          NULL as isTentative,
+          0 as isTentative,
           NULL as attachmentCount,
           NULL as status,
           NULL as totalDebtorCount,
@@ -153,7 +153,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as storeName,
           NULL as debtorName,
           NULL as isNonItemised,
-          NULL as isTentative,
+          0 as isTentative,
           NULL as attachmentCount,
           NULL as status,
           NULL as totalDebtorCount,
@@ -185,7 +185,7 @@ export const useTransactions = (params: FetchTransactionsParams) => {
           NULL as storeName,
           d.EntityName as debtorName,
           NULL as isNonItemised,
-          NULL as isTentative,
+          0 as isTentative,
           NULL as attachmentCount,
           NULL as status,
           NULL as totalDebtorCount,
@@ -256,15 +256,17 @@ export const useTransactions = (params: FetchTransactionsParams) => {
         queryParams.push(methodFilter, methodFilter, methodFilter);
       }
 
+      // Global tentative filter
+      if (tentativeFilter && tentativeFilter !== 'all') {
+        whereClauses.push(`isTentative = ?`);
+        queryParams.push(tentativeFilter === 'tentative' ? 1 : 0);
+      }
+
       // Apply type-specific filters
       if (typeFilter === 'expense' || typeFilter === 'paid_expense') {
         if (expenseTypeFilter && expenseTypeFilter !== 'all') {
           whereClauses.push(`isNonItemised = ?`);
           queryParams.push(expenseTypeFilter === 'total-only' ? 1 : 0);
-        }
-        if (tentativeFilter && tentativeFilter !== 'all') {
-          whereClauses.push(`isTentative = ?`);
-          queryParams.push(tentativeFilter === 'tentative' ? 1 : 0);
         }
         if (attachmentFilter && attachmentFilter !== 'all') {
           whereClauses.push(`attachmentCount ${attachmentFilter === 'yes' ? '> 0' : '= 0'}`);
