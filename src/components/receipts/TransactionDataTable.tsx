@@ -247,275 +247,279 @@ const TransactionDataTable: React.FC<TransactionDataTableProps> = ({ onRefetch, 
     await generatePdf(fullReceipts, settings.pdf);
   };
 
-  const columns: any[] = [
-    { header: 'Date', width: '12%', render: (row: Transaction) => <DateDisplay date={row.date} /> },
-    {
-      header: 'Description', width: '20%', render: (row: Transaction) => {
-        if (row.type === 'expense') return row.storeName;
-        if (row.type === 'repayment') return `Repayment from ${row.debtorName}`;
-        if (row.type === 'income') {
-          return row.debtorName || 'Income';
+  const columns = useMemo(() => {
+    const cols: any[] = [
+      { header: 'Date', width: '7%', render: (row: Transaction) => <DateDisplay date={row.date} /> },
+      {
+        header: 'Description', render: (row: Transaction) => {
+          if (row.type === 'expense') return row.storeName;
+          if (row.type === 'repayment') return `Repayment from ${row.debtorName}`;
+          if (row.type === 'income') {
+            return row.debtorName || 'Income';
+          }
+          if (row.type === 'transfer') return 'Transfer';
+          return '';
         }
-        if (row.type === 'transfer') return 'Transfer';
-        return '';
-      }
-    },
-    { header: 'Note', accessor: 'note', width: '23%' },
-  ];
+      },
+      { header: 'Note', accessor: 'note' },
+    ];
 
-  if (paymentMethodsEnabled && !hideColumns.includes('method')) {
-    columns.push({ header: 'Method', accessor: 'methodName', width: '15%' });
-  }
-
-  columns.push({
-    header: 'Amount', width: '10%', className: 'text-right', render: (row: Transaction) => {
-      const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
-      const isTransfer = row.type === 'transfer';
-      return (
-        <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
-          <div className="inline-block">
-            <MoneyDisplay
-              amount={row.amount}
-              useSignum={!isTransfer}
-              showSign={!isTransfer}
-              colorNegative={!isUnpaid && row.amount < 0}
-              colorPositive={row.amount > 0}
-              colorNeutral={isUnpaid}
-              colored={!isTransfer}
-              className={isTransfer ? "text-font-1 font-normal" : ""}
-            />
-          </div>
-        </Tooltip>
-      );
+    if (paymentMethodsEnabled && !hideColumns.includes('method')) {
+      cols.push({ header: 'Method', accessor: 'methodName', width: '6%' });
     }
-  });
 
-  columns.push({
-    header: 'Type', width: '10%', render: (row: Transaction) => {
-      if (row.type === 'expense' && row.status === 'unpaid') {
+    cols.push({
+      header: 'Amount', width: '10%', className: 'text-right', render: (row: Transaction) => {
+        const isUnpaid = row.type === 'expense' && row.status === 'unpaid';
+        const isTransfer = row.type === 'transfer';
         return (
-          <Tooltip content={row.owedToEntityId ? `Owed to ${row.debtorName || 'entity'}` : "Unpaid expense - not yet deducted from balance"}>
-            <Badge variant="yellow" className="flex items-center gap-1 w-fit">
-              <Clock className="h-3 w-3" /> {row.owedToEntityId ? 'Owed' : 'Unpaid'}
-            </Badge>
+          <Tooltip content={isUnpaid ? "This expense is unpaid and hasn't affected your balance yet." : ""}>
+            <div className="inline-block">
+              <MoneyDisplay
+                amount={row.amount}
+                useSignum={!isTransfer}
+                showSign={!isTransfer}
+                colorNegative={!isUnpaid && row.amount < 0}
+                colorPositive={row.amount > 0}
+                colorNeutral={isUnpaid}
+                colored={!isTransfer}
+                className={isTransfer ? "text-font-1 font-normal" : ""}
+              />
+            </div>
           </Tooltip>
         );
       }
-      switch (row.type) {
-        case 'expense':
-          if (row.owedToEntityId) {
+    });
+
+    cols.push({
+      header: 'Type', width: '7%', render: (row: Transaction) => {
+        if (row.type === 'expense' && row.status === 'unpaid') {
+          return (
+            <Tooltip content={row.owedToEntityId ? `Owed to ${row.debtorName || 'entity'}` : "Unpaid expense - not yet deducted from balance"}>
+              <Badge variant="yellow" className="flex items-center gap-1 w-fit">
+                <Clock className="h-3 w-3" /> {row.owedToEntityId ? 'Owed' : 'Unpaid'}
+              </Badge>
+            </Tooltip>
+          );
+        }
+        switch (row.type) {
+          case 'expense':
+            if (row.owedToEntityId) {
+              return (
+                <Tooltip content={`Repaid to ${row.debtorName || 'entity'}`}>
+                  <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Repaid</Badge>
+                </Tooltip>
+              );
+            }
             return (
-              <Tooltip content={`Repaid to ${row.debtorName || 'entity'}`}>
-                <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Repaid</Badge>
+              <Tooltip content="Expense - money spent">
+                <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Expense</Badge>
+              </Tooltip>
+            );
+          case 'income':
+            return (
+              <Tooltip content="Income - money received from a source">
+                <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3" /> Income</Badge>
+              </Tooltip>
+            );
+          case 'transfer':
+            return (
+              <Tooltip content="Transfer - money moved between payment methods">
+                <Badge variant="gray" className="flex items-center gap-1 w-fit text-font-1 border-font-1/20 bg-font-1/10"><ArrowRightLeft className="h-3 w-3" /> Transfer</Badge>
+              </Tooltip>
+            );
+          case 'repayment':
+            return (
+              <Tooltip content="Repayment - money received from a debtor">
+                <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3" /> Repayment</Badge>
+              </Tooltip>
+            );
+          default:
+            return row.type;
+        }
+      }
+    });
+
+    // Indicators Column
+    cols.push({
+      header: '', width: '5%', className: 'text-right', render: (row: Transaction) => {
+        const enabledCount = [indicatorSettings?.type, indicatorSettings?.debt && debtEnabled, indicatorSettings?.tentative, indicatorSettings?.attachments].filter(Boolean).length;
+        if (enabledCount === 0) return <span className="text-font-2">-</span>;
+        if (row.type !== 'expense') {
+          return (
+            <div className="flex justify-end">
+              <div className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-10" style={{ minWidth: `${enabledCount * 32}px` }}>
+                <span className="text-font-2">-</span>
+              </div>
+            </div>
+          );
+        }
+        const visibleIndicators = [];
+        if (indicatorSettings?.type) {
+          visibleIndicators.push(
+            row.isNonItemised ? (
+              <Tooltip key="type" content="Total-only expense">
+                <Clipboard className="h-5 w-5 text-font-2" />
+              </Tooltip>
+            ) : (
+              <Tooltip key="type" content="Detailed Expense">
+                <ClipboardList className="h-5 w-5 text-font-2" />
+              </Tooltip>
+            )
+          );
+        }
+        if (indicatorSettings?.debt && debtEnabled) {
+          if ((row.unpaidDebtorCount || 0) > 0) {
+            visibleIndicators.push(
+              <Tooltip key="debt" content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
+                <AlertCircle className="h-5 w-5 text-red" />
+              </Tooltip>
+            );
+          } else if ((row.totalDebtorCount || 0) > 0) {
+            visibleIndicators.push(
+              <Tooltip key="debt" content="All debts settled">
+                <CheckCircle className="h-5 w-5 text-green" />
               </Tooltip>
             );
           }
-          return (
-            <Tooltip content="Expense - money spent">
-              <Badge variant="red" className="flex items-center gap-1 w-fit"><ArrowUpRight className="h-3 w-3" /> Expense</Badge>
+        }
+        if (indicatorSettings?.tentative && row.isTentative) {
+          visibleIndicators.push(
+            <Tooltip key="tentative" content="Tentative Expense">
+              <HelpCircle className="h-5 w-5 text-yellow" />
             </Tooltip>
           );
-        case 'income':
-          return (
-            <Tooltip content="Income - money received from a source">
-              <Badge variant="green" className="flex items-center gap-1 w-fit"><ArrowDownLeft className="h-3 w-3" /> Income</Badge>
+        }
+        if (indicatorSettings?.attachments && (row.attachmentCount || 0) > 0) {
+          visibleIndicators.push(
+            <Tooltip key="attachments" content={`${row.attachmentCount} attachment(s)`}>
+              <Paperclip className="h-5 w-5 text-font-2" />
             </Tooltip>
           );
-        case 'transfer':
-          return (
-            <Tooltip content="Transfer - money moved between payment methods">
-              <Badge variant="gray" className="flex items-center gap-1 w-fit text-font-1 border-font-1/20 bg-font-1/10"><ArrowRightLeft className="h-3 w-3" /> Transfer</Badge>
-            </Tooltip>
-          );
-        case 'repayment':
-          return (
-            <Tooltip content="Repayment - money received from a debtor">
-              <Badge variant="green" className="flex items-center gap-1 w-fit"><HandCoins className="h-3 w-3" /> Repayment</Badge>
-            </Tooltip>
-          );
-        default:
-          return row.type;
-      }
-    }
-  });
-
-  // Indicators Column
-  columns.push({
-    header: '', width: '10%', className: 'text-right', render: (row: Transaction) => {
-      const enabledCount = [indicatorSettings?.type, indicatorSettings?.debt && debtEnabled, indicatorSettings?.tentative, indicatorSettings?.attachments].filter(Boolean).length;
-      if (enabledCount === 0) return <span className="text-font-2">-</span>;
-      if (row.type !== 'expense') {
+        }
         return (
           <div className="flex justify-end">
             <div className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-10" style={{ minWidth: `${enabledCount * 32}px` }}>
-              <span className="text-font-2">-</span>
+              {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-font-2">-</span>}
             </div>
           </div>
         );
       }
-      const visibleIndicators = [];
-      if (indicatorSettings?.type) {
-        visibleIndicators.push(
-          row.isNonItemised ? (
-            <Tooltip key="type" content="Total-only expense">
-              <Clipboard className="h-5 w-5 text-font-2" />
-            </Tooltip>
-          ) : (
-            <Tooltip key="type" content="Detailed Expense">
-              <ClipboardList className="h-5 w-5 text-font-2" />
-            </Tooltip>
-          )
-        );
-      }
-      if (indicatorSettings?.debt && debtEnabled) {
-        if ((row.unpaidDebtorCount || 0) > 0) {
-          visibleIndicators.push(
-            <Tooltip key="debt" content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
-              <AlertCircle className="h-5 w-5 text-red" />
-            </Tooltip>
-          );
-        } else if ((row.totalDebtorCount || 0) > 0) {
-          visibleIndicators.push(
-            <Tooltip key="debt" content="All debts settled">
-              <CheckCircle className="h-5 w-5 text-green" />
-            </Tooltip>
-          );
-        }
-      }
-      if (indicatorSettings?.tentative && row.isTentative) {
-        visibleIndicators.push(
-          <Tooltip key="tentative" content="Tentative Expense">
-            <HelpCircle className="h-5 w-5 text-yellow" />
-          </Tooltip>
-        );
-      }
-      if (indicatorSettings?.attachments && (row.attachmentCount || 0) > 0) {
-        visibleIndicators.push(
-          <Tooltip key="attachments" content={`${row.attachmentCount} attachment(s)`}>
-            <Paperclip className="h-5 w-5 text-font-2" />
-          </Tooltip>
-        );
-      }
-      return (
-        <div className="flex justify-end">
-          <div className="border border-border rounded-lg p-1 flex items-center justify-center gap-2 h-10" style={{ minWidth: `${enabledCount * 32}px` }}>
-            {visibleIndicators.length > 0 ? visibleIndicators : <span className="text-font-2">-</span>}
-          </div>
-        </div>
-      );
-    }
-  });
+    });
 
-  columns.push({
-    header: '', width: '5%', className: 'text-right', render: (row: Transaction) => (
-      <div className="flex justify-end items-center">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {row.type === 'expense' && (
-              <>
-                <DropdownMenuLabel>Indicators</DropdownMenuLabel>
-                <div className="flex items-center gap-2 px-2 py-1.5 pointer-events-none">
-                  {row.isNonItemised ? (
-                    <Tooltip content="Total-only expense">
-                      <Clipboard className="h-4 w-4 text-font-2" />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip content="Detailed Expense">
-                      <ClipboardList className="h-4 w-4 text-font-2" />
-                    </Tooltip>
-                  )}
-                  {debtEnabled && (
-                    (row.unpaidDebtorCount || 0) > 0 ? (
-                      <Tooltip content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
-                        <AlertCircle className="h-4 w-4 text-red" />
-                      </Tooltip>
-                    ) : (row.totalDebtorCount || 0) > 0 ? (
-                      <Tooltip content="All debts settled">
-                        <CheckCircle className="h-4 w-4 text-green" />
+    cols.push({
+      header: '', width: '1%', className: 'text-right', render: (row: Transaction) => (
+        <div className="flex justify-end items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {row.type === 'expense' && (
+                <>
+                  <DropdownMenuLabel>Indicators</DropdownMenuLabel>
+                  <div className="flex items-center gap-2 px-2 py-1.5 pointer-events-none">
+                    {row.isNonItemised ? (
+                      <Tooltip content="Total-only expense">
+                        <Clipboard className="h-4 w-4 text-font-2" />
                       </Tooltip>
                     ) : (
-                      <Tooltip content="No debts">
-                        <AlertCircle className="h-4 w-4 text-text-disabled" />
+                      <Tooltip content="Detailed Expense">
+                        <ClipboardList className="h-4 w-4 text-font-2" />
                       </Tooltip>
-                    )
-                  )}
-                  {row.isTentative ? (
-                    <Tooltip content="Tentative Expense">
-                      <HelpCircle className="h-4 w-4 text-yellow" />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip content="Finished Expense">
-                      <CheckCircle className="h-4 w-4 text-text-disabled" />
-                    </Tooltip>
-                  )}
-                  {(row.attachmentCount || 0) > 0 ? (
-                    <Tooltip content={`${row.attachmentCount} attachment(s)`}>
-                      <Paperclip className="h-4 w-4 text-font-2" />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip content="No attachments">
-                      <Paperclip className="h-4 w-4 text-text-disabled" />
-                    </Tooltip>
-                  )}
-                </div>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuLabel>Go To</DropdownMenuLabel>
-            {row.type === 'transfer' ? (
-              <>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (row.fromMethodId) navigate(`/payment-methods/${row.fromMethodId}`); }}>
-                  <CreditCard className="mr-2 h-4 w-4" /> Origin Method
+                    )}
+                    {debtEnabled && (
+                      (row.unpaidDebtorCount || 0) > 0 ? (
+                        <Tooltip content={`${row.unpaidDebtorCount} unpaid debtor(s)`}>
+                          <AlertCircle className="h-4 w-4 text-red" />
+                        </Tooltip>
+                      ) : (row.totalDebtorCount || 0) > 0 ? (
+                        <Tooltip content="All debts settled">
+                          <CheckCircle className="h-4 w-4 text-green" />
+                        </Tooltip>
+                      ) : (
+                        <Tooltip content="No debts">
+                          <AlertCircle className="h-4 w-4 text-text-disabled" />
+                        </Tooltip>
+                      )
+                    )}
+                    {row.isTentative ? (
+                      <Tooltip content="Tentative Expense">
+                        <HelpCircle className="h-4 w-4 text-yellow" />
+                      </Tooltip>
+                    ) : (
+                      <Tooltip content="Finished Expense">
+                        <CheckCircle className="h-4 w-4 text-text-disabled" />
+                      </Tooltip>
+                    )}
+                    {(row.attachmentCount || 0) > 0 ? (
+                      <Tooltip content={`${row.attachmentCount} attachment(s)`}>
+                        <Paperclip className="h-4 w-4 text-font-2" />
+                      </Tooltip>
+                    ) : (
+                      <Tooltip content="No attachments">
+                        <Paperclip className="h-4 w-4 text-text-disabled" />
+                      </Tooltip>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuLabel>Go To</DropdownMenuLabel>
+              {row.type === 'transfer' ? (
+                <>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (row.fromMethodId) navigate(`/payment-methods/${row.fromMethodId}`); }}>
+                    <CreditCard className="mr-2 h-4 w-4" /> Origin Method
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (row.toMethodId) navigate(`/payment-methods/${row.toMethodId}`); }}>
+                    <CreditCard className="mr-2 h-4 w-4" /> Destination Method
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem disabled={!row.methodId} onClick={(e) => { e.stopPropagation(); if (row.methodId) navigate(`/payment-methods/${row.methodId}`); }}>
+                  <CreditCard className="mr-2 h-4 w-4" /> Method
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (row.toMethodId) navigate(`/payment-methods/${row.toMethodId}`); }}>
-                  <CreditCard className="mr-2 h-4 w-4" /> Destination Method
+              )}
+              {(row.type === 'expense' || row.type === 'repayment' || row.type === 'income' || row.type === 'transfer') && (
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  if (row.type === 'expense') {
+                    navigate(`/receipts/view/${row.originalId}`);
+                  } else if (row.type === 'income' || row.type === 'repayment') {
+                    navigate(`/income/view/${row.originalId}`);
+                  } else if (row.type === 'transfer') {
+                    navigate(`/transfers/view/${row.originalId}`);
+                  }
+                }}>
+                  <Eye className="mr-2 h-4 w-4" /> View Details
                 </DropdownMenuItem>
-              </>
-            ) : (
-              <DropdownMenuItem disabled={!row.methodId} onClick={(e) => { e.stopPropagation(); if (row.methodId) navigate(`/payment-methods/${row.methodId}`); }}>
-                <CreditCard className="mr-2 h-4 w-4" /> Method
+              )}
+              {(row.type === 'repayment' || row.type === 'income') && (
+                <DropdownMenuItem disabled={!row.debtorId} onClick={(e) => { e.stopPropagation(); if (row.debtorId) navigate(`/entities/${row.debtorId}`); }}>
+                  <User className="mr-2 h-4 w-4" /> Entity
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              {row.type === 'expense' && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/receipts/edit/${row.originalId}`); }}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem className="text-red" onClick={(e) => { e.stopPropagation(); openDeleteModal(row); }}>
+                <Trash className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
-            )}
-            {(row.type === 'expense' || row.type === 'repayment' || row.type === 'income' || row.type === 'transfer') && (
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                if (row.type === 'expense') {
-                  navigate(`/receipts/view/${row.originalId}`);
-                } else if (row.type === 'income' || row.type === 'repayment') {
-                  navigate(`/income/view/${row.originalId}`);
-                } else if (row.type === 'transfer') {
-                  navigate(`/transfers/view/${row.originalId}`);
-                }
-              }}>
-                <Eye className="mr-2 h-4 w-4" /> View Details
-              </DropdownMenuItem>
-            )}
-            {(row.type === 'repayment' || row.type === 'income') && (
-              <DropdownMenuItem disabled={!row.debtorId} onClick={(e) => { e.stopPropagation(); if (row.debtorId) navigate(`/entities/${row.debtorId}`); }}>
-                <User className="mr-2 h-4 w-4" /> Entity
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            {row.type === 'expense' && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/receipts/edit/${row.originalId}`); }}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="text-red" onClick={(e) => { e.stopPropagation(); openDeleteModal(row); }}>
-              <Trash className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    )
-  });
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )
+    });
+
+    return cols;
+  }, [paymentMethodsEnabled, hideColumns, indicatorSettings, debtEnabled, navigate]);
 
   const typeFilterOptions = [
     { value: 'all', label: 'All' },

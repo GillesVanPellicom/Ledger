@@ -122,40 +122,58 @@ const DataTable: React.FC<DataTableProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const hasMeasuredRef = useRef(false);
   const [colWidths, setColWidths] = useState<number[]>([]);
 
+  // Dynamic scaling system: measure and lock widths to prevent flickering
   useLayoutEffect(() => {
-    if (data.length > 0 && !loading && !hasMeasuredRef.current && tableContainerRef.current) {
+    // We measure if we have data OR if we're loading but have previous data (to keep header stable)
+    const hasContent = data.length > 0 || (loading && previousData.length > 0);
+    
+    if (hasContent && tableContainerRef.current) {
       const table = tableContainerRef.current.querySelector('table');
       if (!table) return;
 
+      // Temporarily switch to auto layout to measure natural/percentage-based widths
+      const originalTableLayout = table.style.tableLayout;
+      const originalWidth = table.style.width;
+      
       table.style.tableLayout = 'auto';
-      table.style.width = 'auto';
+      table.style.width = '100%';
 
       const headerCells = table.querySelectorAll('thead th');
       if (headerCells.length === 0) return;
 
-      const widths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
-      const totalTableWidth = widths.reduce((sum, w) => sum + w, 0);
-      const containerWidth = tableContainerRef.current.offsetWidth;
+      const measuredWidths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
+      
+      // Restore layout
+      table.style.tableLayout = originalTableLayout;
+      table.style.width = originalWidth;
 
-      if (totalTableWidth < containerWidth) {
-        table.style.width = '100%';
-        const scaledWidths = Array.from(headerCells).map(cell => cell.getBoundingClientRect().width);
-        setColWidths(scaledWidths);
-      } else {
-        setColWidths(widths);
-      }
-
-      hasMeasuredRef.current = true;
+      setColWidths(prev => {
+        // If column count changed, reset to new measurements
+        if (prev.length !== measuredWidths.length) return measuredWidths;
+        
+        // Keep the maximum width seen so far for each column to prevent flickering across pages
+        const merged = measuredWidths.map((w, i) => Math.max(w, prev[i]));
+        
+        // Only update if there's a meaningful change to avoid unnecessary re-renders
+        const hasChanged = merged.some((w, i) => Math.abs(w - prev[i]) > 0.5);
+        return hasChanged ? merged : prev;
+      });
     }
-  }, [data, loading]);
+  }, [data, loading, previousData.length]);
 
+  // Reset widths when columns or search/page size changes significantly
   useEffect(() => {
-    hasMeasuredRef.current = false;
     setColWidths([]);
   }, [searchTerm, pageSize, columns]);
+
+  // Reset widths on window resize to allow re-calculation of percentage-based widths
+  useEffect(() => {
+    const handleResize = () => setColWidths([]);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (selectable) {
